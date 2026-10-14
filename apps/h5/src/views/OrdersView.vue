@@ -38,7 +38,7 @@ const orders = computed(() =>
 .hint {
   text-align: center;
   color: #999;
-  font-size: 12px;
-  padding: 16px;
+  font-size: 0.75rem;
+  padding: 1rem;
 }
 </style>

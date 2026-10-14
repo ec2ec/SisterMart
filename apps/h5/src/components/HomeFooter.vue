@@ -23,27 +23,27 @@ const right = ['privacy', 'payment', 'shipping', 'refund', 'return'] as const
 
 <style scoped>
 .footer {
-  padding: 20px 24px 28px;
+  padding: 1.25rem 1.5rem 1.75rem;
   background: #fff;
 }
 
 .cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px 24px;
+  gap: 0.5rem 1.5rem;
 }
 
 .cols a {
   display: block;
-  padding: 6px 0;
-  font-size: 13px;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
   color: #666;
 }
 
 .slogan {
-  margin: 18px 0 0;
+  margin: 1.125rem 0 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #aaa;
 }
 </style>

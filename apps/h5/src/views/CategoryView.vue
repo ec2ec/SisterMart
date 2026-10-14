@@ -70,7 +70,8 @@ function openList(categoryId: string) {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  padding-top: var(--sm-header-h);
+  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
 }
 
 .body {
@@ -81,8 +82,8 @@ function openList(categoryId: string) {
 }
 
 .side {
-  width: 88px;
-  flex: 0 0 88px;
+  width: 5.5rem;
+  flex: 0 0 5.5rem;
   background: var(--sm-bg-soft);
   overflow-y: auto;
 }
@@ -95,22 +96,22 @@ function openList(categoryId: string) {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 10px 20px;
+  padding: 0.5rem 0.625rem 1.25rem;
   background: #fff;
 }
 
 .sec + .sec {
-  margin-top: 10px;
+  margin-top: 0.625rem;
 }
 
 .sec-title {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0 14px;
+  gap: 0.625rem;
+  margin: 0.625rem 0 0.875rem;
   color: #333;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .sec-title em {
@@ -119,14 +120,14 @@ function openList(categoryId: string) {
 }
 
 .sec-title span {
-  height: 1px;
+  height: 0.0625rem;
   background: #e8e8e8;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px 8px;
+  gap: 0.875rem 0.5rem;
 }
 
 .item {
@@ -140,15 +141,15 @@ function openList(categoryId: string) {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   background: #f5f5f5;
   display: block;
 }
 
 .item span {
   display: block;
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
   color: #333;
   line-height: 1.3;
 }

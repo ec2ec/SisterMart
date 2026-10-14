@@ -55,7 +55,7 @@ function removeChecked() {
           <p>{{ item.spec[locale as 'zh-HK' | 'en'] }}</p>
           <div class="bottom">
             <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
-            <van-stepper v-model="item.qty" min="1" theme="round" button-size="22" />
+            <van-stepper v-model="item.qty" min="1" theme="round" button-size="1.375rem" />
           </div>
         </div>
       </div>
@@ -88,8 +88,8 @@ function removeChecked() {
 .trust {
   display: flex;
   justify-content: space-around;
-  padding: 10px 8px;
-  font-size: 11px;
+  padding: 0.625rem 0.5rem;
+  font-size: 0.6875rem;
   color: #999;
   background: #fafafa;
 }
@@ -98,39 +98,39 @@ function removeChecked() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
 }
 
 .toolbar h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .manage {
-  border: 1px solid #ddd;
+  border: 0.0625rem solid #ddd;
   background: #fff;
-  border-radius: 999px;
-  padding: 4px 14px;
-  font-size: 12px;
+  border-radius: 62.4375rem;
+  padding: 0.25rem 0.875rem;
+  font-size: 0.75rem;
   color: #333;
 }
 
 .list {
-  padding: 0 12px 90px;
+  padding: 0 0.75rem 5.625rem;
 }
 
 .row {
   display: flex;
-  gap: 10px;
+  gap: 0.625rem;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f2f2f2;
+  padding: 0.75rem 0;
+  border-bottom: 0.0625rem solid #f2f2f2;
 }
 
 .row img {
-  width: 88px;
-  height: 88px;
-  border-radius: 10px;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 0.625rem;
   object-fit: cover;
   background: #f5f5f5;
   flex: 0 0 auto;
@@ -143,12 +143,12 @@ function removeChecked() {
 
 .info h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .info p {
-  margin: 6px 0 10px;
-  font-size: 12px;
+  margin: 0.375rem 0 0.625rem;
+  font-size: 0.75rem;
   color: #999;
 }
 
@@ -167,29 +167,29 @@ function removeChecked() {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
   background: #fff;
-  border-top: 1px solid #eee;
+  border-top: 0.0625rem solid #eee;
 }
 
 .sum {
   flex: 1;
   text-align: right;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .sum strong {
-  margin-left: 4px;
-  font-size: 16px;
+  margin-left: 0.25rem;
+  font-size: 1rem;
 }
 
 .submit :deep(.van-button) {
-  min-width: 96px;
-  height: 36px;
+  min-width: 6rem;
+  height: 2.25rem;
 }
 </style>

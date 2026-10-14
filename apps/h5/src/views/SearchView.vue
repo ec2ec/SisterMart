@@ -34,13 +34,13 @@ const list = computed(() => searchProducts(keyword.value))
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 8px 12px 24px;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem 1.5rem;
 }
 
 .empty {
   text-align: center;
   color: #999;
-  padding: 40px 16px;
+  padding: 2.5rem 1rem;
 }
 </style>

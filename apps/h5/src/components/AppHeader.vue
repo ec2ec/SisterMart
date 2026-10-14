@@ -41,9 +41,9 @@ function goSearch() {
       @click-input="goSearch"
     />
     <div class="actions">
-      <van-icon name="like-o" size="20" @click="router.push({ name: 'wishlist' })" />
+      <van-icon name="like-o" size="1.25rem" @click="router.push({ name: 'wishlist' })" />
       <van-badge dot>
-        <van-icon name="envelop-o" size="20" @click="router.push({ name: 'messages' })" />
+        <van-icon name="envelop-o" size="1.25rem" @click="router.push({ name: 'messages' })" />
       </van-badge>
     </div>
   </header>
@@ -51,33 +51,31 @@ function goSearch() {
 
 <style scoped>
 .app-header {
-  z-index: 20;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   min-height: var(--sm-header-h);
-  padding: 6px 10px;
-  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  padding: 0.375rem 0.625rem;
+  padding-top: calc(0.375rem + env(safe-area-inset-top, 0rem));
 }
 
 .app-header.solid {
-  position: sticky;
-  top: 0;
   background: #fff;
 }
 
 .app-header.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 100%);
   color: #fff;
 }
 
 .logo {
   flex: 0 0 auto;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -118,8 +116,8 @@ function goSearch() {
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 4px;
+  gap: 0.75rem;
+  padding-right: 0.25rem;
   color: #333;
 }
 

@@ -56,6 +56,24 @@ export const flashProducts: Product[] = [
     badge: 'hot',
     liked: true,
   },
+  {
+    id: 'p-flash-3',
+    name: { 'zh-HK': '項鏈', en: 'Necklace' },
+    price: 128,
+    sold: '56',
+    image: '/products/coll-pearl.jpg',
+    badge: 'flash',
+    liked: true,
+  },
+  {
+    id: 'p-flash-4',
+    name: { 'zh-HK': '戒指', en: 'Ring' },
+    price: 88,
+    sold: '40+',
+    image: '/products/hot-ring.jpg',
+    badge: 'hot',
+    liked: false,
+  },
 ]
 
 export const homeCategories = [

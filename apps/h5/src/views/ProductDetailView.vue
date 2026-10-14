@@ -48,36 +48,36 @@ const name = computed(() => (product.value ? text(product.value.name) : ''))
 }
 
 .body {
-  padding: 16px 16px 96px;
+  padding: 1rem 1rem 6rem;
 }
 
 .body h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .price {
-  margin: 8px 0 4px;
+  margin: 0.5rem 0 0.25rem;
   color: var(--sm-primary);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
 .meta {
-  margin: 0 0 16px;
+  margin: 0 0 1rem;
   color: #999;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .body h2 {
-  margin: 0 0 8px;
-  font-size: 15px;
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
 }
 
 .desc {
   margin: 0;
   color: #666;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 
@@ -88,9 +88,9 @@ const name = computed(() => (product.value ? text(product.value.name) : ''))
   bottom: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom, 0rem));
   background: #fff;
-  border-top: 1px solid #eee;
+  border-top: 0.0625rem solid #eee;
 }
 </style>

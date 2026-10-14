@@ -39,19 +39,19 @@ function submit() {
 
 <style scoped>
 .form {
-  padding: 16px;
+  padding: 1rem;
 }
 
 .btn {
-  margin-top: 20px;
+  margin-top: 1.25rem;
 }
 
 .link {
   display: block;
-  margin: 16px auto 0;
+  margin: 1rem auto 0;
   border: 0;
   background: transparent;
   color: var(--sm-primary);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 </style>

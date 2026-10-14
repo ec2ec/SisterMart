@@ -23,6 +23,8 @@ const feedTab = ref(0)
 const email = ref('')
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
 
+const flashVisible = computed(() => flashProducts.slice(0, 4))
+
 const feedList = computed(() => {
   if (feedTab.value === 1) return collectionProducts
   if (feedTab.value === 2) return [...feedProducts, ...flashProducts]
@@ -63,8 +65,10 @@ function goList(categoryId?: string) {
         <h2>{{ t('home.flashSale') }}</h2>
         <van-count-down :time="flashRemain" class="countdown" />
       </div>
-      <div class="grid-2">
-        <ProductCard v-for="p in flashProducts" :key="p.id" :product="p" />
+      <div class="flash-scroll">
+        <div v-for="p in flashVisible" :key="p.id" class="flash-item">
+          <ProductCard :product="p" />
+        </div>
       </div>
     </section>
 
@@ -133,7 +137,7 @@ function goList(categoryId?: string) {
 
 .hero-item {
   position: relative;
-  height: 260px;
+  height: 16.25rem;
   background: #111;
 }
 
@@ -156,69 +160,88 @@ function goList(categoryId?: string) {
 
 .hero-copy {
   position: absolute;
-  left: 16px;
-  bottom: 28px;
+  left: 1rem;
+  bottom: 1.75rem;
   z-index: 1;
   color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.45);
   max-width: 80%;
 }
 
 .hero-copy .eyebrow {
   margin: 0;
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.06em;
 }
 
 .hero-copy h2 {
-  margin: 4px 0;
-  font-size: 24px;
+  margin: 0.25rem 0;
+  font-size: 1.5rem;
   font-weight: 800;
 }
 
 .hero-copy .sub {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .promo {
-  padding: 8px 12px;
+  padding: 0.5rem 0.75rem;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--sm-primary);
   background: var(--sm-promo-bg);
 }
 
 .countdown {
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
   background: #f3f3f3;
   color: var(--sm-primary);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
+}
+
+.flash-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0 0.75rem 0.5rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.flash-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.flash-item {
+  flex: 0 0 calc((100% - 0.75rem) / 2);
+  scroll-snap-align: start;
 }
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 12px 8px;
+  gap: 0.75rem;
+  padding: 0 0.75rem 0.5rem;
 }
 
 .padded {
-  padding-top: 4px;
+  padding-top: 0.25rem;
 }
 
 .cats {
-  padding: 8px 0 4px;
+  padding: 0.5rem 0 0.25rem;
 }
 
 .cat-scroll {
   display: flex;
-  gap: 14px;
+  gap: 0.875rem;
   overflow-x: auto;
-  padding: 4px 14px 8px;
+  padding: 0.25rem 0.875rem 0.5rem;
   scrollbar-width: none;
 }
 
@@ -228,7 +251,7 @@ function goList(categoryId?: string) {
 
 .cat {
   flex: 0 0 auto;
-  width: 64px;
+  width: 4rem;
   border: 0;
   background: transparent;
   padding: 0;
@@ -236,58 +259,58 @@ function goList(categoryId?: string) {
 }
 
 .cat img {
-  width: 56px;
-  height: 56px;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 50%;
   object-fit: cover;
   display: block;
-  margin: 0 auto 6px;
+  margin: 0 auto 0.375rem;
   background: #f2f2f2;
 }
 
 .cat span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #333;
 }
 
 .more {
   border: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--sm-text-muted);
   padding: 0;
 }
 
 .feed :deep(.van-tabs__wrap) {
-  padding: 0 8px;
+  padding: 0 0.5rem;
 }
 
 .newsletter {
-  margin: 12px;
-  padding: 18px 16px;
-  border: 1px solid #eee;
-  border-radius: 14px;
+  margin: 0.75rem;
+  padding: 1.125rem 1rem;
+  border: 0.0625rem solid #eee;
+  border-radius: 0.875rem;
   background: #fff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.03);
 }
 
 .newsletter h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .newsletter p {
-  margin: 6px 0 12px;
-  font-size: 12px;
+  margin: 0.375rem 0 0.75rem;
+  font-size: 0.75rem;
   color: var(--sm-text-muted);
 }
 
 .email-box {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 12px;
-  border-radius: 999px;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border-radius: 62.4375rem;
   background: #f3f4f6;
 }
 
@@ -296,7 +319,7 @@ function goList(categoryId?: string) {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: 0.8125rem;
   min-width: 0;
 }
 
@@ -305,7 +328,7 @@ function goList(categoryId?: string) {
   background: transparent;
   color: var(--sm-primary);
   font-weight: 700;
-  font-size: 13px;
-  padding: 8px 12px;
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.75rem;
 }
 </style>

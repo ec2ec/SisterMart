@@ -41,7 +41,7 @@ function goService(route: string) {
   <div class="page page--soft">
     <section class="hero">
       <button class="settings" type="button" :title="t('account.switchLang')" @click="toggleLocale">
-        <van-icon name="setting-o" size="18" />
+        <van-icon name="setting-o" size="1.125rem" />
       </button>
       <div class="user" role="button" @click="router.push({ name: 'login' })">
         <div class="avatar">{{ u.avatarLetter }}</div>
@@ -86,7 +86,7 @@ function goService(route: string) {
       <div class="orders">
         <button v-for="o in orderItems" :key="o.key" type="button" @click="router.push({ name: 'orders' })">
           <van-badge :content="('badge' in o && o.badge) || ''" :show-zero="false">
-            <van-icon :name="o.icon" size="22" />
+            <van-icon :name="o.icon" size="1.375rem" />
           </van-badge>
           <span>{{ t(`account.${o.key}`) }}</span>
         </button>
@@ -95,7 +95,7 @@ function goService(route: string) {
 
     <section class="checkin">
       <div class="left">
-        <van-icon name="calendar-o" color="var(--sm-primary)" size="20" />
+        <van-icon name="calendar-o" color="var(--sm-primary)" size="1.25rem" />
         <div>
           <p class="title">{{ t('account.checkinTitle') }}</p>
           <p class="sub">{{ t('account.checkinSub', { n: u.streak }) }}</p>
@@ -108,7 +108,7 @@ function goService(route: string) {
 
     <section class="card services">
       <button v-for="s in services" :key="s.key" type="button" @click="goService(s.route)">
-        <van-icon :name="s.icon" size="22" />
+        <van-icon :name="s.icon" size="1.375rem" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>
     </section>
@@ -120,14 +120,14 @@ function goService(route: string) {
 <style scoped>
 .hero {
   position: relative;
-  padding: 20px 16px 14px;
+  padding: 1.25rem 1rem 0.875rem;
   background: linear-gradient(180deg, #ffe8df 0%, #fff 70%);
 }
 
 .settings {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 0.875rem;
+  right: 0.875rem;
   border: 0;
   background: transparent;
   color: #666;
@@ -135,84 +135,84 @@ function goService(route: string) {
 
 .user {
   display: flex;
-  gap: 12px;
+  gap: 0.75rem;
   align-items: center;
 }
 
 .avatar {
-  width: 58px;
-  height: 58px;
+  width: 3.625rem;
+  height: 3.625rem;
   border-radius: 50%;
   background: #fff;
   color: var(--sm-primary);
   display: grid;
   place-items: center;
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(238, 80, 47, 0.15);
+  box-shadow: 0 0.125rem 0.5rem rgba(238, 80, 47, 0.15);
 }
 
 .user h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .phone,
 .spent {
-  margin: 2px 0 0;
-  font-size: 12px;
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
   color: #888;
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin-top: 16px;
+  margin-top: 1rem;
   text-align: center;
 }
 
 .stats strong {
   display: block;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .stats span {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #888;
 }
 
 .quick {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 0 12px;
+  gap: 0.625rem;
+  padding: 0 0.75rem;
 }
 
 .quick button {
   border: 0;
   text-align: left;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
   background: #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0.0625rem 0.375rem rgba(0, 0, 0, 0.04);
 }
 
 .quick strong {
   display: block;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .quick span {
   display: block;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
   color: #999;
 }
 
 .card {
-  margin: 12px;
-  padding: 12px;
-  border-radius: 14px;
+  margin: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
   background: #fff;
 }
 
@@ -220,86 +220,86 @@ function goService(route: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 0.5rem;
 }
 
 .card-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .more {
   border: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #999;
 }
 
 .orders {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .orders button,
 .services button {
   border: 0;
   background: transparent;
-  padding: 8px 0;
+  padding: 0.5rem 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
   color: #333;
 }
 
 .checkin {
-  margin: 0 12px;
-  padding: 10px 12px;
-  border: 1px solid #ffc9b8;
-  border-radius: 12px;
+  margin: 0 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 0.0625rem solid #ffc9b8;
+  border-radius: 0.75rem;
   background: #fff8f5;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .checkin .left {
   display: flex;
-  gap: 10px;
+  gap: 0.625rem;
   align-items: center;
 }
 
 .checkin .title {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
 .checkin .sub {
-  margin: 2px 0 0;
-  font-size: 11px;
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
   color: #999;
 }
 
 .services {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px 0;
-  margin-bottom: 8px;
+  gap: 0.25rem 0;
+  margin-bottom: 0.5rem;
 }
 
 .lang {
   display: block;
-  width: calc(100% - 24px);
-  margin: 0 12px 20px;
-  border: 1px solid #eee;
-  border-radius: 10px;
+  width: calc(100% - 1.5rem);
+  margin: 0 0.75rem 1.25rem;
+  border: 0.0625rem solid #eee;
+  border-radius: 0.625rem;
   background: #fff;
-  padding: 12px;
+  padding: 0.75rem;
   color: #666;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 </style>
