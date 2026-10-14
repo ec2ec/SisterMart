@@ -1,13 +1,49 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { api, ApiError } from '../api/client'
 import { accountMock } from '../mock/data'
+import { clearSession, isLoggedIn, memberState, type Member } from '../composables/useSession'
 import { toggleLocale } from '../i18n'
 
 const { t } = useI18n()
 const router = useRouter()
 const u = accountMock
+const loggedIn = computed(() => isLoggedIn() && memberState.value)
+const displayName = computed(() => memberState.value?.email || memberState.value?.phone || u.name)
+const displaySub = computed(() =>
+  memberState.value ? t('account.promo', { code: memberState.value.promo_code }) : u.phone,
+)
+const avatarLetter = computed(() => (displayName.value || 'S').slice(0, 1).toUpperCase())
+
+function openAccount() {
+  if (loggedIn.value) return
+  router.push({ name: 'login', query: { redirect: '/account' } })
+}
+
+onMounted(async () => {
+  if (!isLoggedIn()) return
+  try {
+    const data = await api<{ member: Member }>('/api/auth/me', {}, 'member')
+    memberState.value = data.member
+    localStorage.setItem('sm_member', JSON.stringify(data.member))
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) clearSession()
+  }
+})
+
+async function logout() {
+  try {
+    await api('/api/auth/logout', { method: 'POST' }, 'member')
+  } catch {
+    /* 本地仍清除令牌 */
+  }
+  clearSession()
+  showToast(t('auth.loggedOut'))
+  router.replace('/')
+}
 
 const orderItems = [
   { key: 'toPay', icon: 'credit-pay' },
@@ -43,25 +79,25 @@ function goService(route: string) {
       <button class="settings" type="button" :title="t('account.switchLang')" @click="toggleLocale">
         <van-icon name="setting-o" size="1.125rem" />
       </button>
-      <div class="user" role="button" @click="router.push({ name: 'login', query: { redirect: '/account' } })">
-        <div class="avatar">{{ u.avatarLetter }}</div>
+      <div class="user" role="button" @click="openAccount">
+        <div class="avatar">{{ avatarLetter }}</div>
         <div>
-          <h1>{{ u.name }}</h1>
-          <p class="phone">{{ u.phone }}</p>
-          <p class="spent">{{ t('account.spent', { n: u.spent }) }}</p>
+          <h1>{{ displayName }}</h1>
+          <p class="phone">{{ displaySub }}</p>
+          <p class="spent">{{ t('account.spent', { n: loggedIn ? 0 : u.spent }) }}</p>
         </div>
       </div>
       <div class="stats">
         <div>
-          <strong>{{ u.balance }}</strong>
+          <strong>{{ loggedIn ? '0.00' : u.balance }}</strong>
           <span>{{ t('account.balance') }}</span>
         </div>
         <div>
-          <strong>{{ u.coupons }}</strong>
+          <strong>{{ loggedIn ? 0 : u.coupons }}</strong>
           <span>{{ t('account.coupons') }}</span>
         </div>
         <div>
-          <strong>{{ u.points }}</strong>
+          <strong>{{ loggedIn ? 0 : u.points }}</strong>
           <span>{{ t('account.points') }}</span>
         </div>
       </div>
@@ -85,7 +121,7 @@ function goService(route: string) {
       </div>
       <div class="orders">
         <button v-for="o in orderItems" :key="o.key" type="button" @click="router.push({ name: 'orders' })">
-          <van-badge :content="('badge' in o && o.badge) || ''" :show-zero="false">
+          <van-badge :content="(!loggedIn && 'badge' in o && o.badge) || ''" :show-zero="false">
             <van-icon :name="o.icon" size="1.375rem" />
           </van-badge>
           <span>{{ t(`account.${o.key}`) }}</span>
@@ -98,7 +134,7 @@ function goService(route: string) {
         <van-icon name="calendar-o" color="var(--sm-primary)" size="1.25rem" />
         <div>
           <p class="title">{{ t('account.checkinTitle') }}</p>
-          <p class="sub">{{ t('account.checkinSub', { n: u.streak }) }}</p>
+          <p class="sub">{{ t('account.checkinSub', { n: loggedIn ? 0 : u.streak }) }}</p>
         </div>
       </div>
       <van-button size="small" round color="var(--sm-primary)" @click="showToast(t('account.checkinBtn'))">
@@ -114,6 +150,7 @@ function goService(route: string) {
     </section>
 
     <button type="button" class="lang" @click="toggleLocale">{{ t('account.switchLang') }}</button>
+    <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
   </div>
 </template>
 
@@ -136,7 +173,8 @@ function goService(route: string) {
 .user {
   display: flex;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-start;
+  padding-right: 2.25rem;
 }
 
 .avatar {
@@ -154,7 +192,9 @@ function goService(route: string) {
 
 .user h1 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  word-break: break-all;
 }
 
 .phone,

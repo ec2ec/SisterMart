@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { api } from '../api/client'
 import AuthLayout from '../components/AuthLayout.vue'
-import { authQuery, isCode, isEmail, isPhone, isStrongPassword, useCooldown } from '../composables/useAuth'
+import { authError, authQuery, isCode, isEmail, isPhone, isStrongPassword, useCooldown } from '../composables/useAuth'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -19,27 +20,30 @@ const codeSent = ref(false)
 const whatsappFallback = ref(false)
 const { left, start } = useCooldown()
 
-function sendCode() {
+async function sendCode() {
   if (left.value > 0) return
   const value = identity.value.trim()
-  if (isEmail(value)) {
-    whatsappFallback.value = false
-    codeSent.value = true
-    start()
-    showToast(t('auth.sentEmail'))
-    return
-  }
-  if (!isPhone(value)) {
+  if (!isEmail(value) && !isPhone(value)) {
     showToast(t('auth.identityInvalid'))
     return
   }
-  whatsappFallback.value = true
-  codeSent.value = true
-  start()
-  showToast(t('auth.whatsappFailedBound'))
+  const channel = isEmail(value) ? 'email' : 'whatsapp'
+  try {
+    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/auth/code', {
+      method: 'POST',
+      body: JSON.stringify({ channel, purpose: 'reset', target: value }),
+    })
+    whatsappFallback.value = Boolean(data.fallback)
+    codeSent.value = true
+    start()
+    if (data.debug_code) showToast(t('auth.debugCode', { code: data.debug_code }))
+    else showToast(data.fallback ? t('auth.whatsappFailedBound') : t('auth.sentEmail'))
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 
-function submit() {
+async function submit() {
   const value = identity.value.trim()
   if (!isEmail(value) && !isPhone(value)) {
     showToast(t('auth.identityInvalid'))
@@ -61,8 +65,16 @@ function submit() {
     showToast(t('auth.passwordMismatch'))
     return
   }
-  showToast(t('auth.resetOk'))
-  router.replace({ name: 'login', query: authQuery(route.query) })
+  try {
+    await api('/api/auth/reset', {
+      method: 'POST',
+      body: JSON.stringify({ identity: value, code: code.value.trim(), password: password.value }),
+    })
+    showToast(t('auth.resetOk'))
+    router.replace({ name: 'login', query: authQuery(route.query) })
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 </script>
 

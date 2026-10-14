@@ -3,9 +3,11 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { api, ApiError } from '../api/client'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
   afterAuthPath,
+  authError,
   authQuery,
   isCode,
   isEmail,
@@ -13,7 +15,8 @@ import {
   isStrongPassword,
   useCooldown,
 } from '../composables/useAuth'
-import { markLoggedIn } from '../composables/useFavorites'
+import { setSession, type Member } from '../composables/useSession'
+import { i18n, setLocale } from '../i18n'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -41,37 +44,46 @@ function openArticle(id: string) {
   router.push({ name: 'article', params: { id } })
 }
 
-function sendCode() {
+async function sendCode() {
   if (left.value > 0) return
-  if (mode.value === 'email') {
-    if (!isEmail(email.value)) {
-      showToast(t('auth.emailInvalid'))
+  if (mode.value === 'phone' && !whatsappFallback.value) {
+    if (!isPhone(phone.value)) {
+      showToast(t('auth.phoneInvalid'))
       return
     }
-    codeSent.value = true
-    start()
-    showToast(t('auth.sentEmail'))
-    return
-  }
-  if (!isPhone(phone.value)) {
-    showToast(t('auth.phoneInvalid'))
-    return
-  }
-  if (!whatsappFallback.value) {
-    whatsappFallback.value = true
-    showToast(t('auth.whatsappFailedNeedEmail'))
-    return
+    try {
+      await api('/api/auth/code', {
+        method: 'POST',
+        body: JSON.stringify({ channel: 'whatsapp', purpose: 'register', target: phone.value.trim() }),
+      })
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'WHATSAPP_UNAVAILABLE') {
+        whatsappFallback.value = true
+        showToast(t('auth.whatsappFailedNeedEmail'))
+        return
+      }
+      showToast(authError(t, error))
+      return
+    }
   }
   if (!isEmail(email.value)) {
     showToast(t('auth.emailInvalid'))
     return
   }
-  codeSent.value = true
-  start()
-  showToast(t('auth.sentEmail'))
+  try {
+    const data = await api<{ debug_code?: string }>('/api/auth/code', {
+      method: 'POST',
+      body: JSON.stringify({ channel: 'email', purpose: 'register', target: email.value.trim() }),
+    })
+    codeSent.value = true
+    start()
+    showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.sentEmail'))
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 
-function submit() {
+async function submit() {
   if (!agreed.value) {
     showToast(t('auth.needAgree'))
     return
@@ -80,11 +92,7 @@ function submit() {
     showToast(t('auth.phoneInvalid'))
     return
   }
-  if (mode.value === 'email' && !isEmail(email.value)) {
-    showToast(t('auth.emailInvalid'))
-    return
-  }
-  if (mode.value === 'phone' && whatsappFallback.value && !isEmail(email.value)) {
+  if ((mode.value === 'email' || whatsappFallback.value) && !isEmail(email.value)) {
     showToast(t('auth.emailInvalid'))
     return
   }
@@ -101,9 +109,27 @@ function submit() {
     return
   }
   const refCode = authQuery(route.query).ref
-  markLoggedIn()
-  showToast(refCode ? t('auth.registerOkRef', { ref: refCode }) : t('auth.registerOk'))
-  router.replace(afterAuthPath(route.query))
+  try {
+    const data = await api<{ token: string; member: Member; bound?: boolean }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        channel: mode.value,
+        email: email.value.trim(),
+        phone: phone.value.trim(),
+        password: password.value,
+        code: code.value.trim(),
+        agreed: true,
+        ref: refCode || '',
+        locale: i18n.global.locale.value,
+      }),
+    })
+    setSession(data.token, data.member)
+    if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
+    showToast(data.bound && refCode ? t('auth.registerOkRef', { ref: refCode }) : t('auth.registerOk'))
+    router.replace(afterAuthPath(route.query))
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 </script>
 

@@ -1,18 +1,16 @@
 import { reactive } from 'vue'
 import { allProducts } from '../mock/data'
 
-const SESSION = 'sm_session'
 const PENDING = 'sm_pending_fav'
 
 const liked = reactive<Record<string, boolean>>({})
 for (const product of allProducts) liked[product.id] = Boolean(product.liked)
 
 export function isLoggedIn() {
-  return localStorage.getItem(SESSION) === '1'
+  return Boolean(localStorage.getItem('sm_token'))
 }
 
 export function markLoggedIn() {
-  localStorage.setItem(SESSION, '1')
   const pending = sessionStorage.getItem(PENDING)
   if (!pending) return
   liked[pending] = true

@@ -3,9 +3,11 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { api } from '../api/client'
 import AuthLayout from '../components/AuthLayout.vue'
-import { afterAuthPath, authQuery, isCode, isEmail, isPhone, useCooldown } from '../composables/useAuth'
-import { markLoggedIn } from '../composables/useFavorites'
+import { afterAuthPath, authError, authQuery, isCode, isEmail, isPhone, useCooldown } from '../composables/useAuth'
+import { setSession, type Member } from '../composables/useSession'
+import { setLocale } from '../i18n'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -39,19 +41,27 @@ function go(name: 'register' | 'forgot' | 'article', id?: string) {
   router.push({ name, query: authQuery(route.query) })
 }
 
-function sendCode() {
+async function sendCode() {
   if (left.value > 0) return
   if (!isPhone(phone.value)) {
     showToast(t('auth.phoneInvalid'))
     return
   }
-  whatsappFallback.value = true
-  codeSent.value = true
-  start()
-  showToast(t('auth.whatsappFailedBound'))
+  try {
+    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/auth/code', {
+      method: 'POST',
+      body: JSON.stringify({ channel: 'whatsapp', purpose: 'login', target: phone.value.trim() }),
+    })
+    whatsappFallback.value = Boolean(data.fallback)
+    codeSent.value = true
+    start()
+    showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.whatsappFailedBound'))
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 
-function submit() {
+async function submit() {
   if (!agreed.value) {
     showToast(t('auth.needAgree'))
     return
@@ -79,9 +89,25 @@ function submit() {
       return
     }
   }
-  markLoggedIn()
-  showToast(t('auth.loginOk'))
-  router.replace(afterAuthPath(route.query))
+  try {
+    const data = await api<{ token: string; member: Member }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        channel: mode.value,
+        email: email.value.trim(),
+        phone: phone.value.trim(),
+        password: password.value,
+        code: code.value.trim(),
+        agreed: true,
+      }),
+    })
+    setSession(data.token, data.member)
+    if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
+    showToast(t('auth.loginOk'))
+    router.replace(afterAuthPath(route.query))
+  } catch (error) {
+    showToast(authError(t, error))
+  }
 }
 </script>
 

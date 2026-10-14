@@ -7,7 +7,8 @@ import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
 import { useLocaleText } from '../composables/useLocaleText'
-import { isLoggedIn, isFavorite, requestFavorite } from '../composables/useFavorites'
+import { isFavorite, requestFavorite } from '../composables/useFavorites'
+import { currentMember, isLoggedIn } from '../composables/useSession'
 import { allProducts, findProduct, skuKey, specsFor } from '../mock/data'
 
 const { t } = useI18n()
@@ -104,7 +105,8 @@ function toggleFav() {
 async function share() {
   if (!product.value) return
   const url = new URL(`/product/${product.value.id}`, location.origin)
-  if (isLoggedIn()) url.searchParams.set('ref', 'SM1001')
+  const promo = currentMember()?.promo_code
+  if (isLoggedIn() && promo) url.searchParams.set('ref', promo)
   const shareUrl = url.toString()
   if (navigator.share) {
     try {
