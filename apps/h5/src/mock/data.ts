@@ -236,3 +236,156 @@ export function searchProducts(keyword: string): Product[] {
     `${p.name['zh-HK']} ${p.name.en}`.toLowerCase().includes(q),
   )
 }
+
+export type Localized = { 'zh-HK': string; en: string }
+
+export type SpecOption = {
+  id: string
+  name: Localized
+  image?: string
+}
+
+export type SpecGroup = {
+  id: string
+  name: Localized
+  options: SpecOption[]
+}
+
+export type SkuQuote = {
+  key: string
+  price: number
+  compareAt: number
+  stock: number
+}
+
+export type Review = {
+  id: string
+  stars: number
+  author: string
+  body: Localized
+  images: string[]
+  follow?: Localized
+}
+
+export type ProductSpecs = {
+  compareAt: number
+  stock: number
+  tags: Localized[]
+  detail: Localized
+  groups: SpecGroup[]
+  skus: SkuQuote[]
+  reviews: Review[]
+}
+
+const serviceTags: Localized[] = [
+  { 'zh-HK': '香港包郵門檻', en: 'Free-shipping threshold' },
+  { 'zh-HK': '售後保障', en: 'After-sales cover' },
+]
+
+function quotes(price: number, pairs: [string, number, number][]): SkuQuote[] {
+  return pairs.map(([key, delta, stock]) => ({
+    key,
+    price: price + delta,
+    compareAt: price + delta + 30,
+    stock,
+  }))
+}
+
+const heartSpecs: ProductSpecs = {
+  compareAt: 99,
+  stock: 12,
+  tags: serviceTags,
+  detail: {
+    'zh-HK': '紅色愛心手鏈，鍍金鏈身配琺瑯愛心。可選顏色與鏈長，細節見下方實拍。',
+    en: 'Heart bracelet with an enamel motif on a gold-tone chain. Choose a color and length. Photos below show the details.',
+  },
+  groups: [
+    {
+      id: 'color',
+      name: { 'zh-HK': '顏色', en: 'Color' },
+      options: [
+        { id: 'red', name: { 'zh-HK': '紅色愛心', en: 'Red heart' }, image: heartBracelet.image },
+        { id: 'white', name: { 'zh-HK': '白色', en: 'White' }, image: heartBracelet.gallery?.[3] },
+        { id: 'gold', name: { 'zh-HK': '金色', en: 'Gold' }, image: heartBracelet.gallery?.[2] },
+      ],
+    },
+    {
+      id: 'size',
+      name: { 'zh-HK': '尺寸', en: 'Size' },
+      options: [
+        { id: '16', name: { 'zh-HK': '16 cm', en: '16 cm' } },
+        { id: '18', name: { 'zh-HK': '18 cm', en: '18 cm' } },
+      ],
+    },
+  ],
+  skus: quotes(69, [
+    ['red|16', 0, 12],
+    ['red|18', 10, 8],
+    ['white|16', 0, 5],
+    ['white|18', 10, 3],
+    ['gold|16', 20, 6],
+    ['gold|18', 30, 2],
+  ]),
+  reviews: [
+    {
+      id: 'r1',
+      stars: 5,
+      author: 'Coco',
+      body: { 'zh-HK': '鏈長剛好，愛心顏色和圖片一致。', en: 'The length fits, and the hearts match the photos.' },
+      images: [heartBracelet.image],
+      follow: { 'zh-HK': '戴了一週，扣環仍然穩。', en: 'After a week, the clasp still feels secure.' },
+    },
+    {
+      id: 'r2',
+      stars: 4,
+      author: 'Amy',
+      body: { 'zh-HK': '日常佩戴很輕，包裝完整。', en: 'Light for everyday wear, and the packaging was complete.' },
+      images: [],
+    },
+  ],
+}
+
+function basicSpecs(product: Product): ProductSpecs {
+  const photo = product.gallery?.[1] || product.image
+  return {
+    compareAt: product.price + 30,
+    stock: 20,
+    tags: serviceTags,
+    detail: {
+      'zh-HK': `${product.name['zh-HK']}，香港現貨。下方為細節實拍。`,
+      en: `${product.name.en}, ready to ship in Hong Kong. Detail photos are below.`,
+    },
+    groups: [
+      {
+        id: 'style',
+        name: { 'zh-HK': '款式', en: 'Style' },
+        options: [
+          { id: 'classic', name: { 'zh-HK': '經典', en: 'Classic' }, image: product.image },
+          { id: 'detail', name: { 'zh-HK': '細節款', en: 'Detail' }, image: photo },
+        ],
+      },
+    ],
+    skus: quotes(product.price, [
+      ['classic', 0, 20],
+      ['detail', 10, 9],
+    ]),
+    reviews: [
+      {
+        id: `${product.id}-r1`,
+        stars: 5,
+        author: 'Mia',
+        body: { 'zh-HK': '成色和描述一致，會再回購。', en: 'It matches the description. I would buy it again.' },
+        images: [product.image],
+      },
+    ],
+  }
+}
+
+export function specsFor(product: Product): ProductSpecs {
+  if (product.id === heartBracelet.id) return heartSpecs
+  return basicSpecs(product)
+}
+
+export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
+  return groups.map((group) => selected[group.id] || '').join('|')
+}

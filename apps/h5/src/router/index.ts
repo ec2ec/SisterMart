@@ -24,7 +24,7 @@ export const router = createRouter({
     { path: '/cart', name: 'cart', component: CartView, meta: { tab: true } },
     { path: '/account', name: 'account', component: AccountView, meta: { tab: true } },
     { path: '/search', name: 'search', component: SearchView },
-    { path: '/product/:id', name: 'product-detail', component: ProductDetailView },
+    { path: '/product/:id', name: 'product-detail', component: ProductDetailView, meta: { tab: true } },
     { path: '/products', name: 'product-list', component: ProductListView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },

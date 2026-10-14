@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AuthLayout from '../components/AuthLayout.vue'
 import { afterAuthPath, authQuery, isCode, isEmail, isPhone, useCooldown } from '../composables/useAuth'
+import { markLoggedIn } from '../composables/useFavorites'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -78,6 +79,7 @@ function submit() {
       return
     }
   }
+  markLoggedIn()
   showToast(t('auth.loginOk'))
   router.replace(afterAuthPath(route.query))
 }

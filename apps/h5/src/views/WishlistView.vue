@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '../components/ProductCard.vue'
 import SubPageNav from '../components/SubPageNav.vue'
+import { isFavorite } from '../composables/useFavorites'
 import { allProducts } from '../mock/data'
 
 const { t } = useI18n()
-const list = allProducts.filter((p) => p.liked)
+const list = computed(() => allProducts.filter((p) => isFavorite(p.id)))
 </script>
 
 <template>

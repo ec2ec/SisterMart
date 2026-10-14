@@ -13,6 +13,7 @@ import {
   isStrongPassword,
   useCooldown,
 } from '../composables/useAuth'
+import { markLoggedIn } from '../composables/useFavorites'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -100,6 +101,7 @@ function submit() {
     return
   }
   const refCode = authQuery(route.query).ref
+  markLoggedIn()
   showToast(refCode ? t('auth.registerOkRef', { ref: refCode }) : t('auth.registerOk'))
   router.replace(afterAuthPath(route.query))
 }

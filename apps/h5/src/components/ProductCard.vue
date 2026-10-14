@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { Product } from '../mock/data'
 import { useLocaleText } from '../composables/useLocaleText'
+import { isFavorite, requestFavorite } from '../composables/useFavorites'
 
 const props = defineProps<{
   product: Product
@@ -12,12 +13,18 @@ const props = defineProps<{
 const { t } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
+const route = useRoute()
 
 const name = computed(() => text(props.product.name))
 const badgeText = computed(() => (props.product.badge ? t(`badge.${props.product.badge}`) : ''))
+const liked = computed(() => isFavorite(props.product.id))
 
 function openDetail() {
   router.push({ name: 'product-detail', params: { id: props.product.id } })
+}
+
+function onWish() {
+  requestFavorite(props.product.id, route.fullPath, (to) => router.push(to))
 }
 </script>
 
@@ -26,8 +33,8 @@ function openDetail() {
     <div class="media">
       <img :src="product.image" :alt="name" />
       <span v-if="product.badge" class="badge" :class="product.badge">{{ badgeText }}</span>
-      <button class="wish" type="button" aria-label="wishlist" @click.stop>
-        <van-icon name="like-o" color="var(--sm-primary)" />
+      <button class="wish" type="button" :aria-label="t('pdp.fav')" @click.stop="onWish">
+        <van-icon :name="liked ? 'like' : 'like-o'" color="var(--sm-primary)" />
       </button>
     </div>
     <div class="meta">
