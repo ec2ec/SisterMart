@@ -137,18 +137,28 @@ function goList(categoryId?: string) {
   background: #111;
 }
 
+.hero-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.05) 40%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.05) 55%);
+  pointer-events: none;
+}
+
 .hero-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  filter: brightness(0.78);
 }
 
 .hero-copy {
   position: absolute;
   left: 16px;
   bottom: 28px;
+  z-index: 1;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   max-width: 80%;
