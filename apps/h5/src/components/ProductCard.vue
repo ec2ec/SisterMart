@@ -16,7 +16,7 @@ const router = useRouter()
 const route = useRoute()
 
 const name = computed(() => text(props.product.name))
-const badgeText = computed(() => (props.product.badge ? t(`badge.${props.product.badge}`) : ''))
+const badges = computed(() => props.product.badges ?? [])
 const liked = computed(() => isFavorite(props.product.id))
 
 function openDetail() {
@@ -32,7 +32,9 @@ function onWish() {
   <article class="card" role="link" tabindex="0" @click="openDetail" @keydown.enter="openDetail">
     <div class="media">
       <img :src="product.image" :alt="name" />
-      <span v-if="product.badge" class="badge" :class="product.badge">{{ badgeText }}</span>
+      <span v-if="badges.length" class="badges">
+        <span v-for="badge in badges" :key="badge" class="badge" :class="badge">{{ t(`badge.${badge}`) }}</span>
+      </span>
       <button class="wish" type="button" :aria-label="t('pdp.fav')" @click.stop="onWish">
         <van-icon :name="liked ? 'like' : 'like-o'" color="var(--sm-primary)" />
       </button>
@@ -68,19 +70,28 @@ function onWish() {
   display: block;
 }
 
-.badge {
+.badges {
   position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0.1875rem 0.5rem;
-  font-size: 0.6875rem;
-  color: #fff;
+  top: 0.375rem;
+  left: 0.375rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.badge {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.5rem;
   background: var(--sm-primary);
-  border-bottom-right-radius: 0.5rem;
+  color: #fff;
+  font-size: 0.625rem;
+  line-height: 1.4;
 }
 
 .badge.editor {
-  background: #6b4f3a;
+  background: var(--sm-badge-alt);
 }
 
 .wish {
@@ -121,7 +132,7 @@ function onWish() {
 
 .price {
   font-size: 0.875rem;
-  color: var(--sm-primary);
+  color: var(--sm-text);
   font-weight: 700;
 }
 

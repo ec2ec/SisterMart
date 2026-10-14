@@ -17,7 +17,7 @@ function onChange(name: string | number) {
 </script>
 
 <template>
-  <van-tabbar :model-value="active" active-color="var(--sm-primary)" inactive-color="#666" @change="onChange">
+  <van-tabbar :model-value="active" active-color="var(--sm-primary)" inactive-color="#8a8378" @change="onChange">
     <van-tabbar-item name="home" icon="home-o">{{ t('tab.home') }}</van-tabbar-item>
     <van-tabbar-item name="category" icon="apps-o">{{ t('tab.category') }}</van-tabbar-item>
     <van-tabbar-item name="cart" icon="shopping-cart-o" :badge="cartCount || ''">{{ t('tab.cart') }}</van-tabbar-item>

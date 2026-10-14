@@ -149,15 +149,15 @@ function goList(categoryId?: string) {
   text-align: center;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--sm-primary);
+  color: var(--sm-text);
   background: var(--sm-promo-bg);
 }
 
 .countdown {
   padding: 0.125rem 0.5rem;
   border-radius: 0.375rem;
-  background: #f3f3f3;
-  color: var(--sm-primary);
+  background: var(--sm-primary-soft);
+  color: var(--sm-text-secondary);
   font-weight: 700;
   font-size: 0.8125rem;
 }

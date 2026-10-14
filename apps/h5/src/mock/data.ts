@@ -6,7 +6,7 @@ export type Product = {
   image: string
   gallery?: string[]
   category?: string
-  badge?: 'flash' | 'hot' | 'new' | 'editor'
+  badges?: ('flash' | 'hot' | 'new' | 'editor')[]
   liked?: boolean
 }
 
@@ -38,7 +38,7 @@ const cushionNecklace: Product = {
   image: mockImage('產品圖-1.jpg'),
   gallery: [mockImage('產品圖-1.jpg'), mockImage('產品圖-1-詳情.jpg'), mockImage('產品圖-1-詳情2.jpg')],
   category: 'necklaces',
-  badge: 'flash',
+  badges: ['flash'],
   liked: true,
 }
 
@@ -55,7 +55,7 @@ const gourdNecklace: Product = {
     mockImage('產品圖-2-詳情3.jpg'),
   ],
   category: 'necklaces',
-  badge: 'new',
+  badges: ['new', 'editor'],
   liked: true,
 }
 
@@ -72,7 +72,7 @@ const cloverBracelet: Product = {
     mockImage('產品圖-3-詳情3.jpg'),
   ],
   category: 'bracelets',
-  badge: 'hot',
+  badges: ['hot'],
   liked: true,
 }
 
@@ -89,7 +89,7 @@ const heartBracelet: Product = {
     mockImage('產品圖-4-詳情3.jpg'),
   ],
   category: 'bracelets',
-  badge: 'flash',
+  badges: ['flash'],
   liked: true,
 }
 

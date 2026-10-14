@@ -282,7 +282,7 @@ h1 {
 }
 
 .price-line strong {
-  color: var(--sm-primary);
+  color: var(--sm-text);
   font-size: 1.25rem;
 }
 

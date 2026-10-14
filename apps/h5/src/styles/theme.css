@@ -4,16 +4,18 @@ html {
 }
 
 :root {
-  --sm-primary: #ee502f;
-  --sm-primary-soft: #fff1ed;
-  --sm-promo-bg: #ffe8e0;
-  --sm-text: #1a1a1a;
-  --sm-text-secondary: #666666;
-  --sm-text-muted: #999999;
-  --sm-border: #f0f0f0;
+  --sm-primary: #16162b;
+  --sm-primary-soft: #efeae3;
+  --sm-promo-bg: #eef2fb;
+  --sm-text: #1c1c1c;
+  --sm-text-secondary: #6d675f;
+  --sm-text-muted: #8a8378;
+  --sm-border: #e3ddd4;
   --sm-bg: #ffffff;
-  --sm-bg-soft: #f7f8fa;
-  --sm-danger: #ee0a24;
+  --sm-bg-soft: #f6f3ee;
+  --sm-badge-alt: #6b4a2a;
+  --sm-accent: #c45c4a;
+  --sm-danger: #c45c4a;
   --sm-radius: 0.75rem;
   --sm-header-h: calc(3.25rem + env(safe-area-inset-top, 0rem));
   --sm-tabbar-h: 3.125rem;
@@ -45,9 +47,10 @@ html {
   --van-font-size-md: 0.875rem;
   --van-font-size-lg: 1rem;
   --van-tabbar-item-active-color: var(--sm-primary);
-  --van-sidebar-selected-border-color: var(--sm-primary);
+  --van-sidebar-selected-border-color: var(--sm-accent);
   --van-checkbox-checked-icon-color: var(--sm-primary);
-  --van-submit-bar-button-color: linear-gradient(90deg, #ff6a3d, #ee502f);
+  --van-submit-bar-button-color: var(--sm-primary);
+  --van-badge-background: var(--sm-accent);
   --van-stepper-button-round-theme-color: var(--sm-primary);
 }
 
@@ -87,7 +90,7 @@ a {
 }
 
 .price {
-  color: var(--sm-primary);
+  color: var(--sm-text);
   font-weight: 700;
 }
 
