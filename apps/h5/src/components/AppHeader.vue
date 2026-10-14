@@ -69,8 +69,8 @@ function goSearch() {
 }
 
 .app-header.overlay {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 100%);
-  color: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 100%);
+  color: #111;
 }
 
 .logo {
@@ -89,7 +89,7 @@ function goSearch() {
 }
 
 .overlay .logo-sister {
-  color: #fff;
+  color: #111;
 }
 
 .logo-mart {
@@ -97,7 +97,7 @@ function goSearch() {
 }
 
 .overlay .logo-mart {
-  color: #ffb4a2;
+  color: var(--sm-primary);
 }
 
 .search {
@@ -122,6 +122,6 @@ function goSearch() {
 }
 
 .overlay .actions {
-  color: #fff;
+  color: #222;
 }
 </style>

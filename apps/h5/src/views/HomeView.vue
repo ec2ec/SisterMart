@@ -27,7 +27,7 @@ const flashVisible = computed(() => flashProducts.slice(0, 4))
 
 const feedList = computed(() => {
   if (feedTab.value === 1) return collectionProducts
-  if (feedTab.value === 2) return [...feedProducts, ...flashProducts]
+  if (feedTab.value === 2) return flashProducts
   return feedProducts
 })
 
@@ -47,11 +47,6 @@ function goList(categoryId?: string) {
         <van-swipe-item v-for="b in banners" :key="b.id">
           <div class="hero-item">
             <img :src="b.image" alt="" />
-            <div class="hero-copy">
-              <p class="eyebrow">{{ t('home.bannerEyebrow') }}</p>
-              <h2>{{ t('home.bannerTitle') }}</h2>
-              <p class="sub">{{ t('home.bannerSub') }}</p>
-            </div>
           </div>
         </van-swipe-item>
       </van-swipe>
@@ -133,56 +128,20 @@ function goList(categoryId?: string) {
 
 .hero {
   width: 100%;
+  height: calc(100vw * 589 / 1600);
 }
 
 .hero-item {
-  position: relative;
-  height: 16.25rem;
-  background: #111;
-}
-
-.hero-item::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.05) 40%, rgba(0, 0, 0, 0.55) 100%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.05) 55%);
-  pointer-events: none;
+  height: 100%;
+  background: #f7f4f0;
 }
 
 .hero-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
-}
-
-.hero-copy {
-  position: absolute;
-  left: 1rem;
-  bottom: 1.75rem;
-  z-index: 1;
-  color: #fff;
-  text-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.45);
-  max-width: 80%;
-}
-
-.hero-copy .eyebrow {
-  margin: 0;
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
-}
-
-.hero-copy h2 {
-  margin: 0.25rem 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.hero-copy .sub {
-  margin: 0;
-  font-size: 0.75rem;
 }
 
 .promo {

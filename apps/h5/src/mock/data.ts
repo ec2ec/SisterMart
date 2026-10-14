@@ -4,8 +4,14 @@ export type Product = {
   price: number
   sold: string
   image: string
+  gallery?: string[]
+  category?: string
   badge?: 'flash' | 'hot' | 'new' | 'editor'
   liked?: boolean
+}
+
+function mockImage(file: string) {
+  return `/mock/${encodeURIComponent(file)}`
 }
 
 export type CategoryNode = {
@@ -20,132 +26,107 @@ export type CategoryNode = {
 }
 
 export const banners = [
-  {
-    id: 'b1',
-    image: '/products/hero-bracelet.jpg',
-    eyebrow: true,
-  },
-  {
-    id: 'b2',
-    image: '/products/flash-bracelet.jpg',
-    eyebrow: true,
-  },
-  {
-    id: 'b3',
-    image: '/products/coll-pearl.jpg',
-    eyebrow: true,
-  },
+  { id: 'b1', image: mockImage('首頁頂部廣告圖-1.png') },
+  { id: 'b2', image: mockImage('首頁頂部廣告圖-2.png') },
 ]
 
-export const flashProducts: Product[] = [
-  {
-    id: 'p-flash-1',
-    name: { 'zh-HK': '手鏈', en: 'Bracelet' },
-    price: 49,
-    sold: '80+',
-    image: '/products/flash-bracelet.jpg',
-    badge: 'flash',
-    liked: true,
-  },
-  {
-    id: 'p-flash-2',
-    name: { 'zh-HK': '耳環', en: 'Earrings' },
-    price: 39,
-    sold: '20+',
-    image: '/products/flash-earrings.jpg',
-    badge: 'hot',
-    liked: true,
-  },
-  {
-    id: 'p-flash-3',
-    name: { 'zh-HK': '項鏈', en: 'Necklace' },
-    price: 128,
-    sold: '56',
-    image: '/products/coll-pearl.jpg',
-    badge: 'flash',
-    liked: true,
-  },
-  {
-    id: 'p-flash-4',
-    name: { 'zh-HK': '戒指', en: 'Ring' },
-    price: 88,
-    sold: '40+',
-    image: '/products/hot-ring.jpg',
-    badge: 'hot',
-    liked: false,
-  },
-]
+const cushionNecklace: Product = {
+  id: 'p1',
+  name: { 'zh-HK': '方鑽項鏈', en: 'Cushion Necklace' },
+  price: 128,
+  sold: '56',
+  image: mockImage('產品圖-1.jpg'),
+  gallery: [mockImage('產品圖-1.jpg'), mockImage('產品圖-1-詳情.jpg'), mockImage('產品圖-1-詳情2.jpg')],
+  category: 'necklaces',
+  badge: 'flash',
+  liked: true,
+}
+
+const gourdNecklace: Product = {
+  id: 'p2',
+  name: { 'zh-HK': '葫蘆項鏈', en: 'Gourd Necklace' },
+  price: 128,
+  sold: '88',
+  image: mockImage('產品圖-2.jpg'),
+  gallery: [
+    mockImage('產品圖-2.jpg'),
+    mockImage('產品圖-2-詳情1.jpg'),
+    mockImage('產品圖-2-詳情2.jpg'),
+    mockImage('產品圖-2-詳情3.jpg'),
+  ],
+  category: 'necklaces',
+  badge: 'new',
+  liked: true,
+}
+
+const cloverBracelet: Product = {
+  id: 'p3',
+  name: { 'zh-HK': '四葉草手鏈', en: 'Clover Bracelet' },
+  price: 49,
+  sold: '80+',
+  image: mockImage('產品圖-3.jpg'),
+  gallery: [
+    mockImage('產品圖-3.jpg'),
+    mockImage('產品圖-3-詳情.jpg'),
+    mockImage('產品圖-3-詳情2.jpg'),
+    mockImage('產品圖-3-詳情3.jpg'),
+  ],
+  category: 'bracelets',
+  badge: 'hot',
+  liked: true,
+}
+
+const heartBracelet: Product = {
+  id: 'p4',
+  name: { 'zh-HK': '紅心手鏈', en: 'Heart Bracelet' },
+  price: 69,
+  sold: '40+',
+  image: mockImage('產品圖-4.jpg'),
+  gallery: [
+    mockImage('產品圖-4.jpg'),
+    mockImage('產品圖-4-詳情1.jpg'),
+    mockImage('產品圖-4-詳情2.jpg'),
+    mockImage('產品圖-4-詳情3.jpg'),
+  ],
+  category: 'bracelets',
+  badge: 'flash',
+  liked: true,
+}
+
+export const flashProducts: Product[] = [heartBracelet, cloverBracelet, cushionNecklace, gourdNecklace]
 
 export const homeCategories = [
-  { id: 'necklaces', name: { 'zh-HK': '項鏈', en: 'Necklaces' }, image: '/products/cat-necklace.jpg' },
-  { id: 'bracelets', name: { 'zh-HK': '手鏈', en: 'Bracelets' }, image: '/products/cat-bracelet.jpg' },
+  { id: 'necklaces', name: { 'zh-HK': '項鏈', en: 'Necklaces' }, image: cushionNecklace.image },
+  { id: 'bracelets', name: { 'zh-HK': '手鏈', en: 'Bracelets' }, image: heartBracelet.image },
   { id: 'earrings', name: { 'zh-HK': '耳環', en: 'Earrings' }, image: '/products/cat-earrings.jpg' },
   { id: 'rings', name: { 'zh-HK': '戒指', en: 'Rings' }, image: '/products/cat-rings.jpg' },
   { id: 'scarves', name: { 'zh-HK': '頭巾', en: 'Scarves' }, image: '/products/cat-scarves.jpg' },
   { id: 'bags', name: { 'zh-HK': '包袋', en: 'Bags' }, image: '/products/cat-bags.jpg' },
 ]
 
-export const collectionProducts: Product[] = [
-  {
-    id: 'p-col-1',
-    name: { 'zh-HK': '葫蘆項鍊', en: 'Pearl Necklace' },
-    price: 128,
-    sold: '88',
-    image: '/products/coll-gourd.jpg',
-    badge: 'new',
-    liked: true,
-  },
-  {
-    id: 'p-col-2',
-    name: { 'zh-HK': '珍珠項鍊', en: 'Pearl Strand' },
-    price: 158,
-    sold: '56',
-    image: '/products/coll-pearl.jpg',
-    badge: 'editor',
-    liked: true,
-  },
-]
+export const collectionProducts: Product[] = [cushionNecklace, gourdNecklace]
 
-export const feedProducts: Product[] = [
-  {
-    id: 'p-hot-1',
-    name: { 'zh-HK': '鑽戒', en: 'Halo Ring' },
-    price: 299,
-    sold: '100+',
-    image: '/products/hot-ring.jpg',
-    badge: 'hot',
-    liked: true,
-  },
-  {
-    id: 'p-hot-2',
-    name: { 'zh-HK': '愛心耳環', en: 'Heart Drops' },
-    price: 89,
-    sold: '64',
-    image: '/products/hot-drops.jpg',
-    badge: 'hot',
-    liked: true,
-  },
-]
+export const feedProducts: Product[] = [cloverBracelet, heartBracelet]
 
 export const categories: CategoryNode[] = [
   {
     id: 'bracelets',
     name: { 'zh-HK': '手鏈', en: 'Bracelets' },
-    image: '/products/cat-bracelet.jpg',
+    image: heartBracelet.image,
     children: [
-      { id: 'b-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/sub-all-brace.jpg' },
-      { id: 'b-heart', name: { 'zh-HK': '愛心手鏈', en: 'Heart' }, image: '/products/sub-heart-brace.jpg' },
+      { id: 'b-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: cloverBracelet.image },
+      { id: 'b-heart', name: { 'zh-HK': '愛心手鏈', en: 'Heart' }, image: heartBracelet.image },
       { id: 'b-gold', name: { 'zh-HK': '金珠手鏈', en: 'Gold Link' }, image: '/products/sub-gold-bead.jpg' },
     ],
   },
   {
     id: 'necklaces',
     name: { 'zh-HK': '項鏈', en: 'Necklaces' },
-    image: '/products/cat-necklace.jpg',
+    image: cushionNecklace.image,
     children: [
-      { id: 'n-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/sub-all-neck.jpg' },
-      { id: 'n-gourd', name: { 'zh-HK': '葫蘆項鏈', en: 'Pearls' }, image: '/products/sub-gourd.jpg' },
-      { id: 'n-square', name: { 'zh-HK': '方鑽項鏈', en: 'Gemstone' }, image: '/products/sub-square.jpg' },
+      { id: 'n-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: cushionNecklace.image },
+      { id: 'n-gourd', name: { 'zh-HK': '葫蘆項鏈', en: 'Gourd' }, image: gourdNecklace.image },
+      { id: 'n-square', name: { 'zh-HK': '方鑽項鏈', en: 'Cushion' }, image: cushionNecklace.image },
       { id: 'n-pearl', name: { 'zh-HK': '珍珠項鏈', en: 'Heart' }, image: '/products/sub-pearl.jpg' },
       { id: 'n-clavicle', name: { 'zh-HK': '鎖骨鏈', en: 'Layered' }, image: '/products/sub-clavicle.jpg' },
       { id: 'n-heart', name: { 'zh-HK': '愛心項鏈', en: 'Moon' }, image: '/products/sub-heart-neck.jpg' },
@@ -241,12 +222,8 @@ export const accountMock = {
   toShipBadge: 1,
 }
 
-/** 全站 Mock 商品池（详情 / 搜索 / 列表共用） */
-export const allProducts: Product[] = [
-  ...flashProducts,
-  ...collectionProducts,
-  ...feedProducts,
-]
+/** 全站 Mock 商品池（详情 / 搜索 / 列表共用，與首頁各區塊共用同一批商品） */
+export const allProducts: Product[] = [cushionNecklace, gourdNecklace, cloverBracelet, heartBracelet]
 
 export function findProduct(id: string): Product | undefined {
   return allProducts.find((p) => p.id === id) ?? allProducts[0]

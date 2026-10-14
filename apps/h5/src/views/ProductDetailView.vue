@@ -14,12 +14,17 @@ const router = useRouter()
 
 const product = computed(() => findProduct(String(route.params.id || '')))
 const name = computed(() => (product.value ? text(product.value.name) : ''))
+const gallery = computed(() => product.value?.gallery ?? (product.value ? [product.value.image] : []))
 </script>
 
 <template>
   <div class="page" v-if="product">
     <SubPageNav :title="t('pages.productDetail')" />
-    <img class="cover" :src="product.image" :alt="name" />
+    <van-swipe class="gallery" :autoplay="0" indicator-color="var(--sm-primary)">
+      <van-swipe-item v-for="(src, index) in gallery" :key="`${product.id}-${index}`">
+        <img :src="src" :alt="name" />
+      </van-swipe-item>
+    </van-swipe>
     <div class="body">
       <h1>{{ name }}</h1>
       <p class="price">HK$ {{ product.price }}</p>
@@ -39,12 +44,17 @@ const name = computed(() => (product.value ? text(product.value.name) : ''))
 </template>
 
 <style scoped>
-.cover {
+.gallery {
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  height: calc(100vw * 4 / 3);
+  background: #f6f6f6;
+}
+
+.gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
-  background: #f5f5f5;
 }
 
 .body {
