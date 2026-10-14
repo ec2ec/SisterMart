@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SisterMart H5 頁面框架圖</title>
+<style>
+  :root {
+    --ink: #1c1c1c;
+    --muted: #6d675f;
+    --line: #e3ddd4;
+    --fill: #efeae3;
+    --fill-2: #e4ddd3;
+    --navy: #16162b;
+    --paper: #f6f3ee;
+    --phone: 390px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--paper);
+    font: 14px/1.45 "Segoe UI", "PingFang HK", "Microsoft JhengHei", sans-serif;
+  }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  nav {
+    position: sticky; top: 0; height: 100vh; overflow: auto;
+    background: #fff; border-right: 1px solid var(--line); padding: 16px 12px 32px;
+  }
+  nav h1 { font-size: 15px; margin: 0 8px 4px; }
+  nav .sub { color: var(--muted); font-size: 12px; margin: 0 8px 12px; }
+  nav h2 { font-size: 11px; letter-spacing: .04em; color: var(--muted); margin: 14px 8px 6px; font-weight: 600; }
+  nav button {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--ink); font: inherit;
+  }
+  nav button.on { background: var(--navy); color: #fff; }
+  .stage { padding: 28px 32px 64px; }
+  .sheet { display: none; gap: 32px; align-items: flex-start; }
+  .sheet.on { display: flex; }
+  .meta { width: 280px; flex: none; }
+  .meta h2 { margin: 0 0 8px; font-size: 22px; }
+  .meta p { margin: 0 0 10px; color: #3f3a34; }
+  .meta ul { margin: 0; padding-left: 18px; color: #3f3a34; }
+  .meta li { margin: 4px 0; }
+  .phone {
+    width: var(--phone); height: 820px; overflow: auto; background: #fff;
+    border: 1px solid #d9d3ca; border-radius: 28px; position: relative;
+  }
+  .top, .bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px; background: #fff; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
+  .search {
+    flex: 1; height: 34px; border-radius: 17px; background: var(--fill);
+    color: var(--muted); font-size: 12px; display: flex; align-items: center; padding: 0 12px; min-width: 0;
+  }
+  .head-ico {
+    width: 28px; height: 28px; display: grid; place-items: center;
+    font-size: 16px; flex: none; position: relative; line-height: 1;
+  }
+  .head-ico .dot {
+    position: absolute; top: 1px; right: 1px; width: 7px; height: 7px;
+    border-radius: 4px; background: #c45c4a;
+  }
+  .cate { display: flex; overflow: hidden; padding: 0; }
+  .cate-side { width: 86px; flex: none; overflow: auto; background: #f6f4f0; border-right: 1px solid var(--line); }
+  .cate-side div { position: relative; padding: 14px 6px; text-align: center; font-size: 12px; color: #3f3a34; }
+  .cate-side .on { background: #fff; color: var(--navy); font-weight: 700; }
+  .cate-side .on::before {
+    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
+    border-radius: 2px; background: #c45c4a;
+  }
+  .cate-main { flex: 1; overflow: auto; padding: 12px 8px 16px; }
+  .cate-main > b { display: block; text-align: center; font-size: 14px; margin: 2px 0 12px; }
+  .cate-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; }
+  .cate-grid div { text-align: center; font-size: 11px; color: #3f3a34; }
+  .cate-grid i { display: block; width: 52px; height: 52px; margin: 0 auto 6px; border-radius: 8px; background: var(--fill-2); }
+  .ico {
+    width: 28px; height: 28px; border-radius: 14px; background: var(--fill);
+    display: grid; place-items: center; font-size: 13px; flex: none;
+  }
+  .hero { height: 168px; margin: 12px; border-radius: 10px; background: var(--fill-2); display: grid; place-items: center; color: var(--muted); }
+  .dots { text-align: center; color: var(--muted); letter-spacing: 4px; margin-top: -6px; }
+  .strip { margin: 8px 12px; background: #eef2fb; border-radius: 6px; padding: 8px 10px; font-size: 12px; text-align: center; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 12px 8px; }
+  .sec b { font-size: 16px; }
+  .sec span, .more { color: var(--muted); font-size: 12px; }
+  .circles { display: flex; gap: 10px; overflow: hidden; padding: 4px 12px 8px; }
+  .circles div { width: 52px; text-align: center; font-size: 11px; color: #3f3a34; }
+  .circles i { display: block; width: 52px; height: 52px; border-radius: 26px; background: var(--fill-2); margin-bottom: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 12px; }
+  .card .pic { height: 120px; background: var(--fill-2); border-radius: 8px; position: relative; }
+  .card .pic em { position: absolute; left: 6px; top: 6px; font-style: normal; font-size: 10px; background: var(--navy); color: #fff; border-radius: 8px; padding: 1px 6px; }
+  .card .pic em.alt { top: 26px; background: #6b4a2a; }
+  .card .fav {
+    position: absolute; right: 6px; top: 6px; width: 24px; height: 24px;
+    border-radius: 12px; background: #fff; display: grid; place-items: center; font-size: 14px;
+  }
+  .price-line { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; margin-top: 2px; }
+  .price-line span { color: var(--muted); font-size: 11px; }
+  .phone.shell { display: flex; flex-direction: column; overflow: hidden; }
+  .phone.shell .body { flex: 1; overflow: auto; min-height: 0; }
+  .phone.shell .body.cate { overflow: hidden; }
+  .phone.shell .top, .phone.shell .bar, .phone.shell .foot { position: static; }
+  .card .fav { font-style: normal; }
+  .tabbar {
+    display: grid; grid-template-columns: repeat(4, 1fr); flex: none;
+    border-top: 1px solid var(--line); background: #fff;
+    padding: 6px 0 8px;
+  }
+  .tabbar > div {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 11px; line-height: 1.2; color: #8a8378;
+  }
+  .tabbar i {
+    width: 22px; height: 22px; border-radius: 11px; background: #f3efe8;
+    display: grid; place-items: center; font-style: normal; color: #3f3a34; position: relative;
+  }
+  .tabbar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+  .tabbar .on { color: var(--navy); font-weight: 700; }
+  .tabbar .on i { background: var(--navy); color: #fff; }
+  .tabbar .bag b {
+    position: absolute; top: -4px; right: -8px; min-width: 14px; height: 14px;
+    border-radius: 7px; background: #c45c4a; color: #fff; font-size: 9px; font-weight: 700;
+    display: grid; place-items: center; padding: 0 3px;
+  }
+  .card p { margin: 6px 0 0; font-size: 12px; }
+  .card strong { font-size: 13px; }
+  .tabs { display: flex; gap: 14px; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .tabs .on { font-weight: 700; border-bottom: 2px solid var(--navy); padding-bottom: 6px; }
+  .subbox { margin: 12px; background: #f3efe8; border-radius: 12px; padding: 14px; }
+  .links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; padding: 8px 16px 16px; color: #5c564e; font-size: 13px; }
+  .slogan { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 12px 20px; }
+  .auth { padding: 28px 22px 24px; }
+  .auth h3 { margin: 18px 0 4px; font-size: 20px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .field { height: 42px; border-radius: 8px; background: #f4f7ff; margin: 8px 0; display: flex; align-items: center; padding: 0 12px; color: #7b8494; font-size: 13px; }
+  .lab { font-size: 13px; margin-top: 12px; }
+  .right { text-align: right; font-size: 13px; margin: 4px 0 12px; }
+  .btn { height: 44px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; margin: 12px 0; font-weight: 600; }
+  .btn.line { background: #fff; color: var(--navy); border: 1px solid var(--navy); }
+  .btn.ghost { background: var(--fill); color: var(--ink); }
+  .center { text-align: center; }
+  .check { font-size: 12px; display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; }
+  .box { width: 14px; height: 14px; border: 1px solid #b9b2a8; border-radius: 3px; flex: none; margin-top: 2px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--fill); border-radius: 8px; padding: 3px; margin-top: 12px; }
+  .seg span { text-align: center; padding: 6px; border-radius: 6px; font-size: 13px; }
+  .seg .on { background: #fff; font-weight: 700; }
+  .pad { padding: 12px; }
+  .sku { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sku span, .chip { border: 1px solid var(--line); border-radius: 14px; padding: 4px 10px; font-size: 12px; }
+  .sku .on, .chip.on { border-color: var(--navy); font-weight: 700; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .tags span { background: var(--fill); border-radius: 4px; padding: 2px 6px; font-size: 11px; }
+  .block { background: var(--fill); border-radius: 8px; min-height: 72px; display: grid; place-items: center; color: var(--muted); margin: 8px 0; }
+  .foot {
+    position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 12px;
+    background: #fff; border-top: 1px solid var(--line);
+  }
+  .foot .btn { flex: 1; margin: 0; }
+  .lineitem { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+  .lineitem .pic { width: 72px; height: 72px; background: var(--fill-2); border-radius: 8px; flex: none; }
+  .grow { flex: 1; min-width: 0; }
+  .step { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 12px; }
+  .step b, .step i { padding: 2px 8px; font-style: normal; }
+  .bad { background: #f7f1e8; }
+  .sum { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+  .cardrow { margin: 0 12px 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .timeline { padding: 8px 12px 16px; }
+  .timeline div { display: flex; gap: 10px; padding-bottom: 14px; }
+  .timeline i { width: 10px; height: 10px; border-radius: 5px; background: var(--navy); margin-top: 4px; flex: none; }
+  .menu button, .menu .item {
+    width: 100%; text-align: left; background: #fff; border: 0; border-bottom: 1px solid var(--line);
+    padding: 14px 12px; font: inherit; display: flex; justify-content: space-between;
+  }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px; }
+  .stats div { background: var(--fill); border-radius: 8px; padding: 10px 8px; text-align: center; font-size: 12px; }
+  .stats strong { display: block; font-size: 16px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px 12px 12px; }
+  .cal i { height: 32px; background: var(--fill); border-radius: 6px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
+  .cal .on { background: var(--navy); color: #fff; }
+  .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+  .drawer { position: absolute; inset: 0 18% 0 0; background: #fff; padding: 16px; }
+  .jump { cursor: pointer; }
+  .foot .ico-btn {
+    width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px;
+    display: grid; place-items: center; flex: none; background: #fff; font-size: 18px;
+  }
+  .viewer { background: #111; color: #fff; min-height: 100%; }
+  .viewer .bar { background: #111; color: #fff; border-bottom-color: #333; }
+  .viewer .stage-img { height: 520px; margin: 24px 16px; background: #2a2a2a; border-radius: 8px; display: grid; place-items: center; }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    nav { position: relative; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+    .sheet.on { flex-direction: column; }
+    .meta { width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+  <h1>SisterMart H5</h1>
+  <p class="sub">頁面框架圖 · PRD 1.4</p>
+  <h2>賬號</h2>
+  <button data-id="login">登錄</button>
+  <button data-id="register">註冊</button>
+  <button data-id="forgot">忘記密碼</button>
+  <h2>商城</h2>
+  <button data-id="home">首頁</button>
+  <button data-id="drawer">分類</button>
+  <button data-id="list">列表 / 搜索</button>
+  <button data-id="pdp">商品詳情</button>
+  <button data-id="zoom">商品圖全屏</button>
+  <h2>交易</h2>
+  <button data-id="cart">購物車</button>
+  <button data-id="checkout">確認訂單</button>
+  <button data-id="pay">支付</button>
+  <button data-id="paid">支付結果</button>
+  <h2>訂單</h2>
+  <button data-id="orders">訂單列表</button>
+  <button data-id="order">訂單詳情</button>
+  <button data-id="logistics">物流</button>
+  <button data-id="refund">申請售後</button>
+  <button data-id="refund-view">售後進度</button>
+  <button data-id="review">評價 / 追評</button>
+  <h2>營銷</h2>
+  <button data-id="flash">秒殺列表</button>
+  <button data-id="flash-pdp">秒殺詳情</button>
+  <button data-id="coupons">領券中心</button>
+  <button data-id="my-coupons">我的優惠券</button>
+  <button data-id="points-mall">積分商城</button>
+  <button data-id="points-pdp">積分商品詳情</button>
+  <button data-id="checkin">簽到</button>
+  <button data-id="points-log">積分明細</button>
+  <h2>分銷</h2>
+  <button data-id="dist">分銷主頁</button>
+  <button data-id="poster">推廣海報</button>
+  <button data-id="commission">佣金明細</button>
+  <button data-id="withdraw">提現</button>
+  <button data-id="team">下級列表</button>
+  <button data-id="dist-orders">推廣訂單</button>
+  <button data-id="rank">佣金排行</button>
+  <h2>我的 / 內容</h2>
+  <button data-id="me">個人中心</button>
+  <button data-id="profile">編輯資料</button>
+  <button data-id="address">收貨地址</button>
+  <button data-id="address-edit">新增地址</button>
+  <button data-id="fav">收藏</button>
+  <button data-id="history">瀏覽足跡</button>
+  <button data-id="inbox">消息</button>
+  <button data-id="inbox-order">訂單消息詳情</button>
+  <button data-id="inbox-system">系統消息詳情</button>
+  <button data-id="bills">賬單</button>
+  <button data-id="settings">設置</button>
+  <button data-id="article">文章 / 協議</button>
+</nav>
+<main class="stage" id="stage">
+
+<section class="sheet" id="login">
+  <div class="meta">
+    <h2>登錄</h2>
+    <p>無商城頂欄和頁腳，版式對齊 Bagisto 登錄頁：店名居中、標題、說明、表單、主按鈕、註冊入口、底部標語。</p>
+    <ul>
+      <li>PRD 增加郵箱 / 手機切換，以及協議勾選。</li>
+      <li>郵箱用密碼。手機用 WhatsApp 驗證碼。</li>
+      <li>不提供遊客結帳。</li>
+    </ul>
+  </div>
+  <div class="phone">
+    <div class="auth">
+      <div class="center logo">SisterMart</div>
+      <div class="seg"><span class="on">郵箱</span><span>手機</span></div>
+      <h3>用戶登錄</h3>
+      <p class="muted">如果您已經有帳戶，請使用您的電子郵件登錄。</p>
+      <div class="lab">電子郵件 *</div>
+      <div class="field">soec@163.com</div>
+      <div class="lab">密碼 *</div>
+      <div class="field">••••••••　　　　👁</div>
+      <div class="right jump" data-id="forgot">忘記密碼？</div>
+      <label class="check"><i class="box"></i><span>我已閱讀並同意《用戶協議》《私隱協議》</span></label>
+      <div class="btn jump" data-id="home">登錄</div>
+      <p class="center">新用戶？<b class="jump" data-id="register">創建您的帳戶</b></p>
+      <p class="slogan">* 我們守護您的美麗 *</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="register">
+  <div class="meta">
+    <h2>註冊</h2>
+    <p>沿用登錄頁的留白和主按鈕。郵箱或手機二選一，都要驗證碼和密碼。</p>
+    <ul>
+      <li>手機驗證碼先發 WhatsApp。失敗後出現郵箱欄，改發郵件。</li>
+      <li>連結帶 ref 時，註冊成功綁定上級。</li>
+    </ul>
+  </div>
+  <div class="phone">
+    <div class="auth">
+      <div class="center logo">SisterMart</div>
+      <h3>創建您的帳戶</h3>
+      <div class="seg"><span class="on">郵箱</span><span>手機</span></div>
+      <div class="lab">電子郵件 *</div>
+      <div class="field">email@example.com</div>
+      <div class="lab">驗證碼 *</div>
+      <div class="field">6 位驗證碼　　　發送</div>
+      <div class="lab">密碼 *</div>
+      <div class="field">至少 8 位，含字母和數字</div>
+      <label class="check"><i class="box"></i><span>我已閱讀並同意《用戶協議》《私隱協議》</span></label>
+      <div class="btn">註冊</div>
+      <p class="muted">手機註冊時，WhatsApp 發送失敗會要求改填郵箱收驗證碼。</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="forgot">
+  <div class="meta">
+    <h2>忘記密碼</h2>
+    <p>對齊 Bagisto：先驗證身份，再設定新密碼。同一頁展示兩個步驟的框架。</p>
+  </div>
+  <div class="phone">
+    <div class="auth">
+      <div class="center logo">SisterMart</div>
+      <h3>忘記密碼</h3>
+      <p class="muted">郵箱賬號收郵件驗證碼。手機賬號先收 WhatsApp 驗證碼，失敗則改發已綁定郵箱。</p>
+      <div class="lab">郵箱或手機 *</div>
+      <div class="field">email@example.com</div>
+      <div class="lab">驗證碼 *</div>
+      <div class="field">驗證碼　　　　　發送</div>
+      <div class="lab">新密碼 *</div>
+      <div class="field">新密碼</div>
+      <div class="lab">確認新密碼 *</div>
+      <div class="field">再輸入一次</div>
+      <div class="btn">重設密碼</div>
+      <p class="center jump" data-id="login">返回登錄</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="home">
+  <div class="meta">
+    <h2>首頁</h2>
+    <p>頂欄是店名、搜索，搜索框右側是收藏夾和消息。中間是內容。底部四鍵圖標在上、文字在下，圖標背景、圖標、文字和文字顏色每次進入頁面都向接口讀取。商品卡左上角是後台角標，右上角是收藏，價格右側是已售。</p>
+    <ul>
+      <li>輪播 → 字幕 → 秒殺 → 分類圓標 → 商品區 → 熱銷 / 新品 / 猜你喜歡。</li>
+      <li>底部訂閱、兩列協議連結、標語。</li>
+      <li>不放 EMI，搜索框不放相機。</li>
+    </ul>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+      <div class="hero">輪播廣告　Fine Jewelry</div>
+      <div class="dots">● ○ ○</div>
+      <div class="strip">Get UPTO 40% OFF on your 1st order　SHOP NOW</div>
+      <div class="sec"><b>秒殺</b><span>02:14:08</span></div>
+      <div class="grid">
+        <div class="card jump" data-id="flash-pdp">
+          <div class="pic"><em>秒殺</em><i class="fav">♥</i></div>
+          <p>手鏈</p>
+          <div class="price-line"><strong>HK$ 49</strong><span>已售 80+</span></div>
+        </div>
+        <div class="card">
+          <div class="pic"><em>熱銷</em><i class="fav">♡</i></div>
+          <p>耳環</p>
+          <div class="price-line"><strong>HK$ 39</strong><span>已售 20+</span></div>
+        </div>
+      </div>
+      <div class="circles">
+        <div><i></i>項鍊</div><div><i></i>手鏈</div><div><i></i>耳環</div><div><i></i>戒指</div><div><i></i>頭巾</div><div><i></i>包袋</div>
+      </div>
+      <div class="sec"><b>Necklace Collection</b><span class="jump" data-id="list">查看全部 ›</span></div>
+      <div class="grid">
+        <div class="card jump" data-id="pdp">
+          <div class="pic"><em>新品</em><em class="alt">店長推薦</em><i class="fav">♡</i></div>
+          <p>葫蘆項鍊</p>
+          <div class="price-line"><strong>HK$ 128</strong><span>已售 88 個</span></div>
+        </div>
+        <div class="card">
+          <div class="pic"><em>新品</em><i class="fav">♡</i></div>
+          <p>方鑽項鍊</p>
+          <div class="price-line"><strong>HK$ 256</strong><span>已售 6 個</span></div>
+        </div>
+      </div>
+      <div class="tabs"><span class="on">熱銷</span><span>新品</span><span>猜你喜歡</span></div>
+      <div class="grid">
+        <div class="card"><div class="pic"><em>熱銷</em><i class="fav">♡</i></div><p>熱銷商品</p><div class="price-line"><strong>HK$ 88</strong><span>已售 100+</span></div></div>
+        <div class="card"><div class="pic"><i class="fav">♡</i></div><p>熱銷商品</p><div class="price-line"><strong>HK$ 96</strong><span>已售 40+</span></div></div>
+      </div>
+      <div class="subbox">
+        <b>準備好我們有趣的新聞通訊！</b>
+        <p class="muted">訂閱以保持聯繫。</p>
+        <div class="field">email@example.com　　　訂閱</div>
+      </div>
+      <div class="links">
+        <span>About Us</span><span>Privacy Policy</span>
+        <span>Contact Us</span><span>Payment Policy</span>
+        <span>Customer Service</span><span>Shipping Policy</span>
+        <span>What's New</span><span>Refund Policy</span>
+        <span>Terms of Use</span><span>Return Policy</span>
+      </div>
+      <div class="slogan">* 我們守護您的美麗 *</div>
+    </div>
+    <div class="tabbar">
+      <div class="on"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="drawer">
+  <div class="meta">
+    <h2>分類</h2>
+    <p>左側是大類，右側是當前大類的子類。子類用小方格，圖在上、字在下。第一格「全部商品」進入該大類的商品列表，其餘格子進入對應子類列表。</p>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body cate">
+      <div class="cate-side">
+        <div class="on">項鍊</div>
+        <div>手鏈</div>
+        <div>耳環</div>
+        <div>戒指</div>
+        <div>頭巾</div>
+        <div>包袋</div>
+        <div>套裝</div>
+      </div>
+      <div class="cate-main">
+        <b>項鍊</b>
+        <div class="cate-grid">
+          <div class="jump" data-id="list"><i></i><span>全部商品</span></div>
+          <div class="jump" data-id="list"><i></i><span>葫蘆項鍊</span></div>
+          <div class="jump" data-id="list"><i></i><span>方鑽項鍊</span></div>
+          <div class="jump" data-id="list"><i></i><span>珍珠項鍊</span></div>
+          <div class="jump" data-id="list"><i></i><span>鎖骨鏈</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="on"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="list">
+  <div class="meta">
+    <h2>列表 / 搜索</h2>
+    <p>分類列表和搜索結果共用商品卡。左上角標籤、右上角收藏、價格右側已售。示例同時畫了精確「已售 88 個」和模糊「已售 80+」。</p>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">項鍊</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+      <div class="tabs"><span class="on">綜合</span><span>最新</span><span>價格</span><span>銷量</span></div>
+      <div class="sec"><b>項鍊</b><span>24 件</span></div>
+      <div class="grid">
+        <div class="card jump" data-id="pdp"><div class="pic"><em>新品</em><em class="alt">店長推薦</em><i class="fav">♡</i></div><p>葫蘆項鍊</p><div class="price-line"><strong>HK$ 128</strong><span>已售 88 個</span></div></div>
+        <div class="card"><div class="pic"><em>熱銷</em><i class="fav">♥</i></div><p>方鑽項鍊</p><div class="price-line"><strong>HK$ 256</strong><span>已售 80+</span></div></div>
+        <div class="card"><div class="pic"><em>秒殺</em><i class="fav">♡</i></div><p>珍珠項鍊</p><div class="price-line"><strong>HK$ 188</strong><span>已售 30+</span></div></div>
+        <div class="card"><div class="pic"><i class="fav">♡</i></div><p>鎖骨鏈</p><div class="price-line"><strong>HK$ 96</strong><span>已售 6 個</span></div></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="pdp">
+  <div class="meta">
+    <h2>商品詳情</h2>
+    <p>頂欄是店名和搜索。點圖片進入全屏縮放。操作欄在底部四鍵之上：收藏、分享、加入購物車、立即購買。已售文案與列表使用同一套後台開關。</p>
+    <ul>
+      <li>底部左側：心形收藏、飛機分享。右側：加入購物車、立即購買。</li>
+      <li>心形再點一次取消收藏。分享帶自己的推廣 ID。</li>
+    </ul>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+    <div class="hero jump" data-id="zoom" style="height:280px">點擊圖片全屏縮放<br>視頻仍在輪播播放</div>
+    <div class="dots">● ○ ○ ○</div>
+    <div class="pad">
+      <div class="sec" style="padding:0"><b>SLA004 輕奢質感手鏈 紅色愛心</b></div>
+      <div class="price-line"><strong>HK$ 69.00</strong><span>已售 80+</span></div>
+      <p class="muted"><s>HK$ 99.00</s>　庫存 12</p>
+      <div class="tags"><span>香港包郵門檻</span><span>售後保障</span></div>
+      <div class="lab">顏色</div>
+      <div class="sku"><span class="on">紅色愛心</span><span>白色</span><span>金色</span></div>
+      <div class="lab">尺寸</div>
+      <div class="sku"><span class="on">16 cm</span><span>18 cm</span></div>
+      <div class="block">圖文詳情</div>
+      <div class="sec" style="padding-left:0"><b>用戶評價</b><span>查看全部</span></div>
+      <div class="lineitem" style="padding-left:0">
+        <div class="pic"></div>
+        <div class="grow"><b>★★★★★</b><p class="muted">曬圖與文字。追評在評價下方另起一塊。</p></div>
+      </div>
+      <div class="sec" style="padding-left:0"><b>相關推薦</b></div>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="pic"><em>熱銷</em><i class="fav">♡</i></div><p>同分類商品</p><div class="price-line"><strong>HK$ 88</strong><span>已售 20+</span></div></div>
+      <div class="card"><div class="pic"><i class="fav">♡</i></div><p>同分類商品</p><div class="price-line"><strong>HK$ 96</strong><span>已售 4 個</span></div></div>
+    </div>
+    </div>
+    <div class="foot">
+      <div class="ico-btn jump" data-id="fav">♥</div>
+      <div class="ico-btn">✈</div>
+      <div class="btn ghost jump" data-id="cart">加入購物車</div>
+      <div class="btn jump" data-id="checkout">立即購買</div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="zoom">
+  <div class="meta">
+    <h2>商品圖全屏</h2>
+    <p>從商品、秒殺、積分商品的輪播點圖片進入。雙指捏合縮放，雙擊放大或還原，左右滑切換該商品的其他圖片。視頻不進入這個頁面。</p>
+  </div>
+  <div class="phone viewer">
+    <div class="bar"><span class="jump" data-id="pdp">✕</span><b>1 / 4</b></div>
+    <div class="stage-img">全屏圖片<br>可縮放</div>
+    <p class="center muted">左右滑動切換</p>
+  </div>
+</section>
+
+<section class="sheet" id="cart">
+  <div class="meta">
+    <h2>購物車</h2>
+    <p>頂欄是店名和搜索。結算欄在底部四鍵之上。當前高亮「購物車」。</p>
+    <ul>
+      <li>勾選、數量、刪除、全選、合計。</li>
+      <li>下架或庫存不足的行不可勾選。</li>
+      <li>優惠券只預覽，在確認訂單才選用。</li>
+    </ul>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+    <div class="lineitem">
+      <i class="box"></i>
+      <div class="pic"></div>
+      <div class="grow">
+        <b>紅色愛心手鏈</b>
+        <p class="muted">紅色 / 16 cm</p>
+        <strong>HK$ 69.00</strong>
+        <div class="step"><b>−</b><i>1</i><b>+</b></div>
+      </div>
+      <span>刪</span>
+    </div>
+    <div class="lineitem bad">
+      <i class="box"></i>
+      <div class="pic"></div>
+      <div class="grow">
+        <b>已下架商品</b>
+        <p class="muted">庫存不足，無法結算</p>
+      </div>
+    </div>
+    <div class="pad"><div class="field">可用優惠券 2 張，結算時選擇</div></div>
+    </div>
+    <div class="foot">
+      <label class="check"><i class="box"></i>全選</label>
+      <div class="grow">合計 <b>HK$ 69.00</b></div>
+      <div class="btn jump" data-id="checkout" style="flex:none;padding:0 16px">結算</div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="on"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="checkout">
+  <div class="meta">
+    <h2>確認訂單</h2>
+    <p>必須已登錄。地址只限香港。金額順序：商品、優惠券、積分、餘額、運費、實付。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="cart">‹</span><b>確認訂單</b></div>
+    <div class="cardrow jump" data-id="address">
+      <b>張小姐　+852 9123 4567</b>
+      <p class="muted">九龍　觀塘　××大廈 12 樓　默認</p>
+    </div>
+    <div class="lineitem"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p class="muted">紅色 / 16 cm × 1</p><strong>HK$ 69.00</strong></div></div>
+    <div class="menu">
+      <div class="item"><span>優惠券</span><span>滿 200 減 20 ›</span></div>
+      <div class="item"><span>積分抵扣　可用 300</span><span>開關</span></div>
+      <div class="item"><span>餘額抵扣　HK$ 15</span><span>開關</span></div>
+      <div class="item"><span>運費</span><span>未滿門檻 HK$ 30</span></div>
+    </div>
+    <div class="pad"><div class="field">訂單備註（選填）</div>
+      <div class="sum"><span>商品</span><span>HK$ 69.00</span></div>
+      <div class="sum"><span>優惠券</span><span>− HK$ 0.00</span></div>
+      <div class="sum"><span>積分</span><span>− HK$ 0.00</span></div>
+      <div class="sum"><span>餘額</span><span>− HK$ 0.00</span></div>
+      <div class="sum"><span>運費</span><span>HK$ 30.00</span></div>
+      <div class="sum"><b>實付</b><b>HK$ 99.00</b></div>
+    </div>
+    <div class="foot"><div class="btn jump" data-id="pay">提交訂單</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="pay">
+  <div class="meta">
+    <h2>支付</h2>
+    <p>三選一：轉數快、AlipayHK、微信支付香港。實付為 0 時不進此頁，直接支付成功。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>支付</b></div>
+    <div class="pad center"><p class="muted">待付款</p><h2>HK$ 99.00</h2><p class="muted">訂單 202610130001　剩餘 29:12</p></div>
+    <div class="menu">
+      <div class="item"><span>● 轉數快 FPS</span></div>
+      <div class="item"><span>○ AlipayHK</span></div>
+      <div class="item"><span>○ 微信支付香港</span></div>
+    </div>
+    <div class="block" style="margin:12px">FPS 二維碼 / 轉賬識別</div>
+    <div class="foot"><div class="btn jump" data-id="paid">我已支付</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="paid">
+  <div class="meta">
+    <h2>支付結果</h2>
+    <p>以服務端回調為準。成功後可查看訂單或回首頁。</p>
+  </div>
+  <div class="phone">
+    <div class="auth center">
+      <div class="logo">SisterMart</div>
+      <div class="block">支付成功</div>
+      <p>訂單 202610130001</p>
+      <p class="muted">HK$ 99.00　轉數快</p>
+      <div class="btn jump" data-id="order">查看訂單</div>
+      <div class="btn line jump" data-id="home">回首頁</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="orders">
+  <div class="meta">
+    <h2>訂單列表</h2>
+    <p>Tab：全部、待付款、待發貨、待收貨、待評價、售後。待評價是已完成且未評的篩選。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="me">‹</span><b>我的訂單</b></div>
+    <div class="tabs"><span class="on">全部</span><span>待付款</span><span>待發貨</span><span>待收貨</span><span>待評價</span><span>售後</span></div>
+    <div class="cardrow jump" data-id="order">
+      <div class="sum"><span>202610130001</span><b>待收貨</b></div>
+      <div class="lineitem" style="padding:8px 0"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p class="muted">× 1</p></div></div>
+      <div class="right">實付 HK$ 99.00</div>
+    </div>
+    <div class="cardrow">
+      <div class="sum"><span>202610120088</span><b>待付款</b></div>
+      <p class="muted">紅色愛心手鏈</p>
+      <div class="btn" style="height:36px">去支付</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="order">
+  <div class="meta">
+    <h2>訂單詳情</h2>
+    <p>待收貨顯示物流與確認收貨。未完成的已支付訂單可發起售後。確認收貨後訂單完成，並觸發佣金與下單積分。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="orders">‹</span><b>訂單詳情</b></div>
+    <div class="strip">待收貨　發貨後可確認收貨</div>
+    <div class="cardrow">
+      <b>張小姐　+852 9123 4567</b>
+      <p class="muted">九龍　觀塘　××大廈 12 樓</p>
+    </div>
+    <div class="lineitem"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p class="muted">紅色 / 16 cm × 1</p></div></div>
+    <div class="pad">
+      <div class="sum"><span>訂單編號</span><span>202610130001</span></div>
+      <div class="sum"><span>支付方式</span><span>轉數快</span></div>
+      <div class="sum"><span>支付時間</span><span>2026-10-13 19:20</span></div>
+      <div class="sum"><span>實付</span><b>HK$ 99.00</b></div>
+      <div class="sum"><span>備註</span><span>下午送達</span></div>
+    </div>
+    <div class="foot">
+      <div class="btn line jump" data-id="logistics">物流</div>
+      <div class="btn line jump" data-id="refund">申請售後</div>
+      <div class="btn">確認收貨</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="logistics">
+  <div class="meta">
+    <h2>物流</h2>
+    <p>展示後台錄入的公司、運單號和軌跡節點。本期不接快遞查詢接口。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>物流詳情</b></div>
+    <div class="pad">
+      <b>順豐速運</b>
+      <p class="muted">SF1234567890</p>
+    </div>
+    <div class="timeline">
+      <div><i></i><div><b>派送中</b><p class="muted">10-13 18:00　觀塘營業點</p></div></div>
+      <div><i></i><div><b>已發貨</b><p class="muted">10-13 11:20　倉庫出庫</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="refund">
+  <div class="meta">
+    <h2>申請售後</h2>
+    <p>僅退款或退貨退款。退款去向：原支付渠道或商城餘額。訂單一旦完成就不能再申請。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>申請售後</b></div>
+    <div class="lineitem"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p class="muted">最多可退 HK$ 69.00</p></div></div>
+    <div class="pad">
+      <div class="lab">類型</div>
+      <div class="sku"><span class="on">僅退款</span><span>退貨退款</span></div>
+      <div class="lab">原因</div>
+      <div class="field">請選擇</div>
+      <div class="lab">退款金額</div>
+      <div class="field">HK$ 69.00</div>
+      <div class="lab">退回方式</div>
+      <div class="sku"><span class="on">原路退回</span><span>退回餘額</span></div>
+      <div class="lab">說明</div>
+      <div class="block">補充說明</div>
+      <div class="lab">憑證</div>
+      <div class="block">上傳圖片</div>
+    </div>
+    <div class="foot"><div class="btn jump" data-id="refund-view">提交申請</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="refund-view">
+  <div class="meta">
+    <h2>售後進度</h2>
+    <p>待審核、待退貨、待退款、已完成、已駁回。待審核可撤銷。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>售後詳情</b></div>
+    <div class="strip">待審核</div>
+    <div class="timeline">
+      <div><i></i><div><b>已提交</b><p class="muted">10-13 20:10</p></div></div>
+      <div><i style="background:#ccc"></i><div><b>待審核</b></div></div>
+    </div>
+    <div class="pad">
+      <div class="sum"><span>類型</span><span>僅退款</span></div>
+      <div class="sum"><span>金額</span><span>HK$ 69.00</span></div>
+      <div class="sum"><span>去向</span><span>原路退回</span></div>
+    </div>
+    <div class="foot"><div class="btn line">撤銷申請</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="review">
+  <div class="meta">
+    <h2>評價 / 追評</h2>
+    <p>已完成商品可評價一次，之後可追評一次。追評頁同一框架，標題改為「追加評價」。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>評價訂單</b></div>
+    <div class="lineitem"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p>★★★★★</p></div></div>
+    <div class="pad">
+      <div class="block" style="min-height:120px">評價內容</div>
+      <div class="block">上傳曬圖</div>
+    </div>
+    <div class="foot"><div class="btn">提交評價</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="flash">
+  <div class="meta">
+    <h2>秒殺列表</h2>
+    <p>場次與倒計時。未開始只可查看。進行中進入秒殺詳情，按秒殺價購買。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="home">‹</span><b>秒殺</b></div>
+    <div class="tabs"><span>10:00 即將開始</span><span class="on">14:00 進行中</span></div>
+    <div class="strip">距結束 02:14:08</div>
+    <div class="lineitem jump" data-id="flash-pdp">
+      <div class="pic"></div>
+      <div class="grow"><b>紅色愛心手鏈</b><p><strong>HK$ 49</strong> <s class="muted">69</s></p><p class="muted">剩餘 8</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="flash-pdp">
+  <div class="meta">
+    <h2>秒殺詳情</h2>
+    <p>與商品詳情同一套內容，含圖文詳情、全屏看圖、收藏和分享。底部只有立即購買，不能加入購物車。</p>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+    <div class="strip">秒殺進行中　02:14:08　不可加入購物車</div>
+    <div class="hero jump" data-id="zoom" style="height:220px">點擊圖片全屏縮放</div>
+    <div class="pad">
+      <b>紅色愛心手鏈</b>
+      <div class="price-line"><strong>HK$ 49.00</strong><span>已售 80+</span></div>
+      <p class="muted"><s>HK$ 69.00</s>　活動庫存 8</p>
+      <div class="sku"><span class="on">紅色</span><span>白色</span></div>
+      <div class="block">圖文詳情，與商品頁相同</div>
+      <div class="sec" style="padding-left:0"><b>用戶評價</b></div>
+    </div>
+    </div>
+    <div class="foot">
+      <div class="ico-btn">♥</div>
+      <div class="ico-btn">✈</div>
+      <div class="btn jump" data-id="checkout">立即購買</div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="jump" data-id="me"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="coupons">
+  <div class="meta">
+    <h2>領券中心</h2>
+    <p>滿減、折扣、免運費。領完或超過個人限領後按鈕不可用。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>領券中心</b></div>
+    <div class="cardrow"><b>滿 HK$ 200 減 20</b><p class="muted">全場　10/31 到期</p><div class="btn" style="height:36px">領取</div></div>
+    <div class="cardrow"><b>指定分類 9 折</b><p class="muted">項鍊　每人 1 張</p><div class="btn ghost" style="height:36px">已領取</div></div>
+    <div class="cardrow"><b>免運費</b><p class="muted">全場</p><div class="btn" style="height:36px">領取</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="my-coupons">
+  <div class="meta">
+    <h2>我的優惠券</h2>
+    <p>未使用、已使用、已過期。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>我的優惠券</b></div>
+    <div class="tabs"><span class="on">未使用</span><span>已使用</span><span>已過期</span></div>
+    <div class="cardrow"><b>滿 200 減 20</b><p class="muted">10/31 前可用</p></div>
+  </div>
+</section>
+
+<section class="sheet" id="points-mall">
+  <div class="meta">
+    <h2>積分商城</h2>
+    <p>與普通商品同一套卡片。價格區改為積分。積分商品單獨下單，不與現金商品合併。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>積分商城</b><span class="muted">300 分</span></div>
+    <div class="grid">
+      <div class="card jump" data-id="points-pdp"><div class="pic"></div><p>絲巾</p><strong>800 積分</strong></div>
+      <div class="card"><div class="pic"></div><p>耳釘</p><strong>500 積分</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="points-pdp">
+  <div class="meta">
+    <h2>積分商品詳情</h2>
+    <p>框架同商品詳情。結算扣積分。若未滿包郵門檻，運費仍用現金支付。</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="hero jump" data-id="zoom" style="height:220px">點擊圖片全屏縮放</div>
+    <div class="pad">
+      <b>絲巾</b>
+      <p><strong>800 積分</strong></p>
+      <p class="muted">我的積分 300</p>
+      <div class="sku"><span class="on">米色</span><span>黑色</span></div>
+      <div class="block">圖文詳情</div>
+    </div>
+    <div class="foot">
+      <div class="ico-btn">♥</div>
+      <div class="ico-btn">✈</div>
+      <div class="btn">積分兌換</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="checkin">
+  <div class="meta">
+    <h2>簽到</h2>
+    <p>當月日曆。每日領取一次。連續簽到加分由後台配置，頁面上標出已簽日期。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>每日簽到</b></div>
+    <div class="pad center"><h2>+5</h2><p class="muted">今日可領積分</p></div>
+    <div class="cal">
+      <i>1</i><i class="on">2</i><i class="on">3</i><i>4</i><i>5</i><i>6</i><i>7</i>
+      <i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i><i class="on">14</i>
+    </div>
+    <div class="pad"><div class="btn">簽到領積分</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="points-log">
+  <div class="meta">
+    <h2>積分明細</h2>
+    <p>訂單完成、簽到、分享瀏覽、抵扣、兌換、退回。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>積分明細</b></div>
+    <div class="menu">
+      <div class="item"><span>訂單完成 202610130001<br><i class="muted">10-13</i></span><b>+6</b></div>
+      <div class="item"><span>每日簽到<br><i class="muted">10-13</i></span><b>+5</b></div>
+      <div class="item"><span>分享被瀏覽<br><i class="muted">同一 IP 只計一次</i></span><b>+1</b></div>
+      <div class="item"><span>下單抵扣<br><i class="muted">10-12</i></span><b>−20</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="dist">
+  <div class="meta">
+    <h2>分銷主頁</h2>
+    <p>註冊會員即有推廣 ID。只展示直接下級。可提現金額與待完成訂單分開。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="me">‹</span><b>分銷中心</b></div>
+    <div class="pad">
+      <p class="muted">我的推廣 ID</p>
+      <h2>A8K2P1</h2>
+      <div class="stats">
+        <div><strong>120</strong>可提現</div>
+        <div><strong>40</strong>待完成</div>
+        <div><strong>860</strong>累計</div>
+      </div>
+    </div>
+    <div class="menu">
+      <div class="item jump" data-id="poster"><span>我的推廣海報</span><span>›</span></div>
+      <div class="item jump" data-id="commission"><span>佣金明細</span><span>›</span></div>
+      <div class="item jump" data-id="withdraw"><span>提現</span><span>›</span></div>
+      <div class="item jump" data-id="team"><span>下級用戶</span><span>›</span></div>
+      <div class="item jump" data-id="dist-orders"><span>推廣訂單</span><span>›</span></div>
+      <div class="item jump" data-id="rank"><span>佣金排行榜</span><span>›</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="poster">
+  <div class="meta">
+    <h2>推廣海報</h2>
+    <p>商品圖、名稱、價格、二維碼。二維碼打開 /product/{id}?ref={推廣ID}。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>推廣海報</b></div>
+    <div class="pad">
+      <div class="hero" style="height:360px;margin:0">海報預覽<br>商品圖 + 價格 + 二維碼</div>
+      <p class="muted center">product/12?ref=A8K2P1</p>
+    </div>
+    <div class="foot">
+      <div class="btn line">保存圖片</div>
+      <div class="btn">分享</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="commission">
+  <div class="meta">
+    <h2>佣金明細</h2>
+    <p>待完成、已入帳、不計。百分比按優惠後實付，或按商品固定金額。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>佣金明細</b></div>
+    <div class="menu">
+      <div class="item"><span>手鏈 × 1　已入帳<br><i class="muted">實付 69 × 10%</i></span><b>HK$ 6.90</b></div>
+      <div class="item"><span>耳環 × 1　待完成<br><i class="muted">固定 HK$ 10</i></span><b>HK$ 10</b></div>
+      <div class="item"><span>自購　不計</span><b>HK$ 0</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="withdraw">
+  <div class="meta">
+    <h2>提現</h2>
+    <p>轉入餘額即時到帳。轉數快需填收款姓名和識別碼，後台審核。金額不低於後台最低提現額。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>提現</b></div>
+    <div class="pad">
+      <p class="muted">可提現 HK$ 120.00　最低提現以後台為準</p>
+      <div class="lab">金額</div>
+      <div class="field">HK$ 100.00</div>
+      <div class="lab">去向</div>
+      <div class="sku"><span class="on">轉入餘額</span><span>轉數快</span></div>
+      <div class="lab">收款姓名</div>
+      <div class="field">轉數快時顯示</div>
+      <div class="lab">轉數快識別碼</div>
+      <div class="field">電話 / 電郵 / FPS ID</div>
+    </div>
+    <div class="foot"><div class="btn">提交</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="team">
+  <div class="meta">
+    <h2>下級列表</h2>
+    <p>只列直接下級。每行有頭像、暱稱、註冊時間、該下級消費金額、我已入帳的佣金。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>我的下級</b></div>
+    <div class="lineitem">
+      <div class="pic" style="width:44px;height:44px;border-radius:22px"></div>
+      <div class="grow">
+        <b>Amy</b>
+        <p class="muted">2026-10-01 註冊</p>
+        <p>消費 HK$ 860</p>
+        <p>我的佣金 HK$ 86.00</p>
+      </div>
+    </div>
+    <div class="lineitem">
+      <div class="pic" style="width:44px;height:44px;border-radius:22px"></div>
+      <div class="grow">
+        <b>Ben</b>
+        <p class="muted">2026-10-08 註冊</p>
+        <p>消費 HK$ 0</p>
+        <p>我的佣金 HK$ 0.00</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="dist-orders">
+  <div class="meta">
+    <h2>推廣訂單</h2>
+    <p>下級產生的計佣訂單。狀態：待完成、已入帳、不計。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>推廣訂單</b></div>
+    <div class="cardrow">
+      <div class="sum"><span>202610130009　Amy</span><b>待完成</b></div>
+      <p>紅色愛心手鏈</p>
+      <p class="muted">預計佣金 HK$ 6.90</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="rank">
+  <div class="meta">
+    <h2>佣金排行</h2>
+    <p>按已入帳佣金。可切換本月與累計。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>佣金排行</b></div>
+    <div class="tabs"><span class="on">本月</span><span>累計</span></div>
+    <div class="menu">
+      <div class="item"><span>1　Coco</span><b>HK$ 2,400</b></div>
+      <div class="item"><span>2　Amy</span><b>HK$ 860</b></div>
+      <div class="item"><span>3　我</span><b>HK$ 120</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="me">
+  <div class="meta">
+    <h2>個人中心</h2>
+    <p>頂欄是店名和搜索。底部四鍵高亮「我的」。收藏入口進收藏夾。</p>
+  </div>
+  <div class="phone shell">
+    <div class="top">
+      <div class="logo">SisterMart</div>
+      <div class="search">在這裏搜索商品</div>
+      <div class="jump head-ico" data-id="fav">♥</div>
+      <div class="jump head-ico" data-id="inbox">✉<span class="dot"></span></div>
+    </div>
+    <div class="body">
+    <div class="lineitem jump" data-id="profile">
+      <div class="pic" style="width:56px;height:56px;border-radius:28px"></div>
+      <div class="grow"><b>Coco</b><p class="muted">+852 9000 0000</p><p>★★★　累計 HK$ 860</p></div>
+    </div>
+    <div class="stats">
+      <div class="jump" data-id="orders"><strong>待付</strong>訂單</div>
+      <div class="jump" data-id="orders"><strong>待發</strong>訂單</div>
+      <div class="jump" data-id="orders"><strong>待收</strong>訂單</div>
+      <div class="jump" data-id="refund-view"><strong>售後</strong></div>
+      <div class="jump" data-id="my-coupons"><strong>券</strong></div>
+      <div class="jump" data-id="points-log"><strong>300</strong>積分</div>
+    </div>
+    <div class="menu">
+      <div class="item"><span>餘額 HK$ 15.00</span><span>›</span></div>
+      <div class="item jump" data-id="address"><span>收貨地址</span><span>›</span></div>
+      <div class="item jump" data-id="dist"><span>分銷中心</span><span>›</span></div>
+      <div class="item jump" data-id="bills"><span>賬單明細</span><span>›</span></div>
+      <div class="item jump" data-id="fav"><span>收藏商品</span><span>›</span></div>
+      <div class="item jump" data-id="history"><span>瀏覽歷史</span><span>›</span></div>
+      <div class="item jump" data-id="inbox"><span>消息通知</span><span>›</span></div>
+      <div class="item"><span>在線客服 WhatsApp</span><span>›</span></div>
+      <div class="item jump" data-id="settings"><span>設置</span><span>›</span></div>
+    </div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="on"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="profile">
+  <div class="meta">
+    <h2>編輯資料</h2>
+    <p>頭像、暱稱、手機。手機變更需重新走 WhatsApp 驗證碼。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>編輯資料</b></div>
+    <div class="pad center"><div class="pic" style="width:72px;height:72px;border-radius:36px;margin:12px auto;background:#e4ddd3"></div><p class="muted">更換頭像</p></div>
+    <div class="pad">
+      <div class="lab">暱稱</div><div class="field">Coco</div>
+      <div class="lab">手機</div><div class="field">+852 9000 0000</div>
+      <div class="btn">保存</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="address">
+  <div class="meta">
+    <h2>收貨地址</h2>
+    <p>可有多條，僅一條默認。只收香港地址。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>收貨地址</b></div>
+    <div class="cardrow">
+      <b>張小姐　+852 9123 4567　默認</b>
+      <p class="muted">九龍　觀塘　××大廈 12 樓</p>
+    </div>
+    <div class="foot"><div class="btn jump" data-id="address-edit">新增地址</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="address-edit">
+  <div class="meta">
+    <h2>新增地址</h2>
+    <p>收件人、手機、香港島 / 九龍 / 新界、分區、詳細地址、設為默認。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>新增地址</b></div>
+    <div class="pad">
+      <div class="lab">收件人</div><div class="field">姓名</div>
+      <div class="lab">手機</div><div class="field">+852</div>
+      <div class="lab">地區</div><div class="sku"><span class="on">香港島</span><span>九龍</span><span>新界</span></div>
+      <div class="lab">分區</div><div class="field">請選擇</div>
+      <div class="lab">詳細地址</div><div class="field">大廈、樓層、室</div>
+      <label class="check"><i class="box"></i>設為默認</label>
+    </div>
+    <div class="foot"><div class="btn">保存</div></div>
+  </div>
+</section>
+
+<section class="sheet" id="fav">
+  <div class="meta">
+    <h2>收藏</h2>
+    <p>與列表同一張商品卡。右上角再點心形即取消收藏。已下架商品保留並標明失效。二級頁保留返回標題，底部仍有四鍵。</p>
+  </div>
+  <div class="phone shell">
+    <div class="bar"><span class="jump" data-id="me">‹</span><b>收藏</b></div>
+    <div class="body">
+    <div class="grid">
+      <div class="card"><div class="pic"><em>新品</em><i class="fav">♥</i></div><p>葫蘆項鍊</p><div class="price-line"><strong>HK$ 128</strong><span>已售 88 個</span></div></div>
+      <div class="card"><div class="pic"><em>秒殺</em><i class="fav">♥</i></div><p>紅色愛心手鏈</p><div class="price-line"><strong>HK$ 69</strong><span>已售 80+</span></div></div>
+    </div>
+    </div>
+    <div class="tabbar">
+      <div class="jump" data-id="home"><i><svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20H4z"/></svg></i><span>首頁</span></div>
+      <div class="jump" data-id="drawer"><i><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></i><span>分類</span></div>
+      <div class="jump" data-id="cart"><i class="bag"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7zm3 0a3 3 0 0 1 6 0"/></svg><b>2</b></i><span>購物車</span></div>
+      <div class="on"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c1.2-3.2 3.4-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></svg></i><span>我的</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="history">
+  <div class="meta">
+    <h2>瀏覽足跡</h2>
+    <p>登錄後打開詳情才記錄。同一商品只保留最近一次。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>瀏覽歷史</b></div>
+    <div class="pad"><p class="muted">10 月 13 日</p></div>
+    <div class="lineitem"><div class="pic"></div><div class="grow"><b>紅色愛心手鏈</b><p>HK$ 69.00</p></div></div>
+  </div>
+</section>
+
+<section class="sheet" id="inbox">
+  <div class="meta">
+    <h2>消息</h2>
+    <p>兩個列表。訂單消息含狀態變化，以及管理員在後台對某一筆訂單寫給買家的留言。系統消息含系統級通知和營銷消息。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>消息</b></div>
+    <div class="tabs"><span class="on">訂單消息</span><span class="jump" data-id="inbox-system">系統消息</span></div>
+    <div class="menu">
+      <div class="item jump" data-id="inbox-order"><span>訂單已發貨<br><i class="muted">狀態　202610130001　10-13 11:20</i></span></div>
+      <div class="item jump" data-id="inbox-order"><span>商家留言：下午送到樓下<br><i class="muted">留言　202610130001　10-13 15:02</i></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="inbox-order">
+  <div class="meta">
+    <h2>訂單消息詳情</h2>
+    <p>狀態消息或管理員留言。正文下方進入對應訂單。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="inbox">‹</span><b>訂單消息</b></div>
+    <div class="pad">
+      <p class="muted">商家留言　10-13 15:02</p>
+      <h2>訂單 202610130001</h2>
+      <div class="block" style="min-height:120px">下午送到樓下，請保持電話暢通。</div>
+      <div class="btn jump" data-id="order">查看訂單</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="inbox-system">
+  <div class="meta">
+    <h2>系統消息詳情</h2>
+    <p>系統級通知，或後台發出的營銷消息。與某一筆訂單狀態無關的內容放在這個列表。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span class="jump" data-id="inbox">‹</span><b>系統消息</b></div>
+    <div class="tabs"><span class="jump" data-id="inbox">訂單消息</span><span class="on">系統消息</span></div>
+    <div class="menu">
+      <div class="item"><span>提現已打款 HK$ 100<br><i class="muted">系統通知　10-13 16:00</i></span></div>
+      <div class="item"><span>本週新品 8 折<br><i class="muted">營銷　10-12 09:00</i></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="bills">
+  <div class="meta">
+    <h2>賬單</h2>
+    <p>佣金轉入、退款入帳、下單扣餘額。沒有充值入口。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>賬單明細</b></div>
+    <div class="pad"><p class="muted">餘額 HK$ 15.00</p></div>
+    <div class="menu">
+      <div class="item"><span>佣金轉入餘額<br><i class="muted">10-13</i></span><b>+100.00</b></div>
+      <div class="item"><span>訂單抵扣<br><i class="muted">202610120088</i></span><b>−85.00</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="settings">
+  <div class="meta">
+    <h2>設置</h2>
+    <p>修改密碼、退出登錄、繁體中文 / 英文。語言記在賬號上。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>設置</b></div>
+    <div class="menu">
+      <div class="item"><span>語言</span><span>繁體中文 ›</span></div>
+      <div class="item"><span>修改密碼</span><span>›</span></div>
+    </div>
+    <div class="pad"><div class="btn line">退出登錄</div></div>
+    <div class="pad" style="border-top:8px solid #f6f3ee">
+      <b>修改密碼</b>
+      <div class="lab">當前密碼</div><div class="field">••••••••</div>
+      <div class="lab">新密碼</div><div class="field">至少 8 位</div>
+      <div class="btn">保存</div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="article">
+  <div class="meta">
+    <h2>文章 / 協議</h2>
+    <p>用戶協議、私隱協議、配送與退款說明都走文章頁。頁腳兩列連結打開這裡。正文隨當前語言切換。</p>
+  </div>
+  <div class="phone">
+    <div class="bar"><span>‹</span><b>文章</b></div>
+    <div class="pad">
+      <h2>私隱協議</h2>
+      <div class="block" style="min-height:280px">富文本正文</div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+  const buttons = [...document.querySelectorAll('nav button')];
+  const sheets = [...document.querySelectorAll('.sheet')];
+  function openSheet(id) {
+    const exists = sheets.some((sheet) => sheet.id === id);
+    const next = exists ? id : 'home';
+    sheets.forEach((sheet) => sheet.classList.toggle('on', sheet.id === next));
+    buttons.forEach((button) => button.classList.toggle('on', button.dataset.id === next));
+    const phone = document.querySelector('.sheet.on .phone');
+    if (phone) phone.scrollTop = 0;
+    if (location.hash !== '#' + next) history.replaceState(null, '', '#' + next);
+  }
+  document.body.addEventListener('click', (event) => {
+    const target = event.target.closest('[data-id]');
+    if (!target || target.closest('nav') && target.tagName === 'BUTTON') {
+      if (target && target.closest('nav')) openSheet(target.dataset.id);
+      return;
+    }
+    if (target.dataset.id) openSheet(target.dataset.id);
+  });
+  openSheet((location.hash || '#home').slice(1));
+</script>
+</body>
+</html>
