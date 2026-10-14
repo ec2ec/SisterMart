@@ -1,0 +1,86 @@
+import { api } from './client'
+
+export type Localized = { 'zh-HK': string; en: string }
+
+export type CategoryNode = {
+  id: number
+  code: string
+  parent_id: number | null
+  icon: string | null
+  sort: number
+  name: Localized
+  children: CategoryNode[]
+}
+
+export type ProductCard = {
+  id: string
+  db_id: number
+  code: string
+  name: Localized
+  price: number
+  sold: string
+  image: string
+  category: string
+  category_id: number
+  badges: Array<'flash' | 'hot' | 'new' | 'editor'>
+  gallery?: string[]
+  liked?: boolean
+}
+
+export type SpecGroup = {
+  id: string
+  code: string
+  name: Localized
+  options: Array<{ id: string; code: string; name: Localized; image?: string | null }>
+}
+
+export type Sku = {
+  id: number
+  code: string
+  key: string
+  price: number
+  compare_at: number
+  stock: number
+  image?: string | null
+  selected: Record<string, string>
+}
+
+export type ProductDetail = ProductCard & {
+  summary: Localized
+  detail: Localized
+  gallery: string[]
+  media: Array<{ media_type: string; url: string; sort: number }>
+  spec_groups: SpecGroup[]
+  skus: Sku[]
+  tags: Localized[]
+  reviews: unknown[]
+}
+
+export type Article = {
+  id: number
+  code: string
+  title: Localized
+  body: Localized
+}
+
+export async function fetchCategories() {
+  const data = await api<{ items: CategoryNode[] }>('/api/v1/categories')
+  return data.items
+}
+
+export async function fetchProducts(params: Record<string, string> = {}) {
+  const qs = new URLSearchParams(params).toString()
+  return api<{ items: ProductCard[]; sold_display_mode: string }>(`/api/v1/products${qs ? `?${qs}` : ''}`)
+}
+
+export async function fetchProduct(id: string) {
+  return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(id)}`)
+}
+
+export async function fetchArticle(code: string) {
+  return api<Article>(`/api/v1/articles/${encodeURIComponent(code)}`)
+}
+
+export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
+  return groups.map((group) => selected[group.id] || '').join('|')
+}

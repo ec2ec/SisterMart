@@ -179,6 +179,7 @@ export const messages = {
       buyReady: '已帶入確認訂單。',
       copied: '分享連結已複製。',
       swipeHint: '左右滑動切換',
+      outOfStock: '此規格暫時無貨。',
     },
     pages: {
       search: '搜索',
@@ -387,6 +388,7 @@ export const messages = {
       buyReady: 'Ready for checkout.',
       copied: 'Share link copied.',
       swipeHint: 'Swipe to see more photos',
+      outOfStock: 'This option is out of stock.',
     },
     pages: {
       search: 'Search',

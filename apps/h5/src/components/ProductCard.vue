@@ -2,12 +2,12 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import type { Product } from '../mock/data'
+import type { ProductCard } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
 
 const props = defineProps<{
-  product: Product
+  product: ProductCard
 }>()
 
 const { t } = useI18n()

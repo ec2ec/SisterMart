@@ -1,10 +1,21 @@
 import { reactive } from 'vue'
-import { allProducts } from '../mock/data'
 
 const PENDING = 'sm_pending_fav'
+const STORE = 'sm_favorites'
 
-const liked = reactive<Record<string, boolean>>({})
-for (const product of allProducts) liked[product.id] = Boolean(product.liked)
+function readStore(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(STORE) || '{}') as Record<string, boolean>
+  } catch {
+    return {}
+  }
+}
+
+const liked = reactive<Record<string, boolean>>(readStore())
+
+function persist() {
+  localStorage.setItem(STORE, JSON.stringify(liked))
+}
 
 export function isLoggedIn() {
   return Boolean(localStorage.getItem('sm_token'))
@@ -15,17 +26,23 @@ export function markLoggedIn() {
   if (!pending) return
   liked[pending] = true
   sessionStorage.removeItem(PENDING)
+  persist()
 }
 
 export function isFavorite(id: string) {
   return Boolean(liked[id])
 }
 
-export function requestFavorite(id: string, redirect: string, push: (to: { name: string; query: Record<string, string> }) => void) {
+export function requestFavorite(
+  id: string,
+  redirect: string,
+  push: (to: { name: string; query: Record<string, string> }) => void,
+) {
   if (!isLoggedIn()) {
     sessionStorage.setItem(PENDING, id)
     push({ name: 'login', query: { redirect } })
     return
   }
   liked[id] = !liked[id]
+  persist()
 }

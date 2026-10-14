@@ -1,30 +1,46 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
-import { categories } from '../mock/data'
+import { fetchCategories, type CategoryNode } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
 
 const { text } = useLocaleText()
 const router = useRouter()
-const active = ref(1)
+const active = ref(0)
+const categories = ref<CategoryNode[]>([])
+const loading = ref(true)
 
-const current = computed(() => categories[active.value] || categories[0])
-
-const sections = computed(() => {
-  const main = current.value
-  const related = categories.find((c) => c.id === 'bracelets' && main.id === 'necklaces')
-  if (main.id === 'necklaces' && related) {
-    return [
-      { title: main.name, items: main.children || [] },
-      { title: related.name, items: related.children || [] },
-    ]
+onMounted(async () => {
+  try {
+    categories.value = await fetchCategories()
+  } finally {
+    loading.value = false
   }
-  return [{ title: main.name, items: main.children || [] }]
 })
 
-function openList(categoryId: string) {
-  router.push({ name: 'product-list', query: { category: categoryId } })
+const current = computed(() => categories.value[active.value] || categories.value[0])
+
+const gridItems = computed(() => {
+  const main = current.value
+  if (!main) return []
+  const all = {
+    id: -1,
+    code: `${main.code}-all`,
+    parent_id: main.id,
+    icon: main.icon,
+    sort: -1,
+    name: { 'zh-HK': '全部商品', en: 'All' } as const,
+    children: [],
+  }
+  return [all, ...(main.children || [])]
+})
+
+function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
+  const main = current.value
+  if (!main) return
+  const category = item.id === -1 ? main.code : item.code
+  router.push({ name: 'product-list', query: { category } })
 }
 </script>
 
@@ -33,28 +49,20 @@ function openList(categoryId: string) {
     <AppHeader />
     <div class="body">
       <van-sidebar v-model="active" class="side">
-        <van-sidebar-item
-          v-for="c in categories"
-          :key="c.id"
-          :title="text(c.name)"
-        />
+        <van-sidebar-item v-for="c in categories" :key="c.id" :title="text(c.name)" />
       </van-sidebar>
       <div class="content">
-        <section v-for="(sec, idx) in sections" :key="idx" class="sec">
+        <p v-if="loading" class="empty">…</p>
+        <section v-else-if="current" class="sec">
           <div class="sec-title">
             <span />
-            <em>{{ text(sec.title) }}</em>
+            <em>{{ text(current.name) }}</em>
             <span />
           </div>
           <div class="grid">
-            <button
-              v-for="item in sec.items"
-              :key="item.id"
-              type="button"
-              class="item"
-              @click="openList(current.id)"
-            >
-              <img :src="item.image" :alt="text(item.name)" />
+            <button v-for="item in gridItems" :key="item.code" type="button" class="item" @click="openList(item)">
+              <img v-if="item.icon" :src="item.icon" :alt="text(item.name)" />
+              <span v-else class="ph" />
               <span>{{ text(item.name) }}</span>
             </button>
           </div>
@@ -73,84 +81,67 @@ function openList(categoryId: string) {
   padding-top: var(--sm-header-h);
   padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
 }
-
 .body {
   flex: 1;
   display: flex;
   min-height: 0;
-  background: #fff;
 }
-
 .side {
   width: 5.5rem;
-  flex: 0 0 5.5rem;
+  flex-shrink: 0;
   background: var(--sm-bg-soft);
-  overflow-y: auto;
 }
-
-.side :deep(.van-sidebar-item--select) {
-  color: var(--sm-primary);
-  font-weight: 600;
-}
-
 .content {
   flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem 0.625rem 1.25rem;
+  overflow: auto;
+  padding: 0.75rem;
   background: #fff;
 }
-
-.sec + .sec {
-  margin-top: 0.625rem;
-}
-
 .sec-title {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 0.625rem;
-  margin: 0.625rem 0 0.875rem;
-  color: #333;
-  font-size: 0.8125rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--sm-text-secondary);
+  font-size: 0.75rem;
 }
-
+.sec-title span {
+  flex: 1;
+  height: 0.0625rem;
+  background: var(--sm-border);
+}
 .sec-title em {
   font-style: normal;
   font-weight: 600;
+  color: var(--sm-text);
 }
-
-.sec-title span {
-  height: 0.0625rem;
-  background: #e8e8e8;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.875rem 0.5rem;
+  gap: 0.75rem 0.5rem;
 }
-
 .item {
   border: 0;
   background: transparent;
   padding: 0;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  color: var(--sm-text);
 }
-
-.item img {
+.item img,
+.ph {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 0.625rem;
-  background: #f5f5f5;
-  display: block;
+  border-radius: 0.5rem;
+  background: var(--sm-bg-soft);
 }
-
-.item span {
-  display: block;
-  margin-top: 0.375rem;
-  font-size: 0.6875rem;
-  color: #333;
-  line-height: 1.3;
+.empty {
+  margin: 2rem;
+  text-align: center;
+  color: var(--sm-text-muted);
 }
 </style>

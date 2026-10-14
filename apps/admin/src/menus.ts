@@ -12,8 +12,8 @@ export const adminMenus: AdminMenu[] = [
     label: '商品目錄',
     key: 'catalog',
     children: [
-      { label: '商品', key: '/catalog/products', path: '/catalog/products', milestone: 'M3' },
-      { label: '分類', key: '/catalog/categories', path: '/catalog/categories', milestone: 'M3' },
+      { label: '商品', key: '/catalog/products', path: '/catalog/products' },
+      { label: '分類', key: '/catalog/categories', path: '/catalog/categories' },
     ],
   },
   {
@@ -33,7 +33,7 @@ export const adminMenus: AdminMenu[] = [
     label: '內容',
     key: 'cms',
     children: [
-      { label: '文章', key: '/cms/articles', path: '/cms/articles', milestone: 'M3' },
+      { label: '文章', key: '/cms/articles', path: '/cms/articles' },
       { label: '首頁', key: '/cms/home', path: '/cms/home', milestone: '後續' },
       { label: '消息', key: '/cms/messages', path: '/cms/messages', milestone: '後續' },
     ],
@@ -53,7 +53,7 @@ export const adminMenus: AdminMenu[] = [
     key: 'settings',
     children: [
       { label: '底部導航', key: '/settings/tabbar', path: '/settings/tabbar' },
-      { label: '店鋪參數', key: '/settings/shop', path: '/settings/shop', milestone: '後續' },
+      { label: '店鋪參數', key: '/settings/shop', path: '/settings/shop' },
       { label: '管理員與角色', key: '/settings/admins', path: '/settings/admins', milestone: '後續' },
     ],
   },

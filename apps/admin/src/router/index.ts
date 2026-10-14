@@ -1,8 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '../layouts/AdminLayout.vue'
+import ArticlesView from '../views/ArticlesView.vue'
+import CategoriesView from '../views/CategoriesView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import PlaceholderView from '../views/PlaceholderView.vue'
+import ProductEditView from '../views/ProductEditView.vue'
+import ProductsView from '../views/ProductsView.vue'
+import ShopSettingsView from '../views/ShopSettingsView.vue'
 import TabbarView from '../views/TabbarView.vue'
 import { findMenu } from '../menus'
 
@@ -24,12 +29,13 @@ export const router = createRouter({
       component: AdminLayout,
       children: [
         { path: '', component: DashboardView, meta: { title: '概覽' } },
-        placeholder('/catalog/products'),
-        placeholder('/catalog/categories'),
+        { path: '/catalog/products', component: ProductsView, meta: { title: '商品' } },
+        { path: '/catalog/products/:id', component: ProductEditView, meta: { title: '商品編輯' } },
+        { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
         placeholder('/sales/orders'),
         placeholder('/sales/aftersales'),
         placeholder('/customers/members'),
-        placeholder('/cms/articles'),
+        { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         placeholder('/cms/home'),
         placeholder('/cms/messages'),
         placeholder('/marketing/coupons'),
@@ -37,7 +43,7 @@ export const router = createRouter({
         placeholder('/marketing/seckill'),
         placeholder('/marketing/distribution'),
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
-        placeholder('/settings/shop'),
+        { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
         placeholder('/settings/admins'),
       ],
     },

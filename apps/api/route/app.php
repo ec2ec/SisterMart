@@ -22,6 +22,12 @@ Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
 Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
 
+/** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
+Route::get('api/v1/categories', 'api.Categories/index');
+Route::get('api/v1/products/:id', 'api.Products/read');
+Route::get('api/v1/products', 'api.Products/index');
+Route::get('api/v1/articles/:code', 'api.Articles/read');
+
 Route::group('api/v1', function () {
     Route::get('members/me', 'api.Members/me');
     Route::patch('members/me', 'api.Members/updateMe');
@@ -36,4 +42,22 @@ Route::group('api/v1/admin', function () {
     Route::get('admins/me', 'admin.Admins/me');
     Route::get('tabbar', 'admin.Tabbar/index');
     Route::put('tabbar', 'admin.Tabbar/update');
+
+    Route::get('categories', 'admin.Categories/index');
+    Route::post('categories', 'admin.Categories/store');
+    Route::put('categories/:id', 'admin.Categories/update');
+
+    Route::get('products/:id', 'admin.Products/read');
+    Route::put('products/:id', 'admin.Products/update');
+    Route::get('products', 'admin.Products/index');
+    Route::post('products', 'admin.Products/store');
+    Route::get('service-tags', 'admin.Products/tags');
+
+    Route::get('articles/:code', 'admin.Articles/read');
+    Route::put('articles/:id', 'admin.Articles/update');
+    Route::get('articles', 'admin.Articles/index');
+    Route::post('articles', 'admin.Articles/store');
+
+    Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
+    Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
 })->middleware(AdminAuth::class);

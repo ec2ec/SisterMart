@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '../components/ProductCard.vue'
 import SubPageNav from '../components/SubPageNav.vue'
+import { fetchProducts, type ProductCard as Card } from '../api/catalog'
 import { isFavorite } from '../composables/useFavorites'
-import { allProducts } from '../mock/data'
 
 const { t } = useI18n()
-const list = computed(() => allProducts.filter((p) => isFavorite(p.id)))
+const all = ref<Card[]>([])
+onMounted(async () => {
+  const data = await fetchProducts()
+  all.value = data.items
+})
+const list = computed(() => all.value.filter((p) => isFavorite(p.id)))
 </script>
 
 <template>

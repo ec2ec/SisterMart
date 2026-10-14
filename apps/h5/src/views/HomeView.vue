@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
+import { fetchCategories, fetchProducts, type CategoryNode, type ProductCard as Card } from '../api/catalog'
+import { banners } from '../mock/data'
 import { useLocaleText } from '../composables/useLocaleText'
-import {
-  banners,
-  collectionProducts,
-  feedProducts,
-  flashProducts,
-  homeCategories,
-} from '../mock/data'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -22,14 +17,23 @@ const router = useRouter()
 const feedTab = ref(0)
 const email = ref('')
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
+const products = ref<Card[]>([])
+const categories = ref<CategoryNode[]>([])
 
-const flashVisible = computed(() => flashProducts.slice(0, 4))
-
-const feedList = computed(() => {
-  if (feedTab.value === 1) return collectionProducts
-  if (feedTab.value === 2) return flashProducts
-  return feedProducts
+onMounted(async () => {
+  const [list, cats] = await Promise.all([fetchProducts(), fetchCategories()])
+  products.value = list.items
+  categories.value = cats
 })
+
+const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
+const collection = computed(() => products.value.filter((p) => p.category.includes('n-') || p.category === 'necklaces').slice(0, 4))
+const feedList = computed(() => {
+  if (feedTab.value === 1) return collection.value
+  if (feedTab.value === 2) return flashVisible.value
+  return products.value
+})
+const homeCategories = computed(() => categories.value.slice(0, 6))
 
 function onSubscribe() {
   showToast(email.value ? t('home.subscribe') : t('home.emailPlaceholder'))
@@ -38,6 +42,10 @@ function onSubscribe() {
 function goList(categoryId?: string) {
   router.push({ name: 'product-list', query: categoryId ? { category: categoryId } : {} })
 }
+
+const hh = computed(() => String(Math.floor(flashRemain.value / 3600e3)).padStart(2, '0'))
+const mm = computed(() => String(Math.floor((flashRemain.value % 3600e3) / 60e3)).padStart(2, '0'))
+const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).padStart(2, '0'))
 </script>
 
 <template>
@@ -58,236 +66,167 @@ function goList(categoryId?: string) {
     <section class="flash">
       <div class="section-title">
         <h2>{{ t('home.flashSale') }}</h2>
-        <van-count-down :time="flashRemain" class="countdown" />
-      </div>
-      <div class="flash-scroll">
-        <div v-for="p in flashVisible" :key="p.id" class="flash-item">
-          <ProductCard :product="p" />
+        <div class="count">
+          <span>{{ hh }}</span>:<span>{{ mm }}</span>:<span>{{ ss }}</span>
         </div>
+      </div>
+      <div class="flash-row">
+        <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
       </div>
     </section>
 
     <section class="cats">
-      <div class="cat-scroll">
-        <button
-          v-for="c in homeCategories"
-          :key="c.id"
-          type="button"
-          class="cat"
-          @click="goList(c.id)"
-        >
-          <img :src="c.image" :alt="text(c.name)" />
-          <span>{{ text(c.name) }}</span>
-        </button>
-      </div>
-    </section>
-
-    <section>
-      <div class="section-title">
-        <h2>{{ t('home.necklaceCollection') }}</h2>
-        <button type="button" class="more" @click="goList('necklaces')">{{ t('home.viewAll') }}</button>
-      </div>
-      <div class="grid-2 padded">
-        <ProductCard v-for="p in collectionProducts" :key="p.id" :product="p" />
-      </div>
+      <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+        <img v-if="c.icon" :src="c.icon" :alt="text(c.name)" />
+        <span v-else class="ph" />
+        <span>{{ text(c.name) }}</span>
+      </button>
     </section>
 
     <section class="feed">
-      <van-tabs v-model:active="feedTab" shrink color="var(--sm-primary)" title-active-color="var(--sm-primary)">
-        <van-tab :title="t('home.hot')" />
-        <van-tab :title="t('home.new')" />
-        <van-tab :title="t('home.forYou')" />
-      </van-tabs>
-      <div class="grid-2 padded">
-        <ProductCard v-for="p in feedList" :key="`${feedTab}-${p.id}`" :product="p" />
+      <div class="tabs">
+        <button type="button" :class="{ on: feedTab === 0 }" @click="feedTab = 0">{{ t('home.hot') }}</button>
+        <button type="button" :class="{ on: feedTab === 1 }" @click="feedTab = 1">{{ t('home.collection') }}</button>
+        <button type="button" :class="{ on: feedTab === 2 }" @click="feedTab = 2">{{ t('home.flashSale') }}</button>
+      </div>
+      <div class="grid">
+        <ProductCard v-for="p in feedList" :key="p.id" :product="p" />
       </div>
     </section>
 
-    <section class="newsletter">
-      <h3>{{ t('home.newsletterTitle') }}</h3>
-      <p>{{ t('home.newsletterSub') }}</p>
-      <div class="email-box">
+    <section class="subscribe">
+      <h2>{{ t('home.subscribeTitle') }}</h2>
+      <div class="row">
         <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
         <button type="button" @click="onSubscribe">{{ t('home.subscribe') }}</button>
       </div>
     </section>
-
     <HomeFooter />
   </div>
 </template>
 
 <style scoped>
 .home {
-  background: #fff;
+  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
 }
-
 .hero-wrap {
   position: relative;
-  width: 100%;
 }
-
 .hero {
-  width: 100%;
   height: calc(100vw * 589 / 1600);
 }
-
-.hero-item {
-  height: 100%;
-  background: #f7f4f0;
-}
-
+.hero-item,
 .hero-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
   display: block;
 }
-
 .promo {
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--sm-text);
+  margin: 0;
+  padding: 0.625rem 0.875rem;
   background: var(--sm-promo-bg);
+  color: var(--sm-text);
+  font-size: 0.75rem;
 }
-
-.countdown {
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.375rem;
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 0.875rem 0.5rem;
+}
+.section-title h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.count span {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
   background: var(--sm-primary-soft);
   color: var(--sm-text-secondary);
-  font-weight: 700;
-  font-size: 0.8125rem;
+  text-align: center;
+  font-size: 0.75rem;
 }
-
-.flash-scroll {
+.flash-row {
   display: flex;
   gap: 0.75rem;
   overflow-x: auto;
-  padding: 0 0.75rem 0.5rem;
   scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  padding: 0 0.875rem 0.75rem;
 }
-
-.flash-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.flash-item {
+.flash-row :deep(.card) {
   flex: 0 0 calc((100% - 0.75rem) / 2);
   scroll-snap-align: start;
 }
-
-.grid-2 {
+.cats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem 1rem;
+}
+.cats button {
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--sm-text);
+}
+.cats img,
+.ph {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  background: var(--sm-bg-soft);
+}
+.tabs {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0.875rem;
+}
+.tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--sm-text-muted);
+  font-size: 0.875rem;
+}
+.tabs button.on {
+  color: var(--sm-primary);
+  font-weight: 700;
+}
+.grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  padding: 0 0.75rem 0.5rem;
+  padding: 0.25rem 0.875rem 1rem;
 }
-
-.padded {
-  padding-top: 0.25rem;
+.subscribe {
+  padding: 1rem 0.875rem 1.5rem;
 }
-
-.cats {
-  padding: 0.5rem 0 0.25rem;
+.subscribe h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
 }
-
-.cat-scroll {
+.row {
   display: flex;
-  gap: 0.875rem;
-  overflow-x: auto;
-  padding: 0.25rem 0.875rem 0.5rem;
-  scrollbar-width: none;
-}
-
-.cat-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.cat {
-  flex: 0 0 auto;
-  width: 4rem;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  text-align: center;
-}
-
-.cat img {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  margin: 0 auto 0.375rem;
-  background: #f2f2f2;
-}
-
-.cat span {
-  font-size: 0.6875rem;
-  color: #333;
-}
-
-.more {
-  border: 0;
-  background: transparent;
-  font-size: 0.75rem;
-  color: var(--sm-text-muted);
-  padding: 0;
-}
-
-.feed :deep(.van-tabs__wrap) {
-  padding: 0 0.5rem;
-}
-
-.newsletter {
-  margin: 0.75rem;
-  padding: 1.125rem 1rem;
-  border: 0.0625rem solid #eee;
-  border-radius: 0.875rem;
-  background: #fff;
-  box-shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.03);
-}
-
-.newsletter h3 {
-  margin: 0;
-  font-size: 0.9375rem;
-}
-
-.newsletter p {
-  margin: 0.375rem 0 0.75rem;
-  font-size: 0.75rem;
-  color: var(--sm-text-muted);
-}
-
-.email-box {
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-  border-radius: 62.4375rem;
-  background: #f3f4f6;
 }
-
-.email-box input {
+.row input {
   flex: 1;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 0.8125rem;
-  min-width: 0;
+  border: 0.0625rem solid var(--sm-border);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
 }
-
-.email-box button {
+.row button {
   border: 0;
-  background: transparent;
-  color: var(--sm-primary);
-  font-weight: 700;
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--sm-primary);
+  color: #fff;
+  padding: 0 0.875rem;
 }
 </style>
