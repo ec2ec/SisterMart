@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { accountMock } from '../mock/data'
 import { toggleLocale } from '../i18n'
 
 const { t } = useI18n()
+const router = useRouter()
 const u = accountMock
 
 const orderItems = [
@@ -16,24 +18,32 @@ const orderItems = [
 ] as const
 
 const services = [
-  { key: 'address', icon: 'location-o' },
-  { key: 'wishlist', icon: 'star-o' },
-  { key: 'couponCenter', icon: 'coupon-o' },
-  { key: 'pointsMall', icon: 'shop-o' },
-  { key: 'dailyCheckin', icon: 'calendar-o' },
-  { key: 'flashSale', icon: 'clock-o' },
-  { key: 'affiliate', icon: 'friends-o' },
-  { key: 'support', icon: 'chat-o' },
+  { key: 'address', icon: 'location-o', route: '' },
+  { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
+  { key: 'couponCenter', icon: 'coupon-o', route: '' },
+  { key: 'pointsMall', icon: 'shop-o', route: '' },
+  { key: 'dailyCheckin', icon: 'calendar-o', route: '' },
+  { key: 'flashSale', icon: 'clock-o', route: 'home' },
+  { key: 'affiliate', icon: 'friends-o', route: '' },
+  { key: 'support', icon: 'chat-o', route: 'messages' },
 ] as const
+
+function goService(route: string) {
+  if (!route) {
+    showToast(t('pages.coming'))
+    return
+  }
+  router.push({ name: route })
+}
 </script>
 
 <template>
   <div class="page page--soft">
     <section class="hero">
-      <button class="settings" type="button" @click="toggleLocale">
+      <button class="settings" type="button" :title="t('account.switchLang')" @click="toggleLocale">
         <van-icon name="setting-o" size="18" />
       </button>
-      <div class="user">
+      <div class="user" role="button" @click="router.push({ name: 'login' })">
         <div class="avatar">{{ u.avatarLetter }}</div>
         <div>
           <h1>{{ u.name }}</h1>
@@ -58,11 +68,11 @@ const services = [
     </section>
 
     <div class="quick">
-      <button type="button">
+      <button type="button" @click="showToast(t('pages.coming'))">
         <strong>{{ t('account.member') }}</strong>
         <span>{{ t('account.memberSub') }}</span>
       </button>
-      <button type="button">
+      <button type="button" @click="showToast(t('pages.coming'))">
         <strong>{{ t('account.rewards') }}</strong>
         <span>{{ t('account.rewardsSub') }}</span>
       </button>
@@ -71,10 +81,10 @@ const services = [
     <section class="card">
       <div class="card-head">
         <h2>{{ t('account.orders') }}</h2>
-        <span>{{ t('account.more') }}</span>
+        <button type="button" class="more" @click="router.push({ name: 'orders' })">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
-        <button v-for="o in orderItems" :key="o.key" type="button">
+        <button v-for="o in orderItems" :key="o.key" type="button" @click="router.push({ name: 'orders' })">
           <van-badge :content="('badge' in o && o.badge) || ''" :show-zero="false">
             <van-icon :name="o.icon" size="22" />
           </van-badge>
@@ -97,11 +107,13 @@ const services = [
     </section>
 
     <section class="card services">
-      <button v-for="s in services" :key="s.key" type="button">
+      <button v-for="s in services" :key="s.key" type="button" @click="goService(s.route)">
         <van-icon :name="s.icon" size="22" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>
     </section>
+
+    <button type="button" class="lang" @click="toggleLocale">{{ t('account.switchLang') }}</button>
   </div>
 </template>
 
@@ -216,7 +228,9 @@ const services = [
   font-size: 15px;
 }
 
-.card-head span {
+.more {
+  border: 0;
+  background: transparent;
   font-size: 12px;
   color: #999;
 }
@@ -274,6 +288,18 @@ const services = [
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px 0;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.lang {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 0 12px 20px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+  color: #666;
+  font-size: 13px;
 }
 </style>

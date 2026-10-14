@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import AppTabbar from './components/AppTabbar.vue'
 
 const route = useRoute()
-const showTabbar = computed(() => ['home', 'category', 'cart', 'account'].includes(String(route.name)))
+const showTabbar = computed(() => Boolean(route.meta.tab))
 </script>
 
 <template>

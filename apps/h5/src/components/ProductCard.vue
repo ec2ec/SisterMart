@@ -1,28 +1,32 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import type { Product } from '../mock/data'
+import { useLocaleText } from '../composables/useLocaleText'
 
 const props = defineProps<{
   product: Product
-  soldPrefix?: boolean
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const { text } = useLocaleText()
+const router = useRouter()
 
-const name = computed(() => props.product.name[locale.value as 'zh-HK' | 'en'])
-const badgeText = computed(() => {
-  if (!props.product.badge) return ''
-  return t(`badge.${props.product.badge}`)
-})
+const name = computed(() => text(props.product.name))
+const badgeText = computed(() => (props.product.badge ? t(`badge.${props.product.badge}`) : ''))
+
+function openDetail() {
+  router.push({ name: 'product-detail', params: { id: props.product.id } })
+}
 </script>
 
 <template>
-  <article class="card">
+  <article class="card" role="link" tabindex="0" @click="openDetail" @keydown.enter="openDetail">
     <div class="media">
       <img :src="product.image" :alt="name" />
       <span v-if="product.badge" class="badge" :class="product.badge">{{ badgeText }}</span>
-      <button class="wish" type="button" aria-label="wishlist">
+      <button class="wish" type="button" aria-label="wishlist" @click.stop>
         <van-icon name="like-o" color="var(--sm-primary)" />
       </button>
     </div>
@@ -39,6 +43,7 @@ const badgeText = computed(() => {
 <style scoped>
 .card {
   background: #fff;
+  cursor: pointer;
 }
 
 .media {
@@ -109,6 +114,8 @@ const badgeText = computed(() => {
 
 .price {
   font-size: 14px;
+  color: var(--sm-primary);
+  font-weight: 700;
 }
 
 .sold {

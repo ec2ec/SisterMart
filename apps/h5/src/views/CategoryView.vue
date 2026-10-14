@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import { categories } from '../mock/data'
+import { useLocaleText } from '../composables/useLocaleText'
 
-const { locale } = useI18n()
+const { text } = useLocaleText()
+const router = useRouter()
 const active = ref(1)
 
 const current = computed(() => categories[active.value] || categories[0])
@@ -20,6 +22,10 @@ const sections = computed(() => {
   }
   return [{ title: main.name, items: main.children || [] }]
 })
+
+function openList(categoryId: string) {
+  router.push({ name: 'product-list', query: { category: categoryId } })
+}
 </script>
 
 <template>
@@ -30,20 +36,26 @@ const sections = computed(() => {
         <van-sidebar-item
           v-for="c in categories"
           :key="c.id"
-          :title="c.name[locale as 'zh-HK' | 'en']"
+          :title="text(c.name)"
         />
       </van-sidebar>
       <div class="content">
         <section v-for="(sec, idx) in sections" :key="idx" class="sec">
           <div class="sec-title">
             <span />
-            <em>{{ sec.title[locale as 'zh-HK' | 'en'] }}</em>
+            <em>{{ text(sec.title) }}</em>
             <span />
           </div>
           <div class="grid">
-            <button v-for="item in sec.items" :key="item.id" type="button" class="item">
-              <img :src="item.image" :alt="item.name[locale as 'zh-HK' | 'en']" />
-              <span>{{ item.name[locale as 'zh-HK' | 'en'] }}</span>
+            <button
+              v-for="item in sec.items"
+              :key="item.id"
+              type="button"
+              class="item"
+              @click="openList(current.id)"
+            >
+              <img :src="item.image" :alt="text(item.name)" />
+              <span>{{ text(item.name) }}</span>
             </button>
           </div>
         </section>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
+import { useLocaleText } from '../composables/useLocaleText'
 import {
   banners,
   collectionProducts,
@@ -13,39 +15,53 @@ import {
   homeCategories,
 } from '../mock/data'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const { text } = useLocaleText()
+const router = useRouter()
+
 const feedTab = ref(0)
 const email = ref('')
-const flashEnd = Date.now() + 2 * 3600e3 + 14 * 60e3 + 8e3
+const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
+
+const feedList = computed(() => {
+  if (feedTab.value === 1) return collectionProducts
+  if (feedTab.value === 2) return [...feedProducts, ...flashProducts]
+  return feedProducts
+})
 
 function onSubscribe() {
   showToast(email.value ? t('home.subscribe') : t('home.emailPlaceholder'))
 }
+
+function goList(categoryId?: string) {
+  router.push({ name: 'product-list', query: categoryId ? { category: categoryId } : {} })
+}
 </script>
 
 <template>
-  <div class="page">
-    <AppHeader show-logo />
-
-    <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
-      <van-swipe-item v-for="b in banners" :key="b.id">
-        <div class="hero-item">
-          <img :src="b.image" alt="" />
-          <div class="hero-copy">
-            <p class="eyebrow">{{ t('home.bannerEyebrow') }}</p>
-            <h2>{{ t('home.bannerTitle') }}</h2>
-            <p class="sub">{{ t('home.bannerSub') }}</p>
+  <div class="page home">
+    <section class="hero-wrap">
+      <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
+        <van-swipe-item v-for="b in banners" :key="b.id">
+          <div class="hero-item">
+            <img :src="b.image" alt="" />
+            <div class="hero-copy">
+              <p class="eyebrow">{{ t('home.bannerEyebrow') }}</p>
+              <h2>{{ t('home.bannerTitle') }}</h2>
+              <p class="sub">{{ t('home.bannerSub') }}</p>
+            </div>
           </div>
-        </div>
-      </van-swipe-item>
-    </van-swipe>
+        </van-swipe-item>
+      </van-swipe>
+      <AppHeader show-logo variant="overlay" />
+    </section>
 
     <div class="promo">{{ t('home.promo') }}</div>
 
     <section class="flash">
       <div class="section-title">
         <h2>{{ t('home.flashSale') }}</h2>
-        <van-count-down :time="flashEnd - Date.now()" class="countdown" />
+        <van-count-down :time="flashRemain" class="countdown" />
       </div>
       <div class="grid-2">
         <ProductCard v-for="p in flashProducts" :key="p.id" :product="p" />
@@ -54,9 +70,15 @@ function onSubscribe() {
 
     <section class="cats">
       <div class="cat-scroll">
-        <button v-for="c in homeCategories" :key="c.id" type="button" class="cat">
-          <img :src="c.image" :alt="c.name[locale as 'zh-HK' | 'en']" />
-          <span>{{ c.name[locale as 'zh-HK' | 'en'] }}</span>
+        <button
+          v-for="c in homeCategories"
+          :key="c.id"
+          type="button"
+          class="cat"
+          @click="goList(c.id)"
+        >
+          <img :src="c.image" :alt="text(c.name)" />
+          <span>{{ text(c.name) }}</span>
         </button>
       </div>
     </section>
@@ -64,7 +86,7 @@ function onSubscribe() {
     <section>
       <div class="section-title">
         <h2>{{ t('home.necklaceCollection') }}</h2>
-        <span class="more">{{ t('home.viewAll') }}</span>
+        <button type="button" class="more" @click="goList('necklaces')">{{ t('home.viewAll') }}</button>
       </div>
       <div class="grid-2 padded">
         <ProductCard v-for="p in collectionProducts" :key="p.id" :product="p" />
@@ -78,7 +100,7 @@ function onSubscribe() {
         <van-tab :title="t('home.forYou')" />
       </van-tabs>
       <div class="grid-2 padded">
-        <ProductCard v-for="p in feedProducts" :key="p.id" :product="p" />
+        <ProductCard v-for="p in feedList" :key="`${feedTab}-${p.id}`" :product="p" />
       </div>
     </section>
 
@@ -96,15 +118,22 @@ function onSubscribe() {
 </template>
 
 <style scoped>
+.home {
+  background: #fff;
+}
+
+.hero-wrap {
+  position: relative;
+  width: 100%;
+}
+
 .hero {
-  margin: 0 12px;
-  border-radius: 12px;
-  overflow: hidden;
+  width: 100%;
 }
 
 .hero-item {
   position: relative;
-  height: 168px;
+  height: 260px;
   background: #111;
 }
 
@@ -112,29 +141,29 @@ function onSubscribe() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.85;
-  filter: brightness(0.85);
+  display: block;
+  filter: brightness(0.78);
 }
 
 .hero-copy {
   position: absolute;
   left: 16px;
-  bottom: 18px;
+  bottom: 28px;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  max-width: 80%;
 }
 
 .hero-copy .eyebrow {
   margin: 0;
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .hero-copy h2 {
   margin: 4px 0;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: 0.04em;
 }
 
 .hero-copy .sub {
@@ -143,17 +172,12 @@ function onSubscribe() {
 }
 
 .promo {
-  margin-top: 10px;
   padding: 8px 12px;
   text-align: center;
   font-size: 12px;
   font-weight: 600;
   color: var(--sm-primary);
   background: var(--sm-promo-bg);
-}
-
-.flash {
-  padding-bottom: 4px;
 }
 
 .countdown {
@@ -214,6 +238,14 @@ function onSubscribe() {
 .cat span {
   font-size: 11px;
   color: #333;
+}
+
+.more {
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  color: var(--sm-text-muted);
+  padding: 0;
 }
 
 .feed :deep(.van-tabs__wrap) {

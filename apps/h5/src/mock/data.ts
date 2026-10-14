@@ -222,3 +222,22 @@ export const accountMock = {
   streak: 1,
   toShipBadge: 1,
 }
+
+/** 全站 Mock 商品池（详情 / 搜索 / 列表共用） */
+export const allProducts: Product[] = [
+  ...flashProducts,
+  ...collectionProducts,
+  ...feedProducts,
+]
+
+export function findProduct(id: string): Product | undefined {
+  return allProducts.find((p) => p.id === id) ?? allProducts[0]
+}
+
+export function searchProducts(keyword: string): Product[] {
+  const q = keyword.trim().toLowerCase()
+  if (!q) return allProducts
+  return allProducts.filter((p) =>
+    `${p.name['zh-HK']} ${p.name.en}`.toLowerCase().includes(q),
+  )
+}
