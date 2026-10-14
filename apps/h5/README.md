@@ -1,8 +1,19 @@
 # apps/h5
 
-SisterMart 用户端 H5 — **Vue 3 + Vant 4**。
+SisterMart 用户端 H5 — **Vue 3 + Vant 4**，按 `refs/原型/UI參考圖` 设计还原主壳页面。
 
-## 本地启动
+## 页面
+
+| 路由 | 页面 |
+| --- | --- |
+| `/` | 首页（轮播 / 促销条 / 秒杀 / 分类圆标 / 系列 / Tab 商品 / 订阅 / 页脚） |
+| `/category` | 分类（左侧边栏 + 右侧子类网格） |
+| `/cart` | 购物车（信任条 / 管理 / 结算栏） |
+| `/account` | 我的（资产 / 订单入口 / 签到 / 服务宫格） |
+
+点击顶栏 **SisterMart** Logo 或「我的」页设置图标可切换 `zh-HK` / `en`。
+
+## 启动
 
 ```bash
 pnpm install
@@ -10,10 +21,9 @@ cp .env.example .env
 pnpm dev
 ```
 
-默认：`http://127.0.0.1:5173`（`VITE_API_BASE` 指向 API）。
+默认：`http://127.0.0.1:5173`
 
-## M1 范围
+## 说明
 
-- Vite + Vue3 + TS 空壳 + Vant 示例页
-- 可选拉取 API `/health`（API 未启动时仍可打开页面）
-- **不含**业务路由 / i18n 全量文案（自 M2）
+- 商品与账号数据为 **Mock**（对齐 UI 效果图，接口联调后续里程碑）
+- UI 参考图：`refs/原型/UI參考圖/`
