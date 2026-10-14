@@ -26,18 +26,18 @@ abstract class ApiController extends BaseController
         return is_array($decoded) ? $decoded : [];
     }
 
-    protected function run(callable $fn): Response
+    protected function run(callable $fn, int $successStatus = 200): Response
     {
         try {
             $data = $fn();
 
-            return ApiResponse::ok(is_array($data) ? $data : []);
+            return ApiResponse::ok(is_array($data) || $data === null ? $data : [], $successStatus);
         } catch (ApiException $e) {
-            return ApiResponse::fail($e->errorCode, $e->getMessage(), $e->status);
+            return ApiResponse::fromException($e);
         } catch (\Throwable $e) {
             $message = env('APP_DEBUG') ? $e->getMessage() : '服務暫時不可用';
 
-            return ApiResponse::fail('SERVER', $message, 500);
+            return ApiResponse::fail('SERVER', $message, 500, 50000);
         }
     }
 }

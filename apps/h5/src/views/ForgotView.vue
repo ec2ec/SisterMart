@@ -29,7 +29,7 @@ async function sendCode() {
   }
   const channel = isEmail(value) ? 'email' : 'whatsapp'
   try {
-    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/auth/code', {
+    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
       method: 'POST',
       body: JSON.stringify({ channel, purpose: 'reset', target: value }),
     })
@@ -66,8 +66,8 @@ async function submit() {
     return
   }
   try {
-    await api('/api/auth/reset', {
-      method: 'POST',
+    await api('/api/v1/member-passwords', {
+      method: 'PATCH',
       body: JSON.stringify({ identity: value, code: code.value.trim(), password: password.value }),
     })
     showToast(t('auth.resetOk'))

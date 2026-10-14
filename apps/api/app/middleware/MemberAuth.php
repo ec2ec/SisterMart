@@ -18,7 +18,7 @@ class MemberAuth
         $id = TokenService::ownerId('member_tokens', 'member_id', TokenService::bearer($request));
         $member = $id ? Db::name('members')->where('id', $id)->where('status', 1)->find() : null;
         if (!$member) {
-            return ApiResponse::fail('UNAUTHORIZED', '請先登錄', 401);
+            return ApiResponse::fail('UNAUTHORIZED', '請先登錄', 401, 40100);
         }
         app()->instance('sistermart.member', $member);
 

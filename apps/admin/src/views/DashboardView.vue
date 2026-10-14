@@ -8,10 +8,12 @@ const ok = ref(false)
 
 onMounted(async () => {
   try {
-    const res = await fetch(`${apiBase}/health`)
-    const data = await res.json()
-    ok.value = Boolean(data.ok)
-    health.value = data.ok ? `ThinkPHP ${data.thinkphp} · MySQL 可連接` : String(data.db?.error ?? '不可用')
+    const res = await fetch(`${apiBase}/api/v1/health`)
+    const body = await res.json()
+    ok.value = body.code === 0 && Boolean(body.data?.db?.connected)
+    health.value = ok.value
+      ? `ThinkPHP ${body.data.thinkphp} · MySQL 可連接`
+      : String(body.data?.db?.error || body.message || '不可用')
   } catch {
     ok.value = false
     health.value = '接口無法連接'

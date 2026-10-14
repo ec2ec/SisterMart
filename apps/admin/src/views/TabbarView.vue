@@ -24,7 +24,7 @@ const slotName: Record<TabItem['slot'], string> = {
 }
 
 onMounted(async () => {
-  const data = await api<TabbarConfig>('/api/admin/tabbar', {}, true)
+  const data = await api<TabbarConfig>('/api/v1/admin/tabbar', {}, true)
   barBg.value = data.bar_bg
   items.value = [...data.items].sort((a, b) => a.sort - b.sort)
 })
@@ -32,7 +32,7 @@ onMounted(async () => {
 async function save() {
   loading.value = true
   try {
-    const data = await api<TabbarConfig>('/api/admin/tabbar', {
+    const data = await api<TabbarConfig>('/api/v1/admin/tabbar', {
       method: 'PUT',
       body: JSON.stringify({ bar_bg: barBg.value, items: items.value }),
     }, true)

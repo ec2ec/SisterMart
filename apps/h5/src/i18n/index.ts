@@ -22,5 +22,5 @@ export function toggleLocale() {
   const next: LocaleKey = i18n.global.locale.value === 'zh-HK' ? 'en' : 'zh-HK'
   setLocale(next)
   if (!isLoggedIn()) return
-  api('/api/auth/locale', { method: 'PATCH', body: JSON.stringify({ locale: next }) }, 'member').catch(() => {})
+  api('/api/v1/members/me', { method: 'PATCH', body: JSON.stringify({ locale: next }) }, 'member').catch(() => {})
 }

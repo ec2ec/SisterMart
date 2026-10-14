@@ -52,7 +52,7 @@ async function sendCode() {
       return
     }
     try {
-      await api('/api/auth/code', {
+      await api('/api/v1/verification-codes', {
         method: 'POST',
         body: JSON.stringify({ channel: 'whatsapp', purpose: 'register', target: phone.value.trim() }),
       })
@@ -71,7 +71,7 @@ async function sendCode() {
     return
   }
   try {
-    const data = await api<{ debug_code?: string }>('/api/auth/code', {
+    const data = await api<{ debug_code?: string }>('/api/v1/verification-codes', {
       method: 'POST',
       body: JSON.stringify({ channel: 'email', purpose: 'register', target: email.value.trim() }),
     })
@@ -110,7 +110,7 @@ async function submit() {
   }
   const refCode = authQuery(route.query).ref
   try {
-    const data = await api<{ token: string; member: Member; bound?: boolean }>('/api/auth/register', {
+    const data = await api<{ token: string; member: Member; bound?: boolean }>('/api/v1/members', {
       method: 'POST',
       body: JSON.stringify({
         channel: mode.value,

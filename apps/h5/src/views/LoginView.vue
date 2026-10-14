@@ -48,7 +48,7 @@ async function sendCode() {
     return
   }
   try {
-    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/auth/code', {
+    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
       method: 'POST',
       body: JSON.stringify({ channel: 'whatsapp', purpose: 'login', target: phone.value.trim() }),
     })
@@ -90,7 +90,7 @@ async function submit() {
     }
   }
   try {
-    const data = await api<{ token: string; member: Member }>('/api/auth/login', {
+    const data = await api<{ token: string; member: Member }>('/api/v1/member-sessions', {
       method: 'POST',
       body: JSON.stringify({
         channel: mode.value,

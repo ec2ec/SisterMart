@@ -69,7 +69,7 @@ function labelOf(item: TabItem) {
 
 async function refresh() {
   try {
-    const data = await api<TabbarConfig & { ok: boolean }>('/api/tabbar')
+    const data = await api<TabbarConfig>('/api/v1/tabbar')
     const next = { bar_bg: data.bar_bg, items: data.items }
     sessionStorage.setItem(CACHE, JSON.stringify(next))
     config.value = next

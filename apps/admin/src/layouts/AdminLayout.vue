@@ -28,7 +28,7 @@ function go(key: string) {
 
 async function logout() {
   try {
-    await api('/api/admin/logout', { method: 'POST' }, true)
+    await api('/api/v1/admin/sessions/current', { method: 'DELETE' }, true)
   } catch {
     /* 本地仍清除令牌 */
   }

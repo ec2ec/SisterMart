@@ -10,28 +10,30 @@ Route::get('think', function () {
 
 Route::get('hello/:name', 'index/hello');
 
-/** M1 健康检查 */
+/** 健康检查：规范路径 + 运维兼容别名 */
+Route::get('api/v1/health', 'Health/index');
 Route::get('health', 'Health/index');
 Route::get('api/health', 'Health/index');
 
-/** M2 會員登錄與公開底欄 */
-Route::post('api/auth/code', 'api.Auth/code');
-Route::post('api/auth/register', 'api.Auth/register');
-Route::post('api/auth/login', 'api.Auth/login');
-Route::post('api/auth/reset', 'api.Auth/reset');
-Route::get('api/tabbar', 'api.Tabbar/index');
+/** M2 会员资源 */
+Route::post('api/v1/verification-codes', 'api.VerificationCodes/store');
+Route::post('api/v1/members', 'api.Members/store');
+Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
+Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
+Route::get('api/v1/tabbar', 'api.Tabbar/index');
 
-Route::group('api/auth', function () {
-    Route::post('logout', 'api.Auth/logout');
-    Route::get('me', 'api.Auth/me');
-    Route::patch('locale', 'api.Auth/locale');
+Route::group('api/v1', function () {
+    Route::get('members/me', 'api.Members/me');
+    Route::patch('members/me', 'api.Members/updateMe');
+    Route::delete('member-sessions/current', 'api.MemberSessions/destroy');
 })->middleware(MemberAuth::class);
 
-/** M2 後台登錄與底欄配置 */
-Route::post('api/admin/login', 'admin.Auth/login');
-Route::group('api/admin', function () {
-    Route::post('logout', 'admin.Auth/logout');
-    Route::get('me', 'admin.Auth/me');
+/** M2 后台资源 */
+Route::post('api/v1/admin/sessions', 'admin.Sessions/store');
+
+Route::group('api/v1/admin', function () {
+    Route::delete('sessions/current', 'admin.Sessions/destroy');
+    Route::get('admins/me', 'admin.Admins/me');
     Route::get('tabbar', 'admin.Tabbar/index');
-    Route::put('tabbar', 'admin.Tabbar/save');
+    Route::put('tabbar', 'admin.Tabbar/update');
 })->middleware(AdminAuth::class);

@@ -14,7 +14,7 @@ const loading = ref(false)
 async function submit() {
   loading.value = true
   try {
-    const data = await api<{ token: string; admin: AdminUser }>('/api/admin/login', {
+    const data = await api<{ token: string; admin: AdminUser }>('/api/v1/admin/sessions', {
       method: 'POST',
       body: JSON.stringify({ email: email.value.trim(), password: password.value }),
     })

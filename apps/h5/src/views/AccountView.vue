@@ -26,9 +26,9 @@ function openAccount() {
 onMounted(async () => {
   if (!isLoggedIn()) return
   try {
-    const data = await api<{ member: Member }>('/api/auth/me', {}, 'member')
-    memberState.value = data.member
-    localStorage.setItem('sm_member', JSON.stringify(data.member))
+    const data = await api<Member>('/api/v1/members/me', {}, 'member')
+    memberState.value = data
+    localStorage.setItem('sm_member', JSON.stringify(data))
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) clearSession()
   }
@@ -36,7 +36,7 @@ onMounted(async () => {
 
 async function logout() {
   try {
-    await api('/api/auth/logout', { method: 'POST' }, 'member')
+    await api('/api/v1/member-sessions/current', { method: 'DELETE' }, 'member')
   } catch {
     /* 本地仍清除令牌 */
   }

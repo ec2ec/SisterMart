@@ -1,10 +1,22 @@
 const base = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
+type Envelope<T> = {
+  code: number
+  message: string
+  data: T
+  error?: {
+    name?: string
+    details?: Record<string, unknown>
+  }
+}
+
 export class ApiError extends Error {
   code: string
-  constructor(code: string, message: string) {
+  businessCode: number
+  constructor(code: string, message: string, businessCode = 0) {
     super(message)
     this.code = code
+    this.businessCode = businessCode
   }
 }
 
@@ -16,11 +28,11 @@ export async function api<T>(path: string, init: RequestInit = {}, auth = false)
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
   const res = await fetch(`${base}${path}`, { ...init, headers })
-  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; message?: string }
-  if (!res.ok || data.ok === false) {
-    throw new ApiError(data.code || 'HTTP', data.message || '請求失敗')
+  const body = (await res.json().catch(() => ({}))) as Envelope<T>
+  if (!res.ok || body.code !== 0) {
+    throw new ApiError(body.error?.name || 'HTTP', body.message || '請求失敗', body.code ?? 0)
   }
-  return data as T
+  return body.data
 }
 
 export type AdminUser = {

@@ -15,7 +15,7 @@ class Tabbar extends ApiController
         return $this->run(fn () => (new TabbarService())->read());
     }
 
-    public function save(): Response
+    public function update(): Response
     {
         return $this->run(fn () => (new TabbarService())->save($this->payload()));
     }

@@ -18,7 +18,7 @@ class AdminAuth
         $id = TokenService::ownerId('admin_tokens', 'admin_id', TokenService::bearer($request));
         $admin = $id ? Db::name('admins')->where('id', $id)->where('status', 1)->find() : null;
         if (!$admin) {
-            return ApiResponse::fail('UNAUTHORIZED', '請先登錄', 401);
+            return ApiResponse::fail('UNAUTHORIZED', '請先登錄', 401, 40100);
         }
         app()->instance('sistermart.admin', $admin);
 
