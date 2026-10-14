@@ -8,6 +8,8 @@ import ProductDetailView from '../views/ProductDetailView.vue'
 import ProductListView from '../views/ProductListView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import ForgotView from '../views/ForgotView.vue'
+import ArticleView from '../views/ArticleView.vue'
 import WishlistView from '../views/WishlistView.vue'
 import MessagesView from '../views/MessagesView.vue'
 import OrdersView from '../views/OrdersView.vue'
@@ -26,6 +28,8 @@ export const router = createRouter({
     { path: '/products', name: 'product-list', component: ProductListView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
+    { path: '/forgot', name: 'forgot', component: ForgotView },
+    { path: '/article/:id', name: 'article', component: ArticleView },
     { path: '/wishlist', name: 'wishlist', component: WishlistView },
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/orders', name: 'orders', component: OrdersView },

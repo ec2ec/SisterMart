@@ -43,7 +43,7 @@ function goService(route: string) {
       <button class="settings" type="button" :title="t('account.switchLang')" @click="toggleLocale">
         <van-icon name="setting-o" size="1.125rem" />
       </button>
-      <div class="user" role="button" @click="router.push({ name: 'login' })">
+      <div class="user" role="button" @click="router.push({ name: 'login', query: { redirect: '/account' } })">
         <div class="avatar">{{ u.avatarLetter }}</div>
         <div>
           <h1>{{ u.name }}</h1>
