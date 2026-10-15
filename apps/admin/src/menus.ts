@@ -21,7 +21,7 @@ export const adminMenus: AdminMenu[] = [
     key: 'sales',
     children: [
       { label: '訂單', key: '/sales/orders', path: '/sales/orders' },
-      { label: '售後', key: '/sales/aftersales', path: '/sales/aftersales', milestone: 'M5' },
+      { label: '售後', key: '/sales/aftersales', path: '/sales/aftersales' },
     ],
   },
   {

@@ -50,7 +50,7 @@ const orderItems = [
   { key: 'toShip', icon: 'logistics', badge: u.toShipBadge },
   { key: 'toReceive', icon: 'send-gift-o' },
   { key: 'toReview', icon: 'orders-o' },
-  { key: 'returns', icon: 'replay' },
+  { key: 'returns', icon: 'replay', route: 'aftersales' },
 ] as const
 
 const services = [
@@ -132,7 +132,12 @@ function goOrders() {
         <button type="button" class="more" @click="goOrders">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
-        <button v-for="o in orderItems" :key="o.key" type="button" @click="goOrders">
+        <button
+          v-for="o in orderItems"
+          :key="o.key"
+          type="button"
+          @click="'route' in o && o.route ? goService(o.route) : goOrders()"
+        >
           <van-badge :content="(!loggedIn && 'badge' in o && o.badge) || ''" :show-zero="false">
             <van-icon :name="o.icon" size="1.375rem" />
           </van-badge>

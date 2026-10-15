@@ -67,11 +67,16 @@ export type Order = {
   balance_amount?: number
   pay_channel?: string | null
   paid_at?: string | null
+  shipped_at?: string | null
+  completed_at?: string | null
+  aftersale_touched?: boolean
+  points_awarded?: number
   expire_at?: string | null
   created_at: string
   address?: Address | Record<string, string>
   remark?: string
   items?: Array<{
+    id?: number
     product_code: string
     sku_code: string
     name: Localized
@@ -79,6 +84,7 @@ export type Order = {
     image: string
     unit_price: number
     qty: number
+    refunded_qty?: number
     line_amount: number
   }>
   cover?: string
@@ -151,4 +157,59 @@ export function createPayment(orderId: number, channel: string) {
 
 export function mockConfirmPayment(paymentId: number) {
   return api<Order>(`/api/v1/payments/${paymentId}/mock-confirm`, { method: 'POST', body: '{}' }, 'member')
+}
+
+export type Shipment = {
+  order_id: number
+  order_no: string
+  order_status: string
+  company: string
+  tracking_no: string
+  shipped_at: string
+  nodes: Array<{ id: number; occurred_at: string; note: string }>
+}
+
+export type Aftersale = {
+  id: number
+  aftersale_no: string
+  order_id: number
+  order_item_id: number
+  type: string
+  reason: string
+  amount: number
+  qty: number
+  refund_to: string
+  status: string
+  admin_note: string
+  created_at: string
+  order_no?: string
+  item?: {
+    name: { 'zh-HK': string; en: string }
+    spec: { 'zh-HK': string; en: string }
+    image: string
+  }
+}
+
+export function fetchShipment(orderId: number | string) {
+  return api<Shipment>(`/api/v1/orders/${orderId}/shipment`, {}, 'member')
+}
+
+export function confirmReceipt(orderId: number) {
+  return api<Order>(`/api/v1/orders/${orderId}/confirm-receipt`, { method: 'POST', body: '{}' }, 'member')
+}
+
+export function fetchAftersales() {
+  return api<{ items: Aftersale[] }>('/api/v1/aftersales', {}, 'member')
+}
+
+export function fetchAftersale(id: number | string) {
+  return api<Aftersale>(`/api/v1/aftersales/${id}`, {}, 'member')
+}
+
+export function applyAftersale(body: Record<string, unknown>) {
+  return api<Aftersale>('/api/v1/aftersales', { method: 'POST', body: JSON.stringify(body) }, 'member')
+}
+
+export function cancelAftersale(id: number) {
+  return api<Aftersale>(`/api/v1/aftersales/${id}/cancel`, { method: 'POST', body: '{}' }, 'member')
 }

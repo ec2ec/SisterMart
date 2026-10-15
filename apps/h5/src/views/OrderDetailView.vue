@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
-import { cancelOrder, fetchOrder, type Order } from '../api/trade'
+import { cancelOrder, confirmReceipt, fetchOrder, type Order } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 
 const { t } = useI18n()
@@ -19,10 +19,26 @@ async function load() {
 
 onMounted(load)
 
+const statusMap: Record<string, string> = {
+  pending_payment: 'orders.pendingPayment',
+  pending_shipment: 'orders.pendingShipment',
+  pending_receipt: 'orders.pendingReceipt',
+  completed: 'orders.completed',
+  cancelled: 'orders.cancelled',
+  refunded: 'orders.refunded',
+}
+
 async function onCancel() {
   if (!order.value) return
   await cancelOrder(order.value.id)
   showToast(t('orders.cancelled'))
+  await load()
+}
+
+async function onConfirm() {
+  if (!order.value) return
+  await confirmReceipt(order.value.id)
+  showToast(t('fulfill.confirmed'))
   await load()
 }
 </script>
@@ -32,7 +48,7 @@ async function onCancel() {
     <SubPageNav :title="t('orders.detail')" />
     <section class="card">
       <p>{{ order.order_no }}</p>
-      <h2>{{ t(`orders.${order.status === 'pending_payment' ? 'pendingPayment' : order.status === 'pending_shipment' ? 'pendingShipment' : 'cancelled'}`) }}</h2>
+      <h2>{{ t(statusMap[order.status] || order.status) }}</h2>
       <p v-if="order.address">
         {{ (order.address as any).receiver }} {{ (order.address as any).phone }}<br />
         {{ (order.address as any).region }} {{ (order.address as any).district }} {{ (order.address as any).detail }}
@@ -53,10 +69,35 @@ async function onCancel() {
       <p>{{ t('checkout.shipping') }} HK$ {{ order.shipping_amount.toFixed(2) }}</p>
       <p><strong>{{ t('checkout.pay') }} HK$ {{ order.pay_amount.toFixed(2) }}</strong></p>
     </section>
-    <div class="actions" v-if="order.status === 'pending_payment'">
-      <van-button plain round @click="onCancel">{{ t('orders.cancel') }}</van-button>
-      <van-button type="primary" color="var(--sm-primary)" round @click="router.push({ name: 'payment', params: { id: order.id } })">
+    <div class="actions">
+      <van-button v-if="order.status === 'pending_payment'" plain round @click="onCancel">{{ t('orders.cancel') }}</van-button>
+      <van-button
+        v-if="order.status === 'pending_payment'"
+        type="primary"
+        color="var(--sm-primary)"
+        round
+        @click="router.push({ name: 'payment', params: { id: order.id } })"
+      >
         {{ t('orders.payNow') }}
+      </van-button>
+      <van-button
+        v-if="order.status === 'pending_receipt' || order.shipped_at"
+        plain
+        round
+        @click="router.push({ name: 'logistics', params: { id: order.id } })"
+      >
+        {{ t('fulfill.logistics') }}
+      </van-button>
+      <van-button v-if="order.status === 'pending_receipt'" type="primary" color="var(--sm-primary)" round @click="onConfirm">
+        {{ t('fulfill.confirm') }}
+      </van-button>
+      <van-button
+        v-if="order.status === 'pending_shipment' || order.status === 'pending_receipt'"
+        plain
+        round
+        @click="router.push({ name: 'aftersale-apply', params: { id: order.id } })"
+      >
+        {{ t('fulfill.apply') }}
       </van-button>
     </div>
   </div>
@@ -83,10 +124,11 @@ async function onCancel() {
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding: 1rem;
 }
 .actions .van-button {
-  flex: 1;
+  flex: 1 1 calc(50% - 0.5rem);
 }
 </style>

@@ -45,16 +45,24 @@ Route::group('api/v1', function () {
     Route::put('cart/check-all', 'api.Cart/checkAll');
 
     Route::post('checkout/quote', 'api.Orders/quote');
-    Route::get('orders/:id', 'api.Orders/read');
+    Route::get('orders/:orderId/shipment', 'api.Shipments/read');
+    Route::post('orders/:id/confirm-receipt', 'api.Receipts/confirm');
     Route::post('orders/:id/cancel', 'api.Orders/cancel');
     Route::post('orders/:id/payments', 'api.Orders/pay');
+    Route::get('orders/:id', 'api.Orders/read');
     Route::get('orders', 'api.Orders/index');
     Route::post('orders', 'api.Orders/store');
     Route::post('payments/:id/mock-confirm', 'api.Payments/mockConfirm');
+
+    Route::get('aftersales/:id', 'api.Aftersales/read');
+    Route::post('aftersales/:id/cancel', 'api.Aftersales/cancel');
+    Route::get('aftersales', 'api.Aftersales/index');
+    Route::post('aftersales', 'api.Aftersales/store');
 })->middleware(MemberAuth::class);
 
-/** 關單任務可無會員令牌（本地驗收手動觸發） */
+/** 關單 / 自動收貨任務可無會員令牌（本地驗收手動觸發） */
 Route::post('api/v1/jobs/close-expired-orders', 'api.TradeJobs/closeExpired');
+Route::post('api/v1/jobs/auto-receive-orders', 'api.FulfillmentJobs/autoReceive');
 
 /** M2 后台资源 */
 Route::post('api/v1/admin/sessions', 'admin.Sessions/store');
@@ -83,7 +91,17 @@ Route::group('api/v1/admin', function () {
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
 
+    Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
+    Route::get('orders/:orderId/shipment', 'admin.Shipments/read');
+    Route::post('orders/:orderId/shipments', 'admin.Shipments/ship');
     Route::get('orders/:id', 'admin.Orders/read');
     Route::get('orders', 'admin.Orders/index');
     Route::post('jobs/close-expired-orders', 'admin.Orders/closeExpired');
+    Route::post('jobs/auto-receive-orders', 'api.FulfillmentJobs/autoReceive');
+
+    Route::get('aftersales/:id', 'admin.Aftersales/read');
+    Route::post('aftersales/:id/review', 'admin.Aftersales/review');
+    Route::post('aftersales/:id/mark-returned', 'admin.Aftersales/markReturned');
+    Route::post('aftersales/:id/force-balance', 'admin.Aftersales/forceBalance');
+    Route::get('aftersales', 'admin.Aftersales/index');
 })->middleware(AdminAuth::class);

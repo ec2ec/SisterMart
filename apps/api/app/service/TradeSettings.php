@@ -40,6 +40,17 @@ class TradeSettings
         return max(0, min(100, (int) self::get('points.max_percent', '50')));
     }
 
+    public static function autoReceiveDays(): int
+    {
+        return max(1, (int) self::get('order.auto_receive_days', '7'));
+    }
+
+    /** 訂單完成時，商品實付每 HKD 發多少積分（運費不計） */
+    public static function orderEarnPerHkd(): int
+    {
+        return max(0, (int) self::get('points.order_earn_per_hkd', '1'));
+    }
+
     public static function shippingFor(float $goodsAfterDiscount): float
     {
         if ($goodsAfterDiscount >= self::freeThreshold()) {

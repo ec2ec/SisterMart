@@ -18,6 +18,10 @@ import CheckoutView from '../views/CheckoutView.vue'
 import PaymentView from '../views/PaymentView.vue'
 import PayResultView from '../views/PayResultView.vue'
 import AddressesView from '../views/AddressesView.vue'
+import LogisticsView from '../views/LogisticsView.vue'
+import AftersaleApplyView from '../views/AftersaleApplyView.vue'
+import AftersaleDetailView from '../views/AftersaleDetailView.vue'
+import AftersalesView from '../views/AftersalesView.vue'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
@@ -43,6 +47,10 @@ export const router = createRouter({
     { path: '/payment/:id', name: 'payment', component: PaymentView },
     { path: '/pay-result', name: 'pay-result', component: PayResultView },
     { path: '/addresses', name: 'addresses', component: AddressesView },
+    { path: '/orders/:id/logistics', name: 'logistics', component: LogisticsView },
+    { path: '/orders/:id/aftersale', name: 'aftersale-apply', component: AftersaleApplyView },
+    { path: '/aftersales', name: 'aftersales', component: AftersalesView },
+    { path: '/aftersales/:id', name: 'aftersale-detail', component: AftersaleDetailView },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

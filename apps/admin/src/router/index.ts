@@ -10,6 +10,7 @@ import ProductsView from '../views/ProductsView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
+import AftersalesView from '../views/AftersalesView.vue'
 import TabbarView from '../views/TabbarView.vue'
 import { findMenu } from '../menus'
 
@@ -36,7 +37,7 @@ export const router = createRouter({
         { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
         { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
-        placeholder('/sales/aftersales'),
+        { path: '/sales/aftersales', component: AftersalesView, meta: { title: '售後' } },
         placeholder('/customers/members'),
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         placeholder('/cms/home'),
