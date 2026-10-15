@@ -1,44 +1,53 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
+import { fetchOrders, type Order } from '../api/trade'
+import { isLoggedIn } from '../composables/useSession'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const router = useRouter()
+const items = ref<Order[]>([])
 
-const orders = computed(() =>
-  locale.value === 'en'
-    ? [
-        { id: '#10021', status: 'To ship', amount: 'HK$ 197.00' },
-        { id: '#10018', status: 'Completed', amount: 'HK$ 89.00' },
-      ]
-    : [
-        { id: '#10021', status: '待發貨', amount: 'HK$ 197.00' },
-        { id: '#10018', status: '已完成', amount: 'HK$ 89.00' },
-      ],
-)
+const statusLabel: Record<string, string> = {
+  pending_payment: 'orders.pendingPayment',
+  pending_shipment: 'orders.pendingShipment',
+  cancelled: 'orders.cancelled',
+}
+
+onMounted(async () => {
+  if (!isLoggedIn()) {
+    router.replace({ name: 'login', query: { redirect: '/orders' } })
+    return
+  }
+  const data = await fetchOrders()
+  items.value = data.items
+})
 </script>
 
 <template>
   <div class="page">
     <SubPageNav :title="t('pages.orders')" />
-    <van-cell-group inset>
+    <p v-if="!items.length" class="empty">{{ t('orders.empty') }}</p>
+    <van-cell-group v-else inset>
       <van-cell
-        v-for="o in orders"
+        v-for="o in items"
         :key="o.id"
-        :title="o.id"
-        :value="o.status"
-        :label="o.amount"
+        :title="o.order_no"
+        :value="t(statusLabel[o.status] || o.status)"
+        :label="`HK$ ${o.pay_amount.toFixed(2)} · ${o.title || ''}`"
+        is-link
+        @click="router.push({ name: 'order-detail', params: { id: o.id } })"
       />
     </van-cell-group>
-    <p class="hint">{{ t('pages.coming') }}</p>
   </div>
 </template>
 
 <style scoped>
-.hint {
+.empty {
   text-align: center;
   color: #999;
-  font-size: 0.75rem;
-  padding: 1rem;
+  padding: 2rem;
 }
 </style>

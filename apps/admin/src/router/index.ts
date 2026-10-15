@@ -8,6 +8,8 @@ import PlaceholderView from '../views/PlaceholderView.vue'
 import ProductEditView from '../views/ProductEditView.vue'
 import ProductsView from '../views/ProductsView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
+import OrdersView from '../views/OrdersView.vue'
+import OrderDetailView from '../views/OrderDetailView.vue'
 import TabbarView from '../views/TabbarView.vue'
 import { findMenu } from '../menus'
 
@@ -32,7 +34,8 @@ export const router = createRouter({
         { path: '/catalog/products', component: ProductsView, meta: { title: '商品' } },
         { path: '/catalog/products/:id', component: ProductEditView, meta: { title: '商品編輯' } },
         { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
-        placeholder('/sales/orders'),
+        { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
+        { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
         placeholder('/sales/aftersales'),
         placeholder('/customers/members'),
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },

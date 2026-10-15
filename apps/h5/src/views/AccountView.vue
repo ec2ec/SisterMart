@@ -54,7 +54,7 @@ const orderItems = [
 ] as const
 
 const services = [
-  { key: 'address', icon: 'location-o', route: '' },
+  { key: 'address', icon: 'location-o', route: 'addresses' },
   { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
   { key: 'couponCenter', icon: 'coupon-o', route: '' },
   { key: 'pointsMall', icon: 'shop-o', route: '' },
@@ -69,7 +69,19 @@ function goService(route: string) {
     showToast(t('pages.coming'))
     return
   }
+  if (!isLoggedIn() && route !== 'home') {
+    router.push({ name: 'login', query: { redirect: `/${route}` } })
+    return
+  }
   router.push({ name: route })
+}
+
+function goOrders() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/orders' } })
+    return
+  }
+  router.push({ name: 'orders' })
 }
 </script>
 
@@ -89,7 +101,7 @@ function goService(route: string) {
       </div>
       <div class="stats">
         <div>
-          <strong>{{ loggedIn ? '0.00' : u.balance }}</strong>
+          <strong>{{ loggedIn ? (memberState?.balance ?? 0).toFixed(2) : u.balance }}</strong>
           <span>{{ t('account.balance') }}</span>
         </div>
         <div>
@@ -97,7 +109,7 @@ function goService(route: string) {
           <span>{{ t('account.coupons') }}</span>
         </div>
         <div>
-          <strong>{{ loggedIn ? 0 : u.points }}</strong>
+          <strong>{{ loggedIn ? (memberState?.points ?? 0) : u.points }}</strong>
           <span>{{ t('account.points') }}</span>
         </div>
       </div>
@@ -117,10 +129,10 @@ function goService(route: string) {
     <section class="card">
       <div class="card-head">
         <h2>{{ t('account.orders') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'orders' })">{{ t('account.more') }}</button>
+        <button type="button" class="more" @click="goOrders">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
-        <button v-for="o in orderItems" :key="o.key" type="button" @click="router.push({ name: 'orders' })">
+        <button v-for="o in orderItems" :key="o.key" type="button" @click="goOrders">
           <van-badge :content="(!loggedIn && 'badge' in o && o.badge) || ''" :show-zero="false">
             <van-icon :name="o.icon" size="1.375rem" />
           </van-badge>

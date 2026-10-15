@@ -32,7 +32,29 @@ Route::group('api/v1', function () {
     Route::get('members/me', 'api.Members/me');
     Route::patch('members/me', 'api.Members/updateMe');
     Route::delete('member-sessions/current', 'api.MemberSessions/destroy');
+
+    Route::get('addresses', 'api.Addresses/index');
+    Route::post('addresses', 'api.Addresses/store');
+    Route::put('addresses/:id', 'api.Addresses/update');
+    Route::delete('addresses/:id', 'api.Addresses/destroy');
+
+    Route::get('cart', 'api.Cart/show');
+    Route::post('cart/items', 'api.Cart/storeItem');
+    Route::patch('cart/items/:id', 'api.Cart/updateItem');
+    Route::post('cart/delete-items', 'api.Cart/destroyItems');
+    Route::put('cart/check-all', 'api.Cart/checkAll');
+
+    Route::post('checkout/quote', 'api.Orders/quote');
+    Route::get('orders/:id', 'api.Orders/read');
+    Route::post('orders/:id/cancel', 'api.Orders/cancel');
+    Route::post('orders/:id/payments', 'api.Orders/pay');
+    Route::get('orders', 'api.Orders/index');
+    Route::post('orders', 'api.Orders/store');
+    Route::post('payments/:id/mock-confirm', 'api.Payments/mockConfirm');
 })->middleware(MemberAuth::class);
+
+/** 關單任務可無會員令牌（本地驗收手動觸發） */
+Route::post('api/v1/jobs/close-expired-orders', 'api.TradeJobs/closeExpired');
 
 /** M2 后台资源 */
 Route::post('api/v1/admin/sessions', 'admin.Sessions/store');
@@ -60,4 +82,8 @@ Route::group('api/v1/admin', function () {
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
+
+    Route::get('orders/:id', 'admin.Orders/read');
+    Route::get('orders', 'admin.Orders/index');
+    Route::post('jobs/close-expired-orders', 'admin.Orders/closeExpired');
 })->middleware(AdminAuth::class);

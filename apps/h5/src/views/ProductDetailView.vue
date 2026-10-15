@@ -7,9 +7,11 @@ import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
 import { fetchProduct, fetchProducts, skuKey, type ProductCard as Card, type ProductDetail } from '../api/catalog'
+import { addCartItem } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
 import { currentMember, isLoggedIn } from '../composables/useSession'
+import { ApiError } from '../api/client'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -96,14 +98,27 @@ function requireSku() {
   return true
 }
 
-function addToCart() {
-  if (!requireSku()) return
-  showToast(t('pdp.added'))
+async function addToCart() {
+  if (!requireSku() || !quote.value) return
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    return
+  }
+  try {
+    await addCartItem(quote.value.id, 1)
+    showToast(t('pdp.added'))
+  } catch (error) {
+    showToast(error instanceof ApiError ? error.message : t('pdp.outOfStock'))
+  }
 }
 
 function buyNow() {
-  if (!requireSku()) return
-  showToast(t('pdp.buyReady'))
+  if (!requireSku() || !quote.value) return
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    return
+  }
+  router.push({ name: 'checkout', query: { sku_id: String(quote.value.id), qty: '1' } })
 }
 
 function toggleFav() {

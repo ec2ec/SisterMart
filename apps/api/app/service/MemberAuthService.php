@@ -75,6 +75,8 @@ class MemberAuthService
                 'promo_code'      => 'TMP' . bin2hex(random_bytes(4)),
                 'parent_id'       => $parentId,
                 'status'          => 1,
+                'balance'         => 50,
+                'points'          => 5000,
                 'agreed_terms_at' => $now,
                 'created_at'      => $now,
                 'updated_at'      => $now,
@@ -82,6 +84,17 @@ class MemberAuthService
             Db::name('members')->where('id', $memberId)->update([
                 'promo_code' => 'SM' . str_pad((string) $memberId, 4, '0', STR_PAD_LEFT),
             ]);
+            $couponId = (int) Db::name('coupons')->where('code', 'WELCOME20')->value('id');
+            if ($couponId) {
+                Db::name('coupon_grants')->insert([
+                    'coupon_id' => $couponId,
+                    'member_id' => $memberId,
+                    'status' => 'unused',
+                    'order_id' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
 
             return $memberId;
         });
@@ -167,6 +180,8 @@ class MemberAuthService
             'phone'      => $member['phone'] ?: null,
             'locale'     => (string) $member['locale'],
             'promo_code' => (string) $member['promo_code'],
+            'balance' => (float) ($member['balance'] ?? 0),
+            'points' => (int) ($member['points'] ?? 0),
         ];
     }
 

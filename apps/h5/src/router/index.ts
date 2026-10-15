@@ -13,6 +13,11 @@ import ArticleView from '../views/ArticleView.vue'
 import WishlistView from '../views/WishlistView.vue'
 import MessagesView from '../views/MessagesView.vue'
 import OrdersView from '../views/OrdersView.vue'
+import OrderDetailView from '../views/OrderDetailView.vue'
+import CheckoutView from '../views/CheckoutView.vue'
+import PaymentView from '../views/PaymentView.vue'
+import PayResultView from '../views/PayResultView.vue'
+import AddressesView from '../views/AddressesView.vue'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
@@ -33,6 +38,11 @@ export const router = createRouter({
     { path: '/wishlist', name: 'wishlist', component: WishlistView },
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/orders', name: 'orders', component: OrdersView },
+    { path: '/orders/:id', name: 'order-detail', component: OrderDetailView },
+    { path: '/checkout', name: 'checkout', component: CheckoutView },
+    { path: '/payment/:id', name: 'payment', component: PaymentView },
+    { path: '/pay-result', name: 'pay-result', component: PayResultView },
+    { path: '/addresses', name: 'addresses', component: AddressesView },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

@@ -7,6 +7,8 @@ export type Member = {
   phone: string | null
   locale: 'zh-HK' | 'en'
   promo_code: string
+  balance?: number
+  points?: number
 }
 
 const TOKEN = 'sm_token'

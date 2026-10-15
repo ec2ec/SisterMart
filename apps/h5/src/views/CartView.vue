@@ -1,33 +1,92 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { initialCart, type CartItem } from '../mock/data'
+import { ApiError } from '../api/client'
+import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
+import { isLoggedIn } from '../composables/useSession'
+import { useLocaleText } from '../composables/useLocaleText'
 
-const { t, locale } = useI18n()
-const items = ref<CartItem[]>(initialCart.map((i) => ({ ...i })))
+const { t } = useI18n()
+const { text } = useLocaleText()
+const router = useRouter()
+const items = ref<CartItem[]>([])
 const managing = ref(false)
+const loading = ref(false)
 
-const checkedCount = computed(() => items.value.filter((i) => i.checked).length)
+async function load() {
+  if (!isLoggedIn()) {
+    items.value = []
+    return
+  }
+  loading.value = true
+  try {
+    const data = await fetchCart()
+    items.value = data.items
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      router.push({ name: 'login', query: { redirect: '/cart' } })
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+
+const checkedCount = computed(() => items.value.filter((i) => i.checked && i.available).length)
 const allChecked = computed({
-  get: () => items.value.length > 0 && items.value.every((i) => i.checked),
-  set: (v: boolean) => {
-    items.value.forEach((i) => {
-      i.checked = v
-    })
+  get: () => {
+    const usable = items.value.filter((i) => i.available)
+    return usable.length > 0 && usable.every((i) => i.checked)
+  },
+  set: async (v: boolean) => {
+    if (!isLoggedIn()) return
+    await checkAllCart(v)
+    await load()
   },
 })
 const total = computed(() =>
-  items.value.filter((i) => i.checked).reduce((sum, i) => sum + i.price * i.qty, 0),
+  items.value.filter((i) => i.checked && i.available).reduce((sum, i) => sum + i.price * i.qty, 0),
 )
 
-function checkout() {
-  showToast(`${t('cart.checkout')} HK$ ${total.value.toFixed(2)}`)
+async function onQty(item: CartItem, qty: number) {
+  await patchCartItem(item.id, { qty })
+  await load()
 }
 
-function removeChecked() {
-  items.value = items.value.filter((i) => !i.checked)
+async function onCheck(item: CartItem, checked: boolean) {
+  if (!item.available) return
+  await patchCartItem(item.id, { checked })
+  await load()
+}
+
+function checkout() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/cart' } })
+    return
+  }
+  if (checkedCount.value === 0) {
+    showToast(t('cart.checkout'))
+    return
+  }
+  router.push({ name: 'checkout' })
+}
+
+async function removeChecked() {
+  const ids = items.value.filter((i) => i.checked).map((i) => i.id)
+  if (!ids.length) return
+  await deleteCartItems(ids)
   managing.value = false
+  await load()
+}
+
+function reasonText(item: CartItem) {
+  if (item.invalid_reason === 'off_sale') return t('cart.invalidOff')
+  if (item.invalid_reason === 'out_of_stock') return t('cart.invalidStock')
+  if (item.invalid_reason === 'qty_exceed') return t('cart.invalidQty')
+  return ''
 }
 </script>
 
@@ -46,16 +105,34 @@ function removeChecked() {
       </button>
     </div>
 
-    <div class="list">
-      <div v-for="item in items" :key="item.id" class="row">
-        <van-checkbox v-model="item.checked" checked-color="var(--sm-primary)" />
+    <p v-if="!isLoggedIn()" class="empty">
+      <button type="button" @click="router.push({ name: 'login', query: { redirect: '/cart' } })">{{ t('auth.login') }}</button>
+    </p>
+    <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
+
+    <div v-else class="list">
+      <div v-for="item in items" :key="item.id" class="row" :class="{ bad: !item.available }">
+        <van-checkbox
+          :model-value="item.checked"
+          :disabled="!item.available"
+          checked-color="var(--sm-primary)"
+          @update:model-value="(v: boolean) => onCheck(item, v)"
+        />
         <img :src="item.image" alt="" />
         <div class="info">
-          <h3>{{ item.name[locale as 'zh-HK' | 'en'] }}</h3>
-          <p>{{ item.spec[locale as 'zh-HK' | 'en'] }}</p>
+          <h3>{{ text(item.name) }}</h3>
+          <p>{{ text(item.spec) }}</p>
+          <p v-if="!item.available" class="warn">{{ reasonText(item) }}</p>
           <div class="bottom">
             <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
-            <van-stepper v-model="item.qty" min="1" theme="round" button-size="1.375rem" />
+            <van-stepper
+              :model-value="item.qty"
+              :max="Math.max(1, item.stock)"
+              min="1"
+              theme="round"
+              button-size="1.375rem"
+              @change="(v: number) => onQty(item, v)"
+            />
           </div>
         </div>
       </div>
@@ -75,7 +152,7 @@ function removeChecked() {
         type="primary"
         round
         color="var(--sm-primary)"
-        :disabled="checkedCount === 0"
+        :disabled="managing ? checkedCount === 0 && !items.some((i) => i.checked) : checkedCount === 0"
         @click="managing ? removeChecked() : checkout()"
       >
         {{ managing ? t('cart.delete') : t('cart.checkout') }}
@@ -93,103 +170,93 @@ function removeChecked() {
   color: #999;
   background: #fafafa;
 }
-
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
 }
-
 .toolbar h1 {
   margin: 0;
   font-size: 1rem;
 }
-
 .manage {
   border: 0.0625rem solid #ddd;
   background: #fff;
   border-radius: 62.4375rem;
   padding: 0.25rem 0.875rem;
   font-size: 0.75rem;
-  color: #333;
 }
-
 .list {
   padding: 0 0.75rem 5.625rem;
 }
-
 .row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 5rem 1fr;
   gap: 0.625rem;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 0.0625rem solid #f2f2f2;
+  border-bottom: 0.0625rem solid #f0f0f0;
 }
-
+.row.bad {
+  opacity: 0.7;
+}
 .row img {
-  width: 5.5rem;
-  height: 5.5rem;
-  border-radius: 0.625rem;
+  width: 5rem;
+  height: 5rem;
   object-fit: cover;
-  background: #f5f5f5;
-  flex: 0 0 auto;
+  border-radius: 0.5rem;
+  background: #f6f6f6;
 }
-
-.info {
-  flex: 1;
-  min-width: 0;
-}
-
 .info h3 {
   margin: 0;
   font-size: 0.875rem;
 }
-
 .info p {
-  margin: 0.375rem 0 0.625rem;
+  margin: 0.25rem 0;
   font-size: 0.75rem;
-  color: #999;
+  color: #888;
 }
-
+.warn {
+  color: #c45c26 !important;
+}
 .bottom {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
-
 .price {
   color: var(--sm-primary);
   font-weight: 700;
 }
-
 .submit {
   position: fixed;
   left: 0;
   right: 0;
   bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
-  z-index: 15;
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: #fff;
   border-top: 0.0625rem solid #eee;
+  z-index: 20;
 }
-
 .sum {
   flex: 1;
   text-align: right;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
-
-.sum strong {
-  margin-left: 0.25rem;
-  font-size: 1rem;
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #999;
 }
-
-.submit :deep(.van-button) {
-  min-width: 6rem;
-  height: 2.25rem;
+.empty button {
+  border: 0;
+  background: var(--sm-primary);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1.25rem;
 }
 </style>
