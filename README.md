@@ -49,9 +49,16 @@ cd apps/admin && pnpm install && cp .env.example .env && pnpm dev
 
 ## 里程碑状态
 
-- **M0**：已关闭（模具 + 共识文档）
-- **M1**：脚手架已落地，**待你验收** → [M1-验收记录](docs/验收/M1-验收记录.md)
-- **M2**：未开始（验收通过后再开）
+- **M0–M8**：已通过（见 `docs/验收/`）
+- **M9**：测试环境发布包已就绪 → [M9-验收记录](docs/验收/M9-验收记录.md) · [部署文档](docs/验收/M9-部署与环境变量.md) · [演示账号](docs/验收/M9-演示账号.md)
+
+### 演示账号（测试）
+
+| 端 | 账号 | 密码 |
+| --- | --- | --- |
+| H5 | `demo@sistermart.local` | `demo123456` |
+| Admin 超管 | `admin@sistermart.local` | `admin123456` |
+| Admin 运营 | `ops@sistermart.local` | `ops123456` |
 
 ## 真源与必读
 

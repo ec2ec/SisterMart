@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NInputNumber, NSpace, useMessage } from 'naive-ui'
+import { NButton, NCard, NInputNumber, useMessage } from 'naive-ui'
 import { api } from '../api'
 
 type Level = {

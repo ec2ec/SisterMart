@@ -1,0 +1,54 @@
+# SisterMart 测试环境 Nginx 示例
+# 复制到 /etc/nginx/sites-available/sistermart 并改 root / server_name / SSL
+
+upstream sistermart_php {
+    server unix:/run/php/php8.3-fpm.sock;
+}
+
+server {
+    listen 80;
+    server_name shop.example.com;
+    root /var/www/sistermart/apps/h5/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 同源反代 API（可选；也可用独立 api 子域）
+    location /api/ {
+        rewrite ^/api/(.*)$ /$1 break;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/sistermart/apps/api/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_pass sistermart_php;
+    }
+}
+
+server {
+    listen 80;
+    server_name admin.example.com;
+    root /var/www/sistermart/apps/admin/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name api.example.com;
+    root /var/www/sistermart/apps/api/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_pass sistermart_php;
+    }
+}

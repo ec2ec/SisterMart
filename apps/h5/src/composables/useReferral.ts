@@ -1,6 +1,9 @@
 const REF_KEY = 'sm_ref'
 
-export function captureRefFromQuery(ref?: string | string[] | null) {
+/** Accept Vue Router LocationQueryValue (string | null) and arrays thereof. */
+export function captureRefFromQuery(
+  ref?: string | null | Array<string | null> | undefined,
+) {
   const value = Array.isArray(ref) ? ref[0] : ref
   if (value && typeof value === 'string' && value.trim()) {
     localStorage.setItem(REF_KEY, value.trim())

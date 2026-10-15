@@ -19,7 +19,7 @@ const items = ref<Cat[]>([])
 const form = ref({
   id: 0,
   code: '',
-  parent_id: null as number | null,
+  parent_id: 0,
   icon: '',
   sort: 0,
   status: true,
@@ -37,20 +37,20 @@ function flatten(nodes: Cat[], depth = 0): Array<Cat & { label: string }> {
 }
 
 const flat = ref<Array<Cat & { label: string }>>([])
-const parentOptions = ref<Array<{ label: string; value: number | null }>>([])
+const parentOptions = ref<Array<{ label: string; value: number }>>([])
 
 async function load() {
   const data = await api<{ items: Cat[] }>('/api/v1/admin/categories', {}, true)
   items.value = data.items
   flat.value = flatten(data.items)
-  parentOptions.value = [{ label: '（一級分類）', value: null }, ...flat.value.map((c) => ({ label: c.label, value: c.id }))]
+  parentOptions.value = [{ label: '（一級分類）', value: 0 }, ...flat.value.map((c) => ({ label: c.label, value: c.id }))]
 }
 
 function edit(row: Cat) {
   form.value = {
     id: row.id,
     code: row.code,
-    parent_id: row.parent_id,
+    parent_id: row.parent_id ?? 0,
     icon: row.icon || '',
     sort: row.sort,
     status: row.status === 1,
@@ -60,13 +60,13 @@ function edit(row: Cat) {
 }
 
 function reset() {
-  form.value = { id: 0, code: '', parent_id: null, icon: '', sort: 0, status: true, name_zh: '', name_en: '' }
+  form.value = { id: 0, code: '', parent_id: 0, icon: '', sort: 0, status: true, name_zh: '', name_en: '' }
 }
 
 async function save() {
   const body = {
     code: form.value.code,
-    parent_id: form.value.parent_id,
+    parent_id: form.value.parent_id || null,
     icon: form.value.icon,
     sort: form.value.sort,
     status: form.value.status ? 1 : 0,

@@ -16,9 +16,9 @@ type Row = {
 
 const router = useRouter()
 const rows = ref<Row[]>([])
-const status = ref<string | null>(null)
+const status = ref('')
 const options = [
-  { label: '全部', value: null },
+  { label: '全部', value: '' },
   { label: '待付款', value: 'pending_payment' },
   { label: '待發貨', value: 'pending_shipment' },
   { label: '已取消', value: 'cancelled' },

@@ -18,9 +18,9 @@ type Row = {
 const router = useRouter()
 const message = useMessage()
 const rows = ref<Row[]>([])
-const status = ref<string | null>(null)
+const status = ref('')
 const options = [
-  { label: '全部', value: null },
+  { label: '全部', value: '' },
   { label: '待審核', value: 'pending_review' },
   { label: '待退貨', value: 'awaiting_return' },
   { label: '已完成', value: 'completed' },

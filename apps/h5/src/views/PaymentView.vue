@@ -21,27 +21,37 @@ async function load() {
   }
 }
 
+function stopPoll() {
+  if (timer) {
+    window.clearInterval(timer)
+    timer = undefined
+  }
+}
+
 onMounted(async () => {
   await load()
+  // 僅待付款時輕量輪詢（模擬異步回調）；已離開待付或跳轉後立即停止
+  if (order.value?.status !== 'pending_payment') return
   timer = window.setInterval(async () => {
     try {
       const latest = await fetchOrder(String(route.params.id))
       if (latest.status === 'pending_shipment') {
+        stopPoll()
         router.replace({ name: 'pay-result', query: { order_id: String(latest.id) } })
+        return
       }
       if (latest.status === 'cancelled') {
+        stopPoll()
         showToast(t('pay.expired'))
         router.replace({ name: 'orders' })
       }
     } catch {
       /* ignore poll errors */
     }
-  }, 2500)
+  }, 5000)
 })
 
-onUnmounted(() => {
-  if (timer) window.clearInterval(timer)
-})
+onUnmounted(stopPoll)
 
 async function pay() {
   if (!order.value) return

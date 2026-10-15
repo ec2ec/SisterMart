@@ -62,3 +62,6 @@ apps/admin/dist/
 *.db
 .turbo/
 .eslintcache
+
+# Deploy backups (local)
+backups/
