@@ -12,6 +12,8 @@ class OrderService
     public function __construct(
         private CartService $cart = new CartService(),
         private AddressService $addresses = new AddressService(),
+        private AssetService $assets = new AssetService(),
+        private CouponService $coupons = new CouponService(),
     ) {
     }
 
@@ -46,19 +48,12 @@ class OrderService
 
             $pointsUsed = (int) $quote['points_used'];
             $balanceUsed = (float) $quote['balance_amount'];
+            // 先佔位寫入訂單，流水 ref_id 於插入後回填；此處扣減仍先執行
             if ($pointsUsed > 0) {
-                $ok = Db::name('members')->where('id', $memberId)->where('points', '>=', $pointsUsed)
-                    ->dec('points', $pointsUsed)->update(['updated_at' => $now]);
-                if (!$ok) {
-                    throw new ApiException('POINTS_SHORT', '積分不足', 422, 42230);
-                }
+                $this->assets->changePoints($memberId, -$pointsUsed, 'order_deduct', 'order', null, '下單抵扣');
             }
             if ($balanceUsed > 0) {
-                $ok = Db::name('members')->where('id', $memberId)->where('balance', '>=', $balanceUsed)
-                    ->dec('balance', $balanceUsed)->update(['updated_at' => $now]);
-                if (!$ok) {
-                    throw new ApiException('BALANCE_SHORT', '餘額不足', 422, 42231);
-                }
+                $this->assets->changeBalance($memberId, -$balanceUsed, 'order_deduct', 'order', null, '下單抵扣');
             }
             if ($quote['coupon_grant_id']) {
                 $ok = Db::name('coupon_grants')->where([
@@ -128,6 +123,21 @@ class OrderService
                     'status' => $payAmount <= 0 ? 'used' : 'frozen',
                     'updated_at' => $now,
                 ]);
+            }
+
+            if ($pointsUsed > 0) {
+                Db::name('point_logs')->where([
+                    'member_id' => $memberId,
+                    'type' => 'order_deduct',
+                    'ref_type' => 'order',
+                ])->whereNull('ref_id')->order('id', 'desc')->limit(1)->update(['ref_id' => $orderId]);
+            }
+            if ($balanceUsed > 0) {
+                Db::name('balance_logs')->where([
+                    'member_id' => $memberId,
+                    'type' => 'order_deduct',
+                    'ref_type' => 'order',
+                ])->whereNull('ref_id')->order('id', 'desc')->limit(1)->update(['ref_id' => $orderId]);
             }
 
             if (empty($body['buy_now'])) {
@@ -340,6 +350,8 @@ class OrderService
 
         $couponAmount = 0.0;
         $couponGrantId = null;
+        $couponType = null;
+        $freeShipping = false;
         $grantId = isset($body['coupon_grant_id']) ? (int) $body['coupon_grant_id'] : 0;
         $coupons = $this->availableCoupons((int) $member['id'], $goods);
         if ($grantId) {
@@ -353,8 +365,10 @@ class OrderService
             if (!$hit) {
                 throw new ApiException('COUPON_INVALID', '優惠券不可用', 422, 42232);
             }
-            $couponAmount = (float) $hit['amount'];
+            $couponAmount = (float) $hit['discount_amount'];
             $couponGrantId = $grantId;
+            $couponType = $hit['type'];
+            $freeShipping = $hit['type'] === 'free_shipping';
         }
 
         $afterCoupon = max(0, round($goods - $couponAmount, 2));
@@ -377,7 +391,8 @@ class OrderService
         }
 
         $afterPoints = max(0, round($afterCoupon - $pointsAmount, 2));
-        $shipping = TradeSettings::shippingFor($afterCoupon);
+        // 免運券：運費歸零，coupon_amount 僅記商品減免（免運為 0），避免影響累計實付/發積分基數
+        $shipping = $freeShipping ? 0.0 : TradeSettings::shippingFor($afterCoupon);
 
         $balanceAmount = 0.0;
         $memberBalance = (float) ($member['balance'] ?? 0);
@@ -392,6 +407,7 @@ class OrderService
             'goods_amount' => $goods,
             'coupon_amount' => $couponAmount,
             'coupon_grant_id' => $couponGrantId,
+            'coupon_type' => $couponType,
             'coupons' => $coupons,
             'points_amount' => $pointsAmount,
             'points_used' => $pointsUsed,
@@ -409,22 +425,32 @@ class OrderService
 
     private function availableCoupons(int $memberId, float $goods): array
     {
+        $now = date('Y-m-d H:i:s');
         $rows = Db::name('coupon_grants')->alias('g')
             ->join('coupons c', 'c.id = g.coupon_id')
             ->where('g.member_id', $memberId)
             ->where('g.status', 'unused')
             ->where('c.status', 1)
-            ->field('g.id as grant_id, c.code, c.name_zh, c.name_en, c.threshold, c.amount')
+            ->whereRaw('(g.expires_at IS NULL OR g.expires_at >= ?)', [$now])
+            ->field('g.id as grant_id, c.code, c.name_zh, c.name_en, c.type, c.threshold, c.amount')
             ->select()->toArray();
         $out = [];
         foreach ($rows as $r) {
             $usable = $goods >= (float) $r['threshold'];
+            $discount = $usable ? $this->coupons->discountForGoods($r, $goods) : 0.0;
+            $display = $discount;
+            if ($usable && $r['type'] === 'free_shipping') {
+                $display = TradeSettings::shippingFor($goods);
+            }
             $out[] = [
                 'grant_id' => (int) $r['grant_id'],
                 'code' => $r['code'],
                 'name' => ['zh-HK' => $r['name_zh'], 'en' => $r['name_en']],
+                'type' => $r['type'],
                 'threshold' => (float) $r['threshold'],
                 'amount' => (float) $r['amount'],
+                'discount_amount' => $discount,
+                'display_amount' => $display,
                 'usable' => $usable,
                 'reason' => $usable ? '' : 'below_threshold',
             ];
@@ -461,10 +487,24 @@ class OrderService
                 Db::name('skus')->where('id', $item['sku_id'])->inc('stock', (int) $item['qty'])->update(['updated_at' => $now]);
             }
             if ((int) $row['points_used'] > 0) {
-                Db::name('members')->where('id', $row['member_id'])->inc('points', (int) $row['points_used'])->update(['updated_at' => $now]);
+                $this->assets->changePoints(
+                    (int) $row['member_id'],
+                    (int) $row['points_used'],
+                    'order_release',
+                    'order',
+                    (int) $row['id'],
+                    '關單退回積分',
+                );
             }
             if ((float) $row['balance_amount'] > 0) {
-                Db::name('members')->where('id', $row['member_id'])->inc('balance', (float) $row['balance_amount'])->update(['updated_at' => $now]);
+                $this->assets->changeBalance(
+                    (int) $row['member_id'],
+                    (float) $row['balance_amount'],
+                    'order_release',
+                    'order',
+                    (int) $row['id'],
+                    '關單退回餘額',
+                );
             }
             if ($row['coupon_grant_id']) {
                 Db::name('coupon_grants')->where('id', $row['coupon_grant_id'])->where('status', 'frozen')->update([

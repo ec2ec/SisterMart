@@ -27,7 +27,10 @@ export const adminMenus: AdminMenu[] = [
   {
     label: '會員',
     key: 'customers',
-    children: [{ label: '會員', key: '/customers/members', path: '/customers/members', milestone: '後續' }],
+    children: [
+      { label: '會員', key: '/customers/members', path: '/customers/members' },
+      { label: '會員等級', key: '/customers/levels', path: '/customers/levels' },
+    ],
   },
   {
     label: '內容',
@@ -42,8 +45,8 @@ export const adminMenus: AdminMenu[] = [
     label: '營銷',
     key: 'marketing',
     children: [
-      { label: '優惠券', key: '/marketing/coupons', path: '/marketing/coupons', milestone: '後續' },
-      { label: '積分', key: '/marketing/points', path: '/marketing/points', milestone: '後續' },
+      { label: '優惠券', key: '/marketing/coupons', path: '/marketing/coupons' },
+      { label: '積分', key: '/marketing/points', path: '/marketing/points' },
       { label: '秒殺', key: '/marketing/seckill', path: '/marketing/seckill', milestone: '二期' },
       { label: '分銷', key: '/marketing/distribution', path: '/marketing/distribution', milestone: '二期' },
     ],

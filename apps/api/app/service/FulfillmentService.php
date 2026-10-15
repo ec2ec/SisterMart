@@ -122,9 +122,19 @@ class FulfillmentService
                 return;
             }
             $points = $this->earnPointsForOrder($locked);
+            $assets = new AssetService();
             if ($points > 0) {
-                Db::name('members')->where('id', $locked['member_id'])->inc('points', $points)->update(['updated_at' => $now]);
+                $assets->changePoints(
+                    (int) $locked['member_id'],
+                    $points,
+                    'order_earn',
+                    'order',
+                    (int) $locked['id'],
+                    '訂單完成發放',
+                );
             }
+            $goodsNet = AssetService::goodsNetPay($locked);
+            $assets->addSpentAndRefreshLevel((int) $locked['member_id'], $goodsNet);
             Db::name('orders')->where('id', $locked['id'])->update([
                 'status' => 'completed',
                 'completed_at' => $now,
@@ -171,19 +181,7 @@ class FulfillmentService
         if ($per <= 0) {
             return 0;
         }
-        $goodsPay = max(0, (float) $order['goods_amount'] - (float) $order['coupon_amount'] - (float) $order['points_amount'] - (float) $order['balance_amount']);
-        // balance/points may cover shipping too; clamp to goods portion
-        $goodsNet = max(0, (float) $order['goods_amount'] - (float) $order['coupon_amount']);
-        $basis = min($goodsNet, max(0, (float) $order['pay_amount'] + (float) $order['balance_amount'] + (float) $order['points_amount'] - (float) $order['shipping_amount']));
-        if ($basis <= 0) {
-            $basis = max(0, (float) $order['goods_amount'] - (float) $order['coupon_amount'] - (float) $order['points_amount']);
-            // subtract balance portion that applied to goods
-            $ship = (float) $order['shipping_amount'];
-            $bal = (float) $order['balance_amount'];
-            $afterPoints = max(0, (float) $order['goods_amount'] - (float) $order['coupon_amount'] - (float) $order['points_amount']);
-            $balOnGoods = min($bal, $afterPoints);
-            $basis = max(0, $afterPoints - $balOnGoods);
-        }
+        $basis = AssetService::goodsNetPay($order);
 
         return (int) floor($basis * $per);
     }

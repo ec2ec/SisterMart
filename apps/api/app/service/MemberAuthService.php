@@ -84,16 +84,18 @@ class MemberAuthService
             Db::name('members')->where('id', $memberId)->update([
                 'promo_code' => 'SM' . str_pad((string) $memberId, 4, '0', STR_PAD_LEFT),
             ]);
-            $couponId = (int) Db::name('coupons')->where('code', 'WELCOME20')->value('id');
-            if ($couponId) {
+            $welcome = Db::name('coupons')->where('code', 'WELCOME20')->find();
+            if ($welcome) {
                 Db::name('coupon_grants')->insert([
-                    'coupon_id' => $couponId,
+                    'coupon_id' => (int) $welcome['id'],
                     'member_id' => $memberId,
                     'status' => 'unused',
                     'order_id' => null,
+                    'expires_at' => $welcome['ends_at'] ?? null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+                Db::name('coupons')->where('id', $welcome['id'])->inc('claimed', 1)->update([]);
             }
 
             return $memberId;
@@ -174,6 +176,13 @@ class MemberAuthService
             throw new ApiException('UNAUTHORIZED', '請先登錄', 401);
         }
 
+        $assets = new AssetService();
+        $levelId = (int) ($member['level_id'] ?? 1);
+        $level = $assets->presentLevel($assets->findLevel($levelId));
+        $couponCount = (int) Db::name('coupon_grants')
+            ->where(['member_id' => (int) $member['id'], 'status' => 'unused'])
+            ->count();
+
         return [
             'id'         => (int) $member['id'],
             'email'      => $member['email'] ?: null,
@@ -182,6 +191,10 @@ class MemberAuthService
             'promo_code' => (string) $member['promo_code'],
             'balance' => (float) ($member['balance'] ?? 0),
             'points' => (int) ($member['points'] ?? 0),
+            'total_spent' => (float) ($member['total_spent'] ?? 0),
+            'level_id' => $levelId,
+            'level' => $level,
+            'coupon_count' => $couponCount,
         ];
     }
 

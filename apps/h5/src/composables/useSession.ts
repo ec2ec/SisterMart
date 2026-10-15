@@ -9,6 +9,16 @@ export type Member = {
   promo_code: string
   balance?: number
   points?: number
+  total_spent?: number
+  coupon_count?: number
+  level_id?: number
+  level?: {
+    id: number
+    stars: number
+    name: { 'zh-HK': string; en: string }
+    min_spent: number
+    max_spent: number | null
+  }
 }
 
 const TOKEN = 'sm_token'

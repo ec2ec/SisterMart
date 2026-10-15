@@ -12,6 +12,10 @@ import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
 import AftersalesView from '../views/AftersalesView.vue'
 import TabbarView from '../views/TabbarView.vue'
+import CouponsView from '../views/CouponsView.vue'
+import PointsView from '../views/PointsView.vue'
+import MembersView from '../views/MembersView.vue'
+import LevelsView from '../views/LevelsView.vue'
 import { findMenu } from '../menus'
 
 const placeholder = (path: string) => {
@@ -38,12 +42,13 @@ export const router = createRouter({
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
         { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
         { path: '/sales/aftersales', component: AftersalesView, meta: { title: '售後' } },
-        placeholder('/customers/members'),
+        { path: '/customers/members', component: MembersView, meta: { title: '會員' } },
+        { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         placeholder('/cms/home'),
         placeholder('/cms/messages'),
-        placeholder('/marketing/coupons'),
-        placeholder('/marketing/points'),
+        { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
+        { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },
         placeholder('/marketing/seckill'),
         placeholder('/marketing/distribution'),
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },

@@ -22,6 +22,10 @@ import LogisticsView from '../views/LogisticsView.vue'
 import AftersaleApplyView from '../views/AftersaleApplyView.vue'
 import AftersaleDetailView from '../views/AftersaleDetailView.vue'
 import AftersalesView from '../views/AftersalesView.vue'
+import CouponCenterView from '../views/CouponCenterView.vue'
+import MyCouponsView from '../views/MyCouponsView.vue'
+import PointLogsView from '../views/PointLogsView.vue'
+import MemberLevelView from '../views/MemberLevelView.vue'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
@@ -51,6 +55,10 @@ export const router = createRouter({
     { path: '/orders/:id/aftersale', name: 'aftersale-apply', component: AftersaleApplyView },
     { path: '/aftersales', name: 'aftersales', component: AftersalesView },
     { path: '/aftersales/:id', name: 'aftersale-detail', component: AftersaleDetailView },
+    { path: '/coupons', name: 'coupon-center', component: CouponCenterView },
+    { path: '/my-coupons', name: 'my-coupons', component: MyCouponsView },
+    { path: '/point-logs', name: 'point-logs', component: PointLogsView },
+    { path: '/member-level', name: 'member-level', component: MemberLevelView },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

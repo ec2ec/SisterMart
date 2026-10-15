@@ -56,13 +56,21 @@ const orderItems = [
 const services = [
   { key: 'address', icon: 'location-o', route: 'addresses' },
   { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
-  { key: 'couponCenter', icon: 'coupon-o', route: '' },
+  { key: 'couponCenter', icon: 'coupon-o', route: 'coupon-center' },
+  { key: 'myCoupons', icon: 'coupon-o', route: 'my-coupons' },
+  { key: 'pointLogs', icon: 'gold-coin-o', route: 'point-logs' },
   { key: 'pointsMall', icon: 'shop-o', route: '' },
   { key: 'dailyCheckin', icon: 'calendar-o', route: '' },
   { key: 'flashSale', icon: 'clock-o', route: 'home' },
   { key: 'affiliate', icon: 'friends-o', route: '' },
   { key: 'support', icon: 'chat-o', route: 'messages' },
 ] as const
+
+const spentDisplay = computed(() => {
+  const n = loggedIn.value ? Number(memberState.value?.total_spent ?? 0).toFixed(0) : String(u.spent)
+  const stars = '★'.repeat(loggedIn.value ? memberState.value?.level?.stars || 1 : 3)
+  return t('account.spent', { n }).replace(/★+/g, stars)
+})
 
 function goService(route: string) {
   if (!route) {
@@ -74,6 +82,30 @@ function goService(route: string) {
     return
   }
   router.push({ name: route })
+}
+
+function goLevel() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/member-level' } })
+    return
+  }
+  router.push({ name: 'member-level' })
+}
+
+function goCoupons() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/my-coupons' } })
+    return
+  }
+  router.push({ name: 'my-coupons' })
+}
+
+function goPoints() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/point-logs' } })
+    return
+  }
+  router.push({ name: 'point-logs' })
 }
 
 function goOrders() {
@@ -96,7 +128,7 @@ function goOrders() {
         <div>
           <h1>{{ displayName }}</h1>
           <p class="phone">{{ displaySub }}</p>
-          <p class="spent">{{ t('account.spent', { n: loggedIn ? 0 : u.spent }) }}</p>
+          <p class="spent">{{ spentDisplay }}</p>
         </div>
       </div>
       <div class="stats">
@@ -104,11 +136,11 @@ function goOrders() {
           <strong>{{ loggedIn ? (memberState?.balance ?? 0).toFixed(2) : u.balance }}</strong>
           <span>{{ t('account.balance') }}</span>
         </div>
-        <div>
-          <strong>{{ loggedIn ? 0 : u.coupons }}</strong>
+        <div role="button" @click="goCoupons">
+          <strong>{{ loggedIn ? (memberState?.coupon_count ?? 0) : u.coupons }}</strong>
           <span>{{ t('account.coupons') }}</span>
         </div>
-        <div>
+        <div role="button" @click="goPoints">
           <strong>{{ loggedIn ? (memberState?.points ?? 0) : u.points }}</strong>
           <span>{{ t('account.points') }}</span>
         </div>
@@ -116,7 +148,7 @@ function goOrders() {
     </section>
 
     <div class="quick">
-      <button type="button" @click="showToast(t('pages.coming'))">
+      <button type="button" @click="goLevel">
         <strong>{{ t('account.member') }}</strong>
         <span>{{ t('account.memberSub') }}</span>
       </button>

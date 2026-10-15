@@ -207,8 +207,16 @@ class AftersaleService
 
             $refundTo = $forceBalance ? 'balance' : $row['refund_to'];
             $amount = (float) $row['amount'];
+            $assets = new AssetService();
             if ($refundTo === 'balance') {
-                Db::name('members')->where('id', $row['member_id'])->inc('balance', $amount)->update(['updated_at' => $now]);
+                $assets->changeBalance(
+                    (int) $row['member_id'],
+                    $amount,
+                    'aftersale_refund',
+                    'aftersale',
+                    (int) $row['id'],
+                    '售後退餘額',
+                );
             }
             // original：模擬原路成功（不寫渠道流水，僅標記）
 
@@ -238,7 +246,14 @@ class AftersaleService
                 // 整單退完：退回下單凍結的積分/餘額差額不在此重算（支付時已扣）；券若仍 frozen 改 unused 無意義已 used
                 // 退回下單時扣的積分與餘額中尚未被本售後覆蓋的部分 — 簡化：整單退完將訂單標為已退款，並退回 points_used / balance_amount（若售後金額未覆蓋）
                 if ((int) $order['points_used'] > 0) {
-                    Db::name('members')->where('id', $order['member_id'])->inc('points', (int) $order['points_used'])->update(['updated_at' => $now]);
+                    $assets->changePoints(
+                        (int) $order['member_id'],
+                        (int) $order['points_used'],
+                        'aftersale_restore',
+                        'aftersale',
+                        (int) $row['id'],
+                        '整單退回下單積分',
+                    );
                 }
                 // balance_amount already spent; aftersale refunds via refund_to. Don't double-add full balance_amount.
                 if ($order['coupon_grant_id']) {
