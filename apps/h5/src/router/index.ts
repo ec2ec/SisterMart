@@ -26,6 +26,19 @@ import CouponCenterView from '../views/CouponCenterView.vue'
 import MyCouponsView from '../views/MyCouponsView.vue'
 import PointLogsView from '../views/PointLogsView.vue'
 import MemberLevelView from '../views/MemberLevelView.vue'
+import SeckillListView from '../views/SeckillListView.vue'
+import SeckillDetailView from '../views/SeckillDetailView.vue'
+import PointsMallView from '../views/PointsMallView.vue'
+import PointsMallDetailView from '../views/PointsMallDetailView.vue'
+import CheckinView from '../views/CheckinView.vue'
+import DistributionView from '../views/DistributionView.vue'
+import DistDownlinesView from '../views/DistDownlinesView.vue'
+import DistCommissionsView from '../views/DistCommissionsView.vue'
+import DistOrdersView from '../views/DistOrdersView.vue'
+import DistWithdrawView from '../views/DistWithdrawView.vue'
+import DistPosterView from '../views/DistPosterView.vue'
+import DistRankingView from '../views/DistRankingView.vue'
+import { captureRefFromQuery } from '../composables/useReferral'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
@@ -59,6 +72,22 @@ export const router = createRouter({
     { path: '/my-coupons', name: 'my-coupons', component: MyCouponsView },
     { path: '/point-logs', name: 'point-logs', component: PointLogsView },
     { path: '/member-level', name: 'member-level', component: MemberLevelView },
+    { path: '/seckill', name: 'seckill', component: SeckillListView },
+    { path: '/seckill/:id', name: 'seckill-detail', component: SeckillDetailView },
+    { path: '/points-mall', name: 'points-mall', component: PointsMallView },
+    { path: '/points-mall/:id', name: 'points-mall-detail', component: PointsMallDetailView },
+    { path: '/checkin', name: 'checkin', component: CheckinView },
+    { path: '/distribution', name: 'distribution', component: DistributionView },
+    { path: '/distribution/downlines', name: 'dist-downlines', component: DistDownlinesView },
+    { path: '/distribution/commissions', name: 'dist-commissions', component: DistCommissionsView },
+    { path: '/distribution/orders', name: 'dist-orders', component: DistOrdersView },
+    { path: '/distribution/withdraw', name: 'dist-withdraw', component: DistWithdrawView },
+    { path: '/distribution/poster', name: 'dist-poster', component: DistPosterView },
+    { path: '/distribution/ranking', name: 'dist-ranking', component: DistRankingView },
   ],
   scrollBehavior: () => ({ top: 0 }),
+})
+
+router.beforeEach((to) => {
+  captureRefFromQuery(to.query.ref)
 })

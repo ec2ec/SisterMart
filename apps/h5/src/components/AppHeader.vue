@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
+import { isLoggedIn } from '../composables/useSession'
+import { refreshUnread, unreadCount } from '../composables/useUnread'
 
 withDefaults(
   defineProps<{
@@ -15,8 +18,24 @@ withDefaults(
 const { t } = useI18n()
 const router = useRouter()
 
+onMounted(() => {
+  refreshUnread()
+})
+watch(
+  () => isLoggedIn(),
+  () => refreshUnread(),
+)
+
 function goSearch() {
   router.push({ name: 'search' })
+}
+
+function goMessages() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/messages' } })
+    return
+  }
+  router.push({ name: 'messages' })
 }
 </script>
 
@@ -42,8 +61,8 @@ function goSearch() {
     />
     <div class="actions">
       <van-icon name="like-o" size="1.25rem" @click="router.push({ name: 'wishlist' })" />
-      <van-badge dot>
-        <van-icon name="envelop-o" size="1.25rem" @click="router.push({ name: 'messages' })" />
+      <van-badge :dot="unreadCount > 0">
+        <van-icon name="envelop-o" size="1.25rem" @click="goMessages" />
       </van-badge>
     </div>
   </header>

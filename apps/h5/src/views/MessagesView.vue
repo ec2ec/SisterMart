@@ -1,44 +1,71 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
+import { fetchMessages, markMessageRead, type Msg } from '../api/m7'
+import { useLocaleText } from '../composables/useLocaleText'
+import { isLoggedIn } from '../composables/useSession'
+import { refreshUnread } from '../composables/useUnread'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const { text } = useLocaleText()
+const router = useRouter()
+const tab = ref<'order' | 'system'>('order')
+const order = ref<Msg[]>([])
+const system = ref<Msg[]>([])
 
-const items = computed(() =>
-  locale.value === 'en'
-    ? [
-        { title: 'Order shipped', time: 'Today 10:20', body: 'Your order #10021 is on the way.' },
-        { title: 'Coupon received', time: 'Yesterday', body: 'HK$20 off coupon is ready.' },
-      ]
-    : [
-        { title: '訂單已發貨', time: '今天 10:20', body: '您的訂單 #10021 已發出。' },
-        { title: '優惠券到帳', time: '昨天', body: 'HK$20 優惠券已入帳。' },
-      ],
-)
+onMounted(async () => {
+  if (!isLoggedIn()) {
+    router.replace({ name: 'login', query: { redirect: '/messages' } })
+    return
+  }
+  const data = await fetchMessages()
+  order.value = data.order
+  system.value = data.system
+  await refreshUnread()
+})
+
+async function open(msg: Msg) {
+  await markMessageRead(msg.id)
+  msg.read = true
+  await refreshUnread()
+  if (msg.order_id) {
+    router.push({ name: 'order-detail', params: { id: msg.order_id } })
+  }
+}
 </script>
 
 <template>
   <div class="page">
     <SubPageNav :title="t('pages.messages')" />
+    <p class="mock">{{ t('m7.mockBanner') }}</p>
+    <van-tabs v-model:active="tab">
+      <van-tab :title="t('m7.orderMsg')" name="order" />
+      <van-tab :title="t('m7.systemMsg')" name="system" />
+    </van-tabs>
     <van-cell-group inset>
       <van-cell
-        v-for="(m, i) in items"
-        :key="i"
-        :title="m.title"
-        :label="m.body"
-        :value="m.time"
+        v-for="m in tab === 'order' ? order : system"
+        :key="m.id"
+        :title="text(m.title)"
+        :label="text(m.body)"
+        :value="m.created_at.slice(5, 16)"
+        :class="{ unread: !m.read }"
+        is-link
+        @click="open(m)"
       />
     </van-cell-group>
-    <p class="hint">{{ t('pages.coming') }}</p>
   </div>
 </template>
 
 <style scoped>
-.hint {
-  text-align: center;
-  color: #999;
+.mock {
+  margin: 0.5rem 1rem;
   font-size: 0.75rem;
-  padding: 1rem;
+  color: #a67c52;
+}
+.unread :deep(.van-cell__title) {
+  font-weight: 700;
 }
 </style>

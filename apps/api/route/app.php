@@ -32,6 +32,14 @@ Route::get('api/v1/articles/:code', 'api.Articles/read');
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
 Route::get('api/v1/member-levels', 'api.Assets/levelsPublic');
 
+/** M7 公開 Mock：秒殺、積分商城、分享瀏覽 */
+Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read');
+Route::get('api/v1/seckill/sessions', 'api.Seckill/index');
+Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product');
+Route::get('api/v1/points-mall/products/:id', 'api.PointsMall/read');
+Route::get('api/v1/points-mall/products', 'api.PointsMall/index');
+Route::post('api/v1/share-views', 'api.ShareViews/store');
+
 Route::group('api/v1', function () {
     Route::get('members/me/level', 'api.Assets/level');
     Route::get('members/me', 'api.Members/me');
@@ -69,6 +77,20 @@ Route::group('api/v1', function () {
     Route::get('my-coupons', 'api.Coupons/mine');
     Route::get('point-logs', 'api.Assets/pointLogs');
     Route::get('balance-logs', 'api.Assets/balanceLogs');
+
+    /** M7 Mock：簽到、分銷、消息 */
+    Route::get('checkins/calendar', 'api.Checkins/calendar');
+    Route::post('checkins', 'api.Checkins/store');
+    Route::get('distribution/overview', 'api.Distribution/overview');
+    Route::get('distribution/downlines', 'api.Distribution/downlines');
+    Route::get('distribution/commissions', 'api.Distribution/commissions');
+    Route::get('distribution/orders', 'api.Distribution/orders');
+    Route::get('distribution/ranking', 'api.Distribution/ranking');
+    Route::get('distribution/poster', 'api.Distribution/poster');
+    Route::post('distribution/withdrawals', 'api.Distribution/withdraw');
+    Route::get('messages/unread-count', 'api.Messages/unread');
+    Route::post('messages/read', 'api.Messages/read');
+    Route::get('messages', 'api.Messages/index');
 })->middleware(MemberAuth::class);
 
 /** 關單 / 自動收貨任務可無會員令牌（本地驗收手動觸發） */

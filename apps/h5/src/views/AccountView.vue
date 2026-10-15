@@ -59,10 +59,10 @@ const services = [
   { key: 'couponCenter', icon: 'coupon-o', route: 'coupon-center' },
   { key: 'myCoupons', icon: 'coupon-o', route: 'my-coupons' },
   { key: 'pointLogs', icon: 'gold-coin-o', route: 'point-logs' },
-  { key: 'pointsMall', icon: 'shop-o', route: '' },
-  { key: 'dailyCheckin', icon: 'calendar-o', route: '' },
-  { key: 'flashSale', icon: 'clock-o', route: 'home' },
-  { key: 'affiliate', icon: 'friends-o', route: '' },
+  { key: 'pointsMall', icon: 'shop-o', route: 'points-mall' },
+  { key: 'dailyCheckin', icon: 'calendar-o', route: 'checkin' },
+  { key: 'flashSale', icon: 'clock-o', route: 'seckill' },
+  { key: 'affiliate', icon: 'friends-o', route: 'distribution' },
   { key: 'support', icon: 'chat-o', route: 'messages' },
 ] as const
 
@@ -72,13 +72,29 @@ const spentDisplay = computed(() => {
   return t('account.spent', { n }).replace(/★+/g, stars)
 })
 
+const routePaths: Record<string, string> = {
+  addresses: '/addresses',
+  wishlist: '/wishlist',
+  'coupon-center': '/coupons',
+  'my-coupons': '/my-coupons',
+  'point-logs': '/point-logs',
+  'points-mall': '/points-mall',
+  checkin: '/checkin',
+  seckill: '/seckill',
+  distribution: '/distribution',
+  messages: '/messages',
+  home: '/',
+}
+
 function goService(route: string) {
   if (!route) {
     showToast(t('pages.coming'))
     return
   }
-  if (!isLoggedIn() && route !== 'home') {
-    router.push({ name: 'login', query: { redirect: `/${route}` } })
+  const path = routePaths[route] || `/${route}`
+  const needAuth = !['home', 'seckill', 'points-mall', 'coupon-center'].includes(route)
+  if (!isLoggedIn() && needAuth) {
+    router.push({ name: 'login', query: { redirect: path } })
     return
   }
   router.push({ name: route })
@@ -152,7 +168,7 @@ function goOrders() {
         <strong>{{ t('account.member') }}</strong>
         <span>{{ t('account.memberSub') }}</span>
       </button>
-      <button type="button" @click="showToast(t('pages.coming'))">
+      <button type="button" @click="goService('points-mall')">
         <strong>{{ t('account.rewards') }}</strong>
         <span>{{ t('account.rewardsSub') }}</span>
       </button>
@@ -186,7 +202,7 @@ function goOrders() {
           <p class="sub">{{ t('account.checkinSub', { n: loggedIn ? 0 : u.streak }) }}</p>
         </div>
       </div>
-      <van-button size="small" round color="var(--sm-primary)" @click="showToast(t('account.checkinBtn'))">
+      <van-button size="small" round color="var(--sm-primary)" @click="goService('checkin')">
         {{ t('account.checkinBtn') }}
       </van-button>
     </section>

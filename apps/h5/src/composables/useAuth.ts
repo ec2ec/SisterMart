@@ -69,6 +69,10 @@ export function authQuery(query: LocationQuery) {
   const next: Record<string, string> = {}
   if (internalPath(query.redirect)) next.redirect = String(query.redirect)
   if (typeof query.ref === 'string' && query.ref.trim()) next.ref = query.ref.trim()
+  else {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('sm_ref') : null
+    if (stored) next.ref = stored
+  }
   return next
 }
 

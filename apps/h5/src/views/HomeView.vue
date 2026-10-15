@@ -66,6 +66,7 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
     <section class="flash">
       <div class="section-title">
         <h2>{{ t('home.flashSale') }}</h2>
+        <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
         <div class="count">
           <span>{{ hh }}</span>:<span>{{ mm }}</span>:<span>{{ ss }}</span>
         </div>
@@ -133,11 +134,20 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.875rem 0.875rem 0.5rem;
 }
 .section-title h2 {
   margin: 0;
   font-size: 1rem;
+}
+.section-title .more {
+  margin-left: auto;
+  margin-right: 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--sm-primary);
+  font-size: 0.75rem;
 }
 .count span {
   display: inline-block;

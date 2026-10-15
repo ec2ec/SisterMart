@@ -8,8 +8,10 @@ import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
 import { fetchProduct, fetchProducts, skuKey, type ProductCard as Card, type ProductDetail } from '../api/catalog'
 import { addCartItem } from '../api/trade'
+import { fetchSeckillProduct, postShareView } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
+import { captureRefFromQuery, storedRef } from '../composables/useReferral'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 
@@ -23,9 +25,11 @@ const related = ref<Card[]>([])
 const slide = ref(0)
 const zooming = ref(false)
 const selected = ref<Record<string, string>>({})
+const seckill = ref<{ active: boolean; price?: number; origin?: number; ends_at?: string }>({ active: false })
 
 async function load() {
   const id = String(route.params.id || '')
+  captureRefFromQuery(route.query.ref)
   product.value = await fetchProduct(id)
   const next: Record<string, string> = {}
   for (const group of product.value.spec_groups) next[group.id] = group.options[0]?.id || ''
@@ -39,6 +43,21 @@ async function load() {
   zooming.value = false
   const list = await fetchProducts({ category: product.value.category })
   related.value = list.items.filter((item) => item.id !== product.value?.id).slice(0, 4)
+  try {
+    const sk = await fetchSeckillProduct(product.value.code || id)
+    seckill.value = {
+      active: Boolean(sk.session_status === 'live' || route.query.seckill === '1'),
+      price: sk.seckill_price,
+      origin: sk.origin_price,
+      ends_at: sk.ends_at,
+    }
+  } catch {
+    seckill.value = { active: route.query.seckill === '1' }
+  }
+  const refCode = storedRef() || String(route.query.ref || '')
+  if (refCode) {
+    postShareView(refCode, product.value.code || id).catch(() => undefined)
+  }
 }
 
 watch(() => route.params.id, load, { immediate: true })
@@ -58,8 +77,16 @@ const quote = computed(() => {
   return product.value.skus.find((sku) => sku.key === key || sku.code === key) || null
 })
 
-const price = computed(() => quote.value?.price ?? product.value?.price ?? 0)
-const compareAt = computed(() => quote.value?.compare_at ?? 0)
+const price = computed(() =>
+  seckill.value.active && seckill.value.price != null
+    ? seckill.value.price
+    : (quote.value?.price ?? product.value?.price ?? 0),
+)
+const compareAt = computed(() =>
+  seckill.value.active && seckill.value.origin != null
+    ? seckill.value.origin
+    : (quote.value?.compare_at ?? 0),
+)
 const stock = computed(() => quote.value?.stock ?? 0)
 const liked = computed(() => (product.value ? isFavorite(product.value.id) : false))
 
@@ -99,6 +126,10 @@ function requireSku() {
 }
 
 async function addToCart() {
+  if (seckill.value.active) {
+    showToast(t('m7.seckillOnlyBuy'))
+    return
+  }
   if (!requireSku() || !quote.value) return
   if (!isLoggedIn()) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
@@ -165,6 +196,7 @@ async function share() {
 
     <section class="info">
       <h1>{{ name }}</h1>
+      <p v-if="seckill.active" class="seckill-tag">{{ t('m7.live') }} · Mock</p>
       <div class="price-line">
         <strong>{{ money(price) }}</strong>
         <span>{{ t('home.sold', { n: product.sold }) }}</span>
@@ -209,7 +241,15 @@ async function share() {
       <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
         <van-icon name="guide-o" size="1.25rem" />
       </button>
-      <button type="button" class="ghost" :disabled="stock <= 0" @click="addToCart">{{ t('pages.addToCart') }}</button>
+      <button
+        v-if="!seckill.active"
+        type="button"
+        class="ghost"
+        :disabled="stock <= 0"
+        @click="addToCart"
+      >
+        {{ t('pages.addToCart') }}
+      </button>
       <button type="button" class="buy" :disabled="stock <= 0" @click="buyNow">{{ t('pages.buyNow') }}</button>
     </div>
 
@@ -269,6 +309,12 @@ h1 {
   margin: 0.5rem 0 0.375rem;
   font-size: 1rem;
   line-height: 1.4;
+}
+.seckill-tag {
+  margin: 0 0 0.35rem;
+  color: #c45c26;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 .price-line {
   display: flex;
