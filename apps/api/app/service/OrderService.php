@@ -236,23 +236,29 @@ class OrderService
 
     public function mockConfirmPayment(int $paymentId): array
     {
-        $pay = Db::name('payments')->where('id', $paymentId)->find();
-        if (!$pay) {
-            throw new ApiException('NOT_FOUND', '支付單不存在', 404, 40441);
-        }
-        if ($pay['status'] === 'paid') {
-            return $this->presentDetail($this->findOrder((int) $pay['order_id']));
-        }
-        $order = $this->findOrder((int) $pay['order_id']);
-        if ($order['status'] !== 'pending_payment') {
-            throw new ApiException('INVALID_STATUS', '訂單已不可支付', 422, 42241);
-        }
         $now = date('Y-m-d H:i:s');
-        Db::transaction(function () use ($pay, $order, $now) {
-            Db::name('payments')->where('id', $pay['id'])->update([
+        $orderId = 0;
+        Db::transaction(function () use ($paymentId, $now, &$orderId) {
+            $pay = Db::name('payments')->where('id', $paymentId)->lock(true)->find();
+            if (!$pay) {
+                throw new ApiException('NOT_FOUND', '支付單不存在', 404, 40441);
+            }
+            $orderId = (int) $pay['order_id'];
+            // 冪等：已支付直接返回
+            if ($pay['status'] === 'paid') {
+                return;
+            }
+            $order = Db::name('orders')->where('id', $orderId)->lock(true)->find();
+            if (!$order) {
+                throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40440);
+            }
+            if ($order['status'] !== 'pending_payment') {
+                throw new ApiException('INVALID_STATUS', '訂單已不可支付', 422, 42241);
+            }
+            Db::name('payments')->where('id', $pay['id'])->where('status', 'pending')->update([
                 'status' => 'paid', 'paid_at' => $now, 'updated_at' => $now,
             ]);
-            Db::name('orders')->where('id', $order['id'])->update([
+            Db::name('orders')->where('id', $order['id'])->where('status', 'pending_payment')->update([
                 'status' => 'pending_shipment',
                 'pay_channel' => $pay['channel'],
                 'paid_at' => $now,
@@ -266,7 +272,7 @@ class OrderService
             }
         });
 
-        return $this->presentDetail($this->findOrder((int) $order['id']));
+        return $this->presentDetail($this->findOrder($orderId));
     }
 
     public function closeExpired(): array

@@ -112,12 +112,16 @@ class FulfillmentService
         if ($memberId !== null && (int) $order['member_id'] !== $memberId) {
             throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40440);
         }
+        // 冪等：已完成直接返回，避免雙擊/任務重跑重複發積分
+        if ($order['status'] === 'completed') {
+            return (new OrderService())->detail($memberId ?? (int) $order['member_id'], $orderId, $memberId === null);
+        }
         if ($order['status'] !== 'pending_receipt') {
             throw new ApiException('INVALID_STATUS', '僅待收貨訂單可確認收貨', 422, 42252);
         }
         $now = date('Y-m-d H:i:s');
         Db::transaction(function () use ($order, $now, $source) {
-            $locked = Db::name('orders')->where('id', $order['id'])->where('status', 'pending_receipt')->find();
+            $locked = Db::name('orders')->where('id', $order['id'])->where('status', 'pending_receipt')->lock(true)->find();
             if (!$locked) {
                 return;
             }

@@ -42,7 +42,7 @@ async function logout() {
   <n-layout has-sider class="frame">
     <n-layout-sider inverted bordered :native-scrollbar="false" :width="220">
       <div class="brand">Sister<span>Mart</span></div>
-      <n-menu :value="active" :options="menuOptions()" inverted @update:value="go" />
+      <n-menu :value="active" :options="menuOptions(admin?.role)" inverted @update:value="go" />
     </n-layout-sider>
     <n-layout>
       <n-layout-header bordered class="header">

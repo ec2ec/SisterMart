@@ -16,6 +16,7 @@ import CouponsView from '../views/CouponsView.vue'
 import PointsView from '../views/PointsView.vue'
 import MembersView from '../views/MembersView.vue'
 import LevelsView from '../views/LevelsView.vue'
+import AdminsView from '../views/AdminsView.vue'
 import { findMenu } from '../menus'
 
 const placeholder = (path: string) => {
@@ -53,7 +54,7 @@ export const router = createRouter({
         placeholder('/marketing/distribution'),
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
-        placeholder('/settings/admins'),
+        { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],
     },
   ],
@@ -63,6 +64,17 @@ router.beforeEach((to) => {
   if (to.meta.public) return true
   if (!localStorage.getItem('sm_admin_token')) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  const roles = to.meta.roles as string[] | undefined
+  if (roles?.length) {
+    try {
+      const admin = JSON.parse(localStorage.getItem('sm_admin') || '{}') as { role?: string }
+      if (!admin.role || !roles.includes(admin.role)) {
+        return { path: '/' }
+      }
+    } catch {
+      return { path: '/' }
+    }
   }
   return true
 })

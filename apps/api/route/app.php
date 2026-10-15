@@ -1,5 +1,6 @@
 <?php
 
+use app\middleware\AdminAclGate;
 use app\middleware\AdminAuth;
 use app\middleware\MemberAuth;
 use think\facade\Route;
@@ -103,6 +104,9 @@ Route::post('api/v1/admin/sessions', 'admin.Sessions/store');
 Route::group('api/v1/admin', function () {
     Route::delete('sessions/current', 'admin.Sessions/destroy');
     Route::get('admins/me', 'admin.Admins/me');
+    Route::get('admins', 'admin.Admins/index');
+    Route::post('admins', 'admin.Admins/store');
+    Route::put('admins/:id', 'admin.Admins/update');
     Route::get('tabbar', 'admin.Tabbar/index');
     Route::put('tabbar', 'admin.Tabbar/update');
 
@@ -149,4 +153,4 @@ Route::group('api/v1/admin', function () {
     Route::get('members/:id', 'admin.Members/read');
     Route::post('members/:id/asset-adjustments', 'admin.Members/adjust');
     Route::get('members', 'admin.Members/index');
-})->middleware(AdminAuth::class);
+})->middleware([AdminAuth::class, AdminAclGate::class]);

@@ -3,6 +3,8 @@ export type AdminMenu = {
   key: string
   path?: string
   milestone?: string
+  /** 僅列角色可見；省略則全員 */
+  roles?: string[]
   children?: AdminMenu[]
 }
 
@@ -57,13 +59,27 @@ export const adminMenus: AdminMenu[] = [
     children: [
       { label: '底部導航', key: '/settings/tabbar', path: '/settings/tabbar' },
       { label: '店鋪參數', key: '/settings/shop', path: '/settings/shop' },
-      { label: '管理員與角色', key: '/settings/admins', path: '/settings/admins', milestone: '後續' },
+      { label: '管理員與角色', key: '/settings/admins', path: '/settings/admins', roles: ['super'] },
     ],
   },
 ]
 
-export function menuOptions() {
-  return adminMenus.map(toOption)
+export function menusForRole(role?: string | null) {
+  const allow = (item: AdminMenu) => !item.roles || (role ? item.roles.includes(role) : false)
+  const walk = (items: AdminMenu[]): AdminMenu[] =>
+    items
+      .filter(allow)
+      .map((item) => ({
+        ...item,
+        children: item.children ? walk(item.children) : undefined,
+      }))
+      .filter((item) => !item.children || item.children.length > 0 || item.path)
+
+  return walk(adminMenus)
+}
+
+export function menuOptions(role?: string | null) {
+  return menusForRole(role).map(toOption)
 }
 
 function toOption(item: AdminMenu): { label: string; key: string; children?: ReturnType<typeof toOption>[] } {

@@ -32,12 +32,14 @@ class AdminAuthService
             throw new ApiException('UNAUTHORIZED', '請先登錄', 401);
         }
         $role = Db::name('admin_roles')->where('id', $admin['role_id'])->find();
+        $code = (string) ($role['code'] ?? 'ops');
 
         return [
             'id'    => (int) $admin['id'],
             'email' => (string) $admin['email'],
             'name'  => (string) $admin['name'],
-            'role'  => $role['code'] ?? 'ops',
+            'role'  => $code,
+            'permissions' => AdminAcl::permissionsForRole($code),
         ];
     }
 }
