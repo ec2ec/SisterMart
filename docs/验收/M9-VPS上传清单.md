@@ -3,9 +3,20 @@
 > 遠程 FTP 根目錄 = 網站根目錄（`https://sistermart.vip/`）  
 > 本機來源：倉庫分支 `cursor/h5-ui-from-design-fc0f`
 
-## 必須上傳（修復頂部輪播 + 分類圖標 + 商品圖）
+## 推薦：整包 zip（根目錄解壓覆蓋）
 
-### 1) 整包覆蓋 H5 靜態（推薦）
+| 檔案 | 說明 |
+| --- | --- |
+| **`releases/sistermart-vps-root.zip`**（約 11MB） | 模具目錄結構 = 網站根；解壓即覆蓋 |
+
+```bash
+# 下載後在 FTP 根目錄解壓（覆蓋）
+unzip -o sistermart-vps-root.zip
+```
+
+包內含：`/` H5、`/admin/`、`/mock/`（輪播+分類+商品圖）、`/products/`、`/api/index.php`、`/sm-backend/`（含本機測試用 `.env`）。
+
+## 備選：只傳 H5 靜態
 
 從本機 `apps/h5/dist/` 上傳到 VPS 根目錄：
 
@@ -15,8 +26,6 @@
 | `apps/h5/dist/assets/*`（含新 JS，如 `index-*.js`） | `/assets/` |
 | `apps/h5/dist/mock/*`（全部英文檔名） | `/mock/` |
 | `apps/h5/dist/favicon.svg` 等 | `/`（可選覆蓋） |
-
-或直接解壓最新 `releases/sistermart-vps.tgz` 後上傳其中的 `index.html`、`assets/`、`mock/`。
 
 ### 2) `/mock/` 必須包含這些檔
 
