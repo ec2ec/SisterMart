@@ -1,13 +1,15 @@
-# M9 VPS 上傳清單（素材英文化 + catalog 圖標 + H5 重編）
+# M9 VPS 上傳清單（2026-10-16 最終包）
 
 > 遠程 FTP 根目錄 = 網站根目錄（`https://sistermart.vip/`）  
-> 本機來源：倉庫分支 `cursor/h5-ui-from-design-fc0f`
+> 本機來源：倉庫分支 `cursor/h5-ui-from-design-fc0f`  
+> 本包 H5 含：支付選中 ✅+加粗、首頁資料緩衝（回退不閃白）、catalog 圓形圖標。
 
 ## 推薦：整包 zip（根目錄解壓覆蓋）
 
 | 檔案 | 說明 |
 | --- | --- |
-| **`releases/sistermart-vps-root.zip`**（約 11MB） | 模具目錄結構 = 網站根；解壓即覆蓋 |
+| **`releases/sistermart-vps-root.zip`**（約 11MB） | 網站根結構；解壓即覆蓋（H5 + admin + mock + API + sm-backend） |
+| **`releases/sistermart-vps-h5-delta.zip`**（約 1.3MB） | 只含本次必改：`index.html`、`/assets/index-ByFU3q6K.js`、`/assets/index-CgZMgpha.css`、`/mock/cat-*.png`。FTP 不穩時優先傳這個 |
 
 ```bash
 # 下載後在 FTP 根目錄解壓（覆蓋）
@@ -60,8 +62,8 @@ unzip -o sistermart-vps-root.zip
 
 ## 上傳後自檢
 
-1. https://sistermart.vip/ — 頂部輪播應請求 `/mock/home-banner-1.png`（非中文檔名）
-2. https://sistermart.vip/mock/home-banner-1.png → 200
-3. https://sistermart.vip/mock/cat-necklace.png → 200
-4. 分類頁左側圖標正常
-5. 瀏覽器硬刷新（Ctrl+F5）避免舊 JS 緩存
+1. https://sistermart.vip/ — 硬刷新（Ctrl+F5），頁面應載入 `/assets/index-ByFU3q6K.js`
+2. 首頁 catalog 六個圖標為圓形；手鏈、項鏈有圖
+3. https://sistermart.vip/mock/cat-bracelet.png 與 `/mock/cat-necklace.png` → 200
+4. 支付頁選中渠道左側有勾、文字加粗
+5. 從其他頁返回首頁，商品區不應先空白再出現
