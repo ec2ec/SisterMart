@@ -133,10 +133,11 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
 }
 .item img,
 .ph {
-  width: 100%;
+  width: 4rem;
+  height: 4rem;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 0.5rem;
+  border-radius: 50%;
   background: var(--sm-bg-soft);
 }
 .empty {

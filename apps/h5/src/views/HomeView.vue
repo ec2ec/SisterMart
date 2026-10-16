@@ -31,7 +31,30 @@ const feedList = computed(() => {
   if (feedTab.value === 2) return flashVisible.value
   return products.value
 })
-const homeCategories = computed(() => categories.value.slice(0, 6))
+/** Fallback when DB icon is empty or a broken /mock URL 404s (seen on VPS before assets were uploaded). */
+const CAT_ICON_FALLBACK: Record<string, string> = {
+  bracelets: '/mock/cat-bracelet.png',
+  necklaces: '/mock/cat-necklace.png',
+  earrings: '/mock/cat-earrings.png',
+  rings: '/mock/cat-ring.png',
+  scarves: '/mock/cat-headscarf.png',
+  bags: '/mock/cat-bag.png',
+}
+
+const homeCategories = computed(() =>
+  categories.value.slice(0, 6).map((c) => ({
+    ...c,
+    icon: c.icon || CAT_ICON_FALLBACK[c.code] || null,
+  })),
+)
+
+function onCatImgError(event: Event, code: string) {
+  const img = event.target as HTMLImageElement
+  const fallback = CAT_ICON_FALLBACK[code]
+  if (fallback && img.src && !img.src.endsWith(fallback)) {
+    img.src = fallback
+  }
+}
 
 function onSubscribe() {
   showToast(email.value ? t('home.subscribe') : t('home.emailPlaceholder'))
@@ -76,7 +99,12 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
 
     <section class="cats">
       <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
-        <img v-if="c.icon" :src="c.icon" :alt="text(c.name)" />
+        <img
+          v-if="c.icon"
+          :src="c.icon"
+          :alt="text(c.name)"
+          @error="onCatImgError($event, c.code)"
+        />
         <span v-else class="ph" />
         <span>{{ text(c.name) }}</span>
       </button>
@@ -186,10 +214,11 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
 }
 .cats img,
 .ph {
-  width: 100%;
+  width: 4.5rem;
+  height: 4.5rem;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: 0.75rem;
+  border-radius: 50%;
   background: var(--sm-bg-soft);
 }
 .tabs {
