@@ -6,8 +6,8 @@ import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
-import { fetchCategories, fetchProducts, type CategoryNode, type ProductCard as Card } from '../api/catalog'
 import { banners } from '../mock/data'
+import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { useLocaleText } from '../composables/useLocaleText'
 
 const { t } = useI18n()
@@ -17,13 +17,11 @@ const router = useRouter()
 const feedTab = ref(0)
 const email = ref('')
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
-const products = ref<Card[]>([])
-const categories = ref<CategoryNode[]>([])
+// A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
+const { products, categories, refresh } = useHomeCatalog()
 
-onMounted(async () => {
-  const [list, cats] = await Promise.all([fetchProducts(), fetchCategories()])
-  products.value = list.items
-  categories.value = cats
+onMounted(() => {
+  void refresh()
 })
 
 const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
