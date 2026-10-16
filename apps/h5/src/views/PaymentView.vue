@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -11,6 +11,11 @@ const route = useRoute()
 const router = useRouter()
 const order = ref<Order | null>(null)
 const channel = ref<'fps' | 'alipay_hk' | 'wechat_hk'>('fps')
+const channelOptions = computed(() => [
+  { value: 'fps' as const, label: t('pay.fps') },
+  { value: 'alipay_hk' as const, label: t('pay.alipay') },
+  { value: 'wechat_hk' as const, label: t('pay.wechat') },
+])
 const paying = ref(false)
 let timer: number | undefined
 
@@ -74,19 +79,31 @@ async function pay() {
     <section v-if="order" class="box">
       <p>{{ t('pay.orderNo', { n: order.order_no }) }}</p>
       <h1>HK$ {{ order.pay_amount.toFixed(2) }}</h1>
-      <van-radio-group v-model="channel">
+      <van-radio-group v-model="channel" class="channels">
         <van-cell-group inset>
-          <van-cell clickable @click="channel = 'fps'">
-            <template #title>{{ t('pay.fps') }}</template>
-            <template #right-icon><van-radio name="fps" /></template>
-          </van-cell>
-          <van-cell clickable @click="channel = 'alipay_hk'">
-            <template #title>{{ t('pay.alipay') }}</template>
-            <template #right-icon><van-radio name="alipay_hk" /></template>
-          </van-cell>
-          <van-cell clickable @click="channel = 'wechat_hk'">
-            <template #title>{{ t('pay.wechat') }}</template>
-            <template #right-icon><van-radio name="wechat_hk" /></template>
+          <van-cell
+            v-for="opt in channelOptions"
+            :key="opt.value"
+            clickable
+            :class="{ 'channel-row--active': channel === opt.value }"
+            @click="channel = opt.value"
+          >
+            <template #icon>
+              <van-icon
+                v-if="channel === opt.value"
+                name="checked"
+                class="channel-check"
+              />
+              <span v-else class="channel-check-placeholder" />
+            </template>
+            <template #title>
+              <span class="channel-label" :class="{ 'channel-label--active': channel === opt.value }">
+                {{ opt.label }}
+              </span>
+            </template>
+            <template #right-icon>
+              <van-radio :name="opt.value" />
+            </template>
           </van-cell>
         </van-cell-group>
       </van-radio-group>
@@ -111,5 +128,27 @@ h1 {
   color: #999;
   font-size: 0.75rem;
   margin: 1rem 0;
+}
+.channels {
+  text-align: left;
+}
+.channel-check {
+  margin-right: 0.5rem;
+  font-size: 1.125rem;
+  color: var(--sm-primary);
+}
+.channel-check-placeholder {
+  display: inline-block;
+  width: 1.125rem;
+  margin-right: 0.5rem;
+}
+.channel-label {
+  font-weight: 400;
+}
+.channel-label--active {
+  font-weight: 700;
+}
+.channel-row--active :deep(.van-cell__title) {
+  font-weight: 700;
 }
 </style>
