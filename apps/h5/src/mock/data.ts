@@ -96,12 +96,12 @@ const heartBracelet: Product = {
 export const flashProducts: Product[] = [heartBracelet, cloverBracelet, cushionNecklace, gourdNecklace]
 
 export const homeCategories = [
-  { id: 'necklaces', name: { 'zh-HK': '項鏈', en: 'Necklaces' }, image: cushionNecklace.image },
-  { id: 'bracelets', name: { 'zh-HK': '手鏈', en: 'Bracelets' }, image: heartBracelet.image },
-  { id: 'earrings', name: { 'zh-HK': '耳環', en: 'Earrings' }, image: '/products/cat-earrings.jpg' },
-  { id: 'rings', name: { 'zh-HK': '戒指', en: 'Rings' }, image: '/products/cat-rings.jpg' },
-  { id: 'scarves', name: { 'zh-HK': '頭巾', en: 'Scarves' }, image: '/products/cat-scarves.jpg' },
-  { id: 'bags', name: { 'zh-HK': '包袋', en: 'Bags' }, image: '/products/cat-bags.jpg' },
+  { id: 'necklaces', name: { 'zh-HK': '項鏈', en: 'Necklaces' }, image: mockImage('cat-necklace.png') },
+  { id: 'bracelets', name: { 'zh-HK': '手鏈', en: 'Bracelets' }, image: mockImage('cat-bracelet.png') },
+  { id: 'earrings', name: { 'zh-HK': '耳環', en: 'Earrings' }, image: mockImage('cat-earrings.png') },
+  { id: 'rings', name: { 'zh-HK': '戒指', en: 'Rings' }, image: mockImage('cat-ring.png') },
+  { id: 'scarves', name: { 'zh-HK': '頭巾', en: 'Scarves' }, image: mockImage('cat-headscarf.png') },
+  { id: 'bags', name: { 'zh-HK': '包袋', en: 'Bags' }, image: mockImage('cat-bag.png') },
 ]
 
 export const collectionProducts: Product[] = [cushionNecklace, gourdNecklace]
@@ -112,7 +112,7 @@ export const categories: CategoryNode[] = [
   {
     id: 'bracelets',
     name: { 'zh-HK': '手鏈', en: 'Bracelets' },
-    image: heartBracelet.image,
+    image: mockImage('cat-bracelet.png'),
     children: [
       { id: 'b-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: cloverBracelet.image },
       { id: 'b-heart', name: { 'zh-HK': '愛心手鏈', en: 'Heart' }, image: heartBracelet.image },
@@ -122,7 +122,7 @@ export const categories: CategoryNode[] = [
   {
     id: 'necklaces',
     name: { 'zh-HK': '項鏈', en: 'Necklaces' },
-    image: cushionNecklace.image,
+    image: mockImage('cat-necklace.png'),
     children: [
       { id: 'n-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: cushionNecklace.image },
       { id: 'n-gourd', name: { 'zh-HK': '葫蘆項鏈', en: 'Gourd' }, image: gourdNecklace.image },
@@ -135,7 +135,7 @@ export const categories: CategoryNode[] = [
   {
     id: 'earrings',
     name: { 'zh-HK': '耳環', en: 'Earrings' },
-    image: '/products/cat-earrings.jpg',
+    image: mockImage('cat-earrings.png'),
     children: [
       { id: 'e-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/flash-earrings.jpg' },
       { id: 'e-drops', name: { 'zh-HK': '水滴耳環', en: 'Drops' }, image: '/products/hot-drops.jpg' },
@@ -144,7 +144,7 @@ export const categories: CategoryNode[] = [
   {
     id: 'rings',
     name: { 'zh-HK': '戒指', en: 'Rings' },
-    image: '/products/cat-rings.jpg',
+    image: mockImage('cat-ring.png'),
     children: [
       { id: 'r-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/hot-ring.jpg' },
     ],
@@ -152,17 +152,17 @@ export const categories: CategoryNode[] = [
   {
     id: 'scarves',
     name: { 'zh-HK': '頭巾', en: 'Scarves' },
-    image: '/products/cat-scarves.jpg',
+    image: mockImage('cat-headscarf.png'),
     children: [
-      { id: 's-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/cat-scarves.jpg' },
+      { id: 's-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: mockImage('cat-headscarf.png') },
     ],
   },
   {
     id: 'bags',
     name: { 'zh-HK': '包袋', en: 'Bags' },
-    image: '/products/cat-bags.jpg',
+    image: mockImage('cat-bag.png'),
     children: [
-      { id: 'g-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: '/products/cat-bags.jpg' },
+      { id: 'g-all', name: { 'zh-HK': '全部商品', en: 'All' }, image: mockImage('cat-bag.png') },
     ],
   },
   {
