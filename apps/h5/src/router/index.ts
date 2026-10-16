@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import CategoryView from '../views/CategoryView.vue'
 import CartView from '../views/CartView.vue'
@@ -43,7 +43,10 @@ import { captureRefFromQuery } from '../composables/useReferral'
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
 export const router = createRouter({
-  history: createWebHistory(),
+  // Hash mode: shared-host nginx has no try_files yet; deep links like /payment/:id
+  // would 404 on refresh. Switch back to createWebHistory after panel 伪静态 is set
+  // (see releases/vps-spa/nginx-伪静态.conf).
+  history: createWebHashHistory(),
   routes: [
     { path: '/', name: 'home', component: HomeView, meta: { tab: true } },
     { path: '/category', name: 'category', component: CategoryView, meta: { tab: true } },

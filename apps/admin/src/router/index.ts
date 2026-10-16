@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import AdminLayout from '../layouts/AdminLayout.vue'
 import ArticlesView from '../views/ArticlesView.vue'
 import CategoriesView from '../views/CategoriesView.vue'
@@ -29,7 +29,8 @@ const placeholder = (path: string) => {
 }
 
 export const router = createRouter({
-  history: createWebHistory(),
+  // Hash until shared-host nginx try_files covers /admin/* (releases/vps-spa).
+  history: createWebHashHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
     {
