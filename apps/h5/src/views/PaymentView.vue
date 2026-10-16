@@ -90,11 +90,10 @@ async function pay() {
           >
             <template #icon>
               <van-icon
-                v-if="channel === opt.value"
                 name="checked"
                 class="channel-check"
+                :class="{ 'channel-check--hidden': channel !== opt.value }"
               />
-              <span v-else class="channel-check-placeholder" />
             </template>
             <template #title>
               <span class="channel-label" :class="{ 'channel-label--active': channel === opt.value }">
@@ -137,10 +136,8 @@ h1 {
   font-size: 1.125rem;
   color: var(--sm-primary);
 }
-.channel-check-placeholder {
-  display: inline-block;
-  width: 1.125rem;
-  margin-right: 0.5rem;
+.channel-check--hidden {
+  visibility: hidden;
 }
 .channel-label {
   font-weight: 400;
