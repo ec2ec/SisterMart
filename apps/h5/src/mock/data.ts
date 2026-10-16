@@ -11,7 +11,7 @@ export type Product = {
 }
 
 function mockImage(file: string) {
-  return `/mock/${encodeURIComponent(file)}`
+  return `/mock/${file}`
 }
 
 export type CategoryNode = {
@@ -26,8 +26,8 @@ export type CategoryNode = {
 }
 
 export const banners = [
-  { id: 'b1', image: mockImage('首頁頂部廣告圖-1.png') },
-  { id: 'b2', image: mockImage('首頁頂部廣告圖-2.png') },
+  { id: 'b1', image: mockImage('home-banner-1.png') },
+  { id: 'b2', image: mockImage('home-banner-2.png') },
 ]
 
 const cushionNecklace: Product = {
@@ -35,8 +35,8 @@ const cushionNecklace: Product = {
   name: { 'zh-HK': '方鑽項鏈', en: 'Cushion Necklace' },
   price: 128,
   sold: '56',
-  image: mockImage('產品圖-1.jpg'),
-  gallery: [mockImage('產品圖-1.jpg'), mockImage('產品圖-1-詳情.jpg'), mockImage('產品圖-1-詳情2.jpg')],
+  image: mockImage('product-1.jpg'),
+  gallery: [mockImage('product-1.jpg'), mockImage('product-1-detail.jpg'), mockImage('product-1-detail-2.jpg')],
   category: 'necklaces',
   badges: ['flash'],
   liked: true,
@@ -47,12 +47,12 @@ const gourdNecklace: Product = {
   name: { 'zh-HK': '葫蘆項鏈', en: 'Gourd Necklace' },
   price: 128,
   sold: '88',
-  image: mockImage('產品圖-2.jpg'),
+  image: mockImage('product-2.jpg'),
   gallery: [
-    mockImage('產品圖-2.jpg'),
-    mockImage('產品圖-2-詳情1.jpg'),
-    mockImage('產品圖-2-詳情2.jpg'),
-    mockImage('產品圖-2-詳情3.jpg'),
+    mockImage('product-2.jpg'),
+    mockImage('product-2-detail-1.jpg'),
+    mockImage('product-2-detail-2.jpg'),
+    mockImage('product-2-detail-3.jpg'),
   ],
   category: 'necklaces',
   badges: ['new', 'editor'],
@@ -64,12 +64,12 @@ const cloverBracelet: Product = {
   name: { 'zh-HK': '四葉草手鏈', en: 'Clover Bracelet' },
   price: 49,
   sold: '80+',
-  image: mockImage('產品圖-3.jpg'),
+  image: mockImage('product-3.jpg'),
   gallery: [
-    mockImage('產品圖-3.jpg'),
-    mockImage('產品圖-3-詳情.jpg'),
-    mockImage('產品圖-3-詳情2.jpg'),
-    mockImage('產品圖-3-詳情3.jpg'),
+    mockImage('product-3.jpg'),
+    mockImage('product-3-detail.jpg'),
+    mockImage('product-3-detail-2.jpg'),
+    mockImage('product-3-detail-3.jpg'),
   ],
   category: 'bracelets',
   badges: ['hot'],
@@ -81,12 +81,12 @@ const heartBracelet: Product = {
   name: { 'zh-HK': '紅心手鏈', en: 'Heart Bracelet' },
   price: 69,
   sold: '40+',
-  image: mockImage('產品圖-4.jpg'),
+  image: mockImage('product-4.jpg'),
   gallery: [
-    mockImage('產品圖-4.jpg'),
-    mockImage('產品圖-4-詳情1.jpg'),
-    mockImage('產品圖-4-詳情2.jpg'),
-    mockImage('產品圖-4-詳情3.jpg'),
+    mockImage('product-4.jpg'),
+    mockImage('product-4-detail-1.jpg'),
+    mockImage('product-4-detail-2.jpg'),
+    mockImage('product-4-detail-3.jpg'),
   ],
   category: 'bracelets',
   badges: ['flash'],

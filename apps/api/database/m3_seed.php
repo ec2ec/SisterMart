@@ -21,7 +21,7 @@ function now(): string
 
 function mock(string $file): string
 {
-    return '/mock/' . rawurlencode($file);
+    return '/mock/' . $file;
 }
 
 function upsertCategory(string $code, ?string $parentCode, string $zh, string $en, ?string $icon, int $sort): int
@@ -242,18 +242,18 @@ function upsertProduct(
 }
 
 Db::transaction(function () {
-    upsertCategory('bracelets', null, '手鏈', 'Bracelets', mock('產品圖-4.jpg'), 1);
-    upsertCategory('necklaces', null, '項鏈', 'Necklaces', mock('產品圖-1.jpg'), 2);
+    upsertCategory('bracelets', null, '手鏈', 'Bracelets', mock('product-4.jpg'), 1);
+    upsertCategory('necklaces', null, '項鏈', 'Necklaces', mock('product-1.jpg'), 2);
     upsertCategory('earrings', null, '耳環', 'Earrings', null, 3);
     upsertCategory('rings', null, '戒指', 'Rings', null, 4);
     upsertCategory('scarves', null, '頭巾', 'Scarves', null, 5);
     upsertCategory('bags', null, '包袋', 'Bags', null, 6);
     upsertCategory('sets', null, '套裝', 'Sets', null, 7);
 
-    upsertCategory('b-heart', 'bracelets', '愛心手鏈', 'Heart', mock('產品圖-4.jpg'), 1);
+    upsertCategory('b-heart', 'bracelets', '愛心手鏈', 'Heart', mock('product-4.jpg'), 1);
     upsertCategory('b-gold', 'bracelets', '金珠手鏈', 'Gold Link', null, 2);
-    upsertCategory('n-gourd', 'necklaces', '葫蘆項鏈', 'Gourd', mock('產品圖-2.jpg'), 1);
-    upsertCategory('n-square', 'necklaces', '方鑽項鏈', 'Cushion', mock('產品圖-1.jpg'), 2);
+    upsertCategory('n-gourd', 'necklaces', '葫蘆項鏈', 'Gourd', mock('product-2.jpg'), 1);
+    upsertCategory('n-square', 'necklaces', '方鑽項鏈', 'Cushion', mock('product-1.jpg'), 2);
     upsertCategory('n-pearl', 'necklaces', '珍珠項鏈', 'Pearl', null, 3);
     upsertCategory('n-clavicle', 'necklaces', '鎖骨鏈', 'Clavicle', null, 4);
     upsertCategory('n-heart', 'necklaces', '愛心項鏈', 'Heart', null, 5);
@@ -278,10 +278,10 @@ Db::transaction(function () {
         2,
     );
 
-    $p1 = mock('產品圖-1.jpg');
-    $p2 = mock('產品圖-2.jpg');
-    $p3 = mock('產品圖-3.jpg');
-    $p4 = mock('產品圖-4.jpg');
+    $p1 = mock('product-1.jpg');
+    $p2 = mock('product-2.jpg');
+    $p3 = mock('product-3.jpg');
+    $p4 = mock('product-4.jpg');
 
     upsertProduct(
         'p1',
@@ -293,7 +293,7 @@ Db::transaction(function () {
         ],
         56,
         $p1,
-        [$p1, mock('產品圖-1-詳情.jpg'), mock('產品圖-1-詳情2.jpg')],
+        [$p1, mock('product-1-detail.jpg'), mock('product-1-detail-2.jpg')],
         ['flash'],
         [$tagShip, $tagAfter],
         [[
@@ -301,7 +301,7 @@ Db::transaction(function () {
             'name' => ['zh-HK' => '款式', 'en' => 'Style'],
             'options' => [
                 ['code' => 'classic', 'name' => ['zh-HK' => '經典', 'en' => 'Classic'], 'image' => $p1],
-                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('產品圖-1-詳情.jpg')],
+                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('product-1-detail.jpg')],
             ],
         ]],
         [
@@ -320,7 +320,7 @@ Db::transaction(function () {
         ],
         88,
         $p2,
-        [$p2, mock('產品圖-2-詳情1.jpg'), mock('產品圖-2-詳情2.jpg'), mock('產品圖-2-詳情3.jpg')],
+        [$p2, mock('product-2-detail-1.jpg'), mock('product-2-detail-2.jpg'), mock('product-2-detail-3.jpg')],
         ['new', 'editor'],
         [$tagShip, $tagAfter],
         [[
@@ -328,7 +328,7 @@ Db::transaction(function () {
             'name' => ['zh-HK' => '款式', 'en' => 'Style'],
             'options' => [
                 ['code' => 'classic', 'name' => ['zh-HK' => '經典', 'en' => 'Classic'], 'image' => $p2],
-                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('產品圖-2-詳情1.jpg')],
+                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('product-2-detail-1.jpg')],
             ],
         ]],
         [
@@ -347,7 +347,7 @@ Db::transaction(function () {
         ],
         84,
         $p3,
-        [$p3, mock('產品圖-3-詳情.jpg'), mock('產品圖-3-詳情2.jpg'), mock('產品圖-3-詳情3.jpg')],
+        [$p3, mock('product-3-detail.jpg'), mock('product-3-detail-2.jpg'), mock('product-3-detail-3.jpg')],
         ['hot'],
         [$tagShip, $tagAfter],
         [[
@@ -355,7 +355,7 @@ Db::transaction(function () {
             'name' => ['zh-HK' => '款式', 'en' => 'Style'],
             'options' => [
                 ['code' => 'classic', 'name' => ['zh-HK' => '經典', 'en' => 'Classic'], 'image' => $p3],
-                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('產品圖-3-詳情.jpg')],
+                ['code' => 'detail', 'name' => ['zh-HK' => '細節款', 'en' => 'Detail'], 'image' => mock('product-3-detail.jpg')],
             ],
         ]],
         [
@@ -374,7 +374,7 @@ Db::transaction(function () {
         ],
         42,
         $p4,
-        [$p4, mock('產品圖-4-詳情1.jpg'), mock('產品圖-4-詳情2.jpg'), mock('產品圖-4-詳情3.jpg')],
+        [$p4, mock('product-4-detail-1.jpg'), mock('product-4-detail-2.jpg'), mock('product-4-detail-3.jpg')],
         ['flash'],
         [$tagShip, $tagAfter],
         [
@@ -383,8 +383,8 @@ Db::transaction(function () {
                 'name' => ['zh-HK' => '顏色', 'en' => 'Color'],
                 'options' => [
                     ['code' => 'red', 'name' => ['zh-HK' => '紅色愛心', 'en' => 'Red heart'], 'image' => $p4],
-                    ['code' => 'white', 'name' => ['zh-HK' => '白色', 'en' => 'White'], 'image' => mock('產品圖-4-詳情3.jpg')],
-                    ['code' => 'gold', 'name' => ['zh-HK' => '金色', 'en' => 'Gold'], 'image' => mock('產品圖-4-詳情2.jpg')],
+                    ['code' => 'white', 'name' => ['zh-HK' => '白色', 'en' => 'White'], 'image' => mock('product-4-detail-3.jpg')],
+                    ['code' => 'gold', 'name' => ['zh-HK' => '金色', 'en' => 'Gold'], 'image' => mock('product-4-detail-2.jpg')],
                 ],
             ],
             [
@@ -399,10 +399,10 @@ Db::transaction(function () {
         [
             ['code' => 'red|16', 'price' => 69, 'compare' => 99, 'stock' => 12, 'options' => ['color:red', 'size:16'], 'image' => $p4],
             ['code' => 'red|18', 'price' => 79, 'compare' => 109, 'stock' => 8, 'options' => ['color:red', 'size:18'], 'image' => $p4],
-            ['code' => 'white|16', 'price' => 69, 'compare' => 99, 'stock' => 5, 'options' => ['color:white', 'size:16'], 'image' => mock('產品圖-4-詳情3.jpg')],
-            ['code' => 'white|18', 'price' => 79, 'compare' => 109, 'stock' => 3, 'options' => ['color:white', 'size:18'], 'image' => mock('產品圖-4-詳情3.jpg')],
-            ['code' => 'gold|16', 'price' => 89, 'compare' => 119, 'stock' => 6, 'options' => ['color:gold', 'size:16'], 'image' => mock('產品圖-4-詳情2.jpg')],
-            ['code' => 'gold|18', 'price' => 99, 'compare' => 129, 'stock' => 0, 'options' => ['color:gold', 'size:18'], 'image' => mock('產品圖-4-詳情2.jpg')],
+            ['code' => 'white|16', 'price' => 69, 'compare' => 99, 'stock' => 5, 'options' => ['color:white', 'size:16'], 'image' => mock('product-4-detail-3.jpg')],
+            ['code' => 'white|18', 'price' => 79, 'compare' => 109, 'stock' => 3, 'options' => ['color:white', 'size:18'], 'image' => mock('product-4-detail-3.jpg')],
+            ['code' => 'gold|16', 'price' => 89, 'compare' => 119, 'stock' => 6, 'options' => ['color:gold', 'size:16'], 'image' => mock('product-4-detail-2.jpg')],
+            ['code' => 'gold|18', 'price' => 99, 'compare' => 129, 'stock' => 0, 'options' => ['color:gold', 'size:18'], 'image' => mock('product-4-detail-2.jpg')],
         ],
     );
 });

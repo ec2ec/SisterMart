@@ -99,7 +99,7 @@ async function suiteApi() {
       detail: { 'zh-HK': '詳情', en: 'Detail' },
       badges: ['new'],
       service_tag_ids: [],
-      media: [{ media_type: 'image', url: '/mock/%E7%94%A2%E5%93%81%E5%9C%96-1.jpg' }],
+      media: [{ media_type: 'image', url: '/mock/product-1.jpg' }],
       spec_groups: [
         {
           code: 'style',

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, type Connect, type Plugin } from 'vite'
 
-const mockDir = fileURLToPath(new URL('../../docs/設計素材/mock圖片資料', import.meta.url))
+const mockDir = fileURLToPath(new URL('../../docs/design-assets/mock-images', import.meta.url))
 
 function sendMock(req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) {
   const rel = decodeURIComponent((req.url || '/').split('?')[0]).replace(/^\/+/, '')
