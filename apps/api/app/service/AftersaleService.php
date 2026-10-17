@@ -145,6 +145,8 @@ class AftersaleService
                 'admin_note' => $note ?: '已駁回',
                 'updated_at' => $now,
             ]);
+            $row['status'] = 'rejected';
+            (new MessageService())->notifyAftersaleEvent($row, 'rejected');
 
             return $this->detail($id);
         }
@@ -159,11 +161,23 @@ class AftersaleService
                 'admin_note' => $note,
                 'updated_at' => $now,
             ]);
+            $row['status'] = 'awaiting_return';
+            (new MessageService())->notifyAftersaleEvent($row, 'approved');
 
             return $this->detail($id);
         }
 
-        return $this->executeRefund($id, $note, false);
+        $detail = $this->executeRefund($id, $note, false);
+        (new MessageService())->notifyAftersaleEvent(
+            array_merge($row, ['status' => 'completed']),
+            'approved',
+        );
+        (new MessageService())->notifyAftersaleEvent(
+            array_merge($row, ['status' => 'completed']),
+            'completed',
+        );
+
+        return $detail;
     }
 
     /** 買家已退回 / 後台確認收貨後退款 */
@@ -265,10 +279,16 @@ class AftersaleService
                     'status' => 'refunded',
                     'updated_at' => $now,
                 ]);
+                (new MessageService())->notifyOrderEvent($order, 'refunded');
             }
         });
 
-        return $this->detail($id);
+        $detail = $this->detail($id);
+        if (($detail['status'] ?? '') === 'completed') {
+            (new MessageService())->notifyAftersaleEvent($detail, 'completed');
+        }
+
+        return $detail;
     }
 
     private function present(array $row, bool $withItem = false): array

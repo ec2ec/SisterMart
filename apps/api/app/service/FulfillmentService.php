@@ -45,6 +45,8 @@ class FulfillmentService
                 'updated_at' => $now,
             ]);
         });
+        $order['status'] = 'pending_receipt';
+        (new MessageService())->notifyOrderEvent($order, 'shipped');
 
         return $this->logistics((int) $order['id']);
     }
@@ -147,6 +149,8 @@ class FulfillmentService
                 'cancel_reason' => $source === 'auto' ? 'auto_receive' : null,
                 'updated_at' => $now,
             ]);
+            $locked['status'] = 'completed';
+            (new MessageService())->notifyOrderEvent($locked, 'completed');
         });
 
         return (new OrderService())->detail($memberId ?? (int) $order['member_id'], $orderId, $memberId === null);

@@ -82,7 +82,7 @@ Route::group('api/v1', function () {
     Route::get('point-logs', 'api.Assets/pointLogs');
     Route::get('balance-logs', 'api.Assets/balanceLogs');
 
-    /** M14 簽到 + M13 分銷 + M7 Mock 消息 */
+    /** M14 簽到 + M13 分銷 + M15 站內消息 */
     Route::get('checkins/calendar', 'api.Checkins/calendar');
     Route::post('checkins', 'api.Checkins/store');
     Route::get('distribution/overview', 'api.Distribution/overview');
@@ -160,4 +160,8 @@ Route::group('api/v1/admin', function () {
     /** M13 提現審核 */
     Route::get('withdrawals', 'admin.Withdrawals/index');
     Route::post('withdrawals/:id/review', 'admin.Withdrawals/review');
+
+    /** M15 系統消息 */
+    Route::get('messages', 'admin.Messages/index');
+    Route::post('messages', 'admin.Messages/store');
 })->middleware([AdminAuth::class, AdminAclGate::class]);

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace app\controller\api;
 
 use app\controller\ApiController;
-use app\service\MockMarketingService;
+use app\service\MessageService;
 use think\Response;
 
 class Messages extends ApiController
@@ -16,7 +16,10 @@ class Messages extends ApiController
             $member = app('sistermart.member');
             $type = $this->request->get('type');
 
-            return (new MockMarketingService())->messages((int) $member['id'], $type ? (string) $type : null);
+            return (new MessageService())->listForMember(
+                (int) $member['id'],
+                $type ? (string) $type : null,
+            );
         });
     }
 
@@ -25,7 +28,7 @@ class Messages extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->unreadCount((int) $member['id']);
+            return (new MessageService())->unreadCount((int) $member['id']);
         });
     }
 
@@ -33,12 +36,8 @@ class Messages extends ApiController
     {
         return $this->run(function () {
             $member = app('sistermart.member');
-            $id = (string) ($this->payload()['id'] ?? $this->request->param('id', ''));
-            if ($id === '') {
-                throw new \app\support\ApiException('INVALID', '缺少消息 ID', 422, 42285);
-            }
 
-            return (new MockMarketingService())->markRead((int) $member['id'], $id);
+            return (new MessageService())->markRead((int) $member['id'], $this->payload());
         });
     }
 }

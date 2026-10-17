@@ -17,6 +17,7 @@ import PointsView from '../views/PointsView.vue'
 import MembersView from '../views/MembersView.vue'
 import LevelsView from '../views/LevelsView.vue'
 import AdminsView from '../views/AdminsView.vue'
+import MessagesView from '../views/MessagesView.vue'
 import { findMenu } from '../menus'
 
 const placeholder = (path: string) => {
@@ -48,7 +49,7 @@ export const router = createRouter({
         { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         placeholder('/cms/home'),
-        placeholder('/cms/messages'),
+        { path: '/cms/messages', component: MessagesView, meta: { title: '消息' } },
         { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
         { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },
         placeholder('/marketing/seckill'),

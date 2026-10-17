@@ -173,7 +173,15 @@ class OrderService
             }
         });
 
-        return $this->detail($memberId, $orderId);
+        $created = $this->detail($memberId, $orderId);
+        $msgs = new MessageService();
+        if (($created['status'] ?? '') === 'pending_shipment') {
+            $msgs->notifyOrderEvent($created, 'created_zero');
+        } else {
+            $msgs->notifyOrderEvent($created, 'created');
+        }
+
+        return $created;
     }
 
     public function listForMember(int $memberId, ?string $status = null): array
@@ -316,8 +324,10 @@ class OrderService
         });
         // 冪等：無論首次確認或重入，補建 pending 佣金
         (new DistributionService())->createPendingForOrder($orderId);
+        $detail = $this->presentDetail($this->findOrder($orderId));
+        (new MessageService())->notifyOrderEvent($detail, 'paid');
 
-        return $this->presentDetail($this->findOrder($orderId));
+        return $detail;
     }
 
     public function closeExpired(): array
@@ -691,6 +701,9 @@ class OrderService
             Db::name('payments')->where('order_id', $row['id'])->where('status', 'pending')->update([
                 'status' => 'closed', 'updated_at' => $now,
             ]);
+            $locked['status'] = 'cancelled';
+            $locked['cancel_reason'] = $reason;
+            (new MessageService())->notifyOrderEvent($locked, 'cancelled', $reason === 'timeout' ? '超時未付' : null, $reason === 'timeout' ? 'unpaid timeout' : null);
         });
     }
 
@@ -729,6 +742,7 @@ class OrderService
         return [
             'id' => (int) $row['id'],
             'order_no' => $row['order_no'],
+            'member_id' => (int) $row['member_id'],
             'status' => $row['status'],
             'remark' => $row['remark'],
             'address' => $addr,

@@ -39,7 +39,6 @@ async function open(msg: Msg) {
 <template>
   <div class="page">
     <SubPageNav :title="t('pages.messages')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <van-tabs v-model:active="tab">
       <van-tab :title="t('m7.orderMsg')" name="order" />
       <van-tab :title="t('m7.systemMsg')" name="system" />
@@ -60,11 +59,6 @@ async function open(msg: Msg) {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .unread :deep(.van-cell__title) {
   font-weight: 700;
 }
