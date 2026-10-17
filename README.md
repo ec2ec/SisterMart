@@ -37,7 +37,19 @@ cd apps/admin && pnpm install && cp .env.example .env && pnpm dev
 
 或使用脚本：`bash scripts/dev-api.sh` / `dev-h5.sh` / `dev-admin.sh`。
 
-健康检查：`curl -s http://127.0.0.1:8000/health`
+### 生產構建 + VPS zip
+
+在倉庫根目錄：
+
+```bash
+pnpm build          # 只構建 H5 + Admin
+pnpm build zip      # 構建並打 releases/sistermart-vps-root.zip（完整根目錄包）
+pnpm zip            # 僅用現有 dist 打包
+```
+
+解壓到網站根：`unzip -o sistermart-vps-root.zip`（含 H5、`/admin`、`/mock`、`/products`、`/api`、`/sm-backend`；不含 `.env`）。
+
+健康檢查：`curl -s http://127.0.0.1:8000/health`
 
 验证：`bash scripts/m1-verify.sh`（需 API 已启动）。
 
