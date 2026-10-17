@@ -1,0 +1,113 @@
+/* 375 宽下 1rem = 16px，字号随视口宽度等比 */
+html {
+  font-size: calc(100vw / 23.4375);
+}
+
+:root {
+  --sm-primary: #16162b;
+  --sm-primary-soft: #efeae3;
+  --sm-promo-bg: #eef2fb;
+  --sm-text: #1c1c1c;
+  --sm-text-secondary: #6d675f;
+  --sm-text-muted: #8a8378;
+  --sm-border: #e3ddd4;
+  --sm-bg: #ffffff;
+  --sm-bg-soft: #f6f3ee;
+  --sm-badge-alt: #6b4a2a;
+  --sm-accent: #c45c4a;
+  --sm-danger: #c45c4a;
+  --sm-radius: 0.75rem;
+  --sm-header-h: calc(3.25rem + env(safe-area-inset-top, 0rem));
+  --sm-tabbar-h: 3.125rem;
+  --van-primary-color: var(--sm-primary);
+  --van-tabbar-height: 3.125rem;
+  --van-tabbar-item-font-size: 0.75rem;
+  --van-tabbar-item-icon-size: 1.375rem;
+  --van-nav-bar-height: 2.875rem;
+  --van-nav-bar-title-font-size: 1rem;
+  --van-nav-bar-arrow-size: 1rem;
+  --van-search-input-height: 2.125rem;
+  --van-search-padding: 0.625rem 0.75rem;
+  --van-cell-font-size: 0.875rem;
+  --van-cell-line-height: 1.5rem;
+  --van-sidebar-width: 5.5rem;
+  --van-sidebar-font-size: 0.875rem;
+  --van-sidebar-padding: 1.25rem 0.75rem;
+  --van-button-default-height: 2.75rem;
+  --van-button-normal-font-size: 0.875rem;
+  --van-button-small-height: 2rem;
+  --van-button-small-font-size: 0.75rem;
+  --van-padding-base: 0.25rem;
+  --van-padding-xs: 0.5rem;
+  --van-padding-sm: 0.75rem;
+  --van-padding-md: 1rem;
+  --van-padding-lg: 1.5rem;
+  --van-font-size-xs: 0.625rem;
+  --van-font-size-sm: 0.75rem;
+  --van-font-size-md: 0.875rem;
+  --van-font-size-lg: 1rem;
+  --van-tabbar-item-active-color: var(--sm-primary);
+  --van-sidebar-selected-border-color: var(--sm-accent);
+  --van-checkbox-checked-icon-color: var(--sm-primary);
+  --van-submit-bar-button-color: var(--sm-primary);
+  --van-badge-background: var(--sm-accent);
+  --van-stepper-button-round-theme-color: var(--sm-primary);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+  background: var(--sm-bg);
+  color: var(--sm-text);
+  font-family:
+    "PingFang HK",
+    "Noto Sans TC",
+    "Source Han Sans HK",
+    "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page {
+  min-height: 100vh;
+  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  background: var(--sm-bg);
+}
+
+.page--soft {
+  background: var(--sm-bg-soft);
+}
+
+.price {
+  color: var(--sm-text);
+  font-weight: 700;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.section-title .more {
+  font-size: 0.75rem;
+  color: var(--sm-text-muted);
+}
