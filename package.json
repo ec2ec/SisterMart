@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "description": "SisterMart monorepo — H5 / Admin / ThinkPHP API",
-  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "bash scripts/deploy/build-zip.sh",
     "zip": "bash scripts/deploy/build-zip.sh zip",
