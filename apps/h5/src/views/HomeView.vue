@@ -31,7 +31,7 @@ const feedList = computed(() => {
   if (feedTab.value === 2) return flashVisible.value
   return products.value
 })
-/** Fallback when DB icon is empty or a broken /mock URL 404s (seen on VPS before assets were uploaded). */
+/** Primary + secondary paths — /mock can 404 on partial deploys; /products ships with catalog assets. */
 const CAT_ICON_FALLBACK: Record<string, string> = {
   bracelets: '/mock/cat-bracelet.png',
   necklaces: '/mock/cat-necklace.png',
@@ -40,19 +40,34 @@ const CAT_ICON_FALLBACK: Record<string, string> = {
   scarves: '/mock/cat-headscarf.png',
   bags: '/mock/cat-bag.png',
 }
+const CAT_ICON_FALLBACK_ALT: Record<string, string> = {
+  bracelets: '/products/cat-bracelet.png',
+  necklaces: '/products/cat-necklace.png',
+  earrings: '/products/cat-earrings.png',
+  rings: '/products/cat-ring.png',
+  scarves: '/products/cat-headscarf.png',
+  bags: '/products/cat-bag.png',
+}
 
 const homeCategories = computed(() =>
   categories.value.slice(0, 6).map((c) => ({
     ...c,
-    icon: c.icon || CAT_ICON_FALLBACK[c.code] || null,
+    icon: c.icon || CAT_ICON_FALLBACK[c.code] || CAT_ICON_FALLBACK_ALT[c.code] || null,
   })),
 )
 
 function onCatImgError(event: Event, code: string) {
   const img = event.target as HTMLImageElement
-  const fallback = CAT_ICON_FALLBACK[code]
-  if (fallback && img.src && !img.src.endsWith(fallback)) {
-    img.src = fallback
+  const primary = CAT_ICON_FALLBACK[code]
+  const alt = CAT_ICON_FALLBACK_ALT[code]
+  const current = img.getAttribute('src') || ''
+  // If /mock failed (or DB pointed at a dead URL), try /products copy once.
+  if (alt && !current.includes('/products/cat-')) {
+    img.src = alt
+    return
+  }
+  if (primary && !current.endsWith(primary) && !current.includes(primary)) {
+    img.src = primary
   }
 }
 
