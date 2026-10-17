@@ -16,6 +16,7 @@ class OrderService
         private AssetService $assets = new AssetService(),
         private CouponService $coupons = new CouponService(),
         private SeckillService $seckill = new SeckillService(),
+        private PointsMallService $pointsMall = new PointsMallService(),
     ) {
     }
 
@@ -39,12 +40,21 @@ class OrderService
         $expireAt = date('Y-m-d H:i:s', time() + $timeout * 60);
 
         $seckillItemId = !empty($body['seckill_item_id']) ? (int) $body['seckill_item_id'] : 0;
+        $pointsMallItemId = !empty($body['points_mall_item_id']) ? (int) $body['points_mall_item_id'] : 0;
+        if ($seckillItemId > 0 && $pointsMallItemId > 0) {
+            throw new ApiException('INVALID_ORDER', '秒殺與積分兌換不可同單', 422, 42283);
+        }
         $orderId = 0;
-        Db::transaction(function () use ($memberId, $address, $lines, $quote, $body, $now, $expireAt, $seckillItemId, &$orderId) {
+        Db::transaction(function () use ($memberId, $address, $lines, $quote, $body, $now, $expireAt, $seckillItemId, $pointsMallItemId, &$orderId) {
             if ($seckillItemId > 0) {
                 $qty = (int) ($lines[0]['qty'] ?? 1);
                 $this->seckill->assertLiveItem($seckillItemId, $qty, true);
                 $this->seckill->deduct($seckillItemId, $qty, $now);
+            }
+            if ($pointsMallItemId > 0) {
+                $qty = (int) ($lines[0]['qty'] ?? 1);
+                $this->pointsMall->assertAvailable($pointsMallItemId, $qty, true);
+                $this->pointsMall->deduct($pointsMallItemId, $qty, $now);
             }
             foreach ($lines as $line) {
                 $affected = Db::name('skus')->where('id', $line['sku_id'])->where('stock', '>=', $line['qty'])
@@ -58,7 +68,9 @@ class OrderService
             $balanceUsed = (float) $quote['balance_amount'];
             // 先佔位寫入訂單，流水 ref_id 於插入後回填；此處扣減仍先執行
             if ($pointsUsed > 0) {
-                $this->assets->changePoints($memberId, -$pointsUsed, 'order_deduct', 'order', null, '下單抵扣');
+                $type = $pointsMallItemId > 0 ? 'points_mall_redeem' : 'order_deduct';
+                $remark = $pointsMallItemId > 0 ? '積分商城兌換' : '下單抵扣';
+                $this->assets->changePoints($memberId, -$pointsUsed, $type, 'order', null, $remark);
             }
             if ($balanceUsed > 0) {
                 $this->assets->changeBalance($memberId, -$balanceUsed, 'order_deduct', 'order', null, '下單抵扣');
@@ -95,10 +107,11 @@ class OrderService
                 'balance_amount' => $balanceUsed,
                 'shipping_amount' => $quote['shipping_amount'],
                 'pay_amount' => $payAmount,
-                'use_points' => !empty($body['use_points']) ? 1 : 0,
+                'use_points' => $pointsMallItemId > 0 ? 1 : (!empty($body['use_points']) ? 1 : 0),
                 'use_balance' => !empty($body['use_balance']) ? 1 : 0,
                 'coupon_grant_id' => $quote['coupon_grant_id'],
                 'seckill_item_id' => $seckillItemId > 0 ? $seckillItemId : null,
+                'points_mall_item_id' => $pointsMallItemId > 0 ? $pointsMallItemId : null,
                 'pay_channel' => $payAmount <= 0 ? 'zero' : null,
                 'paid_at' => $payAmount <= 0 ? $now : null,
                 'expire_at' => $payAmount <= 0 ? null : $expireAt,
@@ -135,9 +148,10 @@ class OrderService
             }
 
             if ($pointsUsed > 0) {
+                $logType = $pointsMallItemId > 0 ? 'points_mall_redeem' : 'order_deduct';
                 Db::name('point_logs')->where([
                     'member_id' => $memberId,
-                    'type' => 'order_deduct',
+                    'type' => $logType,
                     'ref_type' => 'order',
                 ])->whereNull('ref_id')->order('id', 'desc')->limit(1)->update(['ref_id' => $orderId]);
             }
@@ -149,7 +163,7 @@ class OrderService
                 ])->whereNull('ref_id')->order('id', 'desc')->limit(1)->update(['ref_id' => $orderId]);
             }
 
-            if (empty($body['buy_now']) && $seckillItemId <= 0) {
+            if (empty($body['buy_now']) && $seckillItemId <= 0 && $pointsMallItemId <= 0) {
                 $this->cart->clearChecked($memberId);
             }
         });
@@ -315,6 +329,42 @@ class OrderService
 
     private function resolveLines(int $memberId, array $body): array
     {
+        $pointsMallItemId = (int) ($body['points_mall_item_id'] ?? 0);
+        if ($pointsMallItemId > 0) {
+            if (!empty($body['seckill_item_id']) || !empty($body['buy_now']) || !empty($body['sku_id'])) {
+                throw new ApiException('INVALID_ORDER', '積分兌換須單獨下單', 422, 42283);
+            }
+            $qty = max(1, min(1, (int) ($body['qty'] ?? 1)));
+            $locked = $this->pointsMall->assertAvailable($pointsMallItemId, $qty);
+            $item = $locked['item'];
+            $sku = Db::name('skus')->where('id', $item['sku_id'])->where('status', 1)->find();
+            if (!$sku || (int) $sku['stock'] < $qty) {
+                throw new ApiException('OUT_OF_STOCK', '庫存不足', 422, 42220);
+            }
+            $product = Db::name('products')->where('id', $item['product_id'])->where('status', 1)->find();
+            if (!$product) {
+                throw new ApiException('NOT_FOUND', '商品已下架', 404, 40402);
+            }
+            $spec = $this->skuSpecText((int) $item['sku_id']);
+
+            return [[
+                'id' => 0,
+                'product_id' => (string) $item['product_code'],
+                'product_db_id' => (int) $item['product_id'],
+                'sku_id' => (int) $item['sku_id'],
+                'sku_code' => (string) $sku['code'],
+                'name' => ['zh-HK' => $item['name_zh'], 'en' => $item['name_en']],
+                'spec' => $spec,
+                'price' => 0.0,
+                'qty' => $qty,
+                'image' => $item['image_url'] ?: ($sku['image_url'] ?: $product['cover_url']),
+                'available' => true,
+                'checked' => true,
+                'points_mall_item_id' => $pointsMallItemId,
+                'points_cost' => (int) $item['points_cost'],
+            ]];
+        }
+
         $seckillItemId = (int) ($body['seckill_item_id'] ?? 0);
         if ($seckillItemId > 0) {
             $qty = 1; // 秒殺限購 1
@@ -409,6 +459,45 @@ class OrderService
 
     private function compute(array $member, array $lines, array $body): array
     {
+        $pointsMallItemId = (int) ($body['points_mall_item_id'] ?? 0);
+        $memberPoints = (int) ($member['points'] ?? 0);
+        $memberBalance = (float) ($member['balance'] ?? 0);
+
+        // M12 積分商城：商品用積分兌換，不用券/餘額/現金購貨；運費仍按現金規則（可 mock 支付）
+        if ($pointsMallItemId > 0) {
+            $pointsCost = 0;
+            foreach ($lines as $line) {
+                $pointsCost += (int) ($line['points_cost'] ?? 0) * (int) $line['qty'];
+            }
+            if ($memberPoints < $pointsCost) {
+                throw new ApiException('POINTS_SHORT', '積分不足', 422, 42230);
+            }
+            $shipping = TradeSettings::shippingFor(0.0);
+            $payAmount = $shipping;
+
+            return [
+                'items' => $lines,
+                'goods_amount' => 0.0,
+                'coupon_amount' => 0.0,
+                'coupon_grant_id' => null,
+                'coupon_type' => null,
+                'coupons' => [],
+                'points_amount' => 0.0,
+                'points_used' => $pointsCost,
+                'points_available' => $memberPoints,
+                'points_cap_amount' => 0.0,
+                'points_mall' => true,
+                'points_cost' => $pointsCost,
+                'balance_amount' => 0.0,
+                'balance_available' => $memberBalance,
+                'shipping_amount' => $shipping,
+                'free_threshold' => TradeSettings::freeThreshold(),
+                'shipping_fee' => TradeSettings::shippingFee(),
+                'pay_amount' => $payAmount,
+                'zero_pay' => $payAmount <= 0,
+            ];
+        }
+
         $goods = 0.0;
         foreach ($lines as $line) {
             $goods += $line['price'] * $line['qty'];
@@ -445,7 +534,6 @@ class OrderService
         $per = TradeSettings::pointsPerHkd();
         $maxPercent = TradeSettings::pointsMaxPercent();
         $maxByPercent = round($afterCoupon * $maxPercent / 100, 2);
-        $memberPoints = (int) ($member['points'] ?? 0);
         $maxByPoints = round($memberPoints / $per, 2);
         $pointsCap = min($maxByPercent, $maxByPoints);
         if (!empty($body['use_points']) && $pointsCap > 0) {
@@ -462,7 +550,6 @@ class OrderService
         $shipping = $freeShipping ? 0.0 : TradeSettings::shippingFor($afterCoupon);
 
         $balanceAmount = 0.0;
-        $memberBalance = (float) ($member['balance'] ?? 0);
         $needCash = round($afterPoints + $shipping, 2);
         if (!empty($body['use_balance']) && $memberBalance > 0 && $needCash > 0) {
             $balanceAmount = min($memberBalance, $needCash);
@@ -558,6 +645,11 @@ class OrderService
                 $qty = (int) ($items[0]['qty'] ?? 1);
                 $this->seckill->release($seckillItemId, $qty, $now);
             }
+            $pointsMallItemId = (int) ($row['points_mall_item_id'] ?? 0);
+            if ($pointsMallItemId > 0) {
+                $qty = (int) ($items[0]['qty'] ?? 1);
+                $this->pointsMall->release($pointsMallItemId, $qty, $now);
+            }
             if ((int) $row['points_used'] > 0) {
                 $this->assets->changePoints(
                     (int) $row['member_id'],
@@ -645,6 +737,10 @@ class OrderService
             'completed_at' => $row['completed_at'] ?? null,
             'aftersale_touched' => (int) ($row['aftersale_touched'] ?? 0) === 1,
             'points_awarded' => (int) ($row['points_awarded'] ?? 0),
+            'seckill_item_id' => $row['seckill_item_id'] !== null ? (int) $row['seckill_item_id'] : null,
+            'points_mall_item_id' => isset($row['points_mall_item_id']) && $row['points_mall_item_id'] !== null
+                ? (int) $row['points_mall_item_id']
+                : null,
             'expire_at' => $row['expire_at'],
             'cancel_reason' => $row['cancel_reason'],
             'created_at' => $row['created_at'],

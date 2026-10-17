@@ -175,10 +175,13 @@ class FulfillmentService
         return ['auto_received' => $done, 'days' => $days];
     }
 
-    /** 商品實付（不含運費）按設定發積分；已退款整單不應走到這裡 */
+    /** 商品實付（不含運費）按設定發積分；已退款整單不應走到這裡；積分商城訂單不發下單積分 */
     private function earnPointsForOrder(array $order): int
     {
         if ((int) ($order['points_awarded'] ?? 0) > 0) {
+            return 0;
+        }
+        if (!empty($order['points_mall_item_id'])) {
             return 0;
         }
         $per = TradeSettings::orderEarnPerHkd();

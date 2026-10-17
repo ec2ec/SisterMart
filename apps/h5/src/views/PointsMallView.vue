@@ -19,7 +19,6 @@ onMounted(async () => {
 <template>
   <div class="page">
     <SubPageNav :title="t('account.pointsMall')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <div class="grid">
       <button
         v-for="item in items"
@@ -30,17 +29,13 @@ onMounted(async () => {
         <img :src="item.image" alt="" />
         <strong>{{ text(item.name) }}</strong>
         <span>{{ item.points_cost }} {{ t('account.points') }}</span>
+        <em>{{ t('pdp.stock', { n: item.stock }) }}</em>
       </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -67,5 +62,11 @@ onMounted(async () => {
 .grid span {
   color: var(--sm-primary);
   font-size: 0.75rem;
+}
+.grid em {
+  display: block;
+  font-style: normal;
+  font-size: 0.6875rem;
+  color: #999;
 }
 </style>

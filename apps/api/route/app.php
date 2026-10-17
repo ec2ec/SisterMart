@@ -33,7 +33,7 @@ Route::get('api/v1/articles/:code', 'api.Articles/read');
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
 Route::get('api/v1/member-levels', 'api.Assets/levelsPublic');
 
-/** M11 秒殺（真實庫存）+ M7 公開 Mock：積分商城、分享瀏覽 */
+/** M11 秒殺 + M12 積分商城（真實）+ M7 公開 Mock：分享瀏覽 */
 Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read');
 Route::get('api/v1/seckill/sessions', 'api.Seckill/index');
 Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product');

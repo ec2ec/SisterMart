@@ -51,11 +51,14 @@ export function fetchPointsMall() {
     mock: boolean
     items: Array<{
       id: string
+      points_mall_item_id: number
       product_id: string
+      sku_id: number
       name: { 'zh-HK': string; en: string }
       image: string
       points_cost: number
       stock: number
+      sold?: number
     }>
   }>('/api/v1/points-mall/products')
 }
@@ -63,10 +66,14 @@ export function fetchPointsMall() {
 export function fetchPointsMallItem(id: string) {
   return api<{
     id: string
+    points_mall_item_id: number
+    product_id: string
+    sku_id: number
     name: { 'zh-HK': string; en: string }
     image: string
     points_cost: number
     stock: number
+    sold?: number
     detail: { 'zh-HK': string; en: string }
     mock: boolean
   }>(`/api/v1/points-mall/products/${id}`)

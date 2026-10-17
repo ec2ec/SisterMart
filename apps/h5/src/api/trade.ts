@@ -53,6 +53,8 @@ export type Quote = {
   shipping_fee: number
   pay_amount: number
   zero_pay: boolean
+  points_mall?: boolean
+  points_cost?: number
 }
 
 export type Order = {

@@ -34,6 +34,12 @@ const seckillBuy = reactive({
   qty: 1,
 })
 
+const pointsMallBuy = reactive({
+  active: false,
+  points_mall_item_id: 0,
+  qty: 1,
+})
+
 async function loadAddresses() {
   const data = await fetchAddresses()
   addresses.value = data.items
@@ -47,7 +53,10 @@ async function refreshQuote() {
     use_balance: useBalance.value,
     coupon_grant_id: couponGrantId.value,
   }
-  if (seckillBuy.active) {
+  if (pointsMallBuy.active) {
+    body.points_mall_item_id = pointsMallBuy.points_mall_item_id
+    body.qty = pointsMallBuy.qty
+  } else if (seckillBuy.active) {
     body.seckill_item_id = seckillBuy.seckill_item_id
     body.qty = seckillBuy.qty
   } else if (buyNow.active) {
@@ -63,7 +72,11 @@ onMounted(async () => {
     router.replace({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
-  if (route.query.seckill_item_id) {
+  if (route.query.points_mall_item_id) {
+    pointsMallBuy.active = true
+    pointsMallBuy.points_mall_item_id = Number(route.query.points_mall_item_id)
+    pointsMallBuy.qty = 1
+  } else if (route.query.seckill_item_id) {
     seckillBuy.active = true
     seckillBuy.seckill_item_id = Number(route.query.seckill_item_id)
     seckillBuy.qty = 1
@@ -95,7 +108,10 @@ async function submit() {
       use_balance: useBalance.value,
       coupon_grant_id: couponGrantId.value,
     }
-    if (seckillBuy.active) {
+    if (pointsMallBuy.active) {
+      body.points_mall_item_id = pointsMallBuy.points_mall_item_id
+      body.qty = pointsMallBuy.qty
+    } else if (seckillBuy.active) {
       body.seckill_item_id = seckillBuy.seckill_item_id
       body.qty = seckillBuy.qty
     } else if (buyNow.active) {
@@ -138,12 +154,13 @@ async function submit() {
         <div>
           <h3>{{ text(item.name) }}</h3>
           <p>{{ text(item.spec) }} × {{ item.qty }}</p>
-          <strong>HK$ {{ (item.price * item.qty).toFixed(2) }}</strong>
+          <strong v-if="quote.points_mall">{{ quote.points_cost }} {{ t('account.points') }}</strong>
+          <strong v-else>HK$ {{ (item.price * item.qty).toFixed(2) }}</strong>
         </div>
       </div>
     </section>
 
-    <section v-if="quote" class="card">
+    <section v-if="quote && !quote.points_mall" class="card">
       <div class="row">
         <span>{{ t('checkout.coupon') }}</span>
         <select v-model="couponGrantId">
@@ -164,11 +181,20 @@ async function submit() {
       <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
     </section>
 
+    <section v-else-if="quote" class="card">
+      <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
+    </section>
+
     <section v-if="quote" class="card sum">
-      <p><span>{{ t('checkout.goods') }}</span><em>HK$ {{ quote.goods_amount.toFixed(2) }}</em></p>
-      <p><span>{{ t('checkout.coupon') }}</span><em>-HK$ {{ quote.coupon_amount.toFixed(2) }}</em></p>
-      <p><span>{{ t('checkout.pointsLabel') }}</span><em>-HK$ {{ quote.points_amount.toFixed(2) }}</em></p>
-      <p><span>{{ t('checkout.balanceLabel') }}</span><em>-HK$ {{ quote.balance_amount.toFixed(2) }}</em></p>
+      <template v-if="quote.points_mall">
+        <p><span>{{ t('m7.exchange') }}</span><em>{{ quote.points_used }} {{ t('account.points') }}</em></p>
+      </template>
+      <template v-else>
+        <p><span>{{ t('checkout.goods') }}</span><em>HK$ {{ quote.goods_amount.toFixed(2) }}</em></p>
+        <p><span>{{ t('checkout.coupon') }}</span><em>-HK$ {{ quote.coupon_amount.toFixed(2) }}</em></p>
+        <p><span>{{ t('checkout.pointsLabel') }}</span><em>-HK$ {{ quote.points_amount.toFixed(2) }}</em></p>
+        <p><span>{{ t('checkout.balanceLabel') }}</span><em>-HK$ {{ quote.balance_amount.toFixed(2) }}</em></p>
+      </template>
       <p>
         <span>{{ t('checkout.shipping') }}</span>
         <em>{{ quote.shipping_amount <= 0 ? t('checkout.freeShip') : `HK$ ${quote.shipping_amount.toFixed(2)}` }}</em>

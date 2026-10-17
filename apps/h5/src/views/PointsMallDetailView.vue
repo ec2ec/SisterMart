@@ -19,41 +19,55 @@ onMounted(async () => {
 })
 
 function exchange() {
+  if (!item.value) return
   if (!isLoggedIn()) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
+  if (item.value.stock <= 0) {
+    showToast(t('pdp.outOfStock'))
+    return
+  }
   const pts = memberState.value?.points ?? 0
-  if (item.value && pts < item.value.points_cost) {
+  if (pts < item.value.points_cost) {
     showToast(t('m7.pointsShort'))
     return
   }
-  showToast(t('m7.exchangeMock'))
+  router.push({
+    name: 'checkout',
+    query: {
+      points_mall_item_id: String(item.value.points_mall_item_id),
+      qty: '1',
+    },
+  })
 }
 </script>
 
 <template>
   <div class="page" v-if="item">
     <SubPageNav :title="text(item.name)" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <img class="hero" :src="item.image" alt="" />
     <section class="info">
       <h1>{{ text(item.name) }}</h1>
       <p class="cost">{{ item.points_cost }} {{ t('account.points') }}</p>
+      <p class="stock">{{ t('pdp.stock', { n: item.stock }) }}</p>
       <p>{{ text(item.detail) }}</p>
     </section>
     <div class="bar">
-      <van-button block round color="var(--sm-primary)" @click="exchange">{{ t('m7.exchange') }}</van-button>
+      <van-button
+        block
+        round
+        color="var(--sm-primary)"
+        :disabled="item.stock <= 0"
+        @click="exchange"
+      >
+        {{ t('m7.exchange') }}
+      </van-button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .hero {
   width: 100%;
   aspect-ratio: 1;
@@ -66,6 +80,10 @@ function exchange() {
   color: var(--sm-primary);
   font-weight: 700;
   font-size: 1.125rem;
+}
+.stock {
+  color: #888;
+  font-size: 0.8125rem;
 }
 .bar {
   padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
