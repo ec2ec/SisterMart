@@ -9,13 +9,6 @@ import HomeFooter from '../components/HomeFooter.vue'
 import { banners } from '../mock/data'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { useLocaleText } from '../composables/useLocaleText'
-/** Bundled into H5 dist (/assets/*-HASH.jpg) — avoids broken /mock/cat-bracelet|necklace.png on some clients. */
-import catBrace from '../assets/home-cats/brace.jpg'
-import catNeck from '../assets/home-cats/neck.jpg'
-import catEarrings from '../assets/home-cats/earrings.jpg'
-import catRing from '../assets/home-cats/ring.jpg'
-import catScarf from '../assets/home-cats/scarf.jpg'
-import catBag from '../assets/home-cats/bag.jpg'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -38,29 +31,43 @@ const feedList = computed(() => {
   if (feedTab.value === 2) return flashVisible.value
   return products.value
 })
-
-/** Always prefer Vite-bundled icons for the home grid (stable across deploy / cache / filter issues). */
-const CAT_ICON_BUNDLED: Record<string, string> = {
-  bracelets: catBrace,
-  necklaces: catNeck,
-  earrings: catEarrings,
-  rings: catRing,
-  scarves: catScarf,
-  bags: catBag,
+/** Primary + secondary paths — /mock can 404 on partial deploys; /products ships with catalog assets. */
+const CAT_ICON_FALLBACK: Record<string, string> = {
+  bracelets: '/mock/cat-bracelet.png',
+  necklaces: '/mock/cat-necklace.png',
+  earrings: '/mock/cat-earrings.png',
+  rings: '/mock/cat-ring.png',
+  scarves: '/mock/cat-headscarf.png',
+  bags: '/mock/cat-bag.png',
+}
+const CAT_ICON_FALLBACK_ALT: Record<string, string> = {
+  bracelets: '/products/cat-bracelet.png',
+  necklaces: '/products/cat-necklace.png',
+  earrings: '/products/cat-earrings.png',
+  rings: '/products/cat-ring.png',
+  scarves: '/products/cat-headscarf.png',
+  bags: '/products/cat-bag.png',
 }
 
 const homeCategories = computed(() =>
   categories.value.slice(0, 6).map((c) => ({
     ...c,
-    icon: CAT_ICON_BUNDLED[c.code] || c.icon || null,
+    icon: c.icon || CAT_ICON_FALLBACK[c.code] || CAT_ICON_FALLBACK_ALT[c.code] || null,
   })),
 )
 
 function onCatImgError(event: Event, code: string) {
   const img = event.target as HTMLImageElement
-  const bundled = CAT_ICON_BUNDLED[code]
-  if (bundled && img.getAttribute('src') !== bundled) {
-    img.src = bundled
+  const primary = CAT_ICON_FALLBACK[code]
+  const alt = CAT_ICON_FALLBACK_ALT[code]
+  const current = img.getAttribute('src') || ''
+  // If /mock failed (or DB pointed at a dead URL), try /products copy once.
+  if (alt && !current.includes('/products/cat-')) {
+    img.src = alt
+    return
+  }
+  if (primary && !current.endsWith(primary) && !current.includes(primary)) {
+    img.src = primary
   }
 }
 

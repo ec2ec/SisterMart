@@ -242,12 +242,12 @@ function upsertProduct(
 }
 
 Db::transaction(function () {
-    upsertCategory('bracelets', null, '手鏈', 'Bracelets', '/products/home-cat-brace.jpg', 1);
-    upsertCategory('necklaces', null, '項鏈', 'Necklaces', '/products/home-cat-neck.jpg', 2);
-    upsertCategory('earrings', null, '耳環', 'Earrings', '/products/home-cat-earrings.jpg', 3);
-    upsertCategory('rings', null, '戒指', 'Rings', '/products/home-cat-ring.jpg', 4);
-    upsertCategory('scarves', null, '頭巾', 'Scarves', '/products/home-cat-scarf.jpg', 5);
-    upsertCategory('bags', null, '包袋', 'Bags', '/products/home-cat-bag.jpg', 6);
+    upsertCategory('bracelets', null, '手鏈', 'Bracelets', mock('cat-bracelet.png'), 1);
+    upsertCategory('necklaces', null, '項鏈', 'Necklaces', mock('cat-necklace.png'), 2);
+    upsertCategory('earrings', null, '耳環', 'Earrings', mock('cat-earrings.png'), 3);
+    upsertCategory('rings', null, '戒指', 'Rings', mock('cat-ring.png'), 4);
+    upsertCategory('scarves', null, '頭巾', 'Scarves', mock('cat-headscarf.png'), 5);
+    upsertCategory('bags', null, '包袋', 'Bags', mock('cat-bag.png'), 6);
     upsertCategory('sets', null, '套裝', 'Sets', null, 7);
 
     upsertCategory('b-heart', 'bracelets', '愛心手鏈', 'Heart', mock('product-4.jpg'), 1);
