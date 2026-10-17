@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use app\service\payment\PaymentChannelFactory;
 use app\support\ApiException;
 use think\facade\Db;
 
@@ -199,10 +200,8 @@ class OrderService
 
     public function createPayment(int $memberId, int $orderId, string $channel): array
     {
-        $allowed = ['fps', 'alipay_hk', 'wechat_hk'];
-        if (!in_array($channel, $allowed, true)) {
-            throw new ApiException('INVALID', '支付渠道無效', 422, 42201);
-        }
+        $factory = new PaymentChannelFactory();
+        $driver = $factory->make($channel);
         $row = $this->findOrder($orderId);
         if ((int) $row['member_id'] !== $memberId) {
             throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40440);
@@ -220,16 +219,33 @@ class OrderService
             'channel' => $channel,
             'amount' => $row['pay_amount'],
             'status' => 'pending',
-            'mock_ref' => 'MOCK-' . strtoupper($channel) . '-' . $orderId . '-' . time(),
+            'mock_ref' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+
+        $created = $driver->create([
+            'payment_id' => $payId,
+            'order_id' => $orderId,
+            'order_no' => (string) $row['order_no'],
+            'amount' => (float) $row['pay_amount'],
+            'currency' => 'HKD',
+        ]);
+
+        if (!empty($created['mock_ref'])) {
+            Db::name('payments')->where('id', $payId)->update([
+                'mock_ref' => $created['mock_ref'],
+                'updated_at' => $now,
+            ]);
+        }
 
         return [
             'payment_id' => $payId,
             'channel' => $channel,
             'amount' => (float) $row['pay_amount'],
-            'mock_ref' => Db::name('payments')->where('id', $payId)->value('mock_ref'),
+            'mode' => $created['mode'] ?? $factory->mode(),
+            'mock_ref' => $created['mock_ref'] ?? Db::name('payments')->where('id', $payId)->value('mock_ref'),
+            'next' => $created['next'] ?? null,
             'order' => $this->presentSummary($row),
         ];
     }

@@ -41,6 +41,9 @@ Route::get('api/v1/points-mall/products/:id', 'api.PointsMall/read');
 Route::get('api/v1/points-mall/products', 'api.PointsMall/index');
 Route::post('api/v1/share-views', 'api.ShareViews/store');
 
+/** M10 公開：支付渠道異步回調（驗簽由渠道適配層負責） */
+Route::post('api/v1/payment-callbacks/:channel', 'api.PaymentCallbacks/store');
+
 Route::group('api/v1', function () {
     Route::get('members/me/level', 'api.Assets/level');
     Route::get('members/me', 'api.Members/me');
