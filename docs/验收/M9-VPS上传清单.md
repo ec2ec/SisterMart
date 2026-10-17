@@ -1,8 +1,9 @@
-# M9 VPS 上傳清單（2026-10-16 最終包）
+# M9 VPS 上傳清單（2026-10-17 公網已上線 hash 包）
 
 > 遠程 FTP 根目錄 = 網站根目錄（`https://sistermart.vip/`）  
 > 本機來源：倉庫分支 `cursor/h5-ui-from-design-fc0f`  
-> 本包 H5 含：支付選中 ✅+加粗、首頁資料緩衝（回退不閃白）、catalog 圓形圖標。
+> **線上現狀**：`index.html` → `/assets/index-BqBka7LG.js`（hash 路由）；公網模擬支付已複測 PASS。  
+> 本包 H5 含：支付選中 ✅+加粗、首頁資料緩衝、catalog 圓形圖標、hash 深鏈。
 
 ## 推薦：整包 zip（根目錄解壓覆蓋）
 
