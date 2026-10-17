@@ -57,6 +57,12 @@ class TradeSettings
         return max(0, (float) self::get('distribution.withdraw_min', '100'));
     }
 
+    /** 分享連結被瀏覽時發給推廣人的積分 */
+    public static function shareViewPoints(): int
+    {
+        return max(0, (int) self::get('points.share_view', '2'));
+    }
+
     public static function shippingFor(float $goodsAfterDiscount): float
     {
         if ($goodsAfterDiscount >= self::freeThreshold()) {

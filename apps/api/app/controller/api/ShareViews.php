@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace app\controller\api;
 
 use app\controller\ApiController;
-use app\service\MockMarketingService;
+use app\service\ShareViewService;
 use app\service\TokenService;
 use think\Response;
 
@@ -23,7 +23,7 @@ class ShareViews extends ApiController
             $body = $this->payload();
             $body['ip'] = $this->request->ip();
 
-            return (new MockMarketingService())->shareView($body, $viewerId);
+            return (new ShareViewService())->record($body, $viewerId);
         }, 201);
     }
 }

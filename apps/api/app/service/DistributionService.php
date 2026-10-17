@@ -63,6 +63,7 @@ class DistributionService
                 'order_item_id' => (int) $item['id'],
                 'product_id' => (int) $item['product_id'],
                 'amount' => $amount,
+                'original_amount' => $amount,
                 'status' => 'pending',
                 'created_at' => $now,
                 'settled_at' => null,
@@ -71,21 +72,31 @@ class DistributionService
         }
     }
 
-    /** 訂單完成：pending → settled，增加可提現 */
+    /** 訂單完成：pending → settled，增加可提現（已沖回部分只入帳淨額） */
     public function settleForOrder(int $orderId): void
     {
         $now = date('Y-m-d H:i:s');
         $rows = Db::name('commissions')->where('order_id', $orderId)->where('status', 'pending')->lock(true)->select()->toArray();
         $byBeneficiary = [];
         foreach ($rows as $row) {
+            $net = $this->netCommissionAmount($row);
+            if ($net <= 0) {
+                Db::name('commissions')->where('id', $row['id'])->where('status', 'pending')->update([
+                    'status' => 'void',
+                    'amount' => 0,
+                    'updated_at' => $now,
+                ]);
+                continue;
+            }
             $ok = Db::name('commissions')->where('id', $row['id'])->where('status', 'pending')->update([
                 'status' => 'settled',
+                'amount' => $net,
                 'settled_at' => $now,
                 'updated_at' => $now,
             ]);
             if ($ok) {
                 $bid = (int) $row['beneficiary_id'];
-                $byBeneficiary[$bid] = ($byBeneficiary[$bid] ?? 0) + (float) $row['amount'];
+                $byBeneficiary[$bid] = ($byBeneficiary[$bid] ?? 0) + $net;
             }
         }
         foreach ($byBeneficiary as $bid => $sum) {
@@ -108,6 +119,110 @@ class DistributionService
             'status' => 'void',
             'updated_at' => $now,
         ]);
+    }
+
+    /**
+     * M16 售後退款完成：按售後數量比例沖回佣金（冪等：aftersale_id 唯一）。
+     */
+    public function clawbackForAftersale(int $aftersaleId): void
+    {
+        $aftersale = Db::name('aftersales')->where('id', $aftersaleId)->lock(true)->find();
+        if (!$aftersale || $aftersale['status'] !== 'completed') {
+            return;
+        }
+        if (Db::name('commission_clawbacks')->where('aftersale_id', $aftersaleId)->find()) {
+            return;
+        }
+
+        $comm = Db::name('commissions')
+            ->where('order_item_id', (int) $aftersale['order_item_id'])
+            ->lock(true)
+            ->find();
+        if (!$comm || in_array($comm['status'], ['void', 'clawed_back'], true)) {
+            return;
+        }
+
+        $item = Db::name('order_items')->where('id', (int) $aftersale['order_item_id'])->find();
+        if (!$item) {
+            return;
+        }
+
+        $original = (float) ($comm['original_amount'] ?? $comm['amount']);
+        if ($original <= 0) {
+            return;
+        }
+        $itemQty = max(1, (int) $item['qty']);
+        $claw = round($original * ((int) $aftersale['qty'] / $itemQty), 2);
+        $already = (float) Db::name('commission_clawbacks')->where('commission_id', $comm['id'])->sum('amount');
+        $remain = round($original - $already, 2);
+        $claw = min($claw, max(0, $remain));
+        if ($claw <= 0) {
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        Db::name('commission_clawbacks')->insert([
+            'aftersale_id' => $aftersaleId,
+            'commission_id' => (int) $comm['id'],
+            'amount' => $claw,
+            'created_at' => $now,
+        ]);
+
+        $clawedTotal = round($already + $claw, 2);
+        $net = round($original - $clawedTotal, 2);
+
+        if ($comm['status'] === 'pending') {
+            $update = [
+                'amount' => max(0, $net),
+                'updated_at' => $now,
+            ];
+            if ($net <= 0) {
+                $update['status'] = 'void';
+                $update['amount'] = 0;
+            }
+            Db::name('commissions')->where('id', $comm['id'])->where('status', 'pending')->update($update);
+
+            return;
+        }
+
+        if ($comm['status'] === 'settled') {
+            $m = Db::name('members')->where('id', (int) $comm['beneficiary_id'])->lock(true)->find();
+            if ($m) {
+                $available = round((float) ($m['commission_available'] ?? 0) - $claw, 2);
+                Db::name('members')->where('id', (int) $m['id'])->update([
+                    'commission_available' => max(0, $available),
+                    'updated_at' => $now,
+                ]);
+            }
+            $update = [
+                'amount' => max(0, $net),
+                'updated_at' => $now,
+            ];
+            if ($net <= 0) {
+                $update['status'] = 'clawed_back';
+                $update['amount'] = 0;
+            }
+            Db::name('commissions')->where('id', $comm['id'])->where('status', 'settled')->update($update);
+        }
+    }
+
+    /** @param array<string, mixed> $row */
+    private function netCommissionAmount(array $row): float
+    {
+        $original = (float) ($row['original_amount'] ?? $row['amount']);
+        $clawed = (float) Db::name('commission_clawbacks')->where('commission_id', (int) $row['id'])->sum('amount');
+
+        return round(max(0, $original - $clawed), 2);
+    }
+
+    private function mapCommissionStatus(string $status): string
+    {
+        return match ($status) {
+            'settled' => 'settled',
+            'void' => 'void',
+            'clawed_back' => 'clawed_back',
+            default => 'pending',
+        };
     }
 
     public function overview(int $memberId): array
@@ -173,7 +288,7 @@ class DistributionService
             'id' => (int) $r['id'],
             'order_no' => (string) ($r['order_no'] ?? ''),
             'amount' => (float) $r['amount'],
-            'status' => $r['status'] === 'settled' ? 'settled' : ($r['status'] === 'void' ? 'void' : 'pending'),
+            'status' => $this->mapCommissionStatus((string) $r['status']),
             'created_at' => $r['created_at'],
         ], $rows);
 
@@ -195,11 +310,7 @@ class DistributionService
             'order_no' => (string) ($r['order_no'] ?? ''),
             'title' => (string) ($r['name_zh'] ?: $r['name_en'] ?: ''),
             'commission' => (float) $r['amount'],
-            'status' => match ($r['status']) {
-                'settled' => 'settled',
-                'void' => 'void',
-                default => 'pending',
-            },
+            'status' => $this->mapCommissionStatus((string) $r['status']),
         ], $rows);
 
         return ['mock' => false, 'items' => $items];

@@ -48,8 +48,9 @@ class AftersaleService
         if (!$order) {
             throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40440);
         }
-        if (!in_array($order['status'], ['pending_shipment', 'pending_receipt'], true)) {
-            throw new ApiException('INVALID_STATUS', '僅未完成的已支付訂單可申請售後', 422, 42260);
+        // M16：已完成訂單僅允許退貨退款（以便沖回已入帳佣金）；未完成已支付仍可僅退款/退貨退款
+        if (!in_array($order['status'], ['pending_shipment', 'pending_receipt', 'completed'], true)) {
+            throw new ApiException('INVALID_STATUS', '僅已支付且未全退的訂單可申請售後', 422, 42260);
         }
         $item = Db::name('order_items')->where(['id' => $itemId, 'order_id' => $orderId])->find();
         if (!$item) {
@@ -63,6 +64,8 @@ class AftersaleService
         $type = (string) ($body['type'] ?? '');
         if ($order['status'] === 'pending_shipment') {
             $type = 'refund_only';
+        } elseif ($order['status'] === 'completed') {
+            $type = 'return_refund';
         } elseif (!in_array($type, ['refund_only', 'return_refund'], true)) {
             throw new ApiException('INVALID', '售後類型不正確', 422, 42201);
         }
@@ -256,6 +259,9 @@ class AftersaleService
                 'updated_at' => $now,
             ]);
 
+            // M16：售後退款完成後按明細沖回佣金（pending void / settled clawback）
+            (new DistributionService())->clawbackForAftersale((int) $row['id']);
+
             if ($allRefunded) {
                 // 整單退完：退回下單凍結的積分/餘額差額不在此重算（支付時已扣）；券若仍 frozen 改 unused 無意義已 used
                 // 退回下單時扣的積分與餘額中尚未被本售後覆蓋的部分 — 簡化：整單退完將訂單標為已退款，並退回 points_used / balance_amount（若售後金額未覆蓋）
@@ -279,6 +285,7 @@ class AftersaleService
                     'status' => 'refunded',
                     'updated_at' => $now,
                 ]);
+                (new DistributionService())->voidForOrder((int) $order['id']);
                 (new MessageService())->notifyOrderEvent($order, 'refunded');
             }
         });
