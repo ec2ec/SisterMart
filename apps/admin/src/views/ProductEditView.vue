@@ -1,0 +1,256 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  NButton,
+  NCard,
+  NCheckbox,
+  NCheckboxGroup,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NSelect,
+  NSpace,
+  NSwitch,
+  useMessage,
+} from 'naive-ui'
+import { api } from '../api'
+
+type Cat = { id: number; label: string }
+
+const route = useRoute()
+const router = useRouter()
+const message = useMessage()
+const isNew = computed(() => route.params.id === 'new')
+const categories = ref<Cat[]>([])
+const tags = ref<Array<{ label: string; value: number }>>([])
+
+const complex = ref(false)
+const original = ref<any>(null)
+const form = ref({
+  code: '',
+  category_id: null as number | null,
+  status: true,
+  sold_count: 0,
+  name_zh: '',
+  name_en: '',
+  detail_zh: '',
+  detail_en: '',
+  badges: [] as string[],
+  service_tag_ids: [] as number[],
+  mediaText: '',
+  groupCode: 'style',
+  groupNameZh: '款式',
+  groupNameEn: 'Style',
+  optionACode: 'classic',
+  optionAZh: '經典',
+  optionAEn: 'Classic',
+  optionBCode: 'detail',
+  optionBZh: '細節款',
+  optionBEn: 'Detail',
+  skuAPrice: 0,
+  skuACompare: 0,
+  skuAStock: 0,
+  skuBPrice: 0,
+  skuBCompare: 0,
+  skuBStock: 0,
+})
+
+function flattenCats(nodes: any[], depth = 0): Cat[] {
+  const out: Cat[] = []
+  for (const n of nodes) {
+    out.push({ id: n.id, label: `${'— '.repeat(depth)}${n.name['zh-HK']}` })
+    out.push(...flattenCats(n.children || [], depth + 1))
+  }
+  return out
+}
+
+onMounted(async () => {
+  const [cats, tagData] = await Promise.all([
+    api<{ items: any[] }>('/api/v1/admin/categories', {}, true),
+    api<{ items: Array<{ id: number; name: { 'zh-HK': string } }> }>('/api/v1/admin/service-tags', {}, true),
+  ])
+  categories.value = flattenCats(cats.items)
+  tags.value = tagData.items.map((t) => ({ label: t.name['zh-HK'], value: t.id }))
+  if (!isNew.value) {
+    const p = await api<any>(`/api/v1/admin/products/${route.params.id}`, {}, true)
+    original.value = p
+    complex.value = (p.spec_groups || []).length > 1 || (p.skus || []).length > 2
+    form.value.code = p.code
+    form.value.category_id = p.category_id
+    form.value.status = p.status === 1
+    form.value.sold_count = p.sold_count
+    form.value.name_zh = p.name['zh-HK']
+    form.value.name_en = p.name.en
+    form.value.detail_zh = p.detail['zh-HK']
+    form.value.detail_en = p.detail.en
+    form.value.badges = p.badges || []
+    form.value.service_tag_ids = p.service_tag_ids || []
+    form.value.mediaText = (p.media || []).map((m: any) => m.url).join('\n')
+    const g = p.spec_groups?.[0]
+    if (g) {
+      form.value.groupCode = g.code
+      form.value.groupNameZh = g.name['zh-HK']
+      form.value.groupNameEn = g.name.en
+      const o0 = g.options?.[0]
+      const o1 = g.options?.[1]
+      if (o0) {
+        form.value.optionACode = o0.code
+        form.value.optionAZh = o0.name['zh-HK']
+        form.value.optionAEn = o0.name.en
+      }
+      if (o1) {
+        form.value.optionBCode = o1.code
+        form.value.optionBZh = o1.name['zh-HK']
+        form.value.optionBEn = o1.name.en
+      }
+    }
+    const s0 = p.skus?.[0]
+    const s1 = p.skus?.[1]
+    if (s0) {
+      form.value.skuAPrice = s0.price
+      form.value.skuACompare = s0.compare_at
+      form.value.skuAStock = s0.stock
+    }
+    if (s1) {
+      form.value.skuBPrice = s1.price
+      form.value.skuBCompare = s1.compare_at
+      form.value.skuBStock = s1.stock
+    }
+  }
+})
+
+async function save() {
+  const media = form.value.mediaText
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((url) => ({ media_type: url.match(/\.(mp4|webm)(\?|$)/i) ? 'video' : 'image', url }))
+  const g = form.value.groupCode
+  const a = form.value.optionACode
+  const b = form.value.optionBCode
+  const body: any = {
+    code: form.value.code,
+    category_id: form.value.category_id,
+    status: form.value.status ? 1 : 0,
+    sold_count: form.value.sold_count,
+    name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
+    detail: { 'zh-HK': form.value.detail_zh, en: form.value.detail_en },
+    badges: form.value.badges,
+    service_tag_ids: form.value.service_tag_ids,
+    media,
+  }
+  if (complex.value && original.value) {
+    body.spec_groups = (original.value.spec_groups || []).map((group: any) => ({
+      code: group.code,
+      name: group.name,
+      options: (group.options || []).map((opt: any) => ({
+        code: opt.code,
+        name: opt.name,
+        image: opt.image,
+      })),
+    }))
+    body.skus = (original.value.skus || []).map((sku: any) => ({
+      code: sku.code,
+      price: sku.price,
+      compare_at: sku.compare_at,
+      stock: sku.stock,
+      image: sku.image,
+      option_refs: sku.option_refs,
+    }))
+  } else {
+    body.spec_groups = [
+      {
+        code: g,
+        name: { 'zh-HK': form.value.groupNameZh, en: form.value.groupNameEn },
+        options: [
+          { code: a, name: { 'zh-HK': form.value.optionAZh, en: form.value.optionAEn }, image: media[0]?.url },
+          { code: b, name: { 'zh-HK': form.value.optionBZh, en: form.value.optionBEn }, image: media[1]?.url || media[0]?.url },
+        ],
+      },
+    ]
+    body.skus = [
+      {
+        code: a,
+        price: form.value.skuAPrice,
+        compare_at: form.value.skuACompare,
+        stock: form.value.skuAStock,
+        option_refs: [`${g}:${a}`],
+      },
+      {
+        code: b,
+        price: form.value.skuBPrice,
+        compare_at: form.value.skuBCompare,
+        stock: form.value.skuBStock,
+        option_refs: [`${g}:${b}`],
+      },
+    ]
+  }
+  if (isNew.value) {
+    await api('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(body) }, true)
+  } else {
+    await api(`/api/v1/admin/products/${route.params.id}`, { method: 'PUT', body: JSON.stringify(body) }, true)
+  }
+  message.success('商品已保存')
+  router.push('/catalog/products')
+}
+</script>
+
+<template>
+  <n-card :title="isNew ? '新增商品' : '編輯商品'">
+    <n-form-item label="代碼"><n-input v-model:value="form.code" /></n-form-item>
+    <n-form-item label="分類">
+      <n-select v-model:value="form.category_id" :options="categories.map((c) => ({ label: c.label, value: c.id }))" />
+    </n-form-item>
+    <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
+    <n-form-item label="已售件數"><n-input-number v-model:value="form.sold_count" :min="0" /></n-form-item>
+    <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
+    <n-form-item label="英文名稱"><n-input v-model:value="form.name_en" /></n-form-item>
+    <n-form-item label="繁中詳情"><n-input v-model:value="form.detail_zh" type="textarea" /></n-form-item>
+    <n-form-item label="英文詳情"><n-input v-model:value="form.detail_en" type="textarea" /></n-form-item>
+    <n-form-item label="角標">
+      <n-checkbox-group v-model:value="form.badges">
+        <n-checkbox value="new" label="新品" />
+        <n-checkbox value="hot" label="熱銷" />
+        <n-checkbox value="editor" label="店長推薦" />
+        <n-checkbox value="flash" label="秒殺" />
+      </n-checkbox-group>
+    </n-form-item>
+    <n-form-item label="服務標籤">
+      <n-checkbox-group v-model:value="form.service_tag_ids">
+        <n-checkbox v-for="tag in tags" :key="tag.value" :value="tag.value" :label="tag.label" />
+      </n-checkbox-group>
+    </n-form-item>
+    <n-form-item label="媒體 URL（每行一張圖）">
+      <n-input v-model:value="form.mediaText" type="textarea" :rows="4" />
+    </n-form-item>
+    <p v-if="complex" style="color:#6d675f">此商品為多規格（如顏色×尺寸）。保存時會保留原有 SKU 結構，僅更新名稱、媒體、角標等。</p>
+    <n-card v-if="!complex" size="small" title="規格（兩檔編輯器）" style="margin-bottom: 1rem">
+      <n-space>
+        <n-form-item label="規格代碼"><n-input v-model:value="form.groupCode" /></n-form-item>
+        <n-form-item label="規格繁中"><n-input v-model:value="form.groupNameZh" /></n-form-item>
+        <n-form-item label="規格英文"><n-input v-model:value="form.groupNameEn" /></n-form-item>
+      </n-space>
+      <n-space>
+        <n-form-item label="選項A"><n-input v-model:value="form.optionACode" /></n-form-item>
+        <n-form-item label="A 繁中"><n-input v-model:value="form.optionAZh" /></n-form-item>
+        <n-form-item label="A 英文"><n-input v-model:value="form.optionAEn" /></n-form-item>
+        <n-form-item label="A 價"><n-input-number v-model:value="form.skuAPrice" /></n-form-item>
+        <n-form-item label="A 劃線"><n-input-number v-model:value="form.skuACompare" /></n-form-item>
+        <n-form-item label="A 庫存"><n-input-number v-model:value="form.skuAStock" :min="0" /></n-form-item>
+      </n-space>
+      <n-space>
+        <n-form-item label="選項B"><n-input v-model:value="form.optionBCode" /></n-form-item>
+        <n-form-item label="B 繁中"><n-input v-model:value="form.optionBZh" /></n-form-item>
+        <n-form-item label="B 英文"><n-input v-model:value="form.optionBEn" /></n-form-item>
+        <n-form-item label="B 價"><n-input-number v-model:value="form.skuBPrice" /></n-form-item>
+        <n-form-item label="B 劃線"><n-input-number v-model:value="form.skuBCompare" /></n-form-item>
+        <n-form-item label="B 庫存"><n-input-number v-model:value="form.skuBStock" :min="0" /></n-form-item>
+      </n-space>
+    </n-card>
+    <n-space>
+      <n-button type="primary" @click="save">保存</n-button>
+      <n-button @click="router.push('/catalog/products')">返回</n-button>
+    </n-space>
+  </n-card>
+</template>
