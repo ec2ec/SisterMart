@@ -41,8 +41,7 @@ const homeCategories = computed(() =>
 
 function onCatImgError(event: Event) {
   const img = event.target as HTMLImageElement
-  img.removeAttribute('src')
-  img.style.display = 'none'
+  console.log(img.src, '❌image load error')
 }
 
 function onSubscribe() {
