@@ -51,6 +51,12 @@ class TradeSettings
         return max(0, (int) self::get('points.order_earn_per_hkd', '1'));
     }
 
+    /** 最低提現額（HKD） */
+    public static function withdrawMin(): float
+    {
+        return max(0, (float) self::get('distribution.withdraw_min', '100'));
+    }
+
     public static function shippingFor(float $goodsAfterDiscount): float
     {
         if ($goodsAfterDiscount >= self::freeThreshold()) {

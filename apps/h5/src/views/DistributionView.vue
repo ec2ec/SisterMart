@@ -34,7 +34,6 @@ const links = [
 <template>
   <div class="page">
     <SubPageNav :title="t('account.affiliate')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <section class="hero" v-if="data">
       <p>{{ t('account.promo', { code: data.promo_code }) }}</p>
       <div class="stats">
@@ -66,11 +65,6 @@ const links = [
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .hero {
   margin: 1rem;
   padding: 1.25rem;

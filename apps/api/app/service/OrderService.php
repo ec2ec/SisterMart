@@ -166,6 +166,11 @@ class OrderService
             if (empty($body['buy_now']) && $seckillItemId <= 0 && $pointsMallItemId <= 0) {
                 $this->cart->clearChecked($memberId);
             }
+
+            // 零元單直接待發貨：建立 pending 佣金
+            if ($status === 'pending_shipment') {
+                (new DistributionService())->createPendingForOrder($orderId);
+            }
         });
 
         return $this->detail($memberId, $orderId);
@@ -309,6 +314,8 @@ class OrderService
                 ]);
             }
         });
+        // 冪等：無論首次確認或重入，補建 pending 佣金
+        (new DistributionService())->createPendingForOrder($orderId);
 
         return $this->presentDetail($this->findOrder($orderId));
     }
@@ -650,6 +657,7 @@ class OrderService
                 $qty = (int) ($items[0]['qty'] ?? 1);
                 $this->pointsMall->release($pointsMallItemId, $qty, $now);
             }
+            (new DistributionService())->voidForOrder((int) $row['id']);
             if ((int) $row['points_used'] > 0) {
                 $this->assets->changePoints(
                     (int) $row['member_id'],

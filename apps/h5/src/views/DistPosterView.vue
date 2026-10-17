@@ -25,7 +25,6 @@ function copy() {
 <template>
   <div class="page">
     <SubPageNav :title="t('m7.poster')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <div class="poster" v-if="poster">
       <img :src="poster.image" alt="" />
       <h2>{{ text(poster.name) }}</h2>
@@ -38,11 +37,6 @@ function copy() {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .poster {
   margin: 1rem;
   padding: 1rem;

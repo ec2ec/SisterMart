@@ -8,7 +8,7 @@ import { ApiError } from '../api/client'
 
 const { t } = useI18n()
 const channel = ref<'balance' | 'fps'>('balance')
-const amount = ref(50)
+const amount = ref(100)
 const fpsName = ref('')
 const fpsId = ref('')
 
@@ -30,7 +30,6 @@ async function submit() {
 <template>
   <div class="page">
     <SubPageNav :title="t('m7.withdraw')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <van-radio-group v-model="channel" style="margin: 1rem">
       <van-cell clickable @click="channel = 'balance'">
         <template #title>{{ t('m7.toBalance') }}</template>
@@ -53,9 +52,4 @@ async function submit() {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 </style>

@@ -139,6 +139,7 @@ class FulfillmentService
             }
             $goodsNet = AssetService::goodsNetPay($locked);
             $assets->addSpentAndRefreshLevel((int) $locked['member_id'], $goodsNet);
+            (new DistributionService())->settleForOrder((int) $locked['id']);
             Db::name('orders')->where('id', $locked['id'])->update([
                 'status' => 'completed',
                 'completed_at' => $now,

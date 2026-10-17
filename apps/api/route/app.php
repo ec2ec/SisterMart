@@ -156,4 +156,8 @@ Route::group('api/v1/admin', function () {
     Route::get('members/:id', 'admin.Members/read');
     Route::post('members/:id/asset-adjustments', 'admin.Members/adjust');
     Route::get('members', 'admin.Members/index');
+
+    /** M13 提現審核 */
+    Route::get('withdrawals', 'admin.Withdrawals/index');
+    Route::post('withdrawals/:id/review', 'admin.Withdrawals/review');
 })->middleware([AdminAuth::class, AdminAclGate::class]);

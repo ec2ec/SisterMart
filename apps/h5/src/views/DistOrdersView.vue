@@ -15,7 +15,6 @@ onMounted(async () => {
 <template>
   <div class="page">
     <SubPageNav :title="t('m7.promoOrders')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <van-cell-group inset>
       <van-cell
         v-for="row in items"
@@ -29,9 +28,4 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 </style>

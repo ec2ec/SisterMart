@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace app\controller\api;
 
 use app\controller\ApiController;
-use app\service\MockMarketingService;
+use app\service\DistributionService;
 use think\Response;
 
 class Distribution extends ApiController
@@ -15,7 +15,7 @@ class Distribution extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->distributionOverview((int) $member['id']);
+            return (new DistributionService())->overview((int) $member['id']);
         });
     }
 
@@ -24,25 +24,33 @@ class Distribution extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->downlines((int) $member['id']);
+            return (new DistributionService())->downlines((int) $member['id']);
         });
     }
 
     public function commissions(): Response
     {
-        return $this->run(fn () => (new MockMarketingService())->commissions());
+        return $this->run(function () {
+            $member = app('sistermart.member');
+
+            return (new DistributionService())->commissions((int) $member['id']);
+        });
     }
 
     public function orders(): Response
     {
-        return $this->run(fn () => (new MockMarketingService())->promoOrders());
+        return $this->run(function () {
+            $member = app('sistermart.member');
+
+            return (new DistributionService())->promoOrders((int) $member['id']);
+        });
     }
 
     public function ranking(): Response
     {
         $period = (string) $this->request->get('period', 'month');
 
-        return $this->run(fn () => (new MockMarketingService())->ranking($period));
+        return $this->run(fn () => (new DistributionService())->ranking($period));
     }
 
     public function withdraw(): Response
@@ -50,7 +58,7 @@ class Distribution extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->withdraw((int) $member['id'], $this->payload());
+            return (new DistributionService())->withdraw((int) $member['id'], $this->payload());
         }, 201);
     }
 
@@ -60,7 +68,7 @@ class Distribution extends ApiController
             $member = app('sistermart.member');
             $productId = $this->request->get('product_id');
 
-            return (new MockMarketingService())->poster((int) $member['id'], $productId ? (string) $productId : null);
+            return (new DistributionService())->poster((int) $member['id'], $productId ? (string) $productId : null);
         });
     }
 }

@@ -108,6 +108,7 @@ export function fetchDistributionOverview() {
     total_commission: number
     downline_count: number
     share_link: string
+    withdraw_min?: number
   }>('/api/v1/distribution/overview', {}, 'member')
 }
 

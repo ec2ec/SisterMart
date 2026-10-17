@@ -89,6 +89,7 @@ class AdminAcl
             '/api/v1/admin/articles' => self::PERM_CMS,
             '/api/v1/admin/coupons' => self::PERM_MARKETING,
             '/api/v1/admin/points' => self::PERM_MARKETING,
+            '/api/v1/admin/withdrawals' => self::PERM_SALES,
         ];
         foreach ($map as $prefix => $perm) {
             if (str_starts_with($path, $prefix)) {
