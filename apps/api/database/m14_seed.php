@@ -41,6 +41,13 @@ $icons = [
     'n-pearl' => '/products/sub-pearl.jpg',
     'n-clavicle' => '/products/sub-clavicle.jpg',
     'n-heart' => '/products/sub-heart-neck.jpg',
+    // 首頁一級：避開部分客戶端對 /mock/cat-bracelet|necklace.png 破圖
+    'bracelets' => '/products/home-cat-brace.jpg',
+    'necklaces' => '/products/home-cat-neck.jpg',
+    'earrings' => '/products/home-cat-earrings.jpg',
+    'rings' => '/products/home-cat-ring.jpg',
+    'scarves' => '/products/home-cat-scarf.jpg',
+    'bags' => '/products/home-cat-bag.jpg',
 ];
 foreach ($icons as $code => $icon) {
     Db::name('categories')->where('code', $code)->update(['icon' => $icon, 'updated_at' => $now]);
