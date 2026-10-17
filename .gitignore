@@ -65,3 +65,4 @@ apps/admin/dist/
 
 # Deploy backups (local)
 backups/
+releases/*.zip

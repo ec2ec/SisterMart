@@ -21,20 +21,15 @@ onMounted(async () => {
 
 const current = computed(() => categories.value[active.value] || categories.value[0])
 
-const ALL_ICON_FALLBACK: Record<string, string> = {
-  bracelets: '/products/sub-all-brace.jpg',
-  necklaces: '/products/sub-all-neck.jpg',
-}
-
 const gridItems = computed(() => {
   const main = current.value
   if (!main) return []
-  const allIcon = ALL_ICON_FALLBACK[main.code] || main.icon
+  // Icons come from admin/API (`categories.icon`); 「全部商品」沿用父類 icon。
   const all = {
     id: -1,
     code: `${main.code}-all`,
     parent_id: main.id,
-    icon: allIcon,
+    icon: main.icon,
     sort: -1,
     name: { 'zh-HK': '全部商品', en: 'All' } as const,
     children: [],
