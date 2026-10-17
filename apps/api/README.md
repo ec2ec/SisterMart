@@ -1,13 +1,33 @@
 # apps/api
 
-SisterMart 后端 API（ThinkPHP 8.1 + MySQL）。
+SisterMart 后端 API — **ThinkPHP 8.1** + MySQL。
 
-## 冻结约束（M0）
+## 本地启动（默认）
 
-- 框架：ThinkPHP **8.1**
-- 数据库：MySQL
-- 登录：邮箱登录
-- 支付：模拟支付（一期）
-- 能力范围：2.7 / 2.8 一期后端落地；秒杀 / 分销一期 **Mock**
+```bash
+# 依赖（首次）
+composer install
 
-> M0 仅落模具，不写业务代码。实现自 M1 起。
+# 复制环境变量
+cp .example.env .env
+
+# 确保 MySQL 已创建库/用户（与 .example.env 一致）
+# CREATE DATABASE sistermart CHARACTER SET utf8mb4;
+# CREATE USER 'sistermart'@'%' IDENTIFIED BY 'sistermart';
+# GRANT ALL ON sistermart.* TO 'sistermart'@'%';
+
+php think run -H 0.0.0.0 -p 8000
+```
+
+健康检查：
+
+```bash
+curl -s http://127.0.0.1:8000/health | jq .
+```
+
+期望：`ok: true`，且 `db.ok: true`。
+
+## M1 范围
+
+- 脚手架 + `/health`（含 MySQL 连通探测）
+- **不含**业务模块（自 M2 起）

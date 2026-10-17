@@ -1,0 +1,12 @@
+APP_DEBUG = false
+
+DB_TYPE = mysql
+DB_HOST = localhost
+DB_NAME = gao6154221
+DB_USER = gao6154221
+DB_PASS = zf3ea5gee
+DB_PORT = 3306
+DB_CHARSET = utf8mb4
+DB_PREFIX =
+
+DEFAULT_LANG = zh-cn
