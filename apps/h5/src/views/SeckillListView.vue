@@ -19,7 +19,6 @@ onMounted(async () => {
 <template>
   <div class="page">
     <SubPageNav :title="t('m7.seckill')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <section v-for="s in sessions" :key="s.id" class="session">
       <div class="head">
         <h2>{{ text(s.name) }}</h2>
@@ -32,11 +31,18 @@ onMounted(async () => {
           :key="p.id"
           type="button"
           class="card"
-          @click="router.push({ name: 'seckill-detail', params: { id: s.id }, query: { product: p.product_id } })"
+          @click="
+            router.push({
+              name: 'seckill-detail',
+              params: { id: s.id },
+              query: { product: p.product_id, seckill_item_id: String(p.seckill_item_id) },
+            })
+          "
         >
           <img :src="p.image" alt="" />
           <strong>{{ text(p.name) }}</strong>
           <span class="price">HK$ {{ p.seckill_price }} <s>HK$ {{ p.origin_price }}</s></span>
+          <span class="left">{{ t('pdp.stock', { n: p.stock }) }}</span>
         </button>
       </div>
     </section>
@@ -44,11 +50,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .session {
   margin: 0.75rem 1rem 1.25rem;
 }
@@ -70,7 +71,8 @@ onMounted(async () => {
   background: #ffe8e0;
   color: #c45c26;
 }
-.head .upcoming {
+.head .upcoming,
+.head .ended {
   background: #eee;
   color: #666;
 }
@@ -110,5 +112,11 @@ onMounted(async () => {
 .price s {
   color: #aaa;
   margin-left: 0.25rem;
+}
+.left {
+  display: block;
+  font-size: 0.6875rem;
+  color: #999;
+  margin-top: 0.15rem;
 }
 </style>

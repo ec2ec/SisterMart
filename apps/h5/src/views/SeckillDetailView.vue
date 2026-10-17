@@ -18,7 +18,14 @@ const product = ref<SeckillProduct | null>(null)
 onMounted(async () => {
   session.value = await fetchSeckillSession(String(route.params.id))
   const code = String(route.query.product || session.value.products[0]?.product_id || '')
-  product.value = session.value.products.find((p) => p.product_id === code) || session.value.products[0] || null
+  const byItem = Number(route.query.seckill_item_id || 0)
+  product.value =
+    (byItem
+      ? session.value.products.find((p) => p.seckill_item_id === byItem)
+      : undefined) ||
+    session.value.products.find((p) => p.product_id === code) ||
+    session.value.products[0] ||
+    null
 })
 
 const live = computed(() => session.value?.status === 'live')
@@ -28,21 +35,27 @@ function buy() {
     showToast(t('m7.notStarted'))
     return
   }
+  if (!product.value || product.value.stock <= 0) {
+    showToast(t('pdp.outOfStock'))
+    return
+  }
   if (!isLoggedIn()) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
-  showToast(t('m7.seckillBuyMock'))
-  if (product.value) {
-    router.push({ name: 'product-detail', params: { id: product.value.product_id }, query: { seckill: '1' } })
-  }
+  router.push({
+    name: 'checkout',
+    query: {
+      seckill_item_id: String(product.value.seckill_item_id),
+      qty: '1',
+    },
+  })
 }
 </script>
 
 <template>
   <div class="page" v-if="session && product">
     <SubPageNav :title="text(session.name)" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <img class="hero" :src="product.image" alt="" />
     <section class="info">
       <p class="badge">{{ live ? t('m7.live') : t('m7.upcoming') }} · {{ session.ends_at }}</p>
@@ -52,17 +65,14 @@ function buy() {
       <p class="hint">{{ t('m7.seckillOnlyBuy') }}</p>
     </section>
     <div class="bar">
-      <van-button block round color="var(--sm-primary)" @click="buy">{{ t('pages.buyNow') }}</van-button>
+      <van-button block round color="var(--sm-primary)" :disabled="!live || product.stock <= 0" @click="buy">
+        {{ t('pages.buyNow') }}
+      </van-button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .hero {
   width: 100%;
   aspect-ratio: 1;

@@ -2,18 +2,21 @@ import { api } from './client'
 
 export type SeckillProduct = {
   id: string
+  seckill_item_id: number
   product_id: string
+  sku_id: number
   name: { 'zh-HK': string; en: string }
   image: string
   seckill_price: number
   origin_price: number
   stock: number
+  sold?: number
 }
 
 export type SeckillSession = {
   id: string
   name: { 'zh-HK': string; en: string }
-  status: 'live' | 'upcoming'
+  status: 'live' | 'upcoming' | 'ended'
   starts_at: string
   ends_at: string
   products: SeckillProduct[]
@@ -31,9 +34,12 @@ export function fetchSeckillSession(id: string) {
 export function fetchSeckillProduct(productId: string) {
   return api<{
     in_seckill?: boolean
+    seckill_item_id?: number
+    sku_id?: number
     seckill_price?: number
     origin_price?: number
     stock?: number
+    session_id?: string
     session_status?: string
     ends_at?: string
     mock?: boolean

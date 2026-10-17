@@ -25,7 +25,14 @@ const related = ref<Card[]>([])
 const slide = ref(0)
 const zooming = ref(false)
 const selected = ref<Record<string, string>>({})
-const seckill = ref<{ active: boolean; price?: number; origin?: number; ends_at?: string }>({ active: false })
+const seckill = ref<{
+  active: boolean
+  price?: number
+  origin?: number
+  ends_at?: string
+  seckill_item_id?: number
+  sku_id?: number
+}>({ active: false })
 
 async function load() {
   const id = String(route.params.id || '')
@@ -46,13 +53,15 @@ async function load() {
   try {
     const sk = await fetchSeckillProduct(product.value.code || id)
     seckill.value = {
-      active: Boolean(sk.session_status === 'live' || route.query.seckill === '1'),
+      active: Boolean(sk.in_seckill && sk.session_status === 'live'),
       price: sk.seckill_price,
       origin: sk.origin_price,
       ends_at: sk.ends_at,
+      seckill_item_id: sk.seckill_item_id,
+      sku_id: sk.sku_id,
     }
   } catch {
-    seckill.value = { active: route.query.seckill === '1' }
+    seckill.value = { active: false }
   }
   const refCode = storedRef() || String(route.query.ref || '')
   if (refCode) {
@@ -144,11 +153,18 @@ async function addToCart() {
 }
 
 function buyNow() {
-  if (!requireSku() || !quote.value) return
   if (!isLoggedIn()) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
+  if (seckill.value.active && seckill.value.seckill_item_id) {
+    router.push({
+      name: 'checkout',
+      query: { seckill_item_id: String(seckill.value.seckill_item_id), qty: '1' },
+    })
+    return
+  }
+  if (!requireSku() || !quote.value) return
   router.push({ name: 'checkout', query: { sku_id: String(quote.value.id), qty: '1' } })
 }
 
@@ -196,7 +212,7 @@ async function share() {
 
     <section class="info">
       <h1>{{ name }}</h1>
-      <p v-if="seckill.active" class="seckill-tag">{{ t('m7.live') }} · Mock</p>
+      <p v-if="seckill.active" class="seckill-tag">{{ t('m7.live') }}</p>
       <div class="price-line">
         <strong>{{ money(price) }}</strong>
         <span>{{ t('home.sold', { n: product.sold }) }}</span>

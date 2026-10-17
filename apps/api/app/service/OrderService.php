@@ -15,6 +15,7 @@ class OrderService
         private AddressService $addresses = new AddressService(),
         private AssetService $assets = new AssetService(),
         private CouponService $coupons = new CouponService(),
+        private SeckillService $seckill = new SeckillService(),
     ) {
     }
 
@@ -37,8 +38,14 @@ class OrderService
         $timeout = TradeSettings::unpaidTimeoutMinutes();
         $expireAt = date('Y-m-d H:i:s', time() + $timeout * 60);
 
+        $seckillItemId = !empty($body['seckill_item_id']) ? (int) $body['seckill_item_id'] : 0;
         $orderId = 0;
-        Db::transaction(function () use ($memberId, $address, $lines, $quote, $body, $now, $expireAt, &$orderId) {
+        Db::transaction(function () use ($memberId, $address, $lines, $quote, $body, $now, $expireAt, $seckillItemId, &$orderId) {
+            if ($seckillItemId > 0) {
+                $qty = (int) ($lines[0]['qty'] ?? 1);
+                $this->seckill->assertLiveItem($seckillItemId, $qty, true);
+                $this->seckill->deduct($seckillItemId, $qty, $now);
+            }
             foreach ($lines as $line) {
                 $affected = Db::name('skus')->where('id', $line['sku_id'])->where('stock', '>=', $line['qty'])
                     ->dec('stock', $line['qty'])->update(['updated_at' => $now]);
@@ -91,6 +98,7 @@ class OrderService
                 'use_points' => !empty($body['use_points']) ? 1 : 0,
                 'use_balance' => !empty($body['use_balance']) ? 1 : 0,
                 'coupon_grant_id' => $quote['coupon_grant_id'],
+                'seckill_item_id' => $seckillItemId > 0 ? $seckillItemId : null,
                 'pay_channel' => $payAmount <= 0 ? 'zero' : null,
                 'paid_at' => $payAmount <= 0 ? $now : null,
                 'expire_at' => $payAmount <= 0 ? null : $expireAt,
@@ -141,7 +149,7 @@ class OrderService
                 ])->whereNull('ref_id')->order('id', 'desc')->limit(1)->update(['ref_id' => $orderId]);
             }
 
-            if (empty($body['buy_now'])) {
+            if (empty($body['buy_now']) && $seckillItemId <= 0) {
                 $this->cart->clearChecked($memberId);
             }
         });
@@ -307,11 +315,41 @@ class OrderService
 
     private function resolveLines(int $memberId, array $body): array
     {
+        $seckillItemId = (int) ($body['seckill_item_id'] ?? 0);
+        if ($seckillItemId > 0) {
+            $qty = 1; // 秒殺限購 1
+            $locked = $this->seckill->assertLiveItem($seckillItemId, $qty);
+            $item = $locked['item'];
+            $sku = Db::name('skus')->where('id', $item['sku_id'])->where('status', 1)->find();
+            if (!$sku || (int) $sku['stock'] < $qty) {
+                throw new ApiException('OUT_OF_STOCK', '庫存不足', 422, 42220);
+            }
+            $product = Db::name('products')->where('id', $item['product_id'])->where('status', 1)->find();
+            if (!$product) {
+                throw new ApiException('NOT_FOUND', '商品已下架', 404, 40402);
+            }
+            $spec = $this->skuSpecText((int) $item['sku_id']);
+
+            return [[
+                'id' => 0,
+                'product_id' => (string) $item['product_code'],
+                'product_db_id' => (int) $item['product_id'],
+                'sku_id' => (int) $item['sku_id'],
+                'sku_code' => (string) $sku['code'],
+                'name' => ['zh-HK' => $item['name_zh'], 'en' => $item['name_en']],
+                'spec' => $spec,
+                'price' => (float) $item['seckill_price'],
+                'qty' => $qty,
+                'image' => $item['image_url'] ?: ($sku['image_url'] ?: $product['cover_url']),
+                'available' => true,
+                'checked' => true,
+                'seckill_item_id' => $seckillItemId,
+            ]];
+        }
+
         if (!empty($body['buy_now'])) {
             $skuId = (int) ($body['sku_id'] ?? 0);
             $qty = max(1, (int) ($body['qty'] ?? 1));
-            $cart = new CartService();
-            // reuse present via temporary add? better inline
             $sku = Db::name('skus')->where('id', $skuId)->where('status', 1)->find();
             if (!$sku || (int) $sku['stock'] < $qty) {
                 throw new ApiException('OUT_OF_STOCK', '庫存不足', 422, 42220);
@@ -325,23 +363,7 @@ class OrderService
             foreach ($names as $n) {
                 $name[$n['locale']] = $n['name'];
             }
-            $spec = ['zh-HK' => '', 'en' => ''];
-            $optionIds = Db::name('sku_options')->where('sku_id', $skuId)->column('spec_option_id');
-            if ($optionIds) {
-                $rows = Db::name('spec_options')->alias('o')
-                    ->join('spec_option_i18n i', 'i.spec_option_id = o.id')
-                    ->whereIn('o.id', $optionIds)->field('i.locale,i.name')->select()->toArray();
-                $zh = [];
-                $en = [];
-                foreach ($rows as $r) {
-                    if ($r['locale'] === 'en') {
-                        $en[] = $r['name'];
-                    } else {
-                        $zh[] = $r['name'];
-                    }
-                }
-                $spec = ['zh-HK' => implode(' / ', $zh), 'en' => implode(' / ', $en)];
-            }
+            $spec = $this->skuSpecText($skuId);
 
             return [[
                 'id' => 0,
@@ -360,6 +382,29 @@ class OrderService
         }
 
         return $this->cart->checkedLines($memberId);
+    }
+
+    private function skuSpecText(int $skuId): array
+    {
+        $spec = ['zh-HK' => '', 'en' => ''];
+        $optionIds = Db::name('sku_options')->where('sku_id', $skuId)->column('spec_option_id');
+        if (!$optionIds) {
+            return $spec;
+        }
+        $rows = Db::name('spec_options')->alias('o')
+            ->join('spec_option_i18n i', 'i.spec_option_id = o.id')
+            ->whereIn('o.id', $optionIds)->field('i.locale,i.name')->select()->toArray();
+        $zh = [];
+        $en = [];
+        foreach ($rows as $r) {
+            if ($r['locale'] === 'en') {
+                $en[] = $r['name'];
+            } else {
+                $zh[] = $r['name'];
+            }
+        }
+
+        return ['zh-HK' => implode(' / ', $zh), 'en' => implode(' / ', $en)];
     }
 
     private function compute(array $member, array $lines, array $body): array
@@ -507,6 +552,11 @@ class OrderService
             $items = Db::name('order_items')->where('order_id', $row['id'])->select()->toArray();
             foreach ($items as $item) {
                 Db::name('skus')->where('id', $item['sku_id'])->inc('stock', (int) $item['qty'])->update(['updated_at' => $now]);
+            }
+            $seckillItemId = (int) ($row['seckill_item_id'] ?? 0);
+            if ($seckillItemId > 0) {
+                $qty = (int) ($items[0]['qty'] ?? 1);
+                $this->seckill->release($seckillItemId, $qty, $now);
             }
             if ((int) $row['points_used'] > 0) {
                 $this->assets->changePoints(

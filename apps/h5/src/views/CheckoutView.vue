@@ -28,6 +28,12 @@ const buyNow = reactive({
   qty: 1,
 })
 
+const seckillBuy = reactive({
+  active: false,
+  seckill_item_id: 0,
+  qty: 1,
+})
+
 async function loadAddresses() {
   const data = await fetchAddresses()
   addresses.value = data.items
@@ -41,7 +47,10 @@ async function refreshQuote() {
     use_balance: useBalance.value,
     coupon_grant_id: couponGrantId.value,
   }
-  if (buyNow.active) {
+  if (seckillBuy.active) {
+    body.seckill_item_id = seckillBuy.seckill_item_id
+    body.qty = seckillBuy.qty
+  } else if (buyNow.active) {
     body.buy_now = true
     body.sku_id = buyNow.sku_id
     body.qty = buyNow.qty
@@ -54,7 +63,11 @@ onMounted(async () => {
     router.replace({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
-  if (route.query.sku_id) {
+  if (route.query.seckill_item_id) {
+    seckillBuy.active = true
+    seckillBuy.seckill_item_id = Number(route.query.seckill_item_id)
+    seckillBuy.qty = 1
+  } else if (route.query.sku_id) {
     buyNow.active = true
     buyNow.sku_id = Number(route.query.sku_id)
     buyNow.qty = Math.max(1, Number(route.query.qty || 1))
@@ -82,7 +95,10 @@ async function submit() {
       use_balance: useBalance.value,
       coupon_grant_id: couponGrantId.value,
     }
-    if (buyNow.active) {
+    if (seckillBuy.active) {
+      body.seckill_item_id = seckillBuy.seckill_item_id
+      body.qty = seckillBuy.qty
+    } else if (buyNow.active) {
       body.buy_now = true
       body.sku_id = buyNow.sku_id
       body.qty = buyNow.qty
