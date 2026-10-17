@@ -13,12 +13,18 @@ type Row = {
   amount: number
   refund_to: string
   created_at: string
+  description?: string
+  evidence?: string[]
 }
 
 const router = useRouter()
 const message = useMessage()
 const rows = ref<Row[]>([])
 const status = ref('')
+const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+function assetUrl(u: string) {
+  return u.startsWith('http') ? u : `${apiBase}${u}`
+}
 const options = [
   { label: '全部', value: '' },
   { label: '待審核', value: 'pending_review' },
@@ -68,6 +74,7 @@ async function markReturned(id: number) {
           <th>類型</th>
           <th>金額</th>
           <th>去向</th>
+          <th>證據</th>
           <th>狀態</th>
           <th>操作</th>
         </tr>
@@ -81,6 +88,14 @@ async function markReturned(id: number) {
           <td>{{ row.type }}</td>
           <td>{{ row.amount }}</td>
           <td>{{ row.refund_to }}</td>
+          <td>
+            <div v-if="row.evidence?.length" class="ev">
+              <a v-for="(u, i) in row.evidence" :key="i" :href="assetUrl(u)" target="_blank" rel="noreferrer">
+                <img :src="assetUrl(u)" alt="" />
+              </a>
+            </div>
+            <span v-else>—</span>
+          </td>
           <td><n-tag size="small">{{ row.status }}</n-tag></td>
           <td>
             <n-space>
@@ -106,5 +121,15 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.ev {
+  display: flex;
+  gap: 0.35rem;
+}
+.ev img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: 0.25rem;
 }
 </style>

@@ -40,6 +40,38 @@ class AftersaleService
         return $this->present($row, true);
     }
 
+    /**
+     * @param array<string, mixed> $order
+     * @return array{aftersale_eligible: bool, aftersale_expired: bool, aftersale_window_days: int, aftersale_deadline_at: ?string, cs_whatsapp: string}
+     */
+    public function eligibilityForOrder(array $order): array
+    {
+        $window = TradeSettings::aftersaleWindowDays();
+        $whatsapp = TradeSettings::csWhatsapp();
+        $status = (string) ($order['status'] ?? '');
+        $completedAt = $order['completed_at'] ?? null;
+        $deadline = null;
+        $expired = false;
+        $eligible = in_array($status, ['pending_shipment', 'pending_receipt', 'completed'], true);
+
+        if ($status === 'completed' && $completedAt) {
+            $deadlineTs = strtotime((string) $completedAt) + $window * 86400;
+            $deadline = date('Y-m-d H:i:s', $deadlineTs);
+            if (time() > $deadlineTs) {
+                $expired = true;
+                $eligible = false;
+            }
+        }
+
+        return [
+            'aftersale_eligible' => $eligible,
+            'aftersale_expired' => $expired,
+            'aftersale_window_days' => $window,
+            'aftersale_deadline_at' => $deadline,
+            'cs_whatsapp' => $whatsapp,
+        ];
+    }
+
     public function apply(int $memberId, array $body): array
     {
         $orderId = (int) ($body['order_id'] ?? 0);
@@ -48,9 +80,13 @@ class AftersaleService
         if (!$order) {
             throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40440);
         }
-        // M16：已完成訂單僅允許退貨退款（以便沖回已入帳佣金）；未完成已支付仍可僅退款/退貨退款
+        // M16：已完成訂單僅允許退貨退款；M17：完成後超窗不可申請
         if (!in_array($order['status'], ['pending_shipment', 'pending_receipt', 'completed'], true)) {
             throw new ApiException('INVALID_STATUS', '僅已支付且未全退的訂單可申請售後', 422, 42260);
+        }
+        $elig = $this->eligibilityForOrder($order);
+        if ($elig['aftersale_expired']) {
+            throw new ApiException('AFTERSALE_EXPIRED', '抱歉，已超過售後有效期，暫時無法申請售後', 422, 42286);
         }
         $item = Db::name('order_items')->where(['id' => $itemId, 'order_id' => $orderId])->find();
         if (!$item) {
@@ -78,13 +114,15 @@ class AftersaleService
         if ($amount <= 0 || $amount > $maxAmount + 0.001) {
             throw new ApiException('INVALID', '退款金額不可超過該商品實付', 422, 42262);
         }
-        $reason = trim((string) ($body['reason'] ?? ''));
-        if ($reason === '') {
-            throw new ApiException('INVALID', '請填寫原因', 422, 42201);
+        $description = trim((string) ($body['description'] ?? ($body['reason'] ?? '')));
+        if ($description === '') {
+            throw new ApiException('INVALID', '請詳細描述你遇到的問題', 422, 42201);
         }
+        $reason = mb_substr($description, 0, 128);
+        $evidence = $this->normalizeEvidence($memberId, $body['evidence'] ?? []);
         $now = date('Y-m-d H:i:s');
         $id = 0;
-        Db::transaction(function () use ($memberId, $order, $item, $type, $reason, $amount, $qty, $refundTo, $body, $now, &$id) {
+        Db::transaction(function () use ($memberId, $order, $item, $type, $reason, $description, $amount, $qty, $refundTo, $evidence, $now, &$id) {
             Db::name('orders')->where('id', $order['id'])->update([
                 'aftersale_touched' => 1,
                 'updated_at' => $now,
@@ -98,8 +136,8 @@ class AftersaleService
                 'reason' => $reason,
                 'amount' => $amount,
                 'qty' => $qty,
-                'description' => trim((string) ($body['description'] ?? '')),
-                'evidence_json' => json_encode($body['evidence'] ?? [], JSON_UNESCAPED_UNICODE),
+                'description' => $description,
+                'evidence_json' => json_encode($evidence, JSON_UNESCAPED_UNICODE),
                 'refund_to' => $refundTo,
                 'status' => 'pending_review',
                 'admin_note' => '',
@@ -111,6 +149,31 @@ class AftersaleService
         });
 
         return $this->detail($id, $memberId);
+    }
+
+    /** @param mixed $raw @return list<string> */
+    private function normalizeEvidence(int $memberId, mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+        $urls = [];
+        foreach ($raw as $item) {
+            $url = trim((string) $item);
+            if ($url === '') {
+                continue;
+            }
+            $prefix = '/storage/aftersale/' . $memberId . '/';
+            if (!str_starts_with($url, $prefix)) {
+                throw new ApiException('INVALID', '證據圖片無效', 422, 42287);
+            }
+            $urls[] = $url;
+            if (count($urls) > 3) {
+                throw new ApiException('INVALID', '最多上傳 3 張證據圖片', 422, 42288);
+            }
+        }
+
+        return $urls;
     }
 
     public function cancel(int $memberId, int $id): array
@@ -300,6 +363,13 @@ class AftersaleService
 
     private function present(array $row, bool $withItem = false): array
     {
+        $evidence = [];
+        if (!empty($row['evidence_json'])) {
+            $decoded = json_decode((string) $row['evidence_json'], true);
+            if (is_array($decoded)) {
+                $evidence = array_values(array_filter(array_map('strval', $decoded)));
+            }
+        }
         $data = [
             'id' => (int) $row['id'],
             'aftersale_no' => $row['aftersale_no'],
@@ -311,6 +381,7 @@ class AftersaleService
             'amount' => (float) $row['amount'],
             'qty' => (int) $row['qty'],
             'description' => $row['description'],
+            'evidence' => $evidence,
             'refund_to' => $row['refund_to'],
             'status' => $row['status'],
             'admin_note' => $row['admin_note'],

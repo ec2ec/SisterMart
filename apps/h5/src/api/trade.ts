@@ -74,11 +74,19 @@ export type Order = {
   shipped_at?: string | null
   completed_at?: string | null
   aftersale_touched?: boolean
+  aftersale_eligible?: boolean
+  aftersale_expired?: boolean
+  aftersale_window_days?: number
+  aftersale_deadline_at?: string | null
+  cs_whatsapp?: string
   points_awarded?: number
   expire_at?: string | null
   created_at: string
   address?: Address | Record<string, string>
   remark?: string
+  cover?: string
+  title?: string
+  item_count?: number
   items?: Array<{
     id?: number
     product_code: string
@@ -94,9 +102,6 @@ export type Order = {
     line_amount: number
     promo_discount?: number
   }>
-  cover?: string
-  title?: string
-  item_count?: number
 }
 
 export function fetchCart() {
@@ -183,6 +188,8 @@ export type Aftersale = {
   order_item_id: number
   type: string
   reason: string
+  description?: string
+  evidence?: string[]
   amount: number
   qty: number
   refund_to: string
@@ -219,4 +226,10 @@ export function applyAftersale(body: Record<string, unknown>) {
 
 export function cancelAftersale(id: number) {
   return api<Aftersale>(`/api/v1/aftersales/${id}/cancel`, { method: 'POST', body: '{}' }, 'member')
+}
+
+export function uploadAftersaleEvidence(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return api<{ url: string }>('/api/v1/uploads/aftersale-evidence', { method: 'POST', body }, 'member')
 }

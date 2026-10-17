@@ -75,6 +75,7 @@ Route::group('api/v1', function () {
     Route::post('aftersales/:id/cancel', 'api.Aftersales/cancel');
     Route::get('aftersales', 'api.Aftersales/index');
     Route::post('aftersales', 'api.Aftersales/store');
+    Route::post('uploads/aftersale-evidence', 'api.Uploads/aftersaleEvidence');
 
     /** M6 資產 */
     Route::post('coupons/:id/claims', 'api.Coupons/claim');
@@ -130,6 +131,8 @@ Route::group('api/v1/admin', function () {
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
+    Route::get('settings/shop', 'admin.ShopSettings/shop');
+    Route::put('settings/shop', 'admin.ShopSettings/updateShop');
 
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');

@@ -9,6 +9,8 @@ import {
   Field,
   Icon,
   NavBar,
+  Radio,
+  RadioGroup,
   Search,
   Sidebar,
   SidebarItem,
@@ -20,6 +22,7 @@ import {
   Tabbar,
   TabbarItem,
   Toast,
+  Uploader,
 } from 'vant'
 import 'vant/lib/index.css'
 import './styles/theme.css'
@@ -39,6 +42,8 @@ const app = createApp(App)
   Field,
   Icon,
   NavBar,
+  Radio,
+  RadioGroup,
   Search,
   Sidebar,
   SidebarItem,
@@ -50,6 +55,7 @@ const app = createApp(App)
   Tabbar,
   TabbarItem,
   Toast,
+  Uploader,
 ].forEach((c) => app.use(c))
 
 app.use(router)

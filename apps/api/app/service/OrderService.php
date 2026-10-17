@@ -810,6 +810,6 @@ class OrderService
             'cancel_reason' => $row['cancel_reason'],
             'created_at' => $row['created_at'],
             'items' => $presentedItems,
-        ];
+        ] + (new AftersaleService())->eligibilityForOrder($row);
     }
 }
