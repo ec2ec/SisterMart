@@ -1,0 +1,165 @@
+{
+  "milestone": "M2",
+  "at": "2026-10-14T15:20:08.207Z",
+  "total": 26,
+  "passed": 26,
+  "failed": 0,
+  "results": [
+    {
+      "id": "A1",
+      "title": "GET /api/v1/health REST 信封且數據庫已連接",
+      "pass": true,
+      "detail": "{\"connected\":true,\"driver\":\"mysql\",\"host\":\"127.0.0.1\",\"name\":\"sistermart\",\"error\":null}"
+    },
+    {
+      "id": "A2",
+      "title": "GET /api/v1/tabbar 返回四個固定槽位",
+      "pass": true,
+      "detail": "slots=home,category,cart,account"
+    },
+    {
+      "id": "A3",
+      "title": "未勾選協議登錄返回 NEED_AGREE",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A4",
+      "title": "WhatsApp 註冊驗證碼占位失敗 WHATSAPP_UNAVAILABLE",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A5",
+      "title": "管理員登錄創建 session 並返回 token",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A6",
+      "title": "管理員令牌可訪問 /admin/admins/me",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A7",
+      "title": "郵箱註冊驗證碼可發（debug_code）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A8",
+      "title": "郵箱註冊返回會員 token 與推廣號",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A9",
+      "title": "會員令牌可讀 /members/me",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A10",
+      "title": "PATCH /members/me 可寫入語言偏好",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A11",
+      "title": "退出後令牌作廢",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A12",
+      "title": "郵箱密碼重新登錄成功",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A13",
+      "title": "忘記密碼（驗證碼重置）可用",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A14",
+      "title": "新密碼可登錄",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "A15",
+      "title": "後台 PUT 底欄後公開接口立即生效",
+      "pass": true,
+      "detail": "live=驗收首頁"
+    },
+    {
+      "id": "U1",
+      "title": "未登錄可瀏覽首頁且底欄四鍵可見",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "U2",
+      "title": "登錄頁不顯示底欄",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "U3",
+      "title": "未勾選協議無法登錄（頁面提示）",
+      "pass": true,
+      "detail": "請先閱讀並同意用戶協議和私隱協議。"
+    },
+    {
+      "id": "U4",
+      "title": "登錄成功回跳來原頁（wishlist）",
+      "pass": true,
+      "detail": "http://127.0.0.1:5173/wishlist"
+    },
+    {
+      "id": "U5",
+      "title": "未勾選協議無法註冊（頁面提示）",
+      "pass": true,
+      "detail": "Please read and agree to the Terms of Use and Privacy Policy."
+    },
+    {
+      "id": "U6",
+      "title": "語言切換後面板/底欄文案切換",
+      "pass": true,
+      "detail": "Home -> 首頁"
+    },
+    {
+      "id": "U7",
+      "title": "進入帶底欄頁拉取配置且後台改動生效",
+      "pass": true,
+      "detail": "驗收主頁 分類 2 購物車 我的"
+    },
+    {
+      "id": "U8",
+      "title": "底欄接口失敗時仍有內建四鍵可點",
+      "pass": true,
+      "detail": "首頁 分類 2 購物車 我的"
+    },
+    {
+      "id": "U9",
+      "title": "忘記密碼頁不顯示底欄",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "U10",
+      "title": "忘記密碼可發送驗證碼",
+      "pass": true,
+      "detail": "http=201 code=0 debug=423079"
+    },
+    {
+      "id": "U11",
+      "title": "重設密碼後回到登錄頁",
+      "pass": true,
+      "detail": "http://127.0.0.1:5173/login"
+    }
+  ]
+}
