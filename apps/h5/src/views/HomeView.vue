@@ -31,44 +31,18 @@ const feedList = computed(() => {
   if (feedTab.value === 2) return flashVisible.value
   return products.value
 })
-/** Primary + secondary paths — /mock can 404 on partial deploys; /products ships with catalog assets. */
-const CAT_ICON_FALLBACK: Record<string, string> = {
-  bracelets: '/mock/cat-bracelet.png',
-  necklaces: '/mock/cat-necklace.png',
-  earrings: '/mock/cat-earrings.png',
-  rings: '/mock/cat-ring.png',
-  scarves: '/mock/cat-headscarf.png',
-  bags: '/mock/cat-bag.png',
-}
-const CAT_ICON_FALLBACK_ALT: Record<string, string> = {
-  bracelets: '/products/cat-bracelet.png',
-  necklaces: '/products/cat-necklace.png',
-  earrings: '/products/cat-earrings.png',
-  rings: '/products/cat-ring.png',
-  scarves: '/products/cat-headscarf.png',
-  bags: '/products/cat-bag.png',
-}
-
+/** Home cats use backend-configured `categories.icon` only (admin/seed), not hardcoded assets. */
 const homeCategories = computed(() =>
   categories.value.slice(0, 6).map((c) => ({
     ...c,
-    icon: c.icon || CAT_ICON_FALLBACK[c.code] || CAT_ICON_FALLBACK_ALT[c.code] || null,
+    icon: c.icon || null,
   })),
 )
 
-function onCatImgError(event: Event, code: string) {
+function onCatImgError(event: Event) {
   const img = event.target as HTMLImageElement
-  const primary = CAT_ICON_FALLBACK[code]
-  const alt = CAT_ICON_FALLBACK_ALT[code]
-  const current = img.getAttribute('src') || ''
-  // If /mock failed (or DB pointed at a dead URL), try /products copy once.
-  if (alt && !current.includes('/products/cat-')) {
-    img.src = alt
-    return
-  }
-  if (primary && !current.endsWith(primary) && !current.includes(primary)) {
-    img.src = primary
-  }
+  img.removeAttribute('src')
+  img.style.display = 'none'
 }
 
 function onSubscribe() {
@@ -118,7 +92,7 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
           v-if="c.icon"
           :src="c.icon"
           :alt="text(c.name)"
-          @error="onCatImgError($event, c.code)"
+          @error="onCatImgError($event)"
         />
         <span v-else class="ph" />
         <span>{{ text(c.name) }}</span>
