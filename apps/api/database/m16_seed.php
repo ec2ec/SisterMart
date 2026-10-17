@@ -48,8 +48,13 @@ Db::execute("CREATE TABLE IF NOT EXISTS share_views (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 ensureColumn('commissions', 'original_amount', 'original_amount DECIMAL(12,2) NULL AFTER amount');
+ensureColumn('order_items', 'compare_at', 'compare_at DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER unit_price');
 
 Db::execute('UPDATE commissions SET original_amount = amount WHERE original_amount IS NULL');
+Db::execute('UPDATE order_items oi
+  JOIN skus s ON s.id = oi.sku_id
+  SET oi.compare_at = GREATEST(s.compare_at, oi.unit_price)
+  WHERE oi.compare_at = 0 OR oi.compare_at < oi.unit_price');
 
 $now = date('Y-m-d H:i:s');
 $key = 'points.share_view';
@@ -62,4 +67,4 @@ if (!$setting) {
     ]);
 }
 
-echo "m16 seed ok (clawback + share_views + points.share_view)\n";
+echo "m16 seed ok (clawback + share_views + points.share_view + order_items.compare_at)\n";

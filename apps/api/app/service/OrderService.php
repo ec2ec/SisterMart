@@ -122,6 +122,11 @@ class OrderService
             Db::name('orders')->where('id', $orderId)->update(['order_no' => $orderNo]);
 
             foreach ($lines as $line) {
+                $unit = (float) $line['price'];
+                $compareAt = (float) ($line['compare_at'] ?? 0);
+                if ($compareAt < $unit) {
+                    $compareAt = $unit;
+                }
                 Db::name('order_items')->insert([
                     'order_id' => $orderId,
                     'product_id' => $line['product_db_id'],
@@ -133,9 +138,10 @@ class OrderService
                     'spec_zh' => $line['spec']['zh-HK'],
                     'spec_en' => $line['spec']['en'],
                     'image_url' => $line['image'],
-                    'unit_price' => $line['price'],
+                    'unit_price' => $unit,
+                    'compare_at' => $compareAt,
                     'qty' => $line['qty'],
-                    'line_amount' => round($line['price'] * $line['qty'], 2),
+                    'line_amount' => round($unit * $line['qty'], 2),
                 ]);
             }
 
@@ -373,6 +379,7 @@ class OrderService
                 'name' => ['zh-HK' => $item['name_zh'], 'en' => $item['name_en']],
                 'spec' => $spec,
                 'price' => 0.0,
+                'compare_at' => (float) ($sku['compare_at'] ?? 0),
                 'qty' => $qty,
                 'image' => $item['image_url'] ?: ($sku['image_url'] ?: $product['cover_url']),
                 'available' => true,
@@ -396,6 +403,10 @@ class OrderService
                 throw new ApiException('NOT_FOUND', '商品已下架', 404, 40402);
             }
             $spec = $this->skuSpecText((int) $item['sku_id']);
+            $origin = (float) ($item['origin_price'] ?? 0);
+            if ($origin <= 0) {
+                $origin = max((float) ($sku['compare_at'] ?? 0), (float) ($sku['price'] ?? 0));
+            }
 
             return [[
                 'id' => 0,
@@ -406,6 +417,7 @@ class OrderService
                 'name' => ['zh-HK' => $item['name_zh'], 'en' => $item['name_en']],
                 'spec' => $spec,
                 'price' => (float) $item['seckill_price'],
+                'compare_at' => $origin,
                 'qty' => $qty,
                 'image' => $item['image_url'] ?: ($sku['image_url'] ?: $product['cover_url']),
                 'available' => true,
@@ -441,6 +453,7 @@ class OrderService
                 'name' => $name,
                 'spec' => $spec,
                 'price' => (float) $sku['price'],
+                'compare_at' => (float) ($sku['compare_at'] ?? 0),
                 'qty' => $qty,
                 'image' => $sku['image_url'] ?: $product['cover_url'],
                 'available' => true,
@@ -738,6 +751,35 @@ class OrderService
     {
         $items = Db::name('order_items')->where('order_id', $row['id'])->select()->toArray();
         $addr = json_decode((string) $row['address_snapshot'], true) ?: [];
+        $presentedItems = [];
+        $promoDiscount = 0.0;
+        foreach ($items as $i) {
+            $unit = (float) $i['unit_price'];
+            $compareAt = array_key_exists('compare_at', $i) ? (float) $i['compare_at'] : 0.0;
+            if ($compareAt <= 0) {
+                // 舊單無快照：回退當前 SKU 劃線價（僅展示）
+                $compareAt = (float) (Db::name('skus')->where('id', $i['sku_id'])->value('compare_at') ?: 0);
+            }
+            if ($compareAt < $unit) {
+                $compareAt = $unit;
+            }
+            $linePromo = max(0, round(($compareAt - $unit) * (int) $i['qty'], 2));
+            $promoDiscount += $linePromo;
+            $presentedItems[] = [
+                'id' => (int) $i['id'],
+                'product_code' => $i['product_code'],
+                'sku_code' => $i['sku_code'],
+                'name' => ['zh-HK' => $i['name_zh'], 'en' => $i['name_en']],
+                'spec' => ['zh-HK' => $i['spec_zh'], 'en' => $i['spec_en']],
+                'image' => $i['image_url'],
+                'unit_price' => $unit,
+                'compare_at' => $compareAt,
+                'qty' => (int) $i['qty'],
+                'refunded_qty' => (int) ($i['refunded_qty'] ?? 0),
+                'line_amount' => (float) $i['line_amount'],
+                'promo_discount' => $linePromo,
+            ];
+        }
 
         return [
             'id' => (int) $row['id'],
@@ -748,6 +790,7 @@ class OrderService
             'address' => $addr,
             'goods_amount' => (float) $row['goods_amount'],
             'coupon_amount' => (float) $row['coupon_amount'],
+            'promo_discount' => round($promoDiscount, 2),
             'points_amount' => (float) $row['points_amount'],
             'points_used' => (int) $row['points_used'],
             'balance_amount' => (float) $row['balance_amount'],
@@ -766,18 +809,7 @@ class OrderService
             'expire_at' => $row['expire_at'],
             'cancel_reason' => $row['cancel_reason'],
             'created_at' => $row['created_at'],
-            'items' => array_map(fn ($i) => [
-                'id' => (int) $i['id'],
-                'product_code' => $i['product_code'],
-                'sku_code' => $i['sku_code'],
-                'name' => ['zh-HK' => $i['name_zh'], 'en' => $i['name_en']],
-                'spec' => ['zh-HK' => $i['spec_zh'], 'en' => $i['spec_en']],
-                'image' => $i['image_url'],
-                'unit_price' => (float) $i['unit_price'],
-                'qty' => (int) $i['qty'],
-                'refunded_qty' => (int) ($i['refunded_qty'] ?? 0),
-                'line_amount' => (float) $i['line_amount'],
-            ], $items),
+            'items' => $presentedItems,
         ];
     }
 }

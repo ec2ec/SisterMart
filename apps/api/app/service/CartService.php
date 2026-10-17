@@ -179,6 +179,7 @@ class CartService
             'name' => $name,
             'spec' => $spec,
             'price' => $sku ? (float) $sku['price'] : 0,
+            'compare_at' => $sku ? (float) ($sku['compare_at'] ?? 0) : 0,
             'qty' => (int) $item['qty'],
             'stock' => $stock,
             'image' => $sku['image_url'] ?? $product['cover_url'] ?? '',

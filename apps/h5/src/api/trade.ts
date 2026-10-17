@@ -65,6 +65,8 @@ export type Order = {
   goods_amount: number
   shipping_amount: number
   coupon_amount?: number
+  /** 原價相對售價立減合計（compare_at − unit_price）× qty */
+  promo_discount?: number
   points_amount?: number
   balance_amount?: number
   pay_channel?: string | null
@@ -85,9 +87,12 @@ export type Order = {
     spec: Localized
     image: string
     unit_price: number
+    /** 下單時原價/劃線價快照 */
+    compare_at?: number
     qty: number
     refunded_qty?: number
     line_amount: number
+    promo_discount?: number
   }>
   cover?: string
   title?: string

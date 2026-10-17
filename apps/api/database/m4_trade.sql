@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   spec_en VARCHAR(191) NOT NULL DEFAULT '',
   image_url VARCHAR(255) NULL,
   unit_price DECIMAL(12,2) NOT NULL,
+  compare_at DECIMAL(12,2) NOT NULL DEFAULT 0,
   qty INT NOT NULL,
   line_amount DECIMAL(12,2) NOT NULL,
   PRIMARY KEY (id),

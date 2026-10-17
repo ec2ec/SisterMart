@@ -101,6 +101,7 @@ export const messages = {
     orders: {
       empty: '暫無訂單',
       detail: '訂單詳情',
+      promoDiscount: '優惠立減',
       pendingPayment: '待付款',
       pendingShipment: '待發貨',
       pendingReceipt: '待收貨',
@@ -458,6 +459,7 @@ export const messages = {
     orders: {
       empty: 'No orders yet',
       detail: 'Order detail',
+      promoDiscount: 'Promo discount',
       pendingPayment: 'To pay',
       pendingShipment: 'To ship',
       pendingReceipt: 'To receive',

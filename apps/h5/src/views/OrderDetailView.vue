@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -26,6 +26,23 @@ const statusMap: Record<string, string> = {
   completed: 'orders.completed',
   cancelled: 'orders.cancelled',
   refunded: 'orders.refunded',
+}
+
+const promoDiscount = computed(() => {
+  if (!order.value) return 0
+  if (typeof order.value.promo_discount === 'number') return order.value.promo_discount
+  return (order.value.items || []).reduce((sum, item) => {
+    const compare = Number(item.compare_at ?? item.unit_price)
+    const unit = Number(item.unit_price)
+    return sum + Math.max(0, (compare - unit) * item.qty)
+  }, 0)
+})
+
+const couponAmount = computed(() => Number(order.value?.coupon_amount ?? 0))
+
+function itemCompareAt(item: NonNullable<Order['items']>[number]) {
+  const compare = Number(item.compare_at ?? 0)
+  return compare > item.unit_price ? compare : 0
 }
 
 async function onCancel() {
@@ -57,17 +74,45 @@ async function onConfirm() {
     <section class="card">
       <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
         <img :src="item.image" alt="" />
-        <div>
+        <div class="meta">
           <h3>{{ text(item.name) }}</h3>
           <p>{{ text(item.spec) }} × {{ item.qty }}</p>
-          <strong>HK$ {{ item.line_amount.toFixed(2) }}</strong>
+          <div class="prices">
+            <strong class="sale">HK$ {{ item.unit_price.toFixed(2) }}</strong>
+            <s v-if="itemCompareAt(item)" class="origin">HK$ {{ itemCompareAt(item).toFixed(2) }}</s>
+          </div>
         </div>
       </div>
     </section>
-    <section class="card">
-      <p>{{ t('checkout.goods') }} HK$ {{ order.goods_amount.toFixed(2) }}</p>
-      <p>{{ t('checkout.shipping') }} HK$ {{ order.shipping_amount.toFixed(2) }}</p>
-      <p><strong>{{ t('checkout.pay') }} HK$ {{ order.pay_amount.toFixed(2) }}</strong></p>
+    <section class="card sum">
+      <p>
+        <span>{{ t('checkout.goods') }}</span>
+        <em>HK$ {{ order.goods_amount.toFixed(2) }}</em>
+      </p>
+      <p>
+        <span>{{ t('checkout.shipping') }}</span>
+        <em>{{ order.shipping_amount <= 0 ? t('checkout.freeShip') : `HK$ ${order.shipping_amount.toFixed(2)}` }}</em>
+      </p>
+      <p v-if="promoDiscount > 0" class="discount">
+        <span>{{ t('orders.promoDiscount') }}</span>
+        <em>-{{ promoDiscount.toFixed(2) }}</em>
+      </p>
+      <p v-if="couponAmount > 0" class="discount">
+        <span>{{ t('checkout.coupon') }}</span>
+        <em>-{{ couponAmount.toFixed(2) }}</em>
+      </p>
+      <p v-if="(order.points_amount || 0) > 0">
+        <span>{{ t('checkout.pointsLabel') }}</span>
+        <em>-HK$ {{ Number(order.points_amount).toFixed(2) }}</em>
+      </p>
+      <p v-if="(order.balance_amount || 0) > 0">
+        <span>{{ t('checkout.balanceLabel') }}</span>
+        <em>-HK$ {{ Number(order.balance_amount).toFixed(2) }}</em>
+      </p>
+      <p class="pay">
+        <span>{{ t('checkout.pay') }}</span>
+        <strong>HK$ {{ order.pay_amount.toFixed(2) }}</strong>
+      </p>
     </section>
     <div class="actions">
       <van-button v-if="order.status === 'pending_payment'" plain round @click="onCancel">{{ t('orders.cancel') }}</van-button>
@@ -92,7 +137,7 @@ async function onConfirm() {
         {{ t('fulfill.confirm') }}
       </van-button>
       <van-button
-        v-if="order.status === 'pending_shipment' || order.status === 'pending_receipt'"
+        v-if="order.status === 'pending_shipment' || order.status === 'pending_receipt' || order.status === 'completed'"
         plain
         round
         @click="router.push({ name: 'aftersale-apply', params: { id: order.id } })"
@@ -116,11 +161,64 @@ async function onConfirm() {
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
+.line:last-child {
+  margin-bottom: 0;
+}
 .line img {
   width: 4rem;
   height: 4rem;
   object-fit: cover;
   border-radius: 0.5rem;
+}
+.meta h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.meta p {
+  margin: 0;
+  color: #888;
+  font-size: 0.8125rem;
+}
+.prices {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.sale {
+  color: #1a1a1a;
+  font-size: 0.95rem;
+}
+.origin {
+  color: #999;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.sum p {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+}
+.sum em {
+  font-style: normal;
+}
+.sum .discount {
+  color: #e11d48;
+}
+.sum .discount em {
+  color: #e11d48;
+  font-weight: 600;
+}
+.sum .pay {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #f0ebe4;
+}
+.sum .pay strong {
+  font-size: 1.05rem;
 }
 .actions {
   display: flex;
