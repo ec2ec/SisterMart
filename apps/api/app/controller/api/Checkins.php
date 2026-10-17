@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace app\controller\api;
 
 use app\controller\ApiController;
-use app\service\MockMarketingService;
+use app\service\CheckinService;
 use think\Response;
 
 class Checkins extends ApiController
@@ -15,7 +15,7 @@ class Checkins extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->checkinCalendar((int) $member['id']);
+            return (new CheckinService())->calendar((int) $member['id']);
         });
     }
 
@@ -24,7 +24,7 @@ class Checkins extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
 
-            return (new MockMarketingService())->checkin((int) $member['id']);
+            return (new CheckinService())->checkin((int) $member['id']);
         }, 201);
     }
 }

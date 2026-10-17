@@ -251,12 +251,12 @@ Db::transaction(function () {
     upsertCategory('sets', null, '套裝', 'Sets', null, 7);
 
     upsertCategory('b-heart', 'bracelets', '愛心手鏈', 'Heart', mock('product-4.jpg'), 1);
-    upsertCategory('b-gold', 'bracelets', '金珠手鏈', 'Gold Link', null, 2);
+    upsertCategory('b-gold', 'bracelets', '金珠手鏈', 'Gold Link', '/products/sub-gold-bead.jpg', 2);
     upsertCategory('n-gourd', 'necklaces', '葫蘆項鏈', 'Gourd', mock('product-2.jpg'), 1);
     upsertCategory('n-square', 'necklaces', '方鑽項鏈', 'Cushion', mock('product-1.jpg'), 2);
-    upsertCategory('n-pearl', 'necklaces', '珍珠項鏈', 'Pearl', null, 3);
-    upsertCategory('n-clavicle', 'necklaces', '鎖骨鏈', 'Clavicle', null, 4);
-    upsertCategory('n-heart', 'necklaces', '愛心項鏈', 'Heart', null, 5);
+    upsertCategory('n-pearl', 'necklaces', '珍珠項鏈', 'Pearl', '/products/sub-pearl.jpg', 3);
+    upsertCategory('n-clavicle', 'necklaces', '鎖骨鏈', 'Clavicle', '/products/sub-clavicle.jpg', 4);
+    upsertCategory('n-heart', 'necklaces', '愛心項鏈', 'Heart', '/products/sub-heart-neck.jpg', 5);
 
     $tagShip = upsertTag('hk-ship', '香港包郵門檻', 'Free-shipping threshold', 1);
     $tagAfter = upsertTag('aftersale', '售後保障', 'After-sales cover', 2);

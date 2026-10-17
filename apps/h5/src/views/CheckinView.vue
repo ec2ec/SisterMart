@@ -31,7 +31,6 @@ async function sign() {
 <template>
   <div class="page">
     <SubPageNav :title="t('account.dailyCheckin')" />
-    <p class="mock">{{ t('m7.mockBanner') }}</p>
     <section class="hero" v-if="cal">
       <p>{{ t('account.checkinSub', { n: cal.streak }) }}</p>
       <strong>+{{ cal.reward_today }}</strong>
@@ -60,11 +59,6 @@ async function sign() {
 </template>
 
 <style scoped>
-.mock {
-  margin: 0.5rem 1rem;
-  font-size: 0.75rem;
-  color: #a67c52;
-}
 .hero {
   margin: 1rem;
   padding: 1.25rem;

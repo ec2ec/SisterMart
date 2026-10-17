@@ -21,19 +21,29 @@ onMounted(async () => {
 
 const current = computed(() => categories.value[active.value] || categories.value[0])
 
+const ALL_ICON_FALLBACK: Record<string, string> = {
+  bracelets: '/products/sub-all-brace.jpg',
+  necklaces: '/products/sub-all-neck.jpg',
+}
+
 const gridItems = computed(() => {
   const main = current.value
   if (!main) return []
+  const allIcon = ALL_ICON_FALLBACK[main.code] || main.icon
   const all = {
     id: -1,
     code: `${main.code}-all`,
     parent_id: main.id,
-    icon: main.icon,
+    icon: allIcon,
     sort: -1,
     name: { 'zh-HK': '全部商品', en: 'All' } as const,
     children: [],
   }
-  return [all, ...(main.children || [])]
+  const children = (main.children || []).map((c) => ({
+    ...c,
+    icon: c.icon || main.icon,
+  }))
+  return [all, ...children]
 })
 
 function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
