@@ -53,7 +53,15 @@ export type ProductDetail = ProductCard & {
   spec_groups: SpecGroup[]
   skus: Sku[]
   tags: Localized[]
-  reviews: unknown[]
+  reviews: Array<{
+    id: number | string
+    stars: number
+    author: string
+    body: string | Localized
+    images?: string[]
+    follow?: string | Localized | null
+    created_at?: string
+  }>
 }
 
 export type Article = {

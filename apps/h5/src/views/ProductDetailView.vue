@@ -24,6 +24,7 @@ const product = ref<ProductDetail | null>(null)
 const related = ref<Card[]>([])
 const slide = ref(0)
 const zooming = ref(false)
+const showAllReviews = ref(false)
 const selected = ref<Record<string, string>>({})
 const seckill = ref<{
   active: boolean
@@ -48,6 +49,7 @@ async function load() {
   selected.value = next
   slide.value = 0
   zooming.value = false
+  showAllReviews.value = false
   const list = await fetchProducts({ category: product.value.category })
   related.value = list.items.filter((item) => item.id !== product.value?.id).slice(0, 4)
   try {
@@ -244,6 +246,33 @@ async function share() {
       <p class="copy">{{ text(product.detail) }}</p>
       <img v-for="src in gallery.slice(1)" :key="src" class="detail-img" :src="src" alt="" />
 
+      <h2>{{ t('pdp.reviews') }}</h2>
+      <p v-if="!(product.reviews || []).length" class="copy muted">{{ t('pdp.reviewsEmpty') }}</p>
+      <ul v-else class="reviews">
+        <li v-for="r in showAllReviews ? product.reviews : product.reviews.slice(0, 2)" :key="r.id">
+          <div class="rev-head">
+            <strong>{{ r.author }}</strong>
+            <span class="rev-stars">{{ '★'.repeat(r.stars) }}{{ '☆'.repeat(Math.max(0, 5 - r.stars)) }}</span>
+          </div>
+          <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
+          <div v-if="r.images?.length" class="rev-imgs">
+            <img v-for="(img, i) in r.images" :key="i" :src="img" alt="" />
+          </div>
+          <p v-if="r.follow" class="follow">
+            <em>{{ t('pdp.follow') }}</em>
+            {{ typeof r.follow === 'string' ? r.follow : text(r.follow) }}
+          </p>
+        </li>
+      </ul>
+      <button
+        v-if="(product.reviews || []).length > 2"
+        type="button"
+        class="more-rev"
+        @click="showAllReviews = !showAllReviews"
+      >
+        {{ showAllReviews ? t('pdp.reviewsLess') : t('pdp.reviewsAll') }}
+      </button>
+
       <h2 v-if="related.length">{{ t('pdp.related') }}</h2>
     </section>
     <div v-if="related.length" class="grid">
@@ -396,6 +425,59 @@ h2 {
   font-size: 0.8125rem;
   line-height: 1.6;
   color: #444;
+}
+.copy.muted {
+  color: #999;
+}
+.reviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+.rev-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
+}
+.rev-stars {
+  color: #e6a23c;
+  letter-spacing: 0.05em;
+}
+.rev-imgs {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.rev-imgs img {
+  width: 4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  background: #f6f6f6;
+}
+.follow {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #666;
+}
+.follow em {
+  font-style: normal;
+  color: var(--sm-primary);
+  margin-right: 0.25rem;
+}
+.more-rev {
+  margin-top: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--sm-primary);
+  font-size: 0.8125rem;
+  padding: 0;
 }
 .grid {
   display: grid;

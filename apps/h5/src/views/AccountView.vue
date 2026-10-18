@@ -46,10 +46,10 @@ async function logout() {
 }
 
 const orderItems = [
-  { key: 'toPay', icon: 'credit-pay' },
-  { key: 'toShip', icon: 'logistics', badge: u.toShipBadge },
-  { key: 'toReceive', icon: 'send-gift-o' },
-  { key: 'toReview', icon: 'orders-o' },
+  { key: 'toPay', icon: 'credit-pay', tab: 'pending_payment' },
+  { key: 'toShip', icon: 'logistics', badge: u.toShipBadge, tab: 'pending_shipment' },
+  { key: 'toReceive', icon: 'send-gift-o', tab: 'pending_receipt' },
+  { key: 'toReview', icon: 'orders-o', tab: 'to_review' },
   { key: 'returns', icon: 'replay', route: 'aftersales' },
 ] as const
 
@@ -124,12 +124,13 @@ function goPoints() {
   router.push({ name: 'point-logs' })
 }
 
-function goOrders() {
+function goOrders(tab?: string) {
+  const path = tab ? `/orders?tab=${tab}` : '/orders'
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/orders' } })
+    router.push({ name: 'login', query: { redirect: path } })
     return
   }
-  router.push({ name: 'orders' })
+  router.push({ name: 'orders', query: tab ? { tab } : {} })
 }
 </script>
 
@@ -184,7 +185,7 @@ function goOrders() {
           v-for="o in orderItems"
           :key="o.key"
           type="button"
-          @click="'route' in o && o.route ? goService(o.route) : goOrders()"
+          @click="'route' in o && o.route ? goService(o.route) : goOrders('tab' in o ? o.tab : undefined)"
         >
           <van-badge :content="(!loggedIn && 'badge' in o && o.badge) || ''" :show-zero="false">
             <van-icon :name="o.icon" size="1.375rem" />

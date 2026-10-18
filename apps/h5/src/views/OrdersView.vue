@@ -1,14 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchOrders, type Order } from '../api/trade'
 import { isLoggedIn } from '../composables/useSession'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const items = ref<Order[]>([])
+const loading = ref(false)
+
+const tabs = [
+  { name: 'all', status: '', label: 'orders.tabAll' },
+  { name: 'pending_payment', status: 'pending_payment', label: 'orders.pendingPayment' },
+  { name: 'pending_shipment', status: 'pending_shipment', label: 'orders.pendingShipment' },
+  { name: 'pending_receipt', status: 'pending_receipt', label: 'orders.pendingReceipt' },
+  { name: 'to_review', status: 'to_review', label: 'orders.toReview' },
+  { name: 'aftersale', status: 'aftersale', label: 'orders.tabAftersale' },
+] as const
+
+const tab = ref('all')
 
 const statusLabel: Record<string, string> = {
   pending_payment: 'orders.pendingPayment',
@@ -19,20 +32,46 @@ const statusLabel: Record<string, string> = {
   refunded: 'orders.refunded',
 }
 
-onMounted(async () => {
+async function load(status: string) {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: '/orders' } })
+    router.replace({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
-  const data = await fetchOrders()
-  items.value = data.items
-})
+  loading.value = true
+  try {
+    const data = await fetchOrders(status || undefined)
+    items.value = data.items
+  } finally {
+    loading.value = false
+  }
+}
+
+function onTabChange(name: string | number) {
+  const next = String(name)
+  tab.value = next
+  const query = next === 'all' ? {} : { tab: next }
+  router.replace({ name: 'orders', query })
+}
+
+watch(
+  () => String(route.query.tab || 'all'),
+  (name) => {
+    const valid = tabs.some((x) => x.name === name) ? name : 'all'
+    tab.value = valid
+    const current = tabs.find((x) => x.name === valid) || tabs[0]
+    load(current.status)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div class="page">
     <SubPageNav :title="t('pages.orders')" />
-    <p v-if="!items.length" class="empty">{{ t('orders.empty') }}</p>
+    <van-tabs :active="tab" shrink sticky @change="onTabChange">
+      <van-tab v-for="x in tabs" :key="x.name" :name="x.name" :title="t(x.label)" />
+    </van-tabs>
+    <p v-if="!loading && !items.length" class="empty">{{ t('orders.empty') }}</p>
     <ul v-else class="list">
       <li
         v-for="o in items"
@@ -123,14 +162,14 @@ onMounted(async () => {
 }
 .top em {
   font-style: normal;
+  color: var(--sm-primary);
   font-size: 0.75rem;
-  color: #888;
   flex-shrink: 0;
 }
 .title {
-  margin: 0.2rem 0;
+  margin: 0.25rem 0;
   font-size: 0.8125rem;
-  color: #555;
+  color: #666;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -138,13 +177,9 @@ onMounted(async () => {
 .bottom {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
 }
 .count {
-  font-weight: 400;
-  font-size: 0.75rem;
   color: #999;
 }
 </style>

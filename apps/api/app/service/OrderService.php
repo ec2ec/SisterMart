@@ -194,10 +194,21 @@ class OrderService
     {
         $this->closeExpired();
         $q = Db::name('orders')->where('member_id', $memberId)->order('id', 'desc');
-        if ($status) {
+        if ($status === 'to_review') {
+            $q->where('status', 'completed');
+        } elseif ($status === 'aftersale') {
+            $q->where('aftersale_touched', 1);
+        } elseif ($status) {
             $q->where('status', $status);
         }
         $rows = $q->select()->toArray();
+        if ($status === 'to_review') {
+            $reviews = new ReviewService();
+            $rows = array_values(array_filter(
+                $rows,
+                fn ($r) => $reviews->orderNeedsReview($r),
+            ));
+        }
 
         return ['items' => array_map(fn ($r) => $this->presentSummary($r), $rows)];
     }
@@ -751,8 +762,10 @@ class OrderService
     {
         $items = Db::name('order_items')->where('order_id', $row['id'])->select()->toArray();
         $addr = json_decode((string) $row['address_snapshot'], true) ?: [];
+        $reviewFlags = (new ReviewService())->flagsForOrderItems((string) $row['status'], $items);
         $presentedItems = [];
         $promoDiscount = 0.0;
+        $needsReview = false;
         foreach ($items as $i) {
             $unit = (float) $i['unit_price'];
             $compareAt = array_key_exists('compare_at', $i) ? (float) $i['compare_at'] : 0.0;
@@ -765,6 +778,15 @@ class OrderService
             }
             $linePromo = max(0, round(($compareAt - $unit) * (int) $i['qty'], 2));
             $promoDiscount += $linePromo;
+            $flags = $reviewFlags[(int) $i['id']] ?? [
+                'review_id' => null,
+                'can_review' => false,
+                'can_follow' => false,
+                'reviewed' => false,
+            ];
+            if ($flags['can_review']) {
+                $needsReview = true;
+            }
             $presentedItems[] = [
                 'id' => (int) $i['id'],
                 'product_code' => $i['product_code'],
@@ -778,6 +800,10 @@ class OrderService
                 'refunded_qty' => (int) ($i['refunded_qty'] ?? 0),
                 'line_amount' => (float) $i['line_amount'],
                 'promo_discount' => $linePromo,
+                'review_id' => $flags['review_id'],
+                'can_review' => $flags['can_review'],
+                'can_follow' => $flags['can_follow'],
+                'reviewed' => $flags['reviewed'],
             ];
         }
 
@@ -801,6 +827,7 @@ class OrderService
             'shipped_at' => $row['shipped_at'] ?? null,
             'completed_at' => $row['completed_at'] ?? null,
             'aftersale_touched' => (int) ($row['aftersale_touched'] ?? 0) === 1,
+            'needs_review' => $needsReview,
             'points_awarded' => (int) ($row['points_awarded'] ?? 0),
             'seckill_item_id' => $row['seckill_item_id'] !== null ? (int) $row['seckill_item_id'] : null,
             'points_mall_item_id' => isset($row['points_mall_item_id']) && $row['points_mall_item_id'] !== null

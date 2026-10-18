@@ -571,7 +571,7 @@ class CatalogService
             'skus'            => $skusOut,
             'tags'            => $tags,
             'service_tag_ids' => array_map('intval', $tagIds),
-            'reviews'         => [],
+            'reviews'         => (new ReviewService())->listForProduct((int) $row['id']),
         ]);
     }
 }

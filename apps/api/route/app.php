@@ -76,6 +76,9 @@ Route::group('api/v1', function () {
     Route::get('aftersales', 'api.Aftersales/index');
     Route::post('aftersales', 'api.Aftersales/store');
     Route::post('uploads/aftersale-evidence', 'api.Uploads/aftersaleEvidence');
+    Route::post('uploads/review-image', 'api.Uploads/reviewImage');
+    Route::post('reviews/:id/follow', 'api.Reviews/follow');
+    Route::post('reviews', 'api.Reviews/store');
 
     /** M6 資產 */
     Route::post('coupons/:id/claims', 'api.Coupons/claim');

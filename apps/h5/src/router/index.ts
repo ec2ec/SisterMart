@@ -14,6 +14,7 @@ import WishlistView from '../views/WishlistView.vue'
 import MessagesView from '../views/MessagesView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
+import ReviewView from '../views/ReviewView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
 import PaymentView from '../views/PaymentView.vue'
 import PayResultView from '../views/PayResultView.vue'
@@ -63,6 +64,7 @@ export const router = createRouter({
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/orders', name: 'orders', component: OrdersView },
     { path: '/orders/:id', name: 'order-detail', component: OrderDetailView },
+    { path: '/orders/:id/review', name: 'order-review', component: ReviewView },
     { path: '/checkout', name: 'checkout', component: CheckoutView },
     { path: '/payment/:id', name: 'payment', component: PaymentView },
     { path: '/pay-result', name: 'pay-result', component: PayResultView },

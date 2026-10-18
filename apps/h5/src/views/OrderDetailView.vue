@@ -81,6 +81,31 @@ async function onConfirm() {
             <strong class="sale">HK$ {{ item.unit_price.toFixed(2) }}</strong>
             <s v-if="itemCompareAt(item)" class="origin">HK$ {{ itemCompareAt(item).toFixed(2) }}</s>
           </div>
+          <div v-if="item.can_review || item.can_follow" class="item-actions">
+            <van-button
+              v-if="item.can_review"
+              size="mini"
+              plain
+              round
+              type="primary"
+              @click.stop="
+                router.push({ name: 'order-review', params: { id: order.id }, query: { item: String(item.id) } })
+              "
+            >
+              {{ t('review.go') }}
+            </van-button>
+            <van-button
+              v-else-if="item.can_follow"
+              size="mini"
+              plain
+              round
+              @click.stop="
+                router.push({ name: 'order-review', params: { id: order.id }, query: { item: String(item.id) } })
+              "
+            >
+              {{ t('review.goFollow') }}
+            </van-button>
+          </div>
         </div>
       </div>
     </section>
@@ -144,6 +169,21 @@ async function onConfirm() {
       >
         {{ t('fulfill.apply') }}
       </van-button>
+      <van-button
+        v-if="order.needs_review"
+        type="primary"
+        color="var(--sm-primary)"
+        round
+        @click="
+          router.push({
+            name: 'order-review',
+            params: { id: order.id },
+            query: { item: String((order.items || []).find((i) => i.can_review)?.id || '') },
+          })
+        "
+      >
+        {{ t('review.go') }}
+      </van-button>
     </div>
   </div>
 </template>
@@ -169,6 +209,9 @@ async function onConfirm() {
   height: 4rem;
   object-fit: cover;
   border-radius: 0.5rem;
+}
+.item-actions {
+  margin-top: 0.35rem;
 }
 .meta h3 {
   margin: 0 0 0.25rem;

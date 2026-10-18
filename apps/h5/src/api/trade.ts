@@ -79,6 +79,7 @@ export type Order = {
   aftersale_window_days?: number
   aftersale_deadline_at?: string | null
   cs_whatsapp?: string
+  needs_review?: boolean
   points_awarded?: number
   expire_at?: string | null
   created_at: string
@@ -101,7 +102,25 @@ export type Order = {
     refunded_qty?: number
     line_amount: number
     promo_discount?: number
+    review_id?: number | null
+    can_review?: boolean
+    can_follow?: boolean
+    reviewed?: boolean
   }>
+}
+
+export type ProductReview = {
+  id: number
+  order_item_id: number
+  product_code: string
+  stars: number
+  author: string
+  body: string
+  images: string[]
+  follow?: string | null
+  follow_at?: string | null
+  created_at: string
+  can_follow?: boolean
 }
 
 export function fetchCart() {
@@ -232,4 +251,18 @@ export function uploadAftersaleEvidence(file: File) {
   const body = new FormData()
   body.append('file', file)
   return api<{ url: string }>('/api/v1/uploads/aftersale-evidence', { method: 'POST', body }, 'member')
+}
+
+export function uploadReviewImage(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  return api<{ url: string }>('/api/v1/uploads/review-image', { method: 'POST', body }, 'member')
+}
+
+export function createReview(body: { order_item_id: number; stars: number; body: string; images?: string[] }) {
+  return api<ProductReview>('/api/v1/reviews', { method: 'POST', body: JSON.stringify(body) }, 'member')
+}
+
+export function followReview(id: number, body: string) {
+  return api<ProductReview>(`/api/v1/reviews/${id}/follow`, { method: 'POST', body: JSON.stringify({ body }) }, 'member')
 }
