@@ -9,6 +9,7 @@ use think\facade\Db;
 
 /**
  * M18 商品評價：主評一次 + 追評一次。
+ * M23：後台隱藏 / 商家回覆。
  */
 class ReviewService
 {
@@ -16,10 +17,98 @@ class ReviewService
     {
         $rows = Db::name('product_reviews')
             ->where('product_id', $productId)
+            ->where('is_hidden', 0)
             ->order('id', 'desc')
             ->limit($limit)
             ->select()
             ->toArray();
+
+        return $this->presentMany($rows);
+    }
+
+    /**
+     * @param array{is_hidden?: string|int|null, product_code?: string, q?: string} $filters
+     */
+    public function adminList(array $filters = []): array
+    {
+        $q = Db::name('product_reviews')->order('id', 'desc');
+        if (array_key_exists('is_hidden', $filters) && $filters['is_hidden'] !== '' && $filters['is_hidden'] !== null) {
+            $q->where('is_hidden', (int) $filters['is_hidden'] ? 1 : 0);
+        }
+        $code = trim((string) ($filters['product_code'] ?? ''));
+        if ($code !== '') {
+            $q->where('product_code', $code);
+        }
+        $keyword = trim((string) ($filters['q'] ?? ''));
+        if ($keyword !== '') {
+            $like = '%' . addcslashes($keyword, '%_\\') . '%';
+            $q->where(function ($w) use ($like) {
+                $w->where('body', 'like', $like)->whereOr('admin_reply', 'like', $like);
+            });
+        }
+        $rows = $q->limit(200)->select()->toArray();
+
+        return ['items' => $this->presentMany($rows, true)];
+    }
+
+    public function adminRead(int $id): array
+    {
+        $row = Db::name('product_reviews')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        $member = Db::name('members')->where('id', $row['member_id'])->find();
+
+        return $this->present($row, $member, true);
+    }
+
+    public function setVisibility(int $id, array $body): array
+    {
+        $row = Db::name('product_reviews')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        if (!array_key_exists('is_hidden', $body)) {
+            throw new ApiException('INVALID', '缺少 is_hidden', 422, 42201);
+        }
+        $hidden = (int) $body['is_hidden'] ? 1 : 0;
+        Db::name('product_reviews')->where('id', $id)->update([
+            'is_hidden' => $hidden,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->adminRead($id);
+    }
+
+    public function reply(int $id, array $body): array
+    {
+        $row = Db::name('product_reviews')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        $text = trim((string) ($body['reply'] ?? $body['admin_reply'] ?? ''));
+        if ($text === '') {
+            throw new ApiException('INVALID', '請填寫商家回覆', 422, 42201);
+        }
+        if (mb_strlen($text) > 1000) {
+            throw new ApiException('INVALID', '回覆過長', 422, 42294);
+        }
+        $now = date('Y-m-d H:i:s');
+        Db::name('product_reviews')->where('id', $id)->update([
+            'admin_reply' => $text,
+            'replied_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return $this->adminRead($id);
+    }
+
+    /**
+     * @param list<array<string,mixed>> $rows
+     * @return list<array<string,mixed>>
+     */
+    private function presentMany(array $rows, bool $admin = false): array
+    {
         if (!$rows) {
             return [];
         }
@@ -30,7 +119,7 @@ class ReviewService
             $byId[(int) $m['id']] = $m;
         }
 
-        return array_map(fn ($r) => $this->present($r, $byId[(int) $r['member_id']] ?? null), $rows);
+        return array_map(fn ($r) => $this->present($r, $byId[(int) $r['member_id']] ?? null, $admin), $rows);
     }
 
     /**
@@ -125,6 +214,9 @@ class ReviewService
             'images_json' => $images ? json_encode(array_values($images), JSON_UNESCAPED_UNICODE) : null,
             'follow_body' => null,
             'follow_at' => null,
+            'is_hidden' => 0,
+            'admin_reply' => null,
+            'replied_at' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -203,7 +295,7 @@ class ReviewService
         return $out;
     }
 
-    private function present(array $row, ?array $member): array
+    private function present(array $row, ?array $member, bool $admin = false): array
     {
         $images = [];
         if (!empty($row['images_json'])) {
@@ -215,8 +307,9 @@ class ReviewService
         $follow = $row['follow_body'] !== null && $row['follow_body'] !== ''
             ? (string) $row['follow_body']
             : null;
+        $reply = !empty($row['admin_reply']) ? (string) $row['admin_reply'] : null;
 
-        return [
+        $data = [
             'id' => (int) $row['id'],
             'order_item_id' => (int) $row['order_item_id'],
             'product_code' => (string) $row['product_code'],
@@ -226,9 +319,19 @@ class ReviewService
             'images' => $images,
             'follow' => $follow,
             'follow_at' => $row['follow_at'],
+            'reply' => $reply,
+            'replied_at' => $row['replied_at'] ?? null,
             'created_at' => $row['created_at'],
             'can_follow' => $follow === null,
         ];
+        if ($admin) {
+            $data['is_hidden'] = (int) ($row['is_hidden'] ?? 0);
+            $data['member_id'] = (int) $row['member_id'];
+            $data['order_id'] = (int) $row['order_id'];
+            $data['admin_reply'] = $reply;
+        }
+
+        return $data;
     }
 
     private function authorName(?array $member, int $memberId): string

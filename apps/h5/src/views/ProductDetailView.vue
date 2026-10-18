@@ -262,6 +262,10 @@ async function share() {
             <em>{{ t('pdp.follow') }}</em>
             {{ typeof r.follow === 'string' ? r.follow : text(r.follow) }}
           </p>
+          <p v-if="r.reply" class="reply">
+            <em>{{ t('pdp.reply') }}</em>
+            {{ r.reply }}
+          </p>
         </li>
       </ul>
       <button
@@ -461,15 +465,22 @@ h2 {
   border-radius: 0.375rem;
   background: #f6f6f6;
 }
-.follow {
+.follow,
+.reply {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
   color: #666;
 }
-.follow em {
+.follow em,
+.reply em {
   font-style: normal;
   color: var(--sm-primary);
   margin-right: 0.25rem;
+}
+.reply {
+  background: #f5f2ec;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.35rem;
 }
 .more-rev {
   margin-top: 0.5rem;

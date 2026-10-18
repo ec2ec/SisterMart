@@ -119,6 +119,8 @@ export type ProductReview = {
   images: string[]
   follow?: string | null
   follow_at?: string | null
+  reply?: string | null
+  replied_at?: string | null
   created_at: string
   can_follow?: boolean
 }

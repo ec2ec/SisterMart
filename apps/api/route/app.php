@@ -151,6 +151,12 @@ Route::group('api/v1/admin', function () {
     Route::post('aftersales/:id/force-balance', 'admin.Aftersales/forceBalance');
     Route::get('aftersales', 'admin.Aftersales/index');
 
+    /** M23 評價後台 */
+    Route::get('reviews/:id', 'admin.Reviews/read');
+    Route::post('reviews/:id/visibility', 'admin.Reviews/visibility');
+    Route::post('reviews/:id/reply', 'admin.Reviews/reply');
+    Route::get('reviews', 'admin.Reviews/index');
+
     /** M6 營銷與會員資產 */
     Route::get('coupons', 'admin.Coupons/index');
     Route::post('coupons', 'admin.Coupons/store');

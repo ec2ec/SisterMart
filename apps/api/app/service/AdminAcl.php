@@ -83,6 +83,7 @@ class AdminAcl
             '/api/v1/admin/service-tags' => self::PERM_CATALOG,
             '/api/v1/admin/orders' => self::PERM_SALES,
             '/api/v1/admin/aftersales' => self::PERM_SALES,
+            '/api/v1/admin/reviews' => self::PERM_SALES,
             '/api/v1/admin/jobs' => self::PERM_SALES,
             '/api/v1/admin/members' => self::PERM_CUSTOMERS,
             '/api/v1/admin/member-levels' => self::PERM_CUSTOMERS,

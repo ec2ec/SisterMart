@@ -20,6 +20,7 @@ import AdminsView from '../views/AdminsView.vue'
 import MessagesView from '../views/MessagesView.vue'
 import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
+import ReviewsView from '../views/ReviewsView.vue'
 import { findMenu } from '../menus'
 
 const placeholder = (path: string) => {
@@ -47,6 +48,7 @@ export const router = createRouter({
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
         { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
         { path: '/sales/aftersales', component: AftersalesView, meta: { title: '售後' } },
+        { path: '/sales/reviews', component: ReviewsView, meta: { title: '評價' } },
         { path: '/customers/members', component: MembersView, meta: { title: '會員' } },
         { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },

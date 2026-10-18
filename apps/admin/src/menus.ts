@@ -24,6 +24,7 @@ export const adminMenus: AdminMenu[] = [
     children: [
       { label: '訂單', key: '/sales/orders', path: '/sales/orders' },
       { label: '售後', key: '/sales/aftersales', path: '/sales/aftersales' },
+      { label: '評價', key: '/sales/reviews', path: '/sales/reviews' },
     ],
   },
   {

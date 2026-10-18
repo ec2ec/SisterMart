@@ -1,0 +1,4 @@
+-- M23：評價後台字段（請跑 php database/m23_seed.php，勿直接依賴本文件的 IF NOT EXISTS）
+-- is_hidden TINYINT DEFAULT 0
+-- admin_reply TEXT NULL
+-- replied_at DATETIME NULL
