@@ -89,7 +89,7 @@ export type Order = {
   title?: string
   item_count?: number
   items?: Array<{
-    id?: number
+    id: number
     product_code: string
     sku_code: string
     name: Localized
