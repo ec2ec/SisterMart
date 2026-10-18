@@ -9,6 +9,7 @@ import {
   Field,
   Icon,
   NavBar,
+  Popup,
   Radio,
   RadioGroup,
   Search,
@@ -29,6 +30,8 @@ import './styles/theme.css'
 import App from './App.vue'
 import { router } from './router'
 import { i18n } from './i18n'
+import { hydrateFavorites } from './composables/useFavorites'
+import { isLoggedIn } from './composables/useSession'
 
 const app = createApp(App)
 
@@ -42,6 +45,7 @@ const app = createApp(App)
   Field,
   Icon,
   NavBar,
+  Popup,
   Radio,
   RadioGroup,
   Search,
@@ -61,4 +65,5 @@ const app = createApp(App)
 app.use(router)
 app.use(i18n)
 document.documentElement.lang = String(i18n.global.locale.value)
+if (isLoggedIn()) void hydrateFavorites()
 app.mount('#app')

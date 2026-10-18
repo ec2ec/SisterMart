@@ -1,4 +1,5 @@
 import { api } from './client'
+import type { Member } from '../composables/useSession'
 
 export type Localized = { 'zh-HK': string; en: string }
 
@@ -261,6 +262,12 @@ export function uploadReviewImage(file: File) {
   const body = new FormData()
   body.append('file', file)
   return api<{ url: string }>('/api/v1/uploads/review-image', { method: 'POST', body }, 'member')
+}
+
+export function uploadAvatar(file: Blob | File) {
+  const body = new FormData()
+  body.append('file', file, 'avatar.jpg')
+  return api<{ url: string; member: Member }>('/api/v1/uploads/avatar', { method: 'POST', body }, 'member')
 }
 
 export function createReview(body: { order_item_id: number; stars: number; body: string; images?: string[] }) {

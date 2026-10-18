@@ -160,14 +160,7 @@ class MemberAuthService
 
     public function updateLocale(int $memberId, string $locale): array
     {
-        $locale = $this->locale($locale);
-        Db::name('members')->where('id', $memberId)->update([
-            'locale'     => $locale,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
-        $member = Db::name('members')->where('id', $memberId)->find();
-
-        return ['member' => $this->present($member)];
+        return ['member' => $this->updateProfile($memberId, ['locale' => $locale])];
     }
 
     public function present(?array $member): array
@@ -188,6 +181,7 @@ class MemberAuthService
             'email'      => $member['email'] ?: null,
             'phone'      => $member['phone'] ?: null,
             'locale'     => (string) $member['locale'],
+            'avatar_url' => !empty($member['avatar_url']) ? (string) $member['avatar_url'] : null,
             'promo_code' => (string) $member['promo_code'],
             'balance' => (float) ($member['balance'] ?? 0),
             'points' => (int) ($member['points'] ?? 0),
@@ -196,6 +190,36 @@ class MemberAuthService
             'level' => $level,
             'coupon_count' => $couponCount,
         ];
+    }
+
+    public function updateProfile(int $memberId, array $body): array
+    {
+        $patch = ['updated_at' => date('Y-m-d H:i:s')];
+        if (array_key_exists('locale', $body) && (string) $body['locale'] !== '') {
+            $patch['locale'] = $this->locale((string) $body['locale']);
+        }
+        if (array_key_exists('avatar_url', $body)) {
+            $url = trim((string) ($body['avatar_url'] ?? ''));
+            if ($url === '') {
+                $patch['avatar_url'] = null;
+            } else {
+                $prefix = '/storage/avatar/' . $memberId . '/';
+                if (!str_starts_with($url, $prefix)) {
+                    throw new ApiException('INVALID', '頭像路徑無效', 422, 42201);
+                }
+                if (preg_match('#\.\.|[^\w./\-]#', $url)) {
+                    throw new ApiException('INVALID', '頭像路徑無效', 422, 42201);
+                }
+                $patch['avatar_url'] = $url;
+            }
+        }
+        if (count($patch) === 1) {
+            throw new ApiException('INVALID', '沒有可更新的欄位', 422, 42201);
+        }
+        Db::name('members')->where('id', $memberId)->update($patch);
+        $member = Db::name('members')->where('id', $memberId)->find();
+
+        return $this->present($member);
     }
 
     private function sendWhatsapp(string $purpose, string $target): array

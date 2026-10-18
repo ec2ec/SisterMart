@@ -1,26 +1,60 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
+import { uploadAvatar } from '../api/trade'
 import { accountMock } from '../mock/data'
+import AvatarCropDialog from '../components/AvatarCropDialog.vue'
 import { clearSession, isLoggedIn, memberState, type Member } from '../composables/useSession'
 import { toggleLocale } from '../i18n'
 
 const { t } = useI18n()
 const router = useRouter()
 const u = accountMock
+const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+const showAvatarCrop = ref(false)
+const avatarBusy = ref(false)
+
 const loggedIn = computed(() => isLoggedIn() && memberState.value)
 const displayName = computed(() => memberState.value?.email || memberState.value?.phone || u.name)
 const displaySub = computed(() =>
   memberState.value ? t('account.promo', { code: memberState.value.promo_code }) : u.phone,
 )
 const avatarLetter = computed(() => (displayName.value || 'S').slice(0, 1).toUpperCase())
+const avatarSrc = computed(() => {
+  const url = memberState.value?.avatar_url
+  if (!url) return ''
+  return url.startsWith('http') ? url : `${apiBase}${url}`
+})
 
 function openAccount() {
   if (loggedIn.value) return
   router.push({ name: 'login', query: { redirect: '/account' } })
+}
+
+function onAvatarClick() {
+  if (!loggedIn.value) {
+    openAccount()
+    return
+  }
+  showAvatarCrop.value = true
+}
+
+async function onAvatarConfirm(blob: Blob) {
+  avatarBusy.value = true
+  try {
+    const data = await uploadAvatar(blob)
+    memberState.value = data.member
+    localStorage.setItem('sm_member', JSON.stringify(data.member))
+    showToast(t('account.avatarOk'))
+  } catch (e) {
+    const msg = e instanceof ApiError && e.message ? e.message : t('account.avatarFail')
+    showToast(msg)
+  } finally {
+    avatarBusy.value = false
+  }
 }
 
 onMounted(async () => {
@@ -153,7 +187,10 @@ function goOrders(tab?: string) {
         <van-icon name="setting-o" size="1.125rem" />
       </button>
       <div class="user" role="button" @click="openAccount">
-        <div class="avatar">{{ avatarLetter }}</div>
+        <button type="button" class="avatar" :disabled="avatarBusy" @click.stop="onAvatarClick">
+          <img v-if="avatarSrc" :src="avatarSrc" alt="" />
+          <span v-else>{{ avatarLetter }}</span>
+        </button>
         <div>
           <h1>{{ displayName }}</h1>
           <p class="phone">{{ displaySub }}</p>
@@ -229,6 +266,8 @@ function goOrders(tab?: string) {
 
     <button type="button" class="lang" @click="toggleLocale">{{ t('account.switchLang') }}</button>
     <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
+
+    <AvatarCropDialog v-model:show="showAvatarCrop" @confirm="onAvatarConfirm" />
   </div>
 </template>
 
@@ -258,6 +297,8 @@ function goOrders(tab?: string) {
 .avatar {
   width: 3.625rem;
   height: 3.625rem;
+  border: 0;
+  padding: 0;
   border-radius: 50%;
   background: #fff;
   color: var(--sm-primary);
@@ -266,6 +307,15 @@ function goOrders(tab?: string) {
   font-size: 1.625rem;
   font-weight: 700;
   box-shadow: 0 0.125rem 0.5rem rgba(238, 80, 47, 0.15);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .user h1 {

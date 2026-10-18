@@ -26,6 +26,8 @@ Route::get('api/v1/tabbar', 'api.Tabbar/index');
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
 Route::get('api/v1/categories', 'api.Categories/index');
 Route::get('api/v1/products/:id', 'api.Products/read');
+/** M28 首頁推薦（可選 Bearer：猜你喜歡） */
+Route::get('api/v1/home/recommendations', 'api.HomeRecommendations/index');
 /** M27 訂閱（可匿名；帶 Bearer 則綁定會員） */
 Route::post('api/v1/newsletter/subscribe', 'api.Newsletter/subscribe');
 Route::get('api/v1/products', 'api.Products/index');
@@ -81,8 +83,16 @@ Route::group('api/v1', function () {
     Route::post('aftersales', 'api.Aftersales/store');
     Route::post('uploads/aftersale-evidence', 'api.Uploads/aftersaleEvidence');
     Route::post('uploads/review-image', 'api.Uploads/reviewImage');
+    Route::post('uploads/avatar', 'api.Uploads/avatar');
     Route::post('reviews/:id/follow', 'api.Reviews/follow');
     Route::post('reviews', 'api.Reviews/store');
+
+    /** M28 收藏 */
+    Route::get('favorites/codes', 'api.Favorites/codes');
+    Route::post('favorites/toggle', 'api.Favorites/toggle');
+    Route::delete('favorites/:id', 'api.Favorites/destroy');
+    Route::get('favorites', 'api.Favorites/index');
+    Route::post('favorites', 'api.Favorites/store');
 
     /** M6 資產 */
     Route::post('coupons/:id/claims', 'api.Coupons/claim');

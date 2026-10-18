@@ -125,6 +125,18 @@ export async function fetchHomeOps() {
   return api<HomeOps>('/api/v1/home/ops')
 }
 
+export type HomeRecTab = 'hot' | 'new' | 'for_you'
+
+export async function fetchHomeRecommendations(tab: HomeRecTab, limit = 20) {
+  const qs = new URLSearchParams({ tab, limit: String(limit) })
+  return api<{
+    tab: string
+    source: string
+    items: ProductCard[]
+    sold_display_mode: string
+  }>(`/api/v1/home/recommendations?${qs}`, {}, 'member')
+}
+
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
 }

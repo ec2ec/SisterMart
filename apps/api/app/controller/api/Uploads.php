@@ -20,7 +20,29 @@ class Uploads extends ApiController
         return $this->run(fn () => $this->storeImage('review'), 201);
     }
 
-    private function storeImage(string $bucket): array
+    public function avatar(): Response
+    {
+        return $this->run(function () {
+            $memberId = (int) app('sistermart.member')['id'];
+            $stored = $this->storeImage('avatar', 512 * 1024, 512);
+            // 寫入會員資料
+            \think\facade\Db::name('members')->where('id', $memberId)->update([
+                'avatar_url' => $stored['url'],
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $member = \think\facade\Db::name('members')->where('id', $memberId)->find();
+
+            return [
+                'url' => $stored['url'],
+                'member' => (new \app\service\MemberAuthService())->present($member),
+            ];
+        }, 201);
+    }
+
+    /**
+     * @return array{url: string}
+     */
+    private function storeImage(string $bucket, int $maxBytes = 1048576, ?int $maxEdge = null): array
     {
         $memberId = (int) app('sistermart.member')['id'];
         $file = $this->request->file('file');
@@ -28,8 +50,8 @@ class Uploads extends ApiController
             throw new ApiException('INVALID', '請選擇圖片', 422, 42201);
         }
         $size = (int) $file->getSize();
-        if ($size <= 0 || $size > 1024 * 1024) {
-            throw new ApiException('INVALID', '單張圖片不可超過 1MB', 422, 42289);
+        if ($size <= 0 || $size > $maxBytes) {
+            throw new ApiException('INVALID', '圖片過大', 422, 42289);
         }
         $mime = (string) ($file->getMime() ?: '');
         $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
@@ -44,6 +66,32 @@ class Uploads extends ApiController
         }
         $name = bin2hex(random_bytes(8)) . '.' . $ext;
         $file->move($root, $name);
+        $full = $root . '/' . $name;
+
+        // 可選：服務端再壓一邊（GD），確保頭像不超邊長
+        if ($maxEdge !== null && function_exists('imagecreatefromstring')) {
+            $raw = @file_get_contents($full);
+            if ($raw !== false) {
+                $src = @imagecreatefromstring($raw);
+                if ($src) {
+                    $w = imagesx($src);
+                    $h = imagesy($src);
+                    $side = min($w, $h, $maxEdge);
+                    $dst = imagecreatetruecolor($side, $side);
+                    $sx = (int) (($w - min($w, $h)) / 2);
+                    $sy = (int) (($h - min($w, $h)) / 2);
+                    $crop = min($w, $h);
+                    imagecopyresampled($dst, $src, 0, 0, $sx, $sy, $side, $side, $crop, $crop);
+                    $outName = bin2hex(random_bytes(8)) . '.jpg';
+                    $outFull = $root . '/' . $outName;
+                    imagejpeg($dst, $outFull, 82);
+                    imagedestroy($src);
+                    imagedestroy($dst);
+                    @unlink($full);
+                    $name = $outName;
+                }
+            }
+        }
 
         return ['url' => '/storage/' . $relDir . '/' . $name];
     }

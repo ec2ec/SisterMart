@@ -140,6 +140,7 @@ class CatalogService
         $q = trim((string) ($query['q'] ?? ''));
         $category = trim((string) ($query['category'] ?? ''));
         $sort = (string) ($query['sort'] ?? 'default');
+        $limit = isset($query['limit']) ? (int) $query['limit'] : 0;
         $builder = Db::name('products')->alias('p');
         if (!$admin) {
             $builder->where('p.status', 1);
@@ -165,14 +166,81 @@ class CatalogService
             'newest' => $builder->order('p.id', 'desc'),
             'price_asc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) ASC'),
             'price_desc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) DESC'),
-            'sales' => $builder->order('p.sold_count', 'desc'),
+            'sales' => $builder->order('p.sold_count', 'desc')->order('p.id', 'desc'),
             default => $builder->order('p.id', 'asc'),
         };
+        if ($limit > 0) {
+            $builder->limit(max(1, min(100, $limit)));
+        }
         $rows = $builder->select()->toArray();
         $mode = SoldDisplay::mode();
         $items = array_map(fn ($row) => $this->presentCard($row, $mode), $rows);
 
         return ['items' => $items, 'sold_display_mode' => $mode];
+    }
+
+    /**
+     * 首頁推薦：hot=熱銷 / new=新品 / for_you=猜你喜歡（足跡分類，無則回退熱銷）。
+     *
+     * @return array{tab: string, source: string, items: list<array<string,mixed>>, sold_display_mode: string}
+     */
+    public function homeRecommendations(string $tab, ?int $viewerMemberId = null, int $limit = 20): array
+    {
+        $tab = in_array($tab, ['hot', 'new', 'for_you'], true) ? $tab : 'hot';
+        $limit = max(1, min(40, $limit));
+        $mode = SoldDisplay::mode();
+        $source = $tab;
+
+        if ($tab === 'new') {
+            $rows = Db::name('products')->where('status', 1)->order('id', 'desc')->limit($limit)->select()->toArray();
+
+            return [
+                'tab' => $tab,
+                'source' => 'newest',
+                'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
+                'sold_display_mode' => $mode,
+            ];
+        }
+
+        if ($tab === 'for_you' && $viewerMemberId) {
+            $catIds = (new BrowseHistoryService())->recentCategoryIds($viewerMemberId, 5);
+            if ($catIds) {
+                $rows = Db::name('products')
+                    ->where('status', 1)
+                    ->whereIn('category_id', $catIds)
+                    ->order('sold_count', 'desc')
+                    ->order('id', 'desc')
+                    ->limit($limit)
+                    ->select()
+                    ->toArray();
+                if ($rows) {
+                    return [
+                        'tab' => $tab,
+                        'source' => 'browse_categories',
+                        'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
+                        'sold_display_mode' => $mode,
+                    ];
+                }
+            }
+            $source = 'hot_fallback';
+        } elseif ($tab === 'for_you') {
+            $source = 'hot_fallback';
+        }
+
+        $rows = Db::name('products')
+            ->where('status', 1)
+            ->order('sold_count', 'desc')
+            ->order('id', 'desc')
+            ->limit($limit)
+            ->select()
+            ->toArray();
+
+        return [
+            'tab' => $tab === 'for_you' ? 'for_you' : 'hot',
+            'source' => $source === 'hot_fallback' ? 'hot_fallback' : 'sales',
+            'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
+            'sold_display_mode' => $mode,
+        ];
     }
 
     public function productDetail(string $idOrCode, bool $admin = false, ?int $viewerMemberId = null): array

@@ -25,9 +25,13 @@ class Members extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
             $body = $this->payload();
-            $result = (new MemberAuthService())->updateLocale((int) $member['id'], (string) ($body['locale'] ?? ''));
+            if (isset($body['locale']) && count($body) === 1) {
+                $result = (new MemberAuthService())->updateLocale((int) $member['id'], (string) $body['locale']);
 
-            return $result['member'];
+                return $result['member'];
+            }
+
+            return (new MemberAuthService())->updateProfile((int) $member['id'], $body);
         });
     }
 }

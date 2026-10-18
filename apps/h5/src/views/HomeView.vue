@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -10,8 +10,11 @@ import { banners as mockBanners } from '../mock/data'
 import {
   fetchHomeBanners,
   fetchHomeOps,
+  fetchHomeRecommendations,
   type HomeBanner,
   type HomeMarquee,
+  type HomeRecTab,
+  type ProductCard as Card,
 } from '../api/catalog'
 import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
@@ -22,7 +25,10 @@ const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 
+const feedTabs: HomeRecTab[] = ['hot', 'new', 'for_you']
 const feedTab = ref(0)
+const feedItems = ref<Card[]>([])
+const feedBusy = ref(false)
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
@@ -74,8 +80,26 @@ async function loadSubscribeStatus() {
   }
 }
 
+async function loadFeed() {
+  const tab = feedTabs[feedTab.value] || 'hot'
+  feedBusy.value = true
+  try {
+    const data = await fetchHomeRecommendations(tab, 20)
+    feedItems.value = data.items || []
+  } catch {
+    // 回退：本地 catalog 緩衝
+    if (tab === 'new') {
+      feedItems.value = [...products.value].reverse().slice(0, 20)
+    } else {
+      feedItems.value = products.value.slice(0, 20)
+    }
+  } finally {
+    feedBusy.value = false
+  }
+}
+
 onMounted(() => {
-  void refresh()
+  void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
   void fetchHomeBanners()
     .then((items) => {
@@ -91,6 +115,10 @@ onMounted(() => {
     .catch(() => {
       opsLoaded.value = true
     })
+})
+
+watch(feedTab, () => {
+  void loadFeed()
 })
 
 function onLink(linkType: string, linkValue: string) {
@@ -119,12 +147,6 @@ function onPromoClick() {
 }
 
 const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
-const collection = computed(() => products.value.filter((p) => p.category.includes('n-') || p.category === 'necklaces').slice(0, 4))
-const feedList = computed(() => {
-  if (feedTab.value === 1) return collection.value
-  if (feedTab.value === 2) return flashVisible.value
-  return products.value
-})
 /** Home cats use backend-configured `categories.icon` only (admin/seed), not hardcoded assets. */
 const homeCategories = computed(() =>
   categories.value.slice(0, 6).map((c) => ({
@@ -173,6 +195,12 @@ function goList(categoryId?: string) {
 const hh = computed(() => String(Math.floor(flashRemain.value / 3600e3)).padStart(2, '0'))
 const mm = computed(() => String(Math.floor((flashRemain.value % 3600e3) / 60e3)).padStart(2, '0'))
 const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).padStart(2, '0'))
+
+const tabLabel = (tab: HomeRecTab) => {
+  if (tab === 'new') return t('home.new')
+  if (tab === 'for_you') return t('home.forYou')
+  return t('home.hot')
+}
 </script>
 
 <template>
@@ -226,13 +254,20 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
 
     <section class="feed">
       <div class="tabs">
-        <button type="button" :class="{ on: feedTab === 0 }" @click="feedTab = 0">{{ t('home.hot') }}</button>
-        <button type="button" :class="{ on: feedTab === 1 }" @click="feedTab = 1">{{ t('home.collection') }}</button>
-        <button type="button" :class="{ on: feedTab === 2 }" @click="feedTab = 2">{{ t('home.flashSale') }}</button>
+        <button
+          v-for="(tab, i) in feedTabs"
+          :key="tab"
+          type="button"
+          :class="{ on: feedTab === i }"
+          @click="feedTab = i"
+        >
+          {{ tabLabel(tab) }}
+        </button>
       </div>
       <div class="grid">
-        <ProductCard v-for="p in feedList" :key="p.id" :product="p" />
+        <ProductCard v-for="p in feedItems" :key="p.id" :product="p" />
       </div>
+      <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
     </section>
 
     <section v-if="showSubscribe" class="subscribe">
@@ -370,6 +405,12 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   padding: 0.25rem 0.875rem 1rem;
+}
+.feed-empty {
+  text-align: center;
+  color: #999;
+  font-size: 0.8125rem;
+  padding: 0.5rem 0 1rem;
 }
 .subscribe {
   padding: 1rem 0.875rem 1.5rem;

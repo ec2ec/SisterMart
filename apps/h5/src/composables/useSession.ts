@@ -6,6 +6,7 @@ export type Member = {
   email: string | null
   phone: string | null
   locale: 'zh-HK' | 'en'
+  avatar_url?: string | null
   promo_code: string
   balance?: number
   points?: number
