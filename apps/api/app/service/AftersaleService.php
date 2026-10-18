@@ -16,15 +16,29 @@ class AftersaleService
         return ['items' => array_map([$this, 'present'], $rows)];
     }
 
-    public function listAdmin(?string $status = null): array
+    /**
+     * @param array{status?: ?string, has_evidence?: ?string|int|bool} $filters
+     */
+    public function listAdmin(array $filters = []): array
     {
         $q = Db::name('aftersales')->order('id', 'desc');
-        if ($status) {
+        $status = isset($filters['status']) ? trim((string) $filters['status']) : '';
+        if ($status !== '') {
             $q->where('status', $status);
         }
         $rows = $q->limit(200)->select()->toArray();
+        $items = array_map([$this, 'present'], $rows);
+        $hasEvidence = $filters['has_evidence'] ?? null;
+        if ($hasEvidence !== null && $hasEvidence !== '') {
+            $want = filter_var($hasEvidence, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($want === true) {
+                $items = array_values(array_filter($items, fn ($i) => ($i['evidence_count'] ?? 0) > 0));
+            } elseif ($want === false) {
+                $items = array_values(array_filter($items, fn ($i) => ($i['evidence_count'] ?? 0) === 0));
+            }
+        }
 
-        return ['items' => array_map([$this, 'present'], $rows)];
+        return ['items' => $items];
     }
 
     public function detail(int $id, ?int $memberId = null): array
@@ -206,9 +220,12 @@ class AftersaleService
         $now = date('Y-m-d H:i:s');
         $note = trim((string) ($body['admin_note'] ?? ''));
         if ($action === 'reject') {
+            if ($note === '') {
+                throw new ApiException('INVALID', '駁回請填寫審核備註', 422, 42201);
+            }
             Db::name('aftersales')->where('id', $id)->update([
                 'status' => 'rejected',
-                'admin_note' => $note ?: '已駁回',
+                'admin_note' => $note,
                 'updated_at' => $now,
             ]);
             $row['status'] = 'rejected';
@@ -218,6 +235,11 @@ class AftersaleService
         }
         if ($action !== 'approve') {
             throw new ApiException('INVALID', 'action 須為 approve 或 reject', 422, 42201);
+        }
+
+        // M22：退貨退款須有證據才可通過（避免無圖盲批）
+        if ($row['type'] === 'return_refund' && $this->evidenceCount($row) === 0) {
+            throw new ApiException('EVIDENCE_REQUIRED', '退貨退款需會員上傳證據後再審核通過', 422, 42287);
         }
 
         // 退貨退款：先待退貨；僅退款：直接待退款並執行
@@ -382,6 +404,7 @@ class AftersaleService
             'qty' => (int) $row['qty'],
             'description' => $row['description'],
             'evidence' => $evidence,
+            'evidence_count' => count($evidence),
             'refund_to' => $row['refund_to'],
             'status' => $row['status'],
             'admin_note' => $row['admin_note'],
@@ -402,5 +425,16 @@ class AftersaleService
         }
 
         return $data;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function evidenceCount(array $row): int
+    {
+        if (empty($row['evidence_json'])) {
+            return 0;
+        }
+        $decoded = json_decode((string) $row['evidence_json'], true);
+
+        return is_array($decoded) ? count(array_filter(array_map('strval', $decoded))) : 0;
     }
 }

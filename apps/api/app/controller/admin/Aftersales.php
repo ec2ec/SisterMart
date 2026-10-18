@@ -12,9 +12,10 @@ class Aftersales extends ApiController
 {
     public function index(): Response
     {
-        $status = $this->request->get('status');
-
-        return $this->run(fn () => (new AftersaleService())->listAdmin($status ?: null));
+        return $this->run(fn () => (new AftersaleService())->listAdmin([
+            'status' => $this->request->get('status'),
+            'has_evidence' => $this->request->get('has_evidence'),
+        ]));
     }
 
     public function read(int $id): Response
