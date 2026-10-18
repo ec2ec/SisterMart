@@ -452,6 +452,12 @@ class CatalogService
         return $ids;
     }
 
+    /** @param array<string,mixed> $row */
+    public function presentCardPublic(array $row, ?string $mode = null): array
+    {
+        return $this->presentCard($row, $mode ?? SoldDisplay::mode());
+    }
+
     private function presentCard(array $row, string $mode): array
     {
         $names = Db::name('product_i18n')->where('product_id', $row['id'])->select()->toArray();

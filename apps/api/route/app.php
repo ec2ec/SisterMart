@@ -88,6 +88,11 @@ Route::group('api/v1', function () {
     Route::get('point-logs', 'api.Assets/pointLogs');
     Route::get('balance-logs', 'api.Assets/balanceLogs');
 
+    /** M26 瀏覽足跡 */
+    Route::delete('browse-history/:id', 'api.BrowseHistory/destroy');
+    Route::delete('browse-history', 'api.BrowseHistory/clear');
+    Route::get('browse-history', 'api.BrowseHistory/index');
+
     /** M14 簽到 + M13 分銷 + M15 站內消息 */
     Route::get('checkins/calendar', 'api.Checkins/calendar');
     Route::post('checkins', 'api.Checkins/store');

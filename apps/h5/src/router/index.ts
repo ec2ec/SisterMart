@@ -26,6 +26,8 @@ import AftersalesView from '../views/AftersalesView.vue'
 import CouponCenterView from '../views/CouponCenterView.vue'
 import MyCouponsView from '../views/MyCouponsView.vue'
 import PointLogsView from '../views/PointLogsView.vue'
+import BalanceLogsView from '../views/BalanceLogsView.vue'
+import FootprintView from '../views/FootprintView.vue'
 import MemberLevelView from '../views/MemberLevelView.vue'
 import SeckillListView from '../views/SeckillListView.vue'
 import SeckillDetailView from '../views/SeckillDetailView.vue'
@@ -76,6 +78,8 @@ export const router = createRouter({
     { path: '/coupons', name: 'coupon-center', component: CouponCenterView },
     { path: '/my-coupons', name: 'my-coupons', component: MyCouponsView },
     { path: '/point-logs', name: 'point-logs', component: PointLogsView },
+    { path: '/balance-logs', name: 'balance-logs', component: BalanceLogsView },
+    { path: '/footprint', name: 'footprint', component: FootprintView },
     { path: '/member-level', name: 'member-level', component: MemberLevelView },
     { path: '/seckill', name: 'seckill', component: SeckillListView },
     { path: '/seckill/:id', name: 'seckill-detail', component: SeckillDetailView },

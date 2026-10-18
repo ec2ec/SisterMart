@@ -56,6 +56,8 @@ const orderItems = [
 const services = [
   { key: 'address', icon: 'location-o', route: 'addresses' },
   { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
+  { key: 'footprint', icon: 'browsing-history-o', route: 'footprint' },
+  { key: 'bills', icon: 'balance-list-o', route: 'balance-logs' },
   { key: 'couponCenter', icon: 'coupon-o', route: 'coupon-center' },
   { key: 'myCoupons', icon: 'coupon-o', route: 'my-coupons' },
   { key: 'pointLogs', icon: 'gold-coin-o', route: 'point-logs' },
@@ -75,6 +77,8 @@ const spentDisplay = computed(() => {
 const routePaths: Record<string, string> = {
   addresses: '/addresses',
   wishlist: '/wishlist',
+  footprint: '/footprint',
+  'balance-logs': '/balance-logs',
   'coupon-center': '/coupons',
   'my-coupons': '/my-coupons',
   'point-logs': '/point-logs',
@@ -124,6 +128,14 @@ function goPoints() {
   router.push({ name: 'point-logs' })
 }
 
+function goBills() {
+  if (!isLoggedIn()) {
+    router.push({ name: 'login', query: { redirect: '/balance-logs' } })
+    return
+  }
+  router.push({ name: 'balance-logs' })
+}
+
 function goOrders(tab?: string) {
   const path = tab ? `/orders?tab=${tab}` : '/orders'
   if (!isLoggedIn()) {
@@ -149,7 +161,7 @@ function goOrders(tab?: string) {
         </div>
       </div>
       <div class="stats">
-        <div>
+        <div role="button" @click="goBills">
           <strong>{{ loggedIn ? (memberState?.balance ?? 0).toFixed(2) : u.balance }}</strong>
           <span>{{ t('account.balance') }}</span>
         </div>
