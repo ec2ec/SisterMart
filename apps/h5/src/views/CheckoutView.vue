@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { createOrder, fetchAddresses, quoteCheckout, type Address, type Quote } from '../api/trade'
+import { refreshCartBadge } from '../composables/useCartBadge'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn } from '../composables/useSession'
 
@@ -120,6 +121,7 @@ async function submit() {
       body.qty = buyNow.qty
     }
     const order = await createOrder(body)
+    void refreshCartBadge()
     if (order.status === 'pending_shipment' || order.pay_amount <= 0) {
       router.replace({ name: 'pay-result', query: { order_id: String(order.id), zero: '1' } })
       return
