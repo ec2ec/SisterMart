@@ -40,7 +40,7 @@ export const adminMenus: AdminMenu[] = [
     key: 'cms',
     children: [
       { label: '文章', key: '/cms/articles', path: '/cms/articles' },
-      { label: '首頁', key: '/cms/home', path: '/cms/home', milestone: '後續' },
+      { label: '首頁輪播', key: '/cms/home', path: '/cms/home' },
       { label: '消息', key: '/cms/messages', path: '/cms/messages' },
     ],
   },

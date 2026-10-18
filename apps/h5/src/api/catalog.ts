@@ -89,6 +89,21 @@ export async function fetchArticle(code: string) {
   return api<Article>(`/api/v1/articles/${encodeURIComponent(code)}`)
 }
 
+export type HomeBanner = {
+  id: number
+  image_url: string
+  title: Localized
+  link_type: string
+  link_value: string
+  sort_order: number
+  status: number
+}
+
+export async function fetchHomeBanners() {
+  const data = await api<{ items: HomeBanner[] }>('/api/v1/home/banners')
+  return data.items
+}
+
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
 }
