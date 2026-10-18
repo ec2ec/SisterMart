@@ -178,7 +178,7 @@ function goOrders(tab?: string) {
     <section class="card">
       <div class="card-head">
         <h2>{{ t('account.orders') }}</h2>
-        <button type="button" class="more" @click="goOrders">{{ t('account.more') }}</button>
+        <button type="button" class="more" @click="() => goOrders()">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
         <button
