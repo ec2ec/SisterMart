@@ -6,7 +6,8 @@ import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
-import { banners } from '../mock/data'
+import { banners as mockBanners } from '../mock/data'
+import { fetchHomeBanners, type HomeBanner } from '../api/catalog'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -17,12 +18,44 @@ const router = useRouter()
 const feedTab = ref(0)
 const email = ref('')
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
+const banners = ref<HomeBanner[]>(
+  mockBanners.map((b, i) => ({
+    id: i + 1,
+    image_url: b.image,
+    title: { 'zh-HK': '', en: '' },
+    link_type: 'none',
+    link_value: '',
+    sort_order: i,
+    status: 1,
+  })),
+)
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
 const { products, categories, refresh } = useHomeCatalog()
 
 onMounted(() => {
   void refresh()
+  void fetchHomeBanners()
+    .then((items) => {
+      if (items.length) banners.value = items
+    })
+    .catch(() => undefined)
 })
+
+function onBannerClick(b: HomeBanner) {
+  if (b.link_type === 'product' && b.link_value) {
+    router.push({ name: 'product-detail', params: { id: b.link_value } })
+  } else if (b.link_type === 'category' && b.link_value) {
+    goList(b.link_value)
+  } else if (b.link_type === 'article' && b.link_value) {
+    router.push({ name: 'article', params: { id: b.link_value } })
+  } else if (b.link_type === 'url' && b.link_value) {
+    if (b.link_value.startsWith('http')) {
+      window.open(b.link_value, '_blank', 'noopener')
+    } else {
+      router.push(b.link_value)
+    }
+  }
+}
 
 const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
 const collection = computed(() => products.value.filter((p) => p.category.includes('n-') || p.category === 'necklaces').slice(0, 4))
@@ -63,9 +96,9 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
     <section class="hero-wrap">
       <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
         <van-swipe-item v-for="b in banners" :key="b.id">
-          <div class="hero-item">
-            <img :src="b.image" alt="" />
-          </div>
+          <button type="button" class="hero-item" @click="onBannerClick(b)">
+            <img :src="b.image_url" :alt="text(b.title) || ''" />
+          </button>
         </van-swipe-item>
       </van-swipe>
       <AppHeader show-logo variant="overlay" />
@@ -131,7 +164,14 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
 .hero {
   height: calc(100vw * 589 / 1600);
 }
-.hero-item,
+.hero-item {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: block;
+}
 .hero-item img {
   width: 100%;
   height: 100%;
