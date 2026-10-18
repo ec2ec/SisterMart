@@ -7,11 +7,16 @@ import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
 import { banners as mockBanners } from '../mock/data'
-import { fetchHomeBanners, type HomeBanner } from '../api/catalog'
+import {
+  fetchHomeBanners,
+  fetchHomeOps,
+  type HomeBanner,
+  type HomeMarquee,
+} from '../api/catalog'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { useLocaleText } from '../composables/useLocaleText'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 
@@ -29,8 +34,19 @@ const banners = ref<HomeBanner[]>(
     status: 1,
   })),
 )
+const marquee = ref<HomeMarquee>(null)
+const footerSlogan = ref<{ 'zh-HK': string; en: string } | null>(null)
+const opsLoaded = ref(false)
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
 const { products, categories, refresh } = useHomeCatalog()
+
+const promoText = computed(() => {
+  if (marquee.value?.enabled) {
+    const loc = String(locale.value || 'zh-HK')
+    return loc.startsWith('en') ? marquee.value.text.en || marquee.value.text['zh-HK'] : marquee.value.text['zh-HK'] || marquee.value.text.en
+  }
+  return t('home.promo')
+})
 
 onMounted(() => {
   void refresh()
@@ -39,22 +55,40 @@ onMounted(() => {
       if (items.length) banners.value = items
     })
     .catch(() => undefined)
+  void fetchHomeOps()
+    .then((ops) => {
+      marquee.value = ops.marquee
+      footerSlogan.value = ops.footer_slogan
+      opsLoaded.value = true
+    })
+    .catch(() => {
+      opsLoaded.value = true
+    })
 })
 
-function onBannerClick(b: HomeBanner) {
-  if (b.link_type === 'product' && b.link_value) {
-    router.push({ name: 'product-detail', params: { id: b.link_value } })
-  } else if (b.link_type === 'category' && b.link_value) {
-    goList(b.link_value)
-  } else if (b.link_type === 'article' && b.link_value) {
-    router.push({ name: 'article', params: { id: b.link_value } })
-  } else if (b.link_type === 'url' && b.link_value) {
-    if (b.link_value.startsWith('http')) {
-      window.open(b.link_value, '_blank', 'noopener')
+function onLink(linkType: string, linkValue: string) {
+  if (linkType === 'product' && linkValue) {
+    router.push({ name: 'product-detail', params: { id: linkValue } })
+  } else if (linkType === 'category' && linkValue) {
+    goList(linkValue)
+  } else if (linkType === 'article' && linkValue) {
+    router.push({ name: 'article', params: { id: linkValue } })
+  } else if (linkType === 'url' && linkValue) {
+    if (linkValue.startsWith('http')) {
+      window.open(linkValue, '_blank', 'noopener')
     } else {
-      router.push(b.link_value)
+      router.push(linkValue)
     }
   }
+}
+
+function onBannerClick(b: HomeBanner) {
+  onLink(b.link_type, b.link_value)
+}
+
+function onPromoClick() {
+  if (!marquee.value?.enabled) return
+  onLink(marquee.value.link_type, marquee.value.link_value)
 }
 
 const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
@@ -104,7 +138,15 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
       <AppHeader show-logo variant="overlay" />
     </section>
 
-    <div class="promo">{{ t('home.promo') }}</div>
+    <button
+      v-if="!opsLoaded || marquee?.enabled"
+      type="button"
+      class="promo"
+      :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
+      @click="onPromoClick"
+    >
+      {{ promoText }}
+    </button>
 
     <section class="flash">
       <div class="section-title">
@@ -150,7 +192,7 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
         <button type="button" @click="onSubscribe">{{ t('home.subscribe') }}</button>
       </div>
     </section>
-    <HomeFooter />
+    <HomeFooter :slogan="footerSlogan" />
   </div>
 </template>
 
@@ -179,11 +221,19 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
   display: block;
 }
 .promo {
+  display: block;
+  width: 100%;
   margin: 0;
+  border: 0;
+  text-align: left;
   padding: 0.625rem 0.875rem;
   background: var(--sm-promo-bg);
   color: var(--sm-text);
+  font: inherit;
   font-size: 0.75rem;
+}
+.promo.clickable {
+  cursor: pointer;
 }
 .section-title {
   display: flex;

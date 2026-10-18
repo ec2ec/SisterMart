@@ -29,6 +29,7 @@ Route::get('api/v1/products/:id', 'api.Products/read');
 Route::get('api/v1/products', 'api.Products/index');
 Route::get('api/v1/articles/:code', 'api.Articles/read');
 Route::get('api/v1/home/banners', 'api.HomeBanners/index');
+Route::get('api/v1/home/ops', 'api.HomeOps/index');
 
 /** M6 公開：領券中心列表、等級檔位 */
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
@@ -138,6 +139,8 @@ Route::group('api/v1/admin', function () {
     Route::put('home-banners/:id', 'admin.HomeBanners/update');
     Route::delete('home-banners/:id', 'admin.HomeBanners/destroy');
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
+    Route::get('home-ops', 'admin.HomeOps/read');
+    Route::put('home-ops', 'admin.HomeOps/update');
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');

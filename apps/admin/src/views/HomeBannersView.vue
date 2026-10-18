@@ -13,6 +13,15 @@ type Banner = {
   status: number
 }
 
+type Marquee = {
+  text: { 'zh-HK': string; en: string }
+  link_type: string
+  link_value: string
+  status: number
+}
+
+type Slogan = { 'zh-HK': string; en: string }
+
 const message = useMessage()
 const items = ref<Banner[]>([])
 const form = ref({
@@ -26,6 +35,15 @@ const form = ref({
   status: true,
 })
 
+const marquee = ref({
+  text_zh: '',
+  text_en: '',
+  link_type: 'none',
+  link_value: '',
+  status: true,
+})
+const slogan = ref({ zh: '', en: '' })
+
 const linkTypes = [
   { label: '無跳轉', value: 'none' },
   { label: '商品 code', value: 'product' },
@@ -35,8 +53,22 @@ const linkTypes = [
 ]
 
 async function load() {
-  const data = await api<{ items: Banner[] }>('/api/v1/admin/home-banners', {}, true)
-  items.value = data.items
+  const [banners, ops] = await Promise.all([
+    api<{ items: Banner[] }>('/api/v1/admin/home-banners', {}, true),
+    api<{ marquee: Marquee; footer_slogan: Slogan }>('/api/v1/admin/home-ops', {}, true),
+  ])
+  items.value = banners.items
+  marquee.value = {
+    text_zh: ops.marquee?.text?.['zh-HK'] || '',
+    text_en: ops.marquee?.text?.en || '',
+    link_type: ops.marquee?.link_type || 'none',
+    link_value: ops.marquee?.link_value || '',
+    status: (ops.marquee?.status ?? 1) === 1,
+  }
+  slogan.value = {
+    zh: ops.footer_slogan?.['zh-HK'] || '',
+    en: ops.footer_slogan?.en || '',
+  }
 }
 
 function reset() {
@@ -103,11 +135,52 @@ async function onFile(ev: Event) {
   input.value = ''
 }
 
+async function saveOps() {
+  await api(
+    '/api/v1/admin/home-ops',
+    {
+      method: 'PUT',
+      body: JSON.stringify({
+        marquee: {
+          text_zh: marquee.value.text_zh,
+          text_en: marquee.value.text_en,
+          link_type: marquee.value.link_type,
+          link_value: marquee.value.link_value,
+          status: marquee.value.status ? 1 : 0,
+        },
+        footer_slogan: {
+          'zh-HK': slogan.value.zh,
+          en: slogan.value.en,
+        },
+      }),
+    },
+    true,
+  )
+  message.success('字幕與標語已保存')
+  await load()
+}
+
 onMounted(load)
 </script>
 
 <template>
   <n-space vertical :size="16">
+    <n-card title="廣告字幕（一條）">
+      <n-form-item label="繁中文案"><n-input v-model:value="marquee.text_zh" /></n-form-item>
+      <n-form-item label="英文文案"><n-input v-model:value="marquee.text_en" /></n-form-item>
+      <n-form-item label="跳轉類型"><n-select v-model:value="marquee.link_type" :options="linkTypes" /></n-form-item>
+      <n-form-item v-if="marquee.link_type !== 'none'" label="跳轉目標">
+        <n-input v-model:value="marquee.link_value" placeholder="商品/分類/文章 code 或 URL" />
+      </n-form-item>
+      <n-form-item label="啟用"><n-switch v-model:value="marquee.status" /></n-form-item>
+    </n-card>
+
+    <n-card title="頁腳標語">
+      <n-form-item label="繁中"><n-input v-model:value="slogan.zh" /></n-form-item>
+      <n-form-item label="英文"><n-input v-model:value="slogan.en" /></n-form-item>
+      <n-button type="primary" @click="saveOps">保存字幕與標語</n-button>
+    </n-card>
+
     <n-card title="首頁輪播">
       <div v-for="row in items" :key="row.id" class="row">
         <div class="meta">

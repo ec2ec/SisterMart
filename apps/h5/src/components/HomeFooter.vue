@@ -1,10 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const props = defineProps<{
+  slogan?: { 'zh-HK': string; en: string } | null
+}>()
+
+const { t, locale } = useI18n()
 
 const left = ['about', 'contact', 'service', 'whatsNew', 'terms'] as const
 const right = ['privacy', 'payment', 'shipping', 'refund', 'return'] as const
+
+const sloganText = computed(() => {
+  if (props.slogan) {
+    const loc = String(locale.value || 'zh-HK')
+    return loc.startsWith('en')
+      ? props.slogan.en || props.slogan['zh-HK']
+      : props.slogan['zh-HK'] || props.slogan.en
+  }
+  return t('home.slogan')
+})
 </script>
 
 <template>
@@ -17,7 +32,7 @@ const right = ['privacy', 'payment', 'shipping', 'refund', 'return'] as const
         <a v-for="k in right" :key="k" href="#">{{ t(`footer.${k}`) }}</a>
       </div>
     </div>
-    <p class="slogan">{{ t('home.slogan') }}</p>
+    <p class="slogan">{{ sloganText }}</p>
   </footer>
 </template>
 

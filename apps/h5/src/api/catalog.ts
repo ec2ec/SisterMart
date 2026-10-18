@@ -104,6 +104,23 @@ export async function fetchHomeBanners() {
   return data.items
 }
 
+export type HomeMarquee = {
+  text: Localized
+  link_type: string
+  link_value: string
+  status: number
+  enabled: boolean
+} | null
+
+export type HomeOps = {
+  marquee: HomeMarquee
+  footer_slogan: Localized
+}
+
+export async function fetchHomeOps() {
+  return api<HomeOps>('/api/v1/home/ops')
+}
+
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
 }
