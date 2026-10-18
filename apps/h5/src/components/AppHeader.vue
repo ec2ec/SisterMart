@@ -61,7 +61,7 @@ function goMessages() {
     />
     <div class="actions">
       <van-icon name="like-o" size="1.25rem" @click="router.push({ name: 'wishlist' })" />
-      <van-badge :dot="unreadCount > 0">
+      <van-badge :content="unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''" :show-zero="false">
         <van-icon name="envelop-o" size="1.25rem" @click="goMessages" />
       </van-badge>
     </div>

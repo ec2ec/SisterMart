@@ -12,6 +12,7 @@ import { fetchSeckillProduct, postShareView } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
 import { captureRefFromQuery, storedRef } from '../composables/useReferral'
+import { refreshCartBadge } from '../composables/useCartBadge'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 
@@ -148,6 +149,7 @@ async function addToCart() {
   }
   try {
     await addCartItem(quote.value.id, 1)
+    void refreshCartBadge()
     showToast(t('pdp.added'))
   } catch (error) {
     showToast(error instanceof ApiError ? error.message : t('pdp.outOfStock'))

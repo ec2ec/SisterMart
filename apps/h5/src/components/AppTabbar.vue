@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client'
-import { initialCart } from '../mock/data'
+import { cartBadgeCount, refreshCartBadge } from '../composables/useCartBadge'
+import { isLoggedIn } from '../composables/useSession'
 
 type Slot = 'home' | 'category' | 'cart' | 'account'
 
@@ -39,7 +40,6 @@ const CACHE = 'sm_tabbar'
 const { locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const cartCount = initialCart.length
 
 function readCache(): TabbarConfig | null {
   const raw = sessionStorage.getItem(CACHE)
@@ -54,6 +54,13 @@ function readCache(): TabbarConfig | null {
 const config = ref<TabbarConfig>(readCache() ?? builtin)
 const active = computed(() => String(route.name || 'home'))
 const items = computed(() => [...config.value.items].sort((a, b) => a.sort - b.sort))
+
+/** 空車不顯示角標；有貨顯示件數（>99 顯示 99+） */
+const cartBadge = computed(() => {
+  const n = cartBadgeCount.value
+  if (n <= 0) return ''
+  return n > 99 ? '99+' : String(n)
+})
 
 function isUrl(icon: string) {
   return icon.startsWith('http') || icon.startsWith('/')
@@ -79,9 +86,23 @@ async function refresh() {
   }
 }
 
-watch(() => route.fullPath, () => {
-  if (route.meta.tab) refresh()
-}, { immediate: true })
+watch(
+  () => route.fullPath,
+  () => {
+    if (route.meta.tab) {
+      void refresh()
+      void refreshCartBadge()
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => isLoggedIn(),
+  () => {
+    void refreshCartBadge()
+  },
+)
 
 function onChange(name: string | number) {
   router.push({ name: String(name) })
@@ -98,7 +119,7 @@ function onChange(name: string | number) {
       v-for="item in items"
       :key="item.slot"
       :name="item.slot"
-      :badge="item.slot === 'cart' && cartCount ? cartCount : ''"
+      :badge="item.slot === 'cart' ? cartBadge : ''"
     >
       <span :style="{ color: active === item.slot ? item.text_color_active : item.text_color }">{{ labelOf(item) }}</span>
       <template #icon>

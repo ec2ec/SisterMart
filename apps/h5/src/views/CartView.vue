@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
+import { refreshCartBadge } from '../composables/useCartBadge'
 import { isLoggedIn } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -18,12 +19,14 @@ const loading = ref(false)
 async function load() {
   if (!isLoggedIn()) {
     items.value = []
+    void refreshCartBadge()
     return
   }
   loading.value = true
   try {
     const data = await fetchCart()
     items.value = data.items
+    void refreshCartBadge()
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       router.push({ name: 'login', query: { redirect: '/cart' } })
