@@ -13,7 +13,6 @@ function readStore(): Record<string, boolean> {
 }
 
 const liked = reactive<Record<string, boolean>>(readStore())
-let hydrated = false
 let hydrating: Promise<void> | null = null
 
 function persist() {
@@ -30,10 +29,7 @@ export function isFavorite(id: string) {
 
 /** 登錄後從服務端同步收藏碼；並處理登錄前掛起的收藏。 */
 export async function hydrateFavorites() {
-  if (!isLoggedIn()) {
-    hydrated = false
-    return
-  }
+  if (!isLoggedIn()) return
   if (hydrating) return hydrating
   hydrating = (async () => {
     try {
@@ -43,14 +39,13 @@ export async function hydrateFavorites() {
       for (const k of Object.keys(liked)) delete liked[k]
       Object.assign(liked, next)
       persist()
-      hydrated = true
       const pending = sessionStorage.getItem(PENDING)
       if (pending) {
         sessionStorage.removeItem(PENDING)
         await setFavoriteRemote(pending, true)
       }
     } catch {
-      hydrated = false
+      /* 保持本地緩存 */
     } finally {
       hydrating = null
     }
@@ -100,7 +95,6 @@ export async function requestFavorite(
   try {
     // 以樂觀目標為準寫入（add/remove），避免 hydrate 覆蓋後再 toggle 反向
     await setFavoriteRemote(id, next)
-    hydrated = true
   } catch {
     liked[id] = !next
     if (next) delete liked[id]
