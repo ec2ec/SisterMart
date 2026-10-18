@@ -92,9 +92,11 @@ class AdminAcl
             '/api/v1/admin/newsletter-subscribers' => self::PERM_CMS,
             '/api/v1/admin/home-banners' => self::PERM_CMS,
             '/api/v1/admin/home-ops' => self::PERM_CMS,
+            '/api/v1/admin/home-sections' => self::PERM_CMS,
             '/api/v1/admin/uploads/banner' => self::PERM_CMS,
             '/api/v1/admin/coupons' => self::PERM_MARKETING,
             '/api/v1/admin/points' => self::PERM_MARKETING,
+            '/api/v1/admin/points-mall' => self::PERM_MARKETING,
             '/api/v1/admin/seckill' => self::PERM_MARKETING,
             '/api/v1/admin/withdrawals' => self::PERM_SALES,
         ];

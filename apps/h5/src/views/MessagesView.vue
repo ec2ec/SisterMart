@@ -35,12 +35,25 @@ async function open(msg: Msg) {
   await markMessageRead(msg.id)
   msg.read = true
   await refreshUnread()
-  if (msg.order_id) {
-    router.push({ name: 'order-detail', params: { id: msg.order_id } })
-    return
-  }
   const body = text(msg.body)
   const looksHtml = /<[a-z][\s\S]*>/i.test(body)
+  // 訂單消息（含賣家留言）先看全文，再可進訂單
+  if (msg.order_id) {
+    try {
+      await showDialog({
+        title: text(msg.title),
+        message: looksHtml ? body : body || msg.order_no || '',
+        allowHtml: looksHtml,
+        showCancelButton: true,
+        confirmButtonText: t('m7.viewOrder'),
+        cancelButtonText: t('pages.back'),
+      })
+      router.push({ name: 'order-detail', params: { id: msg.order_id } })
+    } catch {
+      /* 取消 */
+    }
+    return
+  }
   await showDialog({
     title: text(msg.title),
     message: looksHtml ? body : body,

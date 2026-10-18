@@ -18,6 +18,9 @@ Route::get('api/health', 'Health/index');
 
 /** M2 会员资源 */
 Route::post('api/v1/verification-codes', 'api.VerificationCodes/store');
+/** M30 綁定：須排在 POST members 之前，避免被註冊路由前綴吞掉 */
+Route::post('api/v1/member-bindings/code', 'api.Members/bindCode')->middleware(MemberAuth::class);
+Route::post('api/v1/member-bindings', 'api.Members/bind')->middleware(MemberAuth::class);
 Route::post('api/v1/members', 'api.Members/store');
 Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
 Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
@@ -34,6 +37,9 @@ Route::get('api/v1/products', 'api.Products/index');
 Route::get('api/v1/articles/:code', 'api.Articles/read');
 Route::get('api/v1/home/banners', 'api.HomeBanners/index');
 Route::get('api/v1/home/ops', 'api.HomeOps/index');
+/** M29 首頁商品展示區 */
+Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products');
+Route::get('api/v1/home/sections', 'api.HomeSections/index');
 
 /** M6 公開：領券中心列表、等級檔位 */
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
@@ -161,6 +167,12 @@ Route::group('api/v1/admin', function () {
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
     Route::get('home-ops', 'admin.HomeOps/read');
     Route::put('home-ops', 'admin.HomeOps/update');
+    /** M29 展示區 */
+    Route::get('home-sections', 'admin.HomeSections/index');
+    Route::post('home-sections', 'admin.HomeSections/store');
+    Route::put('home-sections/:id', 'admin.HomeSections/update');
+    Route::delete('home-sections/:id', 'admin.HomeSections/destroy');
+    Route::put('home-sections/:id/products', 'admin.HomeSections/products');
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
@@ -170,6 +182,8 @@ Route::group('api/v1/admin', function () {
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');
     Route::post('orders/:orderId/shipments', 'admin.Shipments/ship');
+    /** M31 給買家留言 */
+    Route::post('orders/:id/buyer-messages', 'admin.Orders/buyerMessage');
     Route::get('orders/:id', 'admin.Orders/read');
     Route::get('orders', 'admin.Orders/index');
     Route::post('jobs/close-expired-orders', 'admin.Orders/closeExpired');
@@ -194,6 +208,11 @@ Route::group('api/v1/admin', function () {
     Route::put('coupons/:id', 'admin.Coupons/update');
     Route::get('points/settings', 'admin.Points/settings');
     Route::put('points/settings', 'admin.Points/updateSettings');
+    /** M32 積分商城後台 */
+    Route::get('points-mall/items', 'admin.PointsMall/index');
+    Route::post('points-mall/items', 'admin.PointsMall/store');
+    Route::put('points-mall/items/:id', 'admin.PointsMall/update');
+    Route::delete('points-mall/items/:id', 'admin.PointsMall/destroy');
 
     /** M21 秒殺後台 CRUD */
     Route::get('seckill/sessions/:id', 'admin.Seckill/read');

@@ -180,6 +180,7 @@ class MemberAuthService
             'id'         => (int) $member['id'],
             'email'      => $member['email'] ?: null,
             'phone'      => $member['phone'] ?: null,
+            'nickname'   => !empty($member['nickname']) ? (string) $member['nickname'] : null,
             'locale'     => (string) $member['locale'],
             'avatar_url' => !empty($member['avatar_url']) ? (string) $member['avatar_url'] : null,
             'promo_code' => (string) $member['promo_code'],
@@ -197,6 +198,13 @@ class MemberAuthService
         $patch = ['updated_at' => date('Y-m-d H:i:s')];
         if (array_key_exists('locale', $body) && (string) $body['locale'] !== '') {
             $patch['locale'] = $this->locale((string) $body['locale']);
+        }
+        if (array_key_exists('nickname', $body)) {
+            $nick = trim((string) ($body['nickname'] ?? ''));
+            if (mb_strlen($nick) > 64) {
+                throw new ApiException('INVALID', '暱稱過長', 422, 42201);
+            }
+            $patch['nickname'] = $nick === '' ? null : $nick;
         }
         if (array_key_exists('avatar_url', $body)) {
             $url = trim((string) ($body['avatar_url'] ?? ''));
@@ -217,6 +225,83 @@ class MemberAuthService
             throw new ApiException('INVALID', '沒有可更新的欄位', 422, 42201);
         }
         Db::name('members')->where('id', $memberId)->update($patch);
+        $member = Db::name('members')->where('id', $memberId)->find();
+
+        return $this->present($member);
+    }
+
+    /** 發送綁定驗證碼：郵箱發到目標郵箱；手機發到當前已綁郵箱（WhatsApp 暫緩）。 */
+    public function sendBindCode(int $memberId, array $body): array
+    {
+        $channel = (string) ($body['channel'] ?? '');
+        $target = trim((string) ($body['target'] ?? ''));
+        $member = Db::name('members')->where('id', $memberId)->find();
+        if (!$member) {
+            throw new ApiException('UNAUTHORIZED', '請先登錄', 401);
+        }
+        if ($channel === 'email') {
+            $email = $this->email($target);
+            $taken = Db::name('members')->where('email', $email)->where('id', '<>', $memberId)->find();
+            if ($taken) {
+                throw new ApiException('EMAIL_TAKEN', '這個郵箱已經註冊', 422, 42201);
+            }
+
+            return $this->issueEmailCode($email, 'bind_email', $memberId, false);
+        }
+        if ($channel === 'phone') {
+            $phone = $this->phone($target);
+            $taken = Db::name('members')->where('phone', $phone)->where('id', '<>', $memberId)->find();
+            if ($taken) {
+                throw new ApiException('PHONE_TAKEN', '這個手機已經註冊', 422, 42201);
+            }
+            $email = (string) ($member['email'] ?? '');
+            if ($email === '') {
+                throw new ApiException('NO_BOUND_EMAIL', '請先綁定郵箱再綁定手機', 422, 42201);
+            }
+
+            return $this->issueEmailCode($email, 'bind_phone', $memberId, true);
+        }
+        throw new ApiException('INVALID', '發送渠道不正確', 422, 42201);
+    }
+
+    public function confirmBind(int $memberId, array $body): array
+    {
+        $channel = (string) ($body['channel'] ?? '');
+        $target = trim((string) ($body['target'] ?? ''));
+        $code = (string) ($body['code'] ?? '');
+        $member = Db::name('members')->where('id', $memberId)->find();
+        if (!$member) {
+            throw new ApiException('UNAUTHORIZED', '請先登錄', 401);
+        }
+        if ($channel === 'email') {
+            $email = $this->email($target);
+            $this->consumeCode($email, 'bind_email', $code);
+            $taken = Db::name('members')->where('email', $email)->where('id', '<>', $memberId)->find();
+            if ($taken) {
+                throw new ApiException('EMAIL_TAKEN', '這個郵箱已經註冊', 422, 42201);
+            }
+            Db::name('members')->where('id', $memberId)->update([
+                'email' => $email,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } elseif ($channel === 'phone') {
+            $phone = $this->phone($target);
+            $email = (string) ($member['email'] ?? '');
+            if ($email === '') {
+                throw new ApiException('NO_BOUND_EMAIL', '請先綁定郵箱再綁定手機', 422, 42201);
+            }
+            $this->consumeCode($email, 'bind_phone', $code);
+            $taken = Db::name('members')->where('phone', $phone)->where('id', '<>', $memberId)->find();
+            if ($taken) {
+                throw new ApiException('PHONE_TAKEN', '這個手機已經註冊', 422, 42201);
+            }
+            Db::name('members')->where('id', $memberId)->update([
+                'phone' => $phone,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            throw new ApiException('INVALID', '渠道不正確', 422, 42201);
+        }
         $member = Db::name('members')->where('id', $memberId)->find();
 
         return $this->present($member);

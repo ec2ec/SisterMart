@@ -41,6 +41,7 @@ import DistOrdersView from '../views/DistOrdersView.vue'
 import DistWithdrawView from '../views/DistWithdrawView.vue'
 import DistPosterView from '../views/DistPosterView.vue'
 import DistRankingView from '../views/DistRankingView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import { captureRefFromQuery } from '../composables/useReferral'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
@@ -55,6 +56,7 @@ export const router = createRouter({
     { path: '/category', name: 'category', component: CategoryView, meta: { tab: true } },
     { path: '/cart', name: 'cart', component: CartView, meta: { tab: true } },
     { path: '/account', name: 'account', component: AccountView, meta: { tab: true } },
+    { path: '/profile', name: 'profile', component: ProfileView },
     { path: '/search', name: 'search', component: SearchView },
     { path: '/product/:id', name: 'product-detail', component: ProductDetailView, meta: { tab: true } },
     { path: '/products', name: 'product-list', component: ProductListView },

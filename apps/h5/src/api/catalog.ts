@@ -137,6 +137,30 @@ export async function fetchHomeRecommendations(tab: HomeRecTab, limit = 20) {
   }>(`/api/v1/home/recommendations?${qs}`, {}, 'member')
 }
 
+export type HomeSection = {
+  id: number
+  code: string
+  title: Localized
+  view_all_type: string
+  view_all_value: string
+  sort_order: number
+  status: number
+  items: ProductCard[]
+}
+
+export async function fetchHomeSections() {
+  const data = await api<{ items: HomeSection[] }>('/api/v1/home/sections')
+  return data.items
+}
+
+export async function fetchHomeSectionProducts(code: string) {
+  return api<{
+    section: Omit<HomeSection, 'items'>
+    items: ProductCard[]
+    sold_display_mode: string
+  }>(`/api/v1/home/sections/${encodeURIComponent(code)}/products`)
+}
+
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
 }

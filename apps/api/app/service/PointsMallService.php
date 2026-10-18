@@ -86,6 +86,100 @@ class PointsMallService
         ]);
     }
 
+    public function listAdmin(): array
+    {
+        $rows = Db::name('points_mall_items')->order('id', 'desc')->select()->toArray();
+
+        return [
+            'items' => array_map(fn ($r) => $this->presentAdmin($r), $rows),
+        ];
+    }
+
+    public function saveAdmin(array $body, ?int $id = null): array
+    {
+        $code = trim((string) ($body['code'] ?? ''));
+        $productCode = trim((string) ($body['product_code'] ?? $body['product_id'] ?? ''));
+        $skuId = (int) ($body['sku_id'] ?? 0);
+        $points = (int) ($body['points_cost'] ?? 0);
+        $stock = (int) ($body['stock'] ?? 0);
+        $nameZh = trim((string) ($body['name']['zh-HK'] ?? $body['name_zh'] ?? ''));
+        $nameEn = trim((string) ($body['name']['en'] ?? $body['name_en'] ?? ''));
+        if ($productCode === '' || $skuId <= 0) {
+            throw new ApiException('INVALID', '請指定商品與 SKU', 422, 42201);
+        }
+        if ($points <= 0) {
+            throw new ApiException('INVALID', '積分價須大於 0', 422, 42201);
+        }
+        if ($nameZh === '' && $nameEn === '') {
+            throw new ApiException('INVALID', '請填寫名稱', 422, 42201);
+        }
+        $product = Db::name('products')->where('code', $productCode)->find();
+        if (!$product) {
+            throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
+        }
+        $sku = Db::name('skus')->where('id', $skuId)->where('product_id', (int) $product['id'])->find();
+        if (!$sku) {
+            throw new ApiException('INVALID', 'SKU 不屬於該商品', 422, 42201);
+        }
+        $now = date('Y-m-d H:i:s');
+        if ($id) {
+            $row = Db::name('points_mall_items')->where('id', $id)->find();
+            if (!$row) {
+                throw new ApiException('NOT_FOUND', '積分商品不存在', 404, 40482);
+            }
+            if ($code === '') {
+                $code = (string) $row['code'];
+            }
+        } else {
+            if ($code === '') {
+                $code = 'pm_' . bin2hex(random_bytes(3));
+            }
+        }
+        $dup = Db::name('points_mall_items')->where('code', $code);
+        if ($id) {
+            $dup->where('id', '<>', $id);
+        }
+        if ($dup->find()) {
+            throw new ApiException('INVALID', 'code 已存在', 422, 42201);
+        }
+        $data = [
+            'code' => $code,
+            'product_id' => (int) $product['id'],
+            'product_code' => (string) $product['code'],
+            'sku_id' => $skuId,
+            'points_cost' => $points,
+            'stock' => max(0, $stock),
+            'status' => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
+            'image_url' => trim((string) ($body['image_url'] ?? $body['image'] ?? '')) ?: null,
+            'name_zh' => $nameZh !== '' ? $nameZh : $nameEn,
+            'name_en' => $nameEn !== '' ? $nameEn : $nameZh,
+            'detail_zh' => trim((string) ($body['detail']['zh-HK'] ?? $body['detail_zh'] ?? '')) ?: null,
+            'detail_en' => trim((string) ($body['detail']['en'] ?? $body['detail_en'] ?? '')) ?: null,
+            'updated_at' => $now,
+        ];
+        if ($id) {
+            Db::name('points_mall_items')->where('id', $id)->update($data);
+        } else {
+            $data['sold'] = 0;
+            $data['created_at'] = $now;
+            $id = (int) Db::name('points_mall_items')->insertGetId($data);
+        }
+        $row = Db::name('points_mall_items')->where('id', $id)->find();
+
+        return $this->presentAdmin($row);
+    }
+
+    public function deleteAdmin(int $id): array
+    {
+        $row = Db::name('points_mall_items')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '積分商品不存在', 404, 40482);
+        }
+        Db::name('points_mall_items')->where('id', $id)->delete();
+
+        return ['id' => $id, 'deleted' => true];
+    }
+
     private function findItem(string $id): array
     {
         if (str_starts_with($id, 'pm-') && is_numeric(substr($id, 3))) {
@@ -115,5 +209,18 @@ class PointsMallService
             'stock' => (int) $row['stock'],
             'sold' => (int) ($row['sold'] ?? 0),
         ];
+    }
+
+    private function presentAdmin(array $row): array
+    {
+        return array_merge($this->present($row), [
+            'status' => (int) $row['status'],
+            'detail' => [
+                'zh-HK' => (string) ($row['detail_zh'] ?: ''),
+                'en' => (string) ($row['detail_en'] ?: ''),
+            ],
+            'created_at' => $row['created_at'] ?? null,
+            'updated_at' => $row['updated_at'] ?? null,
+        ]);
     }
 }

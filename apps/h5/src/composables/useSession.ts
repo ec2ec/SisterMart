@@ -5,6 +5,7 @@ export type Member = {
   id: number
   email: string | null
   phone: string | null
+  nickname?: string | null
   locale: 'zh-HK' | 'en'
   avatar_url?: string | null
   promo_code: string

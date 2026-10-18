@@ -104,6 +104,55 @@ class MessageService
     }
 
     /**
+     * M31：管理員在訂單上給買家留言 → 訂單消息 Tab。
+     *
+     * @return array{id: int, order_id: int, order_no: string}
+     */
+    public function adminLeaveOrderNote(int $orderId, array $body): array
+    {
+        $order = Db::name('orders')->where('id', $orderId)->find();
+        if (!$order) {
+            throw new ApiException('NOT_FOUND', '訂單不存在', 404, 40401);
+        }
+        $memberId = (int) ($order['member_id'] ?? 0);
+        if ($memberId <= 0) {
+            throw new ApiException('INVALID', '訂單無買家', 422, 42201);
+        }
+        $noteZh = trim((string) ($body['body_zh'] ?? $body['body'] ?? ''));
+        $noteEn = trim((string) ($body['body_en'] ?? $noteZh));
+        if ($noteZh === '') {
+            throw new ApiException('INVALID', '請填寫留言', 422, 42201);
+        }
+        $orderNo = (string) ($order['order_no'] ?? '');
+        $token = bin2hex(random_bytes(6));
+        $ok = $this->insertOnce([
+            'member_id' => $memberId,
+            'type' => 'order',
+            'title_zh' => '賣家留言 · 訂單 ' . $orderNo,
+            'title_en' => 'Seller note · Order ' . $orderNo,
+            'body_zh' => $noteZh,
+            'body_en' => $noteEn !== '' ? $noteEn : $noteZh,
+            'ref_type' => 'order',
+            'ref_id' => $orderId,
+            'event_key' => 'order:' . $orderId . ':admin_note:' . $token,
+            'batch_id' => null,
+        ]);
+        if (!$ok) {
+            throw new ApiException('SERVER', '留言寫入失敗', 500, 50001);
+        }
+        $msgId = (int) Db::name('member_messages')
+            ->where('event_key', 'order:' . $orderId . ':admin_note:' . $token)
+            ->value('id');
+
+        return [
+            'id' => $msgId,
+            'order_id' => $orderId,
+            'order_no' => $orderNo,
+            'member_id' => $memberId,
+        ];
+    }
+
+    /**
      * 售後審核結果寫入訂單消息 Tab。
      */
     public function notifyAftersaleEvent(array $aftersale, string $event): void

@@ -34,4 +34,22 @@ class Members extends ApiController
             return (new MemberAuthService())->updateProfile((int) $member['id'], $body);
         });
     }
+
+    public function bindCode(): Response
+    {
+        return $this->run(function () {
+            $member = app('sistermart.member');
+
+            return (new MemberAuthService())->sendBindCode((int) $member['id'], $this->payload());
+        }, 201);
+    }
+
+    public function bind(): Response
+    {
+        return $this->run(function () {
+            $member = app('sistermart.member');
+
+            return (new MemberAuthService())->confirmBind((int) $member['id'], $this->payload());
+        });
+    }
 }

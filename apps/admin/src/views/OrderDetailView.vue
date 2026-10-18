@@ -12,6 +12,8 @@ const shipment = ref<any>(null)
 const company = ref('順豐速運')
 const tracking = ref('')
 const nodeNote = ref('')
+const buyerNote = ref('')
+const noteBusy = ref(false)
 
 async function load() {
   order.value = await api(`/api/v1/admin/orders/${route.params.id}`, {}, true)
@@ -41,6 +43,26 @@ async function addNode() {
   nodeNote.value = ''
   message.success('已追加節點')
   await load()
+}
+
+async function sendBuyerNote() {
+  const body = buyerNote.value.trim()
+  if (!body) {
+    message.warning('請填寫留言')
+    return
+  }
+  noteBusy.value = true
+  try {
+    await api(
+      `/api/v1/admin/orders/${route.params.id}/buyer-messages`,
+      { method: 'POST', body: JSON.stringify({ body_zh: body, body_en: body }) },
+      true,
+    )
+    buyerNote.value = ''
+    message.success('已發送給買家')
+  } finally {
+    noteBusy.value = false
+  }
 }
 </script>
 
@@ -89,6 +111,20 @@ async function addNode() {
         <n-input v-model:value="nodeNote" placeholder="追加軌跡說明" style="width: 16rem" />
         <n-button @click="addNode">追加節點</n-button>
       </n-space>
+    </n-card>
+
+    <n-card size="small" title="給買家留言" style="margin-top: 1rem">
+      <p style="color: #888; font-size: 0.8125rem; margin: 0 0 0.5rem">
+        留言會出現在買家的「訂單消息」中，並標明本訂單號。
+      </p>
+      <n-input
+        v-model:value="buyerNote"
+        type="textarea"
+        placeholder="留言內容"
+        :rows="3"
+        style="margin-bottom: 0.5rem"
+      />
+      <n-button type="primary" :loading="noteBusy" @click="sendBuyerNote">發送留言</n-button>
     </n-card>
 
     <n-button style="margin-top: 1rem" @click="router.push('/sales/orders')">返回列表</n-button>

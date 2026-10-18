@@ -18,7 +18,13 @@ const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
 
 const loggedIn = computed(() => isLoggedIn() && memberState.value)
-const displayName = computed(() => memberState.value?.email || memberState.value?.phone || u.name)
+const displayName = computed(
+  () =>
+    memberState.value?.nickname ||
+    memberState.value?.email ||
+    memberState.value?.phone ||
+    u.name,
+)
 const displaySub = computed(() =>
   memberState.value ? t('account.promo', { code: memberState.value.promo_code }) : u.phone,
 )
@@ -88,6 +94,7 @@ const orderItems = [
 ] as const
 
 const services = [
+  { key: 'profile', icon: 'user-o', route: 'profile' },
   { key: 'address', icon: 'location-o', route: 'addresses' },
   { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
   { key: 'footprint', icon: 'browsing-history-o', route: 'footprint' },
@@ -109,6 +116,7 @@ const spentDisplay = computed(() => {
 })
 
 const routePaths: Record<string, string> = {
+  profile: '/profile',
   addresses: '/addresses',
   wishlist: '/wishlist',
   footprint: '/footprint',

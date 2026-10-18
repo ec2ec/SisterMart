@@ -11,9 +11,11 @@ import {
   fetchHomeBanners,
   fetchHomeOps,
   fetchHomeRecommendations,
+  fetchHomeSections,
   type HomeBanner,
   type HomeMarquee,
   type HomeRecTab,
+  type HomeSection,
   type ProductCard as Card,
 } from '../api/catalog'
 import { api, ApiError } from '../api/client'
@@ -48,6 +50,7 @@ const banners = ref<HomeBanner[]>(
 const marquee = ref<HomeMarquee>(null)
 const footerSlogan = ref<{ 'zh-HK': string; en: string } | null>(null)
 const opsLoaded = ref(false)
+const sections = ref<HomeSection[]>([])
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
 const { products, categories, refresh } = useHomeCatalog()
 
@@ -98,6 +101,23 @@ async function loadFeed() {
   }
 }
 
+function onSectionViewAll(sec: HomeSection) {
+  if (sec.view_all_type === 'category' && sec.view_all_value) {
+    goList(sec.view_all_value)
+    return
+  }
+  if (sec.view_all_type === 'url' && sec.view_all_value) {
+    if (sec.view_all_value.startsWith('http')) {
+      window.open(sec.view_all_value, '_blank', 'noopener')
+    } else {
+      router.push(sec.view_all_value)
+    }
+    return
+  }
+  if (sec.view_all_type === 'none') return
+  router.push({ name: 'product-list', query: { section: sec.code } })
+}
+
 onMounted(() => {
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
@@ -115,6 +135,11 @@ onMounted(() => {
     .catch(() => {
       opsLoaded.value = true
     })
+  void fetchHomeSections()
+    .then((items) => {
+      sections.value = items
+    })
+    .catch(() => undefined)
 })
 
 watch(feedTab, () => {
@@ -250,6 +275,23 @@ const tabLabel = (tab: HomeRecTab) => {
         <span v-else class="ph" />
         <span>{{ text(c.name) }}</span>
       </button>
+    </section>
+
+    <section v-for="sec in sections" :key="sec.id" class="showcase">
+      <div class="section-title">
+        <h2>{{ text(sec.title) }}</h2>
+        <button
+          v-if="sec.view_all_type !== 'none'"
+          type="button"
+          class="more"
+          @click="onSectionViewAll(sec)"
+        >
+          {{ t('home.viewAll') }}
+        </button>
+      </div>
+      <div class="grid">
+        <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
+      </div>
     </section>
 
     <section class="feed">
