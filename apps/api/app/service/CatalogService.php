@@ -231,13 +231,25 @@ class CatalogService
             }
         }
 
-        Db::transaction(function () use ($body, &$id, $code, $categoryId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now) {
+        $commissionType = $body['commission_type'] ?? null;
+        $commissionType = $commissionType === '' || $commissionType === null ? null : (string) $commissionType;
+        if ($commissionType !== null && !in_array($commissionType, ['percent', 'fixed'], true)) {
+            throw new ApiException('INVALID', '佣金類型須為 percent / fixed / 空', 422, 42201);
+        }
+        $commissionValue = $commissionType === null ? null : round((float) ($body['commission_value'] ?? 0), 2);
+        if ($commissionType !== null && $commissionValue !== null && $commissionValue < 0) {
+            throw new ApiException('INVALID', '佣金值不可為負', 422, 42201);
+        }
+
+        Db::transaction(function () use ($body, &$id, $code, $categoryId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue) {
             $data = [
                 'code'        => $code,
                 'category_id' => $categoryId,
                 'status'      => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
                 'sold_count'  => max(0, (int) ($body['sold_count'] ?? 0)),
                 'cover_url'   => $cover ?: null,
+                'commission_type' => $commissionType,
+                'commission_value' => $commissionValue,
                 'updated_at'  => $now,
             ];
             if ($id) {
@@ -464,6 +476,10 @@ class CatalogService
             'category_id' => (int) $row['category_id'],
             'badges'   => array_values($badges),
             'status'   => (int) $row['status'],
+            'commission_type' => $row['commission_type'] ?? null,
+            'commission_value' => isset($row['commission_value']) && $row['commission_value'] !== null
+                ? (float) $row['commission_value']
+                : null,
         ];
     }
 

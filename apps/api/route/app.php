@@ -163,9 +163,12 @@ Route::group('api/v1/admin', function () {
     Route::post('members/:id/asset-adjustments', 'admin.Members/adjust');
     Route::get('members', 'admin.Members/index');
 
-    /** M13 提現審核 */
+    /** M13 提現審核 + M20 分銷後台只讀 */
     Route::get('withdrawals', 'admin.Withdrawals/index');
     Route::post('withdrawals/:id/review', 'admin.Withdrawals/review');
+    Route::get('distribution/ranking', 'admin.Distribution/ranking');
+    Route::get('distribution/commissions', 'admin.Distribution/commissions');
+    Route::get('distribution/products', 'admin.Distribution/products');
 
     /** M15 系統消息 */
     Route::get('messages', 'admin.Messages/index');

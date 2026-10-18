@@ -54,6 +54,8 @@ const form = ref({
   skuBPrice: 0,
   skuBCompare: 0,
   skuBStock: 0,
+  commission_type: null as string | null,
+  commission_value: 0,
 })
 
 function flattenCats(nodes: any[], depth = 0): Cat[] {
@@ -117,6 +119,8 @@ onMounted(async () => {
       form.value.skuBCompare = s1.compare_at
       form.value.skuBStock = s1.stock
     }
+    form.value.commission_type = p.commission_type || null
+    form.value.commission_value = Number(p.commission_value ?? 0)
   }
 })
 
@@ -139,6 +143,8 @@ async function save() {
     badges: form.value.badges,
     service_tag_ids: form.value.service_tag_ids,
     media,
+    commission_type: form.value.commission_type,
+    commission_value: form.value.commission_type ? form.value.commission_value : null,
   }
   if (complex.value && original.value) {
     body.spec_groups = (original.value.spec_groups || []).map((group: any) => ({
@@ -223,6 +229,23 @@ async function save() {
     </n-form-item>
     <n-form-item label="媒體 URL（每行一張圖）">
       <n-input v-model:value="form.mediaText" type="textarea" :rows="4" />
+    </n-form-item>
+    <n-form-item label="佣金類型">
+      <n-select
+        v-model:value="form.commission_type"
+        clearable
+        placeholder="不計佣金"
+        :options="[
+          { label: '百分比 percent', value: 'percent' },
+          { label: '固定金額 fixed', value: 'fixed' },
+        ]"
+      />
+    </n-form-item>
+    <n-form-item v-if="form.commission_type" label="佣金值">
+      <n-input-number v-model:value="form.commission_value" :min="0" :precision="2" />
+      <span style="margin-left: 0.5rem; color: #888">
+        {{ form.commission_type === 'percent' ? '%（按商品實付）' : 'HK$（按件）' }}
+      </span>
     </n-form-item>
     <p v-if="complex" style="color:#6d675f">此商品為多規格（如顏色×尺寸）。保存時會保留原有 SKU 結構，僅更新名稱、媒體、角標等。</p>
     <n-card v-if="!complex" size="small" title="規格（兩檔編輯器）" style="margin-bottom: 1rem">

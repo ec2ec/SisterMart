@@ -50,7 +50,7 @@ export const adminMenus: AdminMenu[] = [
       { label: '優惠券', key: '/marketing/coupons', path: '/marketing/coupons' },
       { label: '積分', key: '/marketing/points', path: '/marketing/points' },
       { label: '秒殺', key: '/marketing/seckill', path: '/marketing/seckill', milestone: '二期' },
-      { label: '分銷', key: '/marketing/distribution', path: '/marketing/distribution', milestone: '二期' },
+      { label: '分銷', key: '/marketing/distribution', path: '/marketing/distribution' },
     ],
   },
   {
