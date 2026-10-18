@@ -57,7 +57,7 @@ async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListIte
   for (const entry of list) {
     const file = entry.file
     if (!file) continue
-    if (file.size > 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       showToast(t('review.imageSize'))
       fileList.value = fileList.value.filter((f) => f !== entry)
       continue

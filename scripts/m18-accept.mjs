@@ -161,9 +161,13 @@ async function main() {
   })
   check(
     'A4',
-    '評價圖上傳成功',
-    ok(up.json) && String(up.json.data.url).includes('/storage/review/'),
-    up.json.data?.url,
+    '評價圖上傳成功並轉 JPG',
+    ok(up.json) &&
+      String(up.json.data.url).includes('/storage/review/') &&
+      String(up.json.data.url).endsWith('.jpg') &&
+      Number(up.json.data.bytes || 0) > 0 &&
+      Number(up.json.data.bytes) <= 512000,
+    JSON.stringify({ url: up.json.data?.url, bytes: up.json.data?.bytes, wh: [up.json.data?.width, up.json.data?.height] }),
   )
 
   const created = await api('POST', '/api/v1/reviews', {
@@ -262,15 +266,45 @@ async function main() {
     `count=${(aftersaleList.json.data.items || []).length}`,
   )
 
-  const big = Buffer.alloc(1024 * 1024 + 10, 1)
+  const tooBig = Buffer.alloc(5 * 1024 * 1024 + 100, 1)
   const fdBig = new FormData()
-  fdBig.append('file', new Blob([big], { type: 'image/jpeg' }), 'big.jpg')
+  fdBig.append('file', new Blob([tooBig], { type: 'image/jpeg' }), 'big.jpg')
   const upBig = await api('POST', '/api/v1/uploads/review-image', { token, formData: fdBig })
   check(
     'A13',
-    '超過 1MB 評價圖被拒',
+    '超過 5MB 評價圖被拒',
     !ok(upBig.json) && (upBig.status === 422 || upBig.json.code !== 0),
     upBig.json.message || upBig.json.error?.name,
+  )
+
+  // 大圖 PNG → 壓縮為 ≤1200 邊長、≤500KB 的 JPG
+  const largePngPath = path.join(OUT, 'large.png')
+  execSync(
+    `php -r '$i=imagecreatetruecolor(2400,1800);$c=imagecolorallocate($i,40,120,200);imagefilledrectangle($i,0,0,2399,1799,$c);imagepng($i,"${largePngPath}");'`,
+    { stdio: 'inherit' },
+  )
+  const largeBuf = fs.readFileSync(largePngPath)
+  const fdLarge = new FormData()
+  fdLarge.append('file', new Blob([largeBuf], { type: 'image/png' }), 'large.png')
+  const upLarge = await api('POST', '/api/v1/uploads/review-image', {
+    token,
+    formData: fdLarge,
+    expectHttp: 201,
+  })
+  check(
+    'A14',
+    '大圖壓縮為 ≤1200 邊長且 ≤500KB JPG',
+    ok(upLarge.json) &&
+      String(upLarge.json.data.url).endsWith('.jpg') &&
+      Number(upLarge.json.data.width) <= 1200 &&
+      Number(upLarge.json.data.height) <= 1200 &&
+      Number(upLarge.json.data.bytes) <= 512000,
+    JSON.stringify({
+      url: upLarge.json.data?.url,
+      w: upLarge.json.data?.width,
+      h: upLarge.json.data?.height,
+      bytes: upLarge.json.data?.bytes,
+    }),
   )
 
   const failed = results.filter((r) => !r.pass)

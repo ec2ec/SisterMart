@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showImagePreview, showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
@@ -115,6 +115,15 @@ watch(selectedImage, (src) => {
   const index = gallery.value.indexOf(src)
   if (index >= 0) slide.value = index
 })
+
+function previewReviewImages(images: string[], start: number) {
+  if (!images.length) return
+  showImagePreview({
+    images,
+    startPosition: start,
+    closeable: true,
+  })
+}
 
 function choose(groupId: string, optionId: string) {
   selected.value = { ...selected.value, [groupId]: optionId }
@@ -256,7 +265,15 @@ async function share() {
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
-            <img v-for="(img, i) in r.images" :key="i" :src="img" alt="" />
+            <button
+              v-for="(img, i) in r.images"
+              :key="i"
+              type="button"
+              class="rev-thumb"
+              @click="previewReviewImages(r.images || [], i)"
+            >
+              <img :src="img" alt="" />
+            </button>
           </div>
           <p v-if="r.follow" class="follow">
             <em>{{ t('pdp.follow') }}</em>
@@ -454,12 +471,21 @@ h2 {
   margin-top: 0.5rem;
   flex-wrap: wrap;
 }
-.rev-imgs img {
-  width: 4rem;
-  height: 4rem;
-  object-fit: cover;
+.rev-thumb {
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  border: 0;
   border-radius: 0.375rem;
+  overflow: hidden;
   background: #f6f6f6;
+  cursor: pointer;
+}
+.rev-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .follow {
   margin: 0.35rem 0 0;
