@@ -22,7 +22,9 @@ export class ApiError extends Error {
 
 export async function api<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
   const headers = new Headers(init.headers)
-  if (init.body) headers.set('Content-Type', 'application/json')
+  if (init.body && !(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
   if (auth) {
     const token = localStorage.getItem('sm_admin_token')
     if (token) headers.set('Authorization', `Bearer ${token}`)
