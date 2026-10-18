@@ -4,7 +4,6 @@ import ArticlesView from '../views/ArticlesView.vue'
 import CategoriesView from '../views/CategoriesView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
-import PlaceholderView from '../views/PlaceholderView.vue'
 import ProductEditView from '../views/ProductEditView.vue'
 import ProductsView from '../views/ProductsView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
@@ -22,16 +21,6 @@ import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
 import ReviewsView from '../views/ReviewsView.vue'
 import HomeBannersView from '../views/HomeBannersView.vue'
-import { findMenu } from '../menus'
-
-const placeholder = (path: string) => {
-  const item = findMenu(path)
-  return {
-    path,
-    component: PlaceholderView,
-    meta: { title: item?.label || path, milestone: item?.milestone || '後續' },
-  }
-}
 
 export const router = createRouter({
   // Hash until shared-host nginx try_files covers /admin/* (releases/vps-spa).

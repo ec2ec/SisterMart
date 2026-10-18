@@ -233,10 +233,10 @@ onMounted(async () => {
         <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
         <n-form-item label="開始">
-          <n-input v-model:value="form.starts_at" type="datetime-local" />
+          <input v-model="form.starts_at" type="datetime-local" class="dt" />
         </n-form-item>
         <n-form-item label="結束">
-          <n-input v-model:value="form.ends_at" type="datetime-local" />
+          <input v-model="form.ends_at" type="datetime-local" class="dt" />
         </n-form-item>
       </n-form>
 
@@ -329,5 +329,12 @@ td {
 .muted {
   font-size: 0.75rem;
   color: #6d675f;
+}
+.dt {
+  min-width: 14rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 0.25rem;
+  font: inherit;
 }
 </style>
