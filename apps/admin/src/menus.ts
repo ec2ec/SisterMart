@@ -41,7 +41,8 @@ export const adminMenus: AdminMenu[] = [
     children: [
       { label: '文章', key: '/cms/articles', path: '/cms/articles' },
       { label: '首頁運營', key: '/cms/home', path: '/cms/home' },
-      { label: '消息', key: '/cms/messages', path: '/cms/messages' },
+      { label: '系統消息', key: '/cms/messages', path: '/cms/messages' },
+      { label: '訂閱名單', key: '/cms/newsletter', path: '/cms/newsletter' },
     ],
   },
   {

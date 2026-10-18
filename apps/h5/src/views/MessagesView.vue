@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { showDialog } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchMessages, markMessageRead, type Msg } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
@@ -14,6 +15,10 @@ const router = useRouter()
 const tab = ref<'order' | 'system'>('order')
 const order = ref<Msg[]>([])
 const system = ref<Msg[]>([])
+
+function plainPreview(html: string) {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 onMounted(async () => {
   if (!isLoggedIn()) {
@@ -32,7 +37,16 @@ async function open(msg: Msg) {
   await refreshUnread()
   if (msg.order_id) {
     router.push({ name: 'order-detail', params: { id: msg.order_id } })
+    return
   }
+  const body = text(msg.body)
+  const looksHtml = /<[a-z][\s\S]*>/i.test(body)
+  await showDialog({
+    title: text(msg.title),
+    message: looksHtml ? body : body,
+    allowHtml: looksHtml,
+    confirmButtonText: t('pages.back'),
+  })
 }
 </script>
 
@@ -48,7 +62,7 @@ async function open(msg: Msg) {
         v-for="m in tab === 'order' ? order : system"
         :key="m.id"
         :title="text(m.title)"
-        :label="text(m.body)"
+        :label="plainPreview(text(m.body))"
         :value="m.created_at.slice(5, 16)"
         :class="{ unread: !m.read }"
         is-link

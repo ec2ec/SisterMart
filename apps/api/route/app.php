@@ -26,6 +26,8 @@ Route::get('api/v1/tabbar', 'api.Tabbar/index');
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
 Route::get('api/v1/categories', 'api.Categories/index');
 Route::get('api/v1/products/:id', 'api.Products/read');
+/** M27 訂閱（可匿名；帶 Bearer 則綁定會員） */
+Route::post('api/v1/newsletter/subscribe', 'api.Newsletter/subscribe');
 Route::get('api/v1/products', 'api.Products/index');
 Route::get('api/v1/articles/:code', 'api.Articles/read');
 Route::get('api/v1/home/banners', 'api.HomeBanners/index');
@@ -92,6 +94,9 @@ Route::group('api/v1', function () {
     Route::delete('browse-history/:id', 'api.BrowseHistory/destroy');
     Route::delete('browse-history', 'api.BrowseHistory/clear');
     Route::get('browse-history', 'api.BrowseHistory/index');
+
+    /** M27 訂閱狀態（本人） */
+    Route::get('newsletter/me', 'api.Newsletter/me');
 
     /** M14 簽到 + M13 分銷 + M15 站內消息 */
     Route::get('checkins/calendar', 'api.Checkins/calendar');
@@ -198,7 +203,12 @@ Route::group('api/v1/admin', function () {
     Route::get('distribution/commissions', 'admin.Distribution/commissions');
     Route::get('distribution/products', 'admin.Distribution/products');
 
-    /** M15 系統消息 */
+    /** M15/M27 系統消息 */
     Route::get('messages', 'admin.Messages/index');
     Route::post('messages', 'admin.Messages/store');
+
+    /** M27 訂閱名單 */
+    Route::get('newsletter-subscribers', 'admin.Newsletter/index');
+    Route::post('newsletter-subscribers/:id/status', 'admin.Newsletter/status');
+    Route::delete('newsletter-subscribers/:id', 'admin.Newsletter/delete');
 })->middleware([AdminAuth::class, AdminAclGate::class]);

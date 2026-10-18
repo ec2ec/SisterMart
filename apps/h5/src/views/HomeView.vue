@@ -13,8 +13,10 @@ import {
   type HomeBanner,
   type HomeMarquee,
 } from '../api/catalog'
+import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { useLocaleText } from '../composables/useLocaleText'
+import { isLoggedIn, memberState } from '../composables/useSession'
 
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
@@ -22,7 +24,10 @@ const router = useRouter()
 
 const feedTab = ref(0)
 const email = ref('')
+const subscribed = ref(false)
+const subscribeBusy = ref(false)
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
+const showSubscribe = computed(() => !(isLoggedIn() && subscribed.value))
 const banners = ref<HomeBanner[]>(
   mockBanners.map((b, i) => ({
     id: i + 1,
@@ -48,8 +53,30 @@ const promoText = computed(() => {
   return t('home.promo')
 })
 
+async function loadSubscribeStatus() {
+  if (!isLoggedIn()) {
+    subscribed.value = false
+    return
+  }
+  if (memberState.value?.email) {
+    email.value = memberState.value.email
+  }
+  try {
+    const data = await api<{ subscribed: boolean; email?: string | null }>(
+      '/api/v1/newsletter/me',
+      {},
+      'member',
+    )
+    subscribed.value = Boolean(data.subscribed)
+    if (data.email) email.value = data.email
+  } catch {
+    subscribed.value = false
+  }
+}
+
 onMounted(() => {
   void refresh()
+  void loadSubscribeStatus()
   void fetchHomeBanners()
     .then((items) => {
       if (items.length) banners.value = items
@@ -112,8 +139,31 @@ function onCatImgError(event: Event) {
   img.style.display = 'none'
 }
 
-function onSubscribe() {
-  showToast(email.value ? t('home.subscribe') : t('home.emailPlaceholder'))
+async function onSubscribe() {
+  const target = email.value.trim()
+  if (!target) {
+    showToast(t('home.emailPlaceholder'))
+    return
+  }
+  subscribeBusy.value = true
+  try {
+    await api(
+      '/api/v1/newsletter/subscribe',
+      { method: 'POST', body: JSON.stringify({ email: target }) },
+      isLoggedIn() ? 'member' : 'none',
+    )
+    showToast(t('home.subscribeOk'))
+    if (isLoggedIn()) {
+      subscribed.value = true
+    } else {
+      email.value = ''
+    }
+  } catch (e) {
+    const msg = e instanceof ApiError && e.message ? e.message : t('home.subscribeFail')
+    showToast(msg)
+  } finally {
+    subscribeBusy.value = false
+  }
 }
 
 function goList(categoryId?: string) {
@@ -185,11 +235,11 @@ const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).p
       </div>
     </section>
 
-    <section class="subscribe">
+    <section v-if="showSubscribe" class="subscribe">
       <h2>{{ t('home.subscribeTitle') }}</h2>
       <div class="row">
         <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
-        <button type="button" @click="onSubscribe">{{ t('home.subscribe') }}</button>
+        <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
       </div>
     </section>
     <HomeFooter :slogan="footerSlogan" />

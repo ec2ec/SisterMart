@@ -138,9 +138,9 @@ class MessageService
     }
 
     /**
-     * 後台發系統消息：可指定會員或廣播全體。
+     * 後台發系統消息：全體 / 多選會員；可選同步發郵件；正文可為 HTML。
      *
-     * @return array{mock: bool, batch_id: string, sent: int}
+     * @return array{mock: bool, batch_id: string, sent: int, email_queued: int, scope: string}
      */
     public function adminCreate(array $body): array
     {
@@ -148,31 +148,28 @@ class MessageService
         $titleEn = trim((string) ($body['title_en'] ?? $titleZh));
         $bodyZh = trim((string) ($body['body_zh'] ?? ''));
         $bodyEn = trim((string) ($body['body_en'] ?? $bodyZh));
-        if ($titleZh === '' || $bodyZh === '') {
+        if ($titleZh === '' || $this->plainText($bodyZh) === '') {
             throw new ApiException('INVALID', '請填寫標題與內容', 422, 42201);
         }
-        $memberId = isset($body['member_id']) ? (int) $body['member_id'] : 0;
+        $titleEn = $titleEn !== '' ? $titleEn : $titleZh;
+        $bodyEn = $bodyEn !== '' ? $bodyEn : $bodyZh;
+
+        $targets = $this->resolveTargets($body);
+        $scope = array_key_exists('member_ids', $body) || (!empty($body['member_id']) && (int) $body['member_id'] > 0)
+            ? 'selected'
+            : 'all';
+        $sendEmail = !empty($body['send_email']) && $body['send_email'] !== '0' && $body['send_email'] !== false;
         $batchId = bin2hex(random_bytes(8));
         $now = date('Y-m-d H:i:s');
-        $targets = [];
-        if ($memberId > 0) {
-            $exists = Db::name('members')->where('id', $memberId)->value('id');
-            if (!$exists) {
-                throw new ApiException('NOT_FOUND', '會員不存在', 404, 40410);
-            }
-            $targets = [$memberId];
-        } else {
-            $targets = Db::name('members')->column('id');
-        }
         $sent = 0;
         foreach ($targets as $mid) {
             $ok = $this->insertOnce([
                 'member_id' => (int) $mid,
                 'type' => 'system',
                 'title_zh' => $titleZh,
-                'title_en' => $titleEn !== '' ? $titleEn : $titleZh,
+                'title_en' => $titleEn,
                 'body_zh' => $bodyZh,
-                'body_en' => $bodyEn !== '' ? $bodyEn : $bodyZh,
+                'body_en' => $bodyEn,
                 'ref_type' => 'broadcast',
                 'ref_id' => null,
                 'event_key' => 'sys:' . $batchId . ':' . (int) $mid,
@@ -184,13 +181,91 @@ class MessageService
             }
         }
 
-        return ['mock' => false, 'batch_id' => $batchId, 'sent' => $sent];
+        $emailQueued = 0;
+        if ($sendEmail && $targets) {
+            $mailer = new MailService();
+            $members = Db::name('members')->whereIn('id', $targets)->select()->toArray();
+            foreach ($members as $m) {
+                $to = strtolower(trim((string) ($m['email'] ?? '')));
+                if ($to === '') {
+                    continue;
+                }
+                $result = $mailer->enqueue(
+                    $to,
+                    $titleZh,
+                    $this->emailHtmlWrapper($titleZh, $bodyZh),
+                    'system_batch',
+                    $batchId,
+                );
+                if (($result['status'] ?? '') !== 'skipped') {
+                    $emailQueued++;
+                }
+            }
+        }
+
+        Db::name('system_message_batches')->insert([
+            'batch_id' => $batchId,
+            'title_zh' => $titleZh,
+            'title_en' => $titleEn,
+            'body_zh' => $bodyZh,
+            'body_en' => $bodyEn,
+            'scope' => $scope,
+            'member_ids_json' => $scope === 'selected'
+                ? json_encode(array_values(array_map('intval', $targets)), JSON_UNESCAPED_UNICODE)
+                : null,
+            'send_email' => $sendEmail ? 1 : 0,
+            'recipient_count' => $sent,
+            'email_queued' => $emailQueued,
+            'created_at' => $now,
+        ]);
+
+        return [
+            'mock' => false,
+            'batch_id' => $batchId,
+            'sent' => $sent,
+            'email_queued' => $emailQueued,
+            'scope' => $scope,
+            'send_email' => $sendEmail,
+        ];
     }
 
-    /** 後台：系統消息批次列表（每批一條摘要） */
+    /** 後台：系統消息批次列表（優先讀批次元表） */
     public function adminList(int $limit = 50): array
     {
         $limit = max(1, min(200, $limit));
+        $batches = Db::name('system_message_batches')
+            ->order('created_at', 'desc')
+            ->limit($limit)
+            ->select()
+            ->toArray();
+        if ($batches) {
+            return [
+                'mock' => false,
+                'items' => array_map(static function ($r) {
+                    $ids = [];
+                    if (!empty($r['member_ids_json'])) {
+                        $decoded = json_decode((string) $r['member_ids_json'], true);
+                        if (is_array($decoded)) {
+                            $ids = array_values(array_map('intval', $decoded));
+                        }
+                    }
+
+                    return [
+                        'batch_id' => $r['batch_id'],
+                        'title' => ['zh-HK' => $r['title_zh'], 'en' => $r['title_en']],
+                        'body' => ['zh-HK' => $r['body_zh'], 'en' => $r['body_en']],
+                        'scope' => $r['scope'],
+                        'member_ids' => $ids,
+                        'send_email' => (int) $r['send_email'] === 1,
+                        'email_queued' => (int) $r['email_queued'],
+                        'recipient_count' => (int) $r['recipient_count'],
+                        'created_at' => $r['created_at'],
+                    ];
+                }, $batches),
+            ];
+        }
+
+        // 兼容舊數據（僅 member_messages 聚合）
         $rows = Db::query(
             'SELECT batch_id,
                     ANY_VALUE(title_zh) AS title_zh,
@@ -214,11 +289,66 @@ class MessageService
                     'batch_id' => $r['batch_id'],
                     'title' => ['zh-HK' => $r['title_zh'], 'en' => $r['title_en']],
                     'body' => ['zh-HK' => $r['body_zh'], 'en' => $r['body_en']],
+                    'scope' => 'all',
+                    'member_ids' => [],
+                    'send_email' => false,
+                    'email_queued' => 0,
                     'recipient_count' => (int) $r['recipient_count'],
                     'created_at' => $r['created_at'],
                 ];
             }, $rows ?: []),
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $body
+     * @return list<int>
+     */
+    private function resolveTargets(array $body): array
+    {
+        $ids = [];
+        $selectedMode = array_key_exists('member_ids', $body) || (isset($body['member_id']) && (int) $body['member_id'] > 0);
+        if (array_key_exists('member_ids', $body) && is_array($body['member_ids'])) {
+            foreach ($body['member_ids'] as $id) {
+                $n = (int) $id;
+                if ($n > 0) {
+                    $ids[] = $n;
+                }
+            }
+        } elseif (isset($body['member_id']) && (int) $body['member_id'] > 0) {
+            $ids[] = (int) $body['member_id'];
+        }
+        $ids = array_values(array_unique($ids));
+        if ($selectedMode) {
+            if (!$ids) {
+                throw new ApiException('INVALID', '請選擇至少一位會員', 422, 42201);
+            }
+            $found = Db::name('members')->whereIn('id', $ids)->column('id');
+            $found = array_map('intval', $found ?: []);
+            if (!$found) {
+                throw new ApiException('NOT_FOUND', '會員不存在', 404, 40410);
+            }
+
+            return $found;
+        }
+
+        return array_map('intval', Db::name('members')->column('id') ?: []);
+    }
+
+    private function plainText(string $html): string
+    {
+        return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private function emailHtmlWrapper(string $title, string $bodyHtml): string
+    {
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return '<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.6">'
+            . '<h2>' . $safeTitle . '</h2>'
+            . $bodyHtml
+            . '<p style="color:#999;font-size:12px;margin-top:2rem">SisterMart</p>'
+            . '</body></html>';
     }
 
     /** @return list<array<string, mixed>> */

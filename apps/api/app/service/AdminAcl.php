@@ -89,6 +89,7 @@ class AdminAcl
             '/api/v1/admin/member-levels' => self::PERM_CUSTOMERS,
             '/api/v1/admin/articles' => self::PERM_CMS,
             '/api/v1/admin/messages' => self::PERM_CMS,
+            '/api/v1/admin/newsletter-subscribers' => self::PERM_CMS,
             '/api/v1/admin/home-banners' => self::PERM_CMS,
             '/api/v1/admin/home-ops' => self::PERM_CMS,
             '/api/v1/admin/uploads/banner' => self::PERM_CMS,
