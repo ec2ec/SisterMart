@@ -136,6 +136,7 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
     Route::get('settings/shop', 'admin.ShopSettings/shop');
     Route::put('settings/shop', 'admin.ShopSettings/updateShop');
+    Route::post('uploads/image', 'admin.Uploads/image');
 
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');

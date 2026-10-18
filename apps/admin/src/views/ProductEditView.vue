@@ -14,7 +14,7 @@ import {
   NSwitch,
   useMessage,
 } from 'naive-ui'
-import { api } from '../api'
+import { api, uploadImage } from '../api'
 
 type Cat = { id: number; label: string }
 
@@ -194,6 +194,33 @@ async function save() {
   message.success('商品已保存')
   router.push('/catalog/products')
 }
+
+const uploading = ref(false)
+const mediaFile = ref<HTMLInputElement | null>(null)
+function pickMedia() {
+  mediaFile.value?.click()
+}
+async function onMediaFiles(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  uploading.value = true
+  try {
+    const urls: string[] = []
+    for (const file of files) {
+      const data = await uploadImage(file, { preset: 'product' })
+      urls.push(data.url)
+    }
+    const prev = form.value.mediaText.trim()
+    form.value.mediaText = [prev, ...urls].filter(Boolean).join('\n')
+    message.success(`已上傳 ${urls.length} 張（已壓縮）`)
+  } catch (e: any) {
+    message.error(e?.message || '上傳失敗')
+  } finally {
+    uploading.value = false
+  }
+}
 </script>
 
 <template>
@@ -221,8 +248,23 @@ async function save() {
         <n-checkbox v-for="tag in tags" :key="tag.value" :value="tag.value" :label="tag.label" />
       </n-checkbox-group>
     </n-form-item>
-    <n-form-item label="媒體 URL（每行一張圖）">
-      <n-input v-model:value="form.mediaText" type="textarea" :rows="4" />
+    <n-form-item label="媒體（上傳或填 URL，每行一張）">
+      <n-space vertical style="width: 100%">
+        <n-space>
+          <n-button :loading="uploading" @click="pickMedia">
+            上傳圖片（product 預設：最長邊 1600）
+          </n-button>
+          <input
+            ref="mediaFile"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            hidden
+            @change="onMediaFiles"
+          />
+        </n-space>
+        <n-input v-model:value="form.mediaText" type="textarea" :rows="4" placeholder="也可直接貼外部 URL" />
+      </n-space>
     </n-form-item>
     <p v-if="complex" style="color:#6d675f">此商品為多規格（如顏色×尺寸）。保存時會保留原有 SKU 結構，僅更新名稱、媒體、角標等。</p>
     <n-card v-if="!complex" size="small" title="規格（兩檔編輯器）" style="margin-bottom: 1rem">

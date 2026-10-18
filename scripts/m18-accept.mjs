@@ -307,6 +307,51 @@ async function main() {
     }),
   )
 
+  // 通用壓縮：後台不同 preset / 自訂 max_edge（沿用上文 adminToken）
+  const fdBanner = new FormData()
+  fdBanner.append('file', new Blob([largeBuf], { type: 'image/png' }), 'large.png')
+  fdBanner.append('preset', 'banner')
+  const upBanner = await api('POST', '/api/v1/admin/uploads/image', {
+    token: adminToken,
+    formData: fdBanner,
+    expectHttp: 201,
+  })
+  check(
+    'A15',
+    '後台 banner preset：最長邊 ≤1920 JPG',
+    ok(upBanner.json) &&
+      upBanner.json.data.preset === 'banner' &&
+      String(upBanner.json.data.url).endsWith('.jpg') &&
+      Number(upBanner.json.data.width) <= 1920 &&
+      Number(upBanner.json.data.height) <= 1920 &&
+      Number(upBanner.json.data.bytes) <= 819200,
+    JSON.stringify(upBanner.json.data),
+  )
+
+  const fdCustom = new FormData()
+  fdCustom.append('file', new Blob([largeBuf], { type: 'image/png' }), 'large.png')
+  fdCustom.append('preset', 'admin')
+  fdCustom.append('max_edge', '800')
+  fdCustom.append('max_bytes', '200000')
+  fdCustom.append('quality', '80')
+  const upCustom = await api('POST', '/api/v1/admin/uploads/image', {
+    token: adminToken,
+    formData: fdCustom,
+    expectHttp: 201,
+  })
+  check(
+    'A16',
+    '後台自訂 max_edge=800 保持比例壓縮',
+    ok(upCustom.json) &&
+      Number(upCustom.json.data.width) <= 800 &&
+      Number(upCustom.json.data.height) <= 800 &&
+      Number(upCustom.json.data.bytes) <= 200000 &&
+      Math.abs(
+        Number(upCustom.json.data.width) / Number(upCustom.json.data.height) - 2400 / 1800,
+      ) < 0.02,
+    JSON.stringify(upCustom.json.data),
+  )
+
   const failed = results.filter((r) => !r.pass)
   fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ results, failed: failed.length }, null, 2))
   console.log(`\n${results.length - failed.length}/${results.length} passed`)
