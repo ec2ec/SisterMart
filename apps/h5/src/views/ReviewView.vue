@@ -95,6 +95,10 @@ async function submit() {
       const images = fileList.value
         .map((f) => (f as UploaderFileListItem & { remoteUrl?: string }).remoteUrl || '')
         .filter(Boolean)
+      if (!item.value.id) {
+        showToast(t('review.itemMissing'))
+        return
+      }
       await createReview({
         order_item_id: item.value.id,
         stars: stars.value,
