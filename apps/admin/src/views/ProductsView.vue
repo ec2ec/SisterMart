@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NSpace, NTag } from 'naive-ui'
+import { NButton, NCard, NPagination, NSpace, NTag } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Row = {
   db_id: number
@@ -16,6 +17,7 @@ type Row = {
 
 const router = useRouter()
 const rows = ref<Row[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 
 onMounted(async () => {
   const data = await api<{ items: Row[] }>('/api/v1/admin/products', {}, true)
@@ -41,7 +43,7 @@ onMounted(async () => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.code">
+        <tr v-for="row in paged" :key="row.code">
           <td>{{ row.code }}</td>
           <td>{{ row.name['zh-HK'] }}</td>
           <td>{{ row.price }}</td>
@@ -56,6 +58,15 @@ onMounted(async () => {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 </template>
 
@@ -71,5 +82,10 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

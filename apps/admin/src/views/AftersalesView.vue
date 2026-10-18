@@ -11,8 +11,10 @@ import {
   NSpace,
   NTag,
   useMessage,
+  NPagination,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Row = {
   id: number
@@ -39,6 +41,7 @@ type Row = {
 const router = useRouter()
 const message = useMessage()
 const rows = ref<Row[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const status = ref('pending_review')
 const hasEvidence = ref<string>('')
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
@@ -207,7 +210,7 @@ async function forceBalance() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ row.aftersale_no }}</td>
           <td>
             <n-button text type="primary" @click="router.push(`/sales/orders/${row.order_id}`)">
@@ -238,6 +241,15 @@ async function forceBalance() {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 
   <n-drawer v-model:show="show" :width="520" placement="right">
@@ -373,5 +385,11 @@ td {
   object-fit: contain;
   border-radius: 0.35rem;
   background: #f5f3ef;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

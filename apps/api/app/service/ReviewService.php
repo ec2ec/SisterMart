@@ -183,8 +183,13 @@ class ReviewService
         $itemIds = array_map(fn ($i) => (int) $i['id'], $orderItems);
         $reviews = [];
         if ($itemIds) {
-            foreach (Db::name('product_reviews')->whereIn('order_item_id', $itemIds)->select()->toArray() as $r) {
-                $reviews[(int) $r['order_item_id']] = $r;
+            try {
+                foreach (Db::name('product_reviews')->whereIn('order_item_id', $itemIds)->select()->toArray() as $r) {
+                    $reviews[(int) $r['order_item_id']] = $r;
+                }
+            } catch (\Throwable) {
+                // 生產庫尚未建 product_reviews 時，詳情仍可打開
+                $reviews = [];
             }
         }
         $out = [];

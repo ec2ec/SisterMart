@@ -11,8 +11,10 @@ import {
   NSpace,
   NTag,
   useMessage,
+  NPagination,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Sku = { id: number; code: string; price: number; compare_at: number; stock: number; image?: string }
 type ProductOpt = { label: string; value: string; skus: Sku[] }
@@ -40,6 +42,7 @@ type Session = {
 
 const message = useMessage()
 const rows = ref<Session[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const products = ref<ProductOpt[]>([])
 const editingId = ref<number | null>(null)
 const saving = ref(false)
@@ -287,7 +290,7 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.id">
+          <tr v-for="row in paged" :key="row.id">
             <td>{{ row.code }}</td>
             <td>{{ row.name['zh-HK'] }}</td>
             <td>
@@ -299,6 +302,15 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
     </n-card>
   </n-space>
 </template>
@@ -336,5 +348,11 @@ td {
   border: 1px solid #d0d0d0;
   border-radius: 0.25rem;
   font: inherit;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

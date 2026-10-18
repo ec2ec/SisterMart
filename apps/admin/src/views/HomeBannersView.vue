@@ -10,8 +10,10 @@ import {
   NSpace,
   NSwitch,
   useMessage,
+  NPagination,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Banner = {
   id: number
@@ -46,6 +48,7 @@ type Section = {
 
 const message = useMessage()
 const items = ref<Banner[]>([])
+const { page, pageSize, total, paged } = useClientPager(items, 30)
 const sections = ref<Section[]>([])
 const secForm = ref({
   id: 0,
@@ -319,7 +322,7 @@ onMounted(load)
     </n-card>
 
     <n-card title="首頁輪播">
-      <div v-for="row in items" :key="row.id" class="row">
+      <div v-for="row in paged" :key="row.id" class="row">
         <div class="meta">
           <img v-if="row.image_url" :src="row.image_url" alt="" />
           <div>
@@ -332,6 +335,16 @@ onMounted(load)
           <n-button size="tiny" type="error" secondary @click="remove(row.id)">刪除</n-button>
         </n-space>
       </div>
+    
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
     </n-card>
     <n-card :title="form.id ? `編輯 #${form.id}` : '新增輪播'">
       <n-form-item label="圖片 URL">
@@ -382,5 +395,11 @@ onMounted(load)
   margin: 0.15rem 0 0;
   color: #888;
   font-size: 0.8125rem;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

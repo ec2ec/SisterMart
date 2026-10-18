@@ -9,8 +9,10 @@ import {
   NSpace,
   NSwitch,
   useMessage,
+  NPagination,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Item = {
   points_mall_item_id: number
@@ -28,6 +30,7 @@ type Item = {
 
 const message = useMessage()
 const items = ref<Item[]>([])
+const { page, pageSize, total, paged } = useClientPager(items, 30)
 const form = ref({
   id: 0,
   code: '',
@@ -120,7 +123,7 @@ onMounted(load)
 <template>
   <n-space vertical :size="16">
     <n-card title="積分商城商品">
-      <div v-for="row in items" :key="row.points_mall_item_id" class="row">
+      <div v-for="row in paged" :key="row.points_mall_item_id" class="row">
         <div>
           <strong>{{ row.name['zh-HK'] }}</strong>
           <p>
@@ -133,6 +136,16 @@ onMounted(load)
           <n-button size="tiny" type="error" secondary @click="remove(row.points_mall_item_id)">刪除</n-button>
         </n-space>
       </div>
+    
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
     </n-card>
     <n-card :title="form.id ? `編輯 #${form.id}` : '新增積分商品'">
       <n-form-item label="code"><n-input v-model:value="form.code" placeholder="可空自動生成" /></n-form-item>
@@ -167,5 +180,11 @@ onMounted(load)
   margin: 0.15rem 0 0;
   color: #888;
   font-size: 0.8125rem;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

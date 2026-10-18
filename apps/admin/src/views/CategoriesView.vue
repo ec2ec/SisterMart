@@ -86,8 +86,8 @@ onMounted(load)
 </script>
 
 <template>
-  <n-space vertical :size="16">
-    <n-card title="分類列表">
+  <div class="split">
+    <n-card title="分類列表" class="pane">
       <n-space vertical>
         <div v-for="row in flat" :key="row.id" class="row">
           <span>{{ row.label }}</span>
@@ -95,7 +95,7 @@ onMounted(load)
         </div>
       </n-space>
     </n-card>
-    <n-card :title="form.id ? `編輯 #${form.id}` : '新增分類'">
+    <n-card :title="form.id ? `編輯 #${form.id}` : '新增分類'" class="pane">
       <n-form-item label="代碼"><n-input v-model:value="form.code" /></n-form-item>
       <n-form-item label="上級">
         <n-select v-model:value="form.parent_id" :options="parentOptions" clearable />
@@ -110,15 +110,29 @@ onMounted(load)
         <n-button @click="reset">清空</n-button>
       </n-space>
     </n-card>
-  </n-space>
+  </div>
 </template>
 
 <style scoped>
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+.pane {
+  min-width: 0;
+}
 .row {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   padding: 0.35rem 0;
   border-bottom: 1px solid #eee;
+}
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

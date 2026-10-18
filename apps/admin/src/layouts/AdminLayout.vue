@@ -9,7 +9,13 @@ const route = useRoute()
 const router = useRouter()
 const admin = ref<AdminUser | null>(readAdmin())
 
-const active = computed(() => (route.path === '/' ? '/' : route.path))
+/** 詳情頁仍高亮列表菜單 */
+const active = computed(() => {
+  const p = route.path
+  if (p.startsWith('/sales/orders/')) return '/sales/orders'
+  if (p.startsWith('/catalog/products/') && p !== '/catalog/products') return '/catalog/products'
+  return p === '/' ? '/' : p
+})
 const title = computed(() => String(route.meta.title || 'SisterMart'))
 
 function readAdmin(): AdminUser | null {
@@ -39,12 +45,21 @@ async function logout() {
 </script>
 
 <template>
-  <n-layout has-sider class="frame">
-    <n-layout-sider inverted bordered :native-scrollbar="false" :width="220">
+  <n-layout has-sider class="frame" position="absolute">
+    <n-layout-sider
+      inverted
+      bordered
+      collapse-mode="width"
+      :native-scrollbar="false"
+      :width="220"
+      content-style="display:flex;flex-direction:column;height:100%"
+    >
       <div class="brand">Sister<span>Mart</span></div>
-      <n-menu :value="active" :options="menuOptions(admin?.role)" inverted @update:value="go" />
+      <div class="sider-menu">
+        <n-menu :value="active" :options="menuOptions(admin?.role)" inverted @update:value="go" />
+      </div>
     </n-layout-sider>
-    <n-layout>
+    <n-layout class="main">
       <n-layout-header bordered class="header">
         <strong>{{ title }}</strong>
         <div class="who">
@@ -52,7 +67,11 @@ async function logout() {
           <n-button quaternary size="small" @click="logout">退出</n-button>
         </div>
       </n-layout-header>
-      <n-layout-content class="content">
+      <n-layout-content
+        class="content"
+        :native-scrollbar="false"
+        content-style="padding: 1.25rem; min-height: 100%"
+      >
         <router-view />
       </n-layout-content>
     </n-layout>
@@ -61,10 +80,15 @@ async function logout() {
 
 <style scoped>
 .frame {
-  min-height: 100vh;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 100vh;
 }
 
 .brand {
+  flex: 0 0 auto;
   padding: 1.25rem 1.25rem 0.75rem;
   color: #fff;
   font-size: 1.25rem;
@@ -76,7 +100,20 @@ async function logout() {
   color: #c45c4a;
 }
 
+.sider-menu {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+.main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .header {
+  flex: 0 0 auto;
   height: 3.5rem;
   display: flex;
   align-items: center;
@@ -92,8 +129,8 @@ async function logout() {
 }
 
 .content {
-  padding: 1.25rem;
+  flex: 1 1 auto;
+  min-height: 0;
   background: #f6f3ee;
-  min-height: calc(100vh - 3.5rem);
 }
 </style>

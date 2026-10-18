@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NFormItem, NInput, NInputNumber, NSpace, NSwitch, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NSpace,
+  NSwitch,
+  useMessage,
+  NPagination,
+} from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Article = {
   id: number
@@ -15,6 +26,7 @@ type Article = {
 
 const message = useMessage()
 const items = ref<Article[]>([])
+const { page, pageSize, total, paged } = useClientPager(items, 30)
 const form = ref({
   id: 0,
   code: '',
@@ -70,10 +82,20 @@ onMounted(load)
 <template>
   <n-space vertical :size="16">
     <n-card title="文章列表">
-      <div v-for="row in items" :key="row.id" class="row">
+      <div v-for="row in paged" :key="row.id" class="row">
         <span>{{ row.code }} · {{ row.title['zh-HK'] }}</span>
         <n-button size="tiny" @click="edit(row)">編輯</n-button>
       </div>
+    
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
     </n-card>
     <n-card :title="form.id ? `編輯 #${form.id}` : '新增文章'">
       <n-form-item label="代碼"><n-input v-model:value="form.code" /></n-form-item>
@@ -95,5 +117,11 @@ onMounted(load)
   justify-content: space-between;
   padding: 0.4rem 0;
   border-bottom: 1px solid #eee;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

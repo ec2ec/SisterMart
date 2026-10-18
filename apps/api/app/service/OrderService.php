@@ -829,8 +829,10 @@ class OrderService
             'aftersale_touched' => (int) ($row['aftersale_touched'] ?? 0) === 1,
             'needs_review' => $needsReview,
             'points_awarded' => (int) ($row['points_awarded'] ?? 0),
-            'seckill_item_id' => $row['seckill_item_id'] !== null ? (int) $row['seckill_item_id'] : null,
-            'points_mall_item_id' => isset($row['points_mall_item_id']) && $row['points_mall_item_id'] !== null
+            'seckill_item_id' => array_key_exists('seckill_item_id', $row) && $row['seckill_item_id'] !== null
+                ? (int) $row['seckill_item_id']
+                : null,
+            'points_mall_item_id' => array_key_exists('points_mall_item_id', $row) && $row['points_mall_item_id'] !== null
                 ? (int) $row['points_mall_item_id']
                 : null,
             'expire_at' => $row['expire_at'],

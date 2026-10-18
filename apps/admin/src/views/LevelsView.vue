@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NInputNumber, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NInputNumber,
+  useMessage,
+  NPagination,
+} from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Level = {
   id: number
@@ -13,6 +20,7 @@ type Level = {
 
 const message = useMessage()
 const rows = ref<Level[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 
 async function load() {
   const data = await api<{ items: Level[] }>('/api/v1/admin/member-levels', {}, true)
@@ -49,7 +57,7 @@ async function save(row: Level) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ '★'.repeat(row.stars) }}</td>
           <td>{{ row.name['zh-HK'] }}</td>
           <td><n-input-number v-model:value="row.min_spent" :min="0" :step="1" /></td>
@@ -60,6 +68,15 @@ async function save(row: Level) {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 </template>
 
@@ -75,5 +92,11 @@ td {
   text-align: left;
   font-size: 0.875rem;
   vertical-align: middle;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

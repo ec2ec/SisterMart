@@ -10,11 +10,13 @@ import {
   NRadio,
   NRadioGroup,
   NSelect,
+  NPagination,
   NSpace,
   NTag,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 import RichEditor from '../components/RichEditor.vue'
 
 type Batch = {
@@ -33,6 +35,7 @@ type MemberOpt = { label: string; value: number }
 
 const message = useMessage()
 const rows = ref<Batch[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const memberOptions = ref<MemberOpt[]>([])
 const memberLoading = ref(false)
 const form = reactive({
@@ -173,7 +176,7 @@ async function create() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.batch_id">
+        <tr v-for="row in paged" :key="row.batch_id">
           <td>{{ row.created_at }}</td>
           <td>{{ row.title['zh-HK'] }}</td>
           <td class="snip">{{ stripPreview(row.body['zh-HK'] || '') }}</td>
@@ -190,6 +193,15 @@ async function create() {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 </template>
 
@@ -211,5 +223,10 @@ async function create() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

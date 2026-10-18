@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { NButton, NCard, NForm, NFormItem, NInput, NInputNumber, NSelect, NSpace, NTag, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NForm,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NPagination,
+  NSelect,
+  NSpace,
+  NTag,
+  useMessage,
+} from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Coupon = {
   id: number
@@ -20,6 +33,7 @@ type Coupon = {
 
 const message = useMessage()
 const rows = ref<Coupon[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const form = reactive({
   code: '',
   name_zh: '',
@@ -73,48 +87,65 @@ async function toggle(row: Coupon) {
 </script>
 
 <template>
-  <n-card title="優惠券">
-    <n-form label-placement="left" label-width="6rem" style="max-width: 36rem; margin-bottom: 1.5rem">
-      <n-form-item label="券碼"><n-input v-model:value="form.code" placeholder="如 SAVE15" /></n-form-item>
-      <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
-      <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
-      <n-form-item label="類型"><n-select v-model:value="form.type" :options="types" /></n-form-item>
-      <n-form-item label="門檻"><n-input-number v-model:value="form.threshold" :min="0" /></n-form-item>
-      <n-form-item label="面額/折扣"><n-input-number v-model:value="form.amount" :min="0" :step="0.1" /></n-form-item>
-      <n-form-item label="庫存"><n-input-number v-model:value="form.stock" :min="0" /></n-form-item>
-      <n-form-item label="每人限領"><n-input-number v-model:value="form.per_member_limit" :min="1" /></n-form-item>
-      <n-button type="primary" @click="create">新建券</n-button>
-    </n-form>
+  <n-space vertical :size="16">
+    <n-card title="優惠券列表">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>券碼</th>
+            <th>名稱</th>
+            <th>類型</th>
+            <th>門檻/額度</th>
+            <th>領取</th>
+            <th>狀態</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in paged" :key="row.id">
+            <td>{{ row.code }}</td>
+            <td>{{ row.name['zh-HK'] }}</td>
+            <td>{{ row.type }}</td>
+            <td>≥{{ row.threshold }} / {{ row.amount }}</td>
+            <td>{{ row.claimed }}/{{ row.stock }}（限{{ row.per_member_limit }}）</td>
+            <td>
+              <n-tag size="small" :type="row.status === 1 ? 'success' : 'default'">
+                {{ row.status === 1 ? '啟用' : '停用' }}
+              </n-tag>
+            </td>
+            <td>
+              <n-space>
+                <n-button size="tiny" @click="toggle(row)">{{ row.status === 1 ? '停用' : '啟用' }}</n-button>
+              </n-space>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pager">
+        <n-pagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :item-count="total"
+          :page-sizes="[30, 50, 100]"
+          show-size-picker
+        />
+      </div>
+    </n-card>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>券碼</th>
-          <th>名稱</th>
-          <th>類型</th>
-          <th>門檻/額度</th>
-          <th>領取</th>
-          <th>狀態</th>
-          <th />
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in rows" :key="row.id">
-          <td>{{ row.code }}</td>
-          <td>{{ row.name['zh-HK'] }}</td>
-          <td>{{ row.type }}</td>
-          <td>≥{{ row.threshold }} / {{ row.amount }}</td>
-          <td>{{ row.claimed }}/{{ row.stock }}（限{{ row.per_member_limit }}）</td>
-          <td><n-tag size="small" :type="row.status === 1 ? 'success' : 'default'">{{ row.status === 1 ? '啟用' : '停用' }}</n-tag></td>
-          <td>
-            <n-space>
-              <n-button size="tiny" @click="toggle(row)">{{ row.status === 1 ? '停用' : '啟用' }}</n-button>
-            </n-space>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </n-card>
+    <n-card title="新建券">
+      <n-form label-placement="left" label-width="6rem" style="max-width: 36rem">
+        <n-form-item label="券碼"><n-input v-model:value="form.code" placeholder="如 SAVE15" /></n-form-item>
+        <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
+        <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
+        <n-form-item label="類型"><n-select v-model:value="form.type" :options="types" /></n-form-item>
+        <n-form-item label="門檻"><n-input-number v-model:value="form.threshold" :min="0" /></n-form-item>
+        <n-form-item label="面額/折扣"><n-input-number v-model:value="form.amount" :min="0" :step="0.1" /></n-form-item>
+        <n-form-item label="庫存"><n-input-number v-model:value="form.stock" :min="0" /></n-form-item>
+        <n-form-item label="每人限領"><n-input-number v-model:value="form.per_member_limit" :min="1" /></n-form-item>
+        <n-button type="primary" @click="create">新建券</n-button>
+      </n-form>
+    </n-card>
+  </n-space>
 </template>
 
 <style scoped>
@@ -128,5 +159,10 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { NButton, NCard, NForm, NFormItem, NInput, NInputNumber, NModal, NSpace, NTag, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NForm,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NModal,
+  NPagination,
+  NSpace,
+  NTag,
+  useMessage,
+} from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Member = {
   id: number
@@ -18,6 +31,7 @@ type Member = {
 const message = useMessage()
 const q = ref('')
 const rows = ref<Member[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const show = ref(false)
 const current = ref<Member | null>(null)
 const adjust = reactive({ points_delta: 0, balance_delta: 0, reason: '' })
@@ -70,7 +84,7 @@ async function submitAdjust() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ row.id }}</td>
           <td>{{ row.email || row.phone }}<br /><small>{{ row.promo_code }}</small></td>
           <td>
@@ -83,6 +97,15 @@ async function submitAdjust() {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
 
     <n-modal v-model:show="show" preset="card" title="調整會員資產" style="width: 28rem">
       <p v-if="current">會員 #{{ current.id }} · {{ current.email || current.phone }}</p>
@@ -107,5 +130,10 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

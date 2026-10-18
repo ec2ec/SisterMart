@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NInput, NSelect, NSpace, NTag, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NInput,
+  NSelect,
+  NSpace,
+  NTag,
+  useMessage,
+  NPagination,
+} from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Row = {
   id: number
@@ -14,6 +24,7 @@ type Row = {
 
 const message = useMessage()
 const rows = ref<Row[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const statusFilter = ref<string>('')
 const q = ref('')
 const busy = ref(false)
@@ -85,7 +96,7 @@ async function remove(row: Row) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ row.email }}</td>
           <td>{{ row.member_id ?? '—' }}</td>
           <td>
@@ -119,6 +130,15 @@ async function remove(row: Row) {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
     <p v-if="!rows.length" class="empty">暫無訂閱</p>
   </n-card>
 </template>
@@ -138,5 +158,10 @@ td {
 .empty {
   color: #999;
   padding: 1rem 0;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

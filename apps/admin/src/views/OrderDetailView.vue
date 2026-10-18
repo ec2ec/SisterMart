@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NButton, NCard, NDescriptions, NDescriptionsItem, NInput, NSpace, useMessage } from 'naive-ui'
 import { api } from '../api'
+import { orderStatusLabel } from '../utils/orderStatus'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,14 +15,26 @@ const tracking = ref('')
 const nodeNote = ref('')
 const buyerNote = ref('')
 const noteBusy = ref(false)
+const loadError = ref('')
+const loading = ref(true)
 
 async function load() {
-  order.value = await api(`/api/v1/admin/orders/${route.params.id}`, {}, true)
+  loading.value = true
+  loadError.value = ''
+  try {
+    order.value = await api(`/api/v1/admin/orders/${route.params.id}`, {}, true)
+  } catch (e: any) {
+    order.value = null
+    loadError.value = e?.message || '訂單詳情加載失敗'
+    loading.value = false
+    return
+  }
   try {
     shipment.value = await api(`/api/v1/admin/orders/${route.params.id}/shipment`, {}, true)
   } catch {
     shipment.value = null
   }
+  loading.value = false
 }
 
 onMounted(load)
@@ -64,12 +77,29 @@ async function sendBuyerNote() {
     noteBusy.value = false
   }
 }
+
+function itemName(item: any) {
+  const n = item?.name
+  if (n && typeof n === 'object') return n['zh-HK'] || n.en || ''
+  return String(n || '')
+}
+
+function itemSpec(item: any) {
+  const s = item?.spec
+  if (s && typeof s === 'object') return s['zh-HK'] || s.en || ''
+  return String(s || '')
+}
 </script>
 
 <template>
-  <n-card v-if="order" :title="`訂單 ${order.order_no}`">
+  <n-card v-if="loading" title="訂單詳情">加載中…</n-card>
+  <n-card v-else-if="loadError" title="訂單詳情">
+    <p style="color: #d03050">{{ loadError }}</p>
+    <n-button style="margin-top: 1rem" @click="router.push('/sales/orders')">返回列表</n-button>
+  </n-card>
+  <n-card v-else-if="order" :title="`訂單 ${order.order_no}`">
     <n-descriptions label-placement="left" :column="2">
-      <n-descriptions-item label="狀態">{{ order.status }}</n-descriptions-item>
+      <n-descriptions-item label="狀態">{{ orderStatusLabel(order.status) }}</n-descriptions-item>
       <n-descriptions-item label="實付">{{ order.pay_amount }}</n-descriptions-item>
       <n-descriptions-item label="商品金額">{{ order.goods_amount }}</n-descriptions-item>
       <n-descriptions-item label="運費">{{ order.shipping_amount }}</n-descriptions-item>
@@ -86,10 +116,10 @@ async function sendBuyerNote() {
     </n-descriptions>
 
     <h3 style="margin-top: 1rem">明細</h3>
-    <div v-for="(item, idx) in order.items" :key="idx" class="line">
+    <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
       <img :src="item.image" alt="" />
       <div>
-        <div>{{ item.name['zh-HK'] }} / {{ item.spec['zh-HK'] }}</div>
+        <div>{{ itemName(item) }} / {{ itemSpec(item) }}</div>
         <div>HK$ {{ item.unit_price }} × {{ item.qty }}（已退 {{ item.refunded_qty || 0 }}）= {{ item.line_amount }}</div>
       </div>
     </div>

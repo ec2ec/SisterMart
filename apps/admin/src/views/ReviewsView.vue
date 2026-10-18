@@ -10,8 +10,10 @@ import {
   NSpace,
   NTag,
   useMessage,
+  NPagination,
 } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
 
 type Row = {
   id: number
@@ -32,6 +34,7 @@ type Row = {
 
 const message = useMessage()
 const rows = ref<Row[]>([])
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const hiddenFilter = ref<string>('')
 const modFilter = ref<string>('pending')
 const productCode = ref('')
@@ -181,7 +184,7 @@ async function saveReply() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ row.product_code }}</td>
           <td>{{ row.author }}</td>
           <td>{{ row.stars }}★</td>
@@ -201,6 +204,15 @@ async function saveReply() {
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 
   <n-drawer v-model:show="show" :width="480" placement="right">
@@ -301,5 +313,11 @@ td {
   height: 4rem;
   object-fit: cover;
   border-radius: 0.25rem;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

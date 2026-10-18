@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NSelect, NSpace, NTag } from 'naive-ui'
+import { NButton, NCard, NPagination, NSelect, NSpace, NTag } from 'naive-ui'
 import { api } from '../api'
+import { useClientPager } from '../composables/useClientPager'
+import { ORDER_STATUS_FILTER_OPTIONS, orderStatusLabel } from '../utils/orderStatus'
 
 type Row = {
   id: number
@@ -17,17 +19,20 @@ type Row = {
 const router = useRouter()
 const rows = ref<Row[]>([])
 const status = ref('')
-const options = [
-  { label: '全部', value: '' },
-  { label: '待付款', value: 'pending_payment' },
-  { label: '待發貨', value: 'pending_shipment' },
-  { label: '已取消', value: 'cancelled' },
-]
+const options = ORDER_STATUS_FILTER_OPTIONS
+const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const loadError = ref('')
 
 async function load() {
-  const qs = status.value ? `?status=${status.value}` : ''
-  const data = await api<{ items: Row[] }>(`/api/v1/admin/orders${qs}`, {}, true)
-  rows.value = data.items
+  loadError.value = ''
+  try {
+    const qs = status.value ? `?status=${status.value}` : ''
+    const data = await api<{ items: Row[] }>(`/api/v1/admin/orders${qs}`, {}, true)
+    rows.value = data.items
+  } catch (e: any) {
+    loadError.value = e?.message || '加載失敗'
+    rows.value = []
+  }
 }
 
 onMounted(load)
@@ -39,6 +44,7 @@ onMounted(load)
       <n-select v-model:value="status" :options="options" style="width: 10rem" @update:value="load" />
       <n-button @click="load">刷新</n-button>
     </n-space>
+    <p v-if="loadError" style="color: #d03050">{{ loadError }}</p>
     <table class="table">
       <thead>
         <tr>
@@ -52,17 +58,26 @@ onMounted(load)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr v-for="row in paged" :key="row.id">
           <td>{{ row.order_no }}</td>
           <td>#{{ row.member_id }}</td>
           <td>{{ row.title }}</td>
           <td>{{ row.pay_amount }}</td>
-          <td><n-tag size="small">{{ row.status }}</n-tag></td>
+          <td><n-tag size="small">{{ orderStatusLabel(row.status) }}</n-tag></td>
           <td>{{ row.created_at }}</td>
           <td><n-button size="tiny" @click="router.push(`/sales/orders/${row.id}`)">詳情</n-button></td>
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <n-pagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :item-count="total"
+        :page-sizes="[30, 50, 100]"
+        show-size-picker
+      />
+    </div>
   </n-card>
 </template>
 
@@ -77,5 +92,10 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>
