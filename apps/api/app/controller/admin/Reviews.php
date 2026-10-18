@@ -10,6 +10,7 @@ use think\Response;
 
 /**
  * M23 評價後台：列表 / 隱藏 / 商家回覆。
+ * M25：審核通過 / 拒絕。
  */
 class Reviews extends ApiController
 {
@@ -17,6 +18,7 @@ class Reviews extends ApiController
     {
         return $this->run(fn () => (new ReviewService())->adminList([
             'is_hidden' => $this->request->get('is_hidden'),
+            'moderation_status' => $this->request->get('moderation_status'),
             'product_code' => $this->request->get('product_code'),
             'q' => $this->request->get('q'),
         ]));
@@ -35,5 +37,10 @@ class Reviews extends ApiController
     public function reply(int $id): Response
     {
         return $this->run(fn () => (new ReviewService())->reply($id, $this->payload()));
+    }
+
+    public function moderate(int $id): Response
+    {
+        return $this->run(fn () => (new ReviewService())->moderate($id, $this->payload()));
     }
 }

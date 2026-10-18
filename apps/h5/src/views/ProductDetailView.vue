@@ -253,6 +253,12 @@ async function share() {
           <div class="rev-head">
             <strong>{{ r.author }}</strong>
             <span class="rev-stars">{{ '★'.repeat(r.stars) }}{{ '☆'.repeat(Math.max(0, 5 - r.stars)) }}</span>
+            <span
+              v-if="r.is_mine && r.moderation_status && r.moderation_status !== 'approved'"
+              class="rev-mod"
+            >
+              {{ r.moderation_status === 'rejected' ? t('pdp.reviewRejected') : t('pdp.reviewPending') }}
+            </span>
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
@@ -443,14 +449,25 @@ h2 {
 }
 .rev-head {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: baseline;
+  gap: 0.35rem 0.5rem;
   margin-bottom: 0.25rem;
   font-size: 0.8125rem;
+}
+.rev-head strong {
+  margin-right: auto;
 }
 .rev-stars {
   color: #e6a23c;
   letter-spacing: 0.05em;
+}
+.rev-mod {
+  font-size: 0.6875rem;
+  color: #a67c52;
+  background: #f5efe6;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.2rem;
 }
 .rev-imgs {
   display: flex;

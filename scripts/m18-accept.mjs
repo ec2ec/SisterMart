@@ -117,6 +117,8 @@ function tinyPng() {
 
 async function main() {
   execSync('php database/m18_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
+  execSync('php database/m23_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
+  execSync('php database/m25_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
   const adminToken = await loginAdmin()
   const { token } = await registerMember('m18')
 
@@ -199,11 +201,34 @@ async function main() {
   )
 
   const productCode = completed.items[0].product_code
+  // M25：待審評價僅本人可見；公開 PDP 需審核通過後才有
+  const productPublic = await api('GET', `/api/v1/products/${productCode}`, { expectHttp: 200 })
+  check(
+    'A7a',
+    '待審時公開 PDP 不含該評價',
+    !(productPublic.json.data.reviews || []).some((r) => r.id === created.json.data.id),
+  )
+  const productMine = await api('GET', `/api/v1/products/${productCode}`, {
+    token,
+    expectHttp: 200,
+  })
+  const reviewsMine = productMine.json.data.reviews || []
+  check(
+    'A7b',
+    '本人可見剛寫入評價',
+    reviewsMine.some((r) => r.id === created.json.data.id && r.stars === 5),
+    `reviews=${reviewsMine.length}`,
+  )
+  await api('POST', `/api/v1/admin/reviews/${created.json.data.id}/moderate`, {
+    token: adminToken,
+    body: { status: 'approved' },
+    expectHttp: 200,
+  })
   const product = await api('GET', `/api/v1/products/${productCode}`, { expectHttp: 200 })
   const reviews = product.json.data.reviews || []
   check(
     'A7',
-    '商品詳情含剛寫入評價',
+    '審核通過後商品詳情含評價',
     reviews.some((r) => r.id === created.json.data.id && r.stars === 5),
     `reviews=${reviews.length}`,
   )

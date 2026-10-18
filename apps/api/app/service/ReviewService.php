@@ -10,30 +10,56 @@ use think\facade\Db;
 /**
  * M18 商品評價：主評一次 + 追評一次。
  * M23：後台隱藏 / 商家回覆。
+ * M25：審核（pending / approved / rejected）；本人可見，他人僅 approved。
  */
 class ReviewService
 {
-    public function listForProduct(int $productId, int $limit = 50): array
-    {
-        $rows = Db::name('product_reviews')
-            ->where('product_id', $productId)
-            ->where('is_hidden', 0)
-            ->order('id', 'desc')
-            ->limit($limit)
-            ->select()
-            ->toArray();
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
 
-        return $this->presentMany($rows);
+    /**
+     * 商品詳情評價列表。
+     * - 他人：僅 approved 且未隱藏
+     * - 本人：無論審核狀態均可見（仍尊重 is_hidden=隱藏則不對外；本人仍可見自己的）
+     */
+    public function listForProduct(int $productId, ?int $viewerMemberId = null, int $limit = 50): array
+    {
+        $q = Db::name('product_reviews')
+            ->where('product_id', $productId)
+            ->order('id', 'desc')
+            ->limit($limit);
+
+        if ($viewerMemberId !== null && $viewerMemberId > 0) {
+            $viewerId = $viewerMemberId;
+            $q->where(function ($w) use ($viewerId) {
+                $w->where(function ($pub) {
+                    $pub->where('moderation_status', self::STATUS_APPROVED)->where('is_hidden', 0);
+                })->whereOr(function ($own) use ($viewerId) {
+                    $own->where('member_id', $viewerId);
+                });
+            });
+        } else {
+            $q->where('moderation_status', self::STATUS_APPROVED)->where('is_hidden', 0);
+        }
+
+        $rows = $q->select()->toArray();
+
+        return $this->presentMany($rows, false, $viewerMemberId);
     }
 
     /**
-     * @param array{is_hidden?: string|int|null, product_code?: string, q?: string} $filters
+     * @param array{is_hidden?: string|int|null, moderation_status?: string|null, product_code?: string, q?: string} $filters
      */
     public function adminList(array $filters = []): array
     {
         $q = Db::name('product_reviews')->order('id', 'desc');
         if (array_key_exists('is_hidden', $filters) && $filters['is_hidden'] !== '' && $filters['is_hidden'] !== null) {
             $q->where('is_hidden', (int) $filters['is_hidden'] ? 1 : 0);
+        }
+        $mod = trim((string) ($filters['moderation_status'] ?? ''));
+        if ($mod !== '' && in_array($mod, [self::STATUS_PENDING, self::STATUS_APPROVED, self::STATUS_REJECTED], true)) {
+            $q->where('moderation_status', $mod);
         }
         $code = trim((string) ($filters['product_code'] ?? ''));
         if ($code !== '') {
@@ -104,10 +130,33 @@ class ReviewService
     }
 
     /**
+     * 審核通過 / 拒絕。
+     *
+     * @param array{status?: string, moderation_status?: string} $body
+     */
+    public function moderate(int $id, array $body): array
+    {
+        $row = Db::name('product_reviews')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        $status = trim((string) ($body['status'] ?? $body['moderation_status'] ?? ''));
+        if (!in_array($status, [self::STATUS_APPROVED, self::STATUS_REJECTED], true)) {
+            throw new ApiException('INVALID', '審核狀態須為 approved 或 rejected', 422, 42201);
+        }
+        Db::name('product_reviews')->where('id', $id)->update([
+            'moderation_status' => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->adminRead($id);
+    }
+
+    /**
      * @param list<array<string,mixed>> $rows
      * @return list<array<string,mixed>>
      */
-    private function presentMany(array $rows, bool $admin = false): array
+    private function presentMany(array $rows, bool $admin = false, ?int $viewerMemberId = null): array
     {
         if (!$rows) {
             return [];
@@ -119,7 +168,10 @@ class ReviewService
             $byId[(int) $m['id']] = $m;
         }
 
-        return array_map(fn ($r) => $this->present($r, $byId[(int) $r['member_id']] ?? null, $admin), $rows);
+        return array_map(
+            fn ($r) => $this->present($r, $byId[(int) $r['member_id']] ?? null, $admin, $viewerMemberId),
+            $rows,
+        );
     }
 
     /**
@@ -215,6 +267,7 @@ class ReviewService
             'follow_body' => null,
             'follow_at' => null,
             'is_hidden' => 0,
+            'moderation_status' => self::STATUS_PENDING,
             'admin_reply' => null,
             'replied_at' => null,
             'created_at' => $now,
@@ -224,7 +277,7 @@ class ReviewService
         $row = Db::name('product_reviews')->where('id', $id)->find();
         $member = Db::name('members')->where('id', $memberId)->find();
 
-        return $this->present($row, $member);
+        return $this->present($row, $member, false, $memberId);
     }
 
     public function follow(int $memberId, int $reviewId, array $body): array
@@ -244,15 +297,17 @@ class ReviewService
             throw new ApiException('ALREADY_FOLLOWED', '已追評過', 422, 42300);
         }
         $now = date('Y-m-d H:i:s');
+        // 追評後重新進入待審；他人在通過前看不到整條評價（含主評）。
         Db::name('product_reviews')->where('id', $reviewId)->update([
             'follow_body' => $text,
             'follow_at' => $now,
+            'moderation_status' => self::STATUS_PENDING,
             'updated_at' => $now,
         ]);
         $row = Db::name('product_reviews')->where('id', $reviewId)->find();
         $member = Db::name('members')->where('id', $memberId)->find();
 
-        return $this->present($row, $member);
+        return $this->present($row, $member, false, $memberId);
     }
 
     /**
@@ -295,7 +350,7 @@ class ReviewService
         return $out;
     }
 
-    private function present(array $row, ?array $member, bool $admin = false): array
+    private function present(array $row, ?array $member, bool $admin = false, ?int $viewerMemberId = null): array
     {
         $images = [];
         if (!empty($row['images_json'])) {
@@ -308,6 +363,8 @@ class ReviewService
             ? (string) $row['follow_body']
             : null;
         $reply = !empty($row['admin_reply']) ? (string) $row['admin_reply'] : null;
+        $moderation = (string) ($row['moderation_status'] ?? self::STATUS_APPROVED);
+        $isOwner = $viewerMemberId !== null && $viewerMemberId > 0 && (int) $row['member_id'] === $viewerMemberId;
 
         $data = [
             'id' => (int) $row['id'],
@@ -322,13 +379,16 @@ class ReviewService
             'reply' => $reply,
             'replied_at' => $row['replied_at'] ?? null,
             'created_at' => $row['created_at'],
-            'can_follow' => $follow === null,
+            'can_follow' => $follow === null && $isOwner,
+            'moderation_status' => $moderation,
+            'is_mine' => $isOwner,
         ];
         if ($admin) {
             $data['is_hidden'] = (int) ($row['is_hidden'] ?? 0);
             $data['member_id'] = (int) $row['member_id'];
             $data['order_id'] = (int) $row['order_id'];
             $data['admin_reply'] = $reply;
+            $data['can_follow'] = $follow === null;
         }
 
         return $data;

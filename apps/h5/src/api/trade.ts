@@ -123,6 +123,8 @@ export type ProductReview = {
   replied_at?: string | null
   created_at: string
   can_follow?: boolean
+  moderation_status?: string
+  is_mine?: boolean
 }
 
 export function fetchCart() {

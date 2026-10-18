@@ -175,14 +175,14 @@ class CatalogService
         return ['items' => $items, 'sold_display_mode' => $mode];
     }
 
-    public function productDetail(string $idOrCode, bool $admin = false): array
+    public function productDetail(string $idOrCode, bool $admin = false, ?int $viewerMemberId = null): array
     {
         $row = $this->findProduct($idOrCode);
         if (!$admin && (int) $row['status'] !== 1) {
             throw new ApiException('NOT_FOUND', '商品不存在或已下架', 404, 40402);
         }
 
-        return $this->presentDetail($row, SoldDisplay::mode());
+        return $this->presentDetail($row, SoldDisplay::mode(), $viewerMemberId);
     }
 
     public function saveProduct(array $body, ?int $id = null): array
@@ -483,7 +483,7 @@ class CatalogService
         ];
     }
 
-    private function presentDetail(array $row, string $mode): array
+    private function presentDetail(array $row, string $mode, ?int $viewerMemberId = null): array
     {
         $card = $this->presentCard($row, $mode);
         $i18n = Db::name('product_i18n')->where('product_id', $row['id'])->select()->toArray();
@@ -587,7 +587,7 @@ class CatalogService
             'skus'            => $skusOut,
             'tags'            => $tags,
             'service_tag_ids' => array_map('intval', $tagIds),
-            'reviews'         => (new ReviewService())->listForProduct((int) $row['id']),
+            'reviews'         => (new ReviewService())->listForProduct((int) $row['id'], $viewerMemberId),
         ]);
     }
 }

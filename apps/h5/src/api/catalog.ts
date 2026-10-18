@@ -60,7 +60,10 @@ export type ProductDetail = ProductCard & {
     body: string | Localized
     images?: string[]
     follow?: string | Localized | null
+    reply?: string | null
     created_at?: string
+    moderation_status?: string
+    is_mine?: boolean
   }>
 }
 
@@ -82,7 +85,8 @@ export async function fetchProducts(params: Record<string, string> = {}) {
 }
 
 export async function fetchProduct(id: string) {
-  return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(id)}`)
+  // 帶會員 token（若已登錄）以便本人看到待審評價
+  return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(id)}`, {}, 'member')
 }
 
 export async function fetchArticle(code: string) {

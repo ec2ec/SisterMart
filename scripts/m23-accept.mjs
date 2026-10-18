@@ -110,6 +110,7 @@ async function completeOrder(token, adminToken, orderId) {
 async function main() {
   execSync('php database/m18_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
   execSync('php database/m23_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
+  execSync('php database/m25_seed.php', { cwd: path.resolve('apps/api'), stdio: 'inherit' })
 
   const adminToken = await loginAdmin()
   const { token } = await registerMember('m23')
@@ -130,10 +131,22 @@ async function main() {
   const reviewId = created.json.data.id
   check('A1', '會員主評成功', ok(created.json) && reviewId, `id=${reviewId}`)
 
+  // M25：新建為 pending，需審核通過後公開可見
+  const pdpPending = await api('GET', `/api/v1/products/${productCode}`, { expectHttp: 200 })
+  check(
+    'A2a',
+    '待審時公開 PDP 不可見',
+    !(pdpPending.json.data.reviews || []).some((r) => r.id === reviewId),
+  )
+  await api('POST', `/api/v1/admin/reviews/${reviewId}/moderate`, {
+    token: adminToken,
+    body: { status: 'approved' },
+    expectHttp: 200,
+  })
   const pdp1 = await api('GET', `/api/v1/products/${productCode}`, { expectHttp: 200 })
   check(
     'A2',
-    'PDP 可見新評價',
+    '審核通過後 PDP 可見',
     (pdp1.json.data.reviews || []).some((r) => r.id === reviewId),
     `n=${(pdp1.json.data.reviews || []).length}`,
   )
