@@ -21,7 +21,8 @@ return [
     // 去除斜杠
     'remove_slash'          => false,
     // 默认的路由变量规则
-    'default_route_pattern' => '[\w\.]+',
+    // 允許商品 / 秒殺場次代碼中的連字符（如 sk-live、p1-x）
+    'default_route_pattern' => '[\w\.\-]+',
     // URL伪静态后缀
     'url_html_suffix'       => 'html',
     // 访问控制器层名称

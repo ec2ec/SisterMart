@@ -34,9 +34,9 @@ Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
 Route::get('api/v1/member-levels', 'api.Assets/levelsPublic');
 
 /** M11 秒殺 + M12 積分商城（真實）+ M16 分享瀏覽（真實） */
-Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read');
+Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read')->pattern(['id' => '[A-Za-z0-9_-]+']);
 Route::get('api/v1/seckill/sessions', 'api.Seckill/index');
-Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product');
+Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product')->pattern(['productId' => '[A-Za-z0-9_-]+']);
 Route::get('api/v1/points-mall/products/:id', 'api.PointsMall/read');
 Route::get('api/v1/points-mall/products', 'api.PointsMall/index');
 Route::post('api/v1/share-views', 'api.ShareViews/store');
@@ -157,6 +157,12 @@ Route::group('api/v1/admin', function () {
     Route::put('coupons/:id', 'admin.Coupons/update');
     Route::get('points/settings', 'admin.Points/settings');
     Route::put('points/settings', 'admin.Points/updateSettings');
+
+    /** M21 秒殺後台 CRUD */
+    Route::get('seckill/sessions/:id', 'admin.Seckill/read');
+    Route::put('seckill/sessions/:id', 'admin.Seckill/update');
+    Route::get('seckill/sessions', 'admin.Seckill/index');
+    Route::post('seckill/sessions', 'admin.Seckill/store');
     Route::get('member-levels', 'admin.Levels/index');
     Route::put('member-levels/:id', 'admin.Levels/update');
     Route::get('members/:id', 'admin.Members/read');

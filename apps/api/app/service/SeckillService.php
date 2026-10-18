@@ -114,6 +114,278 @@ class SeckillService
         ]);
     }
 
+    /** 後台：全部場次（含已結束），數值 id 便於編輯。 */
+    public function adminList(): array
+    {
+        $rows = Db::name('seckill_sessions')->order('starts_at', 'desc')->select()->toArray();
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = $this->presentAdminSession($row);
+        }
+
+        return ['items' => $items];
+    }
+
+    public function adminRead(int $id): array
+    {
+        $row = Db::name('seckill_sessions')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '秒殺場次不存在', 404, 40480);
+        }
+
+        return $this->presentAdminSession($row);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    public function adminCreate(array $body): array
+    {
+        $parsed = $this->parseSessionBody($body, requireCode: true);
+        $now = date('Y-m-d H:i:s');
+        $dup = Db::name('seckill_sessions')->where('code', $parsed['code'])->find();
+        if ($dup) {
+            throw new ApiException('INVALID', '場次代碼已存在', 422, 42201);
+        }
+
+        $id = 0;
+        Db::transaction(function () use ($parsed, $now, &$id) {
+            $id = (int) Db::name('seckill_sessions')->insertGetId([
+                'code' => $parsed['code'],
+                'name_zh' => $parsed['name_zh'],
+                'name_en' => $parsed['name_en'],
+                'starts_at' => $parsed['starts_at'],
+                'ends_at' => $parsed['ends_at'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $this->syncItems($id, $parsed['items'], $now, replace: true);
+        });
+
+        return $this->adminRead($id);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    public function adminUpdate(int $id, array $body): array
+    {
+        $row = Db::name('seckill_sessions')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '秒殺場次不存在', 404, 40480);
+        }
+        $parsed = $this->parseSessionBody($body, requireCode: false);
+        $now = date('Y-m-d H:i:s');
+
+        Db::transaction(function () use ($id, $row, $parsed, $now) {
+            $patch = ['updated_at' => $now];
+            if ($parsed['code'] !== null && $parsed['code'] !== (string) $row['code']) {
+                $dup = Db::name('seckill_sessions')
+                    ->where('code', $parsed['code'])
+                    ->where('id', '<>', $id)
+                    ->find();
+                if ($dup) {
+                    throw new ApiException('INVALID', '場次代碼已存在', 422, 42201);
+                }
+                $patch['code'] = $parsed['code'];
+            }
+            if ($parsed['name_zh'] !== null) {
+                $patch['name_zh'] = $parsed['name_zh'];
+            }
+            if ($parsed['name_en'] !== null) {
+                $patch['name_en'] = $parsed['name_en'];
+            }
+            if ($parsed['starts_at'] !== null) {
+                $patch['starts_at'] = $parsed['starts_at'];
+            }
+            if ($parsed['ends_at'] !== null) {
+                $patch['ends_at'] = $parsed['ends_at'];
+            }
+            $starts = (string) ($patch['starts_at'] ?? $row['starts_at']);
+            $ends = (string) ($patch['ends_at'] ?? $row['ends_at']);
+            if (strtotime($ends) <= strtotime($starts)) {
+                throw new ApiException('INVALID', '結束時間須晚於開始時間', 422, 42201);
+            }
+            Db::name('seckill_sessions')->where('id', $id)->update($patch);
+            if ($parsed['items'] !== null) {
+                $this->syncItems($id, $parsed['items'], $now, replace: true);
+            }
+        });
+
+        return $this->adminRead($id);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array{code: ?string, name_zh: ?string, name_en: ?string, starts_at: ?string, ends_at: ?string, items: ?list<array<string, mixed>>}
+     */
+    private function parseSessionBody(array $body, bool $requireCode): array
+    {
+        $code = array_key_exists('code', $body) ? trim((string) $body['code']) : null;
+        if ($requireCode) {
+            if ($code === null || $code === '' || !preg_match('/^[a-zA-Z0-9_-]{2,64}$/', $code)) {
+                throw new ApiException('INVALID', '場次代碼格式無效', 422, 42201);
+            }
+        } elseif ($code !== null && $code !== '' && !preg_match('/^[a-zA-Z0-9_-]{2,64}$/', $code)) {
+            throw new ApiException('INVALID', '場次代碼格式無效', 422, 42201);
+        } elseif ($code === '') {
+            $code = null;
+        }
+
+        $nameZh = null;
+        $nameEn = null;
+        if (isset($body['name']) && is_array($body['name'])) {
+            $nameZh = trim((string) ($body['name']['zh-HK'] ?? $body['name']['zh'] ?? ''));
+            $nameEn = trim((string) ($body['name']['en'] ?? ''));
+        }
+        if (array_key_exists('name_zh', $body)) {
+            $nameZh = trim((string) $body['name_zh']);
+        }
+        if (array_key_exists('name_en', $body)) {
+            $nameEn = trim((string) $body['name_en']);
+        }
+        if ($requireCode && ($nameZh === null || $nameZh === '')) {
+            throw new ApiException('INVALID', '請填寫場次中文名', 422, 42201);
+        }
+
+        $starts = array_key_exists('starts_at', $body) ? trim((string) $body['starts_at']) : null;
+        $ends = array_key_exists('ends_at', $body) ? trim((string) $body['ends_at']) : null;
+        if ($requireCode) {
+            if ($starts === null || $starts === '' || $ends === null || $ends === '') {
+                throw new ApiException('INVALID', '請填寫開始/結束時間', 422, 42201);
+            }
+            if (strtotime($ends) <= strtotime($starts)) {
+                throw new ApiException('INVALID', '結束時間須晚於開始時間', 422, 42201);
+            }
+        }
+
+        $items = null;
+        if (array_key_exists('items', $body)) {
+            if (!is_array($body['items'])) {
+                throw new ApiException('INVALID', 'items 須為陣列', 422, 42201);
+            }
+            $items = array_values($body['items']);
+        }
+
+        return [
+            'code' => $code,
+            'name_zh' => $nameZh,
+            'name_en' => $nameEn !== null ? ($nameEn !== '' ? $nameEn : ($nameZh ?? '')) : null,
+            'starts_at' => $starts !== '' ? $starts : null,
+            'ends_at' => $ends !== '' ? $ends : null,
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $items
+     */
+    private function syncItems(int $sessionId, array $items, string $now, bool $replace): void
+    {
+        $keepIds = [];
+        foreach ($items as $raw) {
+            if (!is_array($raw)) {
+                continue;
+            }
+            $itemId = isset($raw['id']) ? (int) $raw['id'] : 0;
+            $productCode = trim((string) ($raw['product_code'] ?? $raw['product_id'] ?? ''));
+            $skuId = (int) ($raw['sku_id'] ?? 0);
+            if ($productCode === '' || $skuId <= 0) {
+                throw new ApiException('INVALID', '秒殺商品須含 product_code 與 sku_id', 422, 42201);
+            }
+            $product = Db::name('products')->where('code', $productCode)->find();
+            if (!$product) {
+                throw new ApiException('INVALID', '商品不存在：' . $productCode, 422, 42201);
+            }
+            $sku = Db::name('skus')->where('id', $skuId)->where('product_id', $product['id'])->find();
+            if (!$sku) {
+                throw new ApiException('INVALID', 'SKU 不屬於該商品', 422, 42201);
+            }
+            $names = Db::name('product_i18n')->where('product_id', $product['id'])->select()->toArray();
+            $zh = $productCode;
+            $en = $productCode;
+            foreach ($names as $n) {
+                if (($n['locale'] ?? '') === 'en') {
+                    $en = (string) ($n['name'] ?: $en);
+                } else {
+                    $zh = (string) ($n['name'] ?: $zh);
+                }
+            }
+            $payload = [
+                'product_id' => (int) $product['id'],
+                'product_code' => $productCode,
+                'sku_id' => $skuId,
+                'seckill_price' => round((float) ($raw['seckill_price'] ?? 0), 2),
+                'origin_price' => round((float) ($raw['origin_price'] ?? $sku['compare_at'] ?? $sku['price'] ?? 0), 2),
+                'stock' => max(0, (int) ($raw['stock'] ?? 0)),
+                'image_url' => (string) ($raw['image_url'] ?? '')
+                    ?: (string) ($sku['image_url'] ?? '')
+                    ?: (string) ($product['cover_url'] ?? ''),
+                'name_zh' => trim((string) ($raw['name_zh'] ?? $zh)),
+                'name_en' => trim((string) ($raw['name_en'] ?? $en)),
+                'updated_at' => $now,
+            ];
+            if ($payload['seckill_price'] <= 0) {
+                throw new ApiException('INVALID', '秒殺價須大於 0', 422, 42201);
+            }
+            if ($itemId > 0) {
+                $existing = Db::name('seckill_items')
+                    ->where('id', $itemId)
+                    ->where('session_id', $sessionId)
+                    ->find();
+                if (!$existing) {
+                    throw new ApiException('INVALID', '秒殺商品行不存在', 422, 42201);
+                }
+                Db::name('seckill_items')->where('id', $itemId)->update($payload);
+                $keepIds[] = $itemId;
+            } else {
+                $payload['session_id'] = $sessionId;
+                $payload['sold'] = 0;
+                $payload['created_at'] = $now;
+                $keepIds[] = (int) Db::name('seckill_items')->insertGetId($payload);
+            }
+        }
+        if ($replace) {
+            $q = Db::name('seckill_items')->where('session_id', $sessionId);
+            if ($keepIds !== []) {
+                $q->whereNotIn('id', $keepIds);
+            }
+            $q->delete();
+        }
+    }
+
+    private function presentAdminSession(array $row): array
+    {
+        $products = Db::name('seckill_items')
+            ->where('session_id', $row['id'])
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+
+        return [
+            'id' => (int) $row['id'],
+            'code' => (string) $row['code'],
+            'name' => ['zh-HK' => $row['name_zh'], 'en' => $row['name_en']],
+            'status' => $this->statusOf($row),
+            'starts_at' => $row['starts_at'],
+            'ends_at' => $row['ends_at'],
+            'items' => array_map(function (array $p) {
+                return [
+                    'id' => (int) $p['id'],
+                    'product_id' => (int) $p['product_id'],
+                    'product_code' => (string) $p['product_code'],
+                    'sku_id' => (int) $p['sku_id'],
+                    'name' => ['zh-HK' => $p['name_zh'], 'en' => $p['name_en']],
+                    'image' => (string) ($p['image_url'] ?: ''),
+                    'seckill_price' => (float) $p['seckill_price'],
+                    'origin_price' => (float) $p['origin_price'],
+                    'stock' => (int) $p['stock'],
+                    'sold' => (int) ($p['sold'] ?? 0),
+                ];
+            }, $products),
+        ];
+    }
+
     private function findSession(string $id): array
     {
         $row = is_numeric($id)
