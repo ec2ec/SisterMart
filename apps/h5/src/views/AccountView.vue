@@ -10,6 +10,7 @@ import AvatarCropDialog from '../components/AvatarCropDialog.vue'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { clearSession, isLoggedIn, memberState, type Member } from '../composables/useSession'
 import { toggleLocale } from '../i18n'
+import { assetUrl } from '../utils/assetUrl'
 
 defineOptions({ name: 'AccountView' })
 
@@ -19,7 +20,6 @@ const SCROLL_KEY = 'account'
 /** 按鈕表示「即將切換到」的語言：當前繁中 → 展示美國旗（切英文）；當前英文 → 香港區旗 */
 const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '🇭🇰'))
 const u = accountMock
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
 
@@ -38,7 +38,7 @@ const avatarLetter = computed(() => (displayName.value || 'S').slice(0, 1).toUpp
 const avatarSrc = computed(() => {
   const url = memberState.value?.avatar_url
   if (!url) return ''
-  return url.startsWith('http') ? url : `${apiBase}${url}`
+  return assetUrl(url)
 })
 
 function openAccount() {

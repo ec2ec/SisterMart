@@ -6,16 +6,12 @@ import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { cancelAftersale, fetchAftersale, type Aftersale } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
 const row = ref<Aftersale | null>(null)
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
-
-function assetUrl(u: string) {
-  return u.startsWith('http') ? u : `${apiBase}${u}`
-}
 
 async function load() {
   row.value = await fetchAftersale(String(route.params.id))

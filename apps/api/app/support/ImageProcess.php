@@ -37,6 +37,9 @@ final class ImageProcess
             $minQuality = $quality;
         }
 
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            throw new ApiException('SERVER', '伺服器未啟用 GD 圖片擴展，無法處理圖片', 500, 50002);
+        }
         if (!is_file($sourcePath)) {
             throw new ApiException('INVALID', '圖片讀取失敗', 422, 42290);
         }
@@ -49,13 +52,16 @@ final class ImageProcess
         $type = (int) ($info[2] ?? 0);
 
         $src = match ($type) {
-            IMAGETYPE_JPEG => @imagecreatefromjpeg($sourcePath),
-            IMAGETYPE_PNG => @imagecreatefrompng($sourcePath),
+            IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($sourcePath) : false,
+            IMAGETYPE_PNG => function_exists('imagecreatefrompng') ? @imagecreatefrompng($sourcePath) : false,
             IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($sourcePath) : false,
             default => false,
         };
         if ($src === false) {
-            throw new ApiException('INVALID', '不支持的圖片格式', 422, 42290);
+            if ($type === IMAGETYPE_WEBP && !function_exists('imagecreatefromwebp')) {
+                throw new ApiException('INVALID', '伺服器 GD 不支持 WebP，請改用 JPG／PNG', 422, 42290);
+            }
+            throw new ApiException('INVALID', '不支持的圖片格式，請使用 JPG／PNG／WebP', 422, 42290);
         }
 
         // 保持比例：僅當最長邊超過 max_edge 時縮小

@@ -266,7 +266,12 @@ export function uploadReviewImage(file: File) {
 
 export function uploadAvatar(file: Blob | File) {
   const body = new FormData()
-  body.append('file', file, 'avatar.jpg')
+  // 明確帶 image/jpeg，避免部分瀏覽器 Blob 無 Content-Type 被主機拒收
+  const part =
+    file instanceof File
+      ? file
+      : new File([file], 'avatar.jpg', { type: file.type || 'image/jpeg' })
+  body.append('file', part, 'avatar.jpg')
   return api<{ url: string; member: Member }>('/api/v1/uploads/avatar', { method: 'POST', body }, 'member')
 }
 

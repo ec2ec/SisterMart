@@ -12,6 +12,7 @@ import {
 } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -24,7 +25,6 @@ const refundTo = ref<'balance' | 'original'>('balance')
 const description = ref('')
 const fileList = ref<UploaderFileListItem[]>([])
 const submitting = ref(false)
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 const expired = computed(() => Boolean(order.value?.aftersale_expired))
 const whatsappDigits = computed(() => (order.value?.cs_whatsapp || '').replace(/\D/g, ''))
@@ -42,10 +42,6 @@ async function load() {
 }
 
 watch(() => route.params.id, load, { immediate: true })
-
-function assetUrl(u: string) {
-  return u.startsWith('http') ? u : `${apiBase}${u}`
-}
 
 function openWhatsApp() {
   if (!whatsappDigits.value) {

@@ -27,6 +27,9 @@ Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
 
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
+/** 上傳圖公開讀取（共享主機常無 /storage 靜態別名） */
+Route::get('api/v1/media/<path>', 'api.Media/show')->pattern(['path' => '.*']);
+
 Route::get('api/v1/categories', 'api.Categories/index');
 Route::get('api/v1/products/:id', 'api.Products/read');
 /** M28 首頁推薦（可選 Bearer：猜你喜歡） */

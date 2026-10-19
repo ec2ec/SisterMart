@@ -13,6 +13,7 @@ import {
 } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -25,7 +26,6 @@ const body = ref('')
 const followBody = ref('')
 const fileList = ref<UploaderFileListItem[]>([])
 const submitting = ref(false)
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 const itemId = computed(() => Number(route.query.item || 0) || null)
 const item = computed(() => (order.value?.items || []).find((i) => i.id === itemId.value) || null)
@@ -47,10 +47,6 @@ async function load() {
 }
 
 watch(() => [route.params.id, route.query.item], load, { immediate: true })
-
-function assetUrl(u: string) {
-  return u.startsWith('http') ? u : `${apiBase}${u}`
-}
 
 async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListItem[]) {
   const list = Array.isArray(entryOrList) ? entryOrList : [entryOrList]
