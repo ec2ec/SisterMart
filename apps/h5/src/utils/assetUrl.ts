@@ -6,8 +6,7 @@ export function assetOrigin(): string {
 }
 
 /**
- * 預覽上傳圖：優先站點 /storage；若為相對路徑且走 API 入口，改走媒體代理，
- * 避免共享主機沒有 /storage 靜態別名時 404。
+ * 預覽上傳圖：/storage/... 走媒體代理（query），避免 nginx 對多段 PATH_INFO 404。
  */
 export function assetUrl(u: string): string {
   if (!u) return ''
@@ -15,8 +14,7 @@ export function assetUrl(u: string): string {
   const path = u.startsWith('/') ? u : `/${u}`
   if (path.startsWith('/storage/')) {
     const rel = path.slice('/storage/'.length)
-    // 經 ThinkPHP 入口提供，不依賴 nginx alias
-    return `${apiBase.replace(/\/$/, '')}/api/v1/media/${rel}`
+    return `${apiBase.replace(/\/$/, '')}/api/v1/media?path=${encodeURIComponent(rel)}`
   }
   const origin = assetOrigin()
   return `${origin}${path}`

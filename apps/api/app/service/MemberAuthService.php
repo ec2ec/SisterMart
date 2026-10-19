@@ -182,7 +182,7 @@ class MemberAuthService
             'phone'      => $member['phone'] ?: null,
             'nickname'   => !empty($member['nickname']) ? (string) $member['nickname'] : null,
             'locale'     => (string) $member['locale'],
-            'avatar_url' => !empty($member['avatar_url']) ? (string) $member['avatar_url'] : null,
+            'avatar_url' => !empty($member['avatar_url'] ?? null) ? (string) $member['avatar_url'] : null,
             'promo_code' => (string) $member['promo_code'],
             'balance' => (float) ($member['balance'] ?? 0),
             'points' => (int) ($member['points'] ?? 0),
@@ -223,6 +223,29 @@ class MemberAuthService
         }
         if (count($patch) === 1) {
             throw new ApiException('INVALID', '沒有可更新的欄位', 422, 42201);
+        }
+        // avatar_url 可能剛 ALTER 進庫，ORM 欄位緩存會拒寫；有此欄時走原生 SQL
+        if (array_key_exists('avatar_url', $patch)) {
+            $prefix = (string) (Db::getConnection()->getConfig('prefix') ?: '');
+            $table = $prefix . 'members';
+            $sets = ['`updated_at` = ?'];
+            $bind = [$patch['updated_at']];
+            foreach (['locale', 'nickname', 'avatar_url'] as $col) {
+                if (!array_key_exists($col, $patch)) {
+                    continue;
+                }
+                $sets[] = "`{$col}` = ?";
+                $bind[] = $patch[$col];
+            }
+            $bind[] = $memberId;
+            Db::execute('UPDATE `' . $table . '` SET ' . implode(', ', $sets) . ' WHERE `id` = ?', $bind);
+            $rows = Db::query("SELECT * FROM `{$table}` WHERE `id` = ? LIMIT 1", [$memberId]);
+            $member = is_array($rows[0] ?? null) ? $rows[0] : [];
+            if (array_key_exists('avatar_url', $patch)) {
+                $member['avatar_url'] = $patch['avatar_url'];
+            }
+
+            return $this->present($member);
         }
         Db::name('members')->where('id', $memberId)->update($patch);
         $member = Db::name('members')->where('id', $memberId)->find();

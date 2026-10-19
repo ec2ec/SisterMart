@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
-import { isLoggedIn } from '../composables/useSession'
+import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
 
 defineOptions({ name: 'CartView' })
@@ -21,6 +21,7 @@ const loading = ref(false)
 const SCROLL_KEY = 'cart'
 
 async function load() {
+  syncSessionFromStorage()
   if (!isLoggedIn()) {
     items.value = []
     void refreshCartBadge()
@@ -123,7 +124,7 @@ function reasonText(item: CartItem) {
       </button>
     </div>
 
-    <p v-if="!isLoggedIn()" class="empty">
+    <p v-if="!loggedIn" class="empty">
       <button type="button" @click="router.push({ name: 'login', query: { redirect: '/cart' } })">{{ t('auth.login') }}</button>
     </p>
     <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>

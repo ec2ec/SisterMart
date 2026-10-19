@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client'
 import { cartBadgeCount, refreshCartBadge } from '../composables/useCartBadge'
-import { isLoggedIn } from '../composables/useSession'
+import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 
 type Slot = 'home' | 'category' | 'cart' | 'account'
 
@@ -144,12 +144,10 @@ watch(
   { immediate: true },
 )
 
-watch(
-  () => isLoggedIn(),
-  () => {
-    void refreshCartBadge()
-  },
-)
+watch(loggedIn, () => {
+  syncSessionFromStorage()
+  void refreshCartBadge()
+})
 
 function onChange(name: string | number) {
   router.push({ name: String(name) })

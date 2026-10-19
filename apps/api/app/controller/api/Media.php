@@ -9,12 +9,18 @@ use think\Response;
 
 /**
  * 公開讀取 public/storage 下的上傳檔（共享主機常無 /storage 靜態別名）。
- * URL: GET /api/v1/media/avatar/1/20260101/xxx.jpg
+ *
+ * 推薦（兼容 nginx）：GET /api/v1/media?path=avatar/1/20260101/xxx.jpg
+ * 亦支持：GET /api/v1/media/avatar/1/20260101/xxx.jpg
  */
 class Media extends BaseController
 {
     public function show(string $path = ''): Response
     {
+        $fromQuery = trim((string) $this->request->get('path', ''));
+        if ($fromQuery !== '') {
+            $path = $fromQuery;
+        }
         $path = str_replace('\\', '/', $path);
         $path = ltrim($path, '/');
         if ($path === '' || str_contains($path, '..') || !preg_match('#^[a-zA-Z0-9_./\-]+$#', $path)) {

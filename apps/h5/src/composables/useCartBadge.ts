@@ -1,11 +1,12 @@
 import { ref } from 'vue'
 import { fetchCart } from '../api/trade'
-import { isLoggedIn } from './useSession'
+import { isLoggedIn, syncSessionFromStorage } from './useSession'
 
 /** 底欄購物車角標：商品件數合計；空車為 0 不顯示 */
 export const cartBadgeCount = ref(0)
 
 export async function refreshCartBadge() {
+  syncSessionFromStorage()
   if (!isLoggedIn()) {
     cartBadgeCount.value = 0
     return 0

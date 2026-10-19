@@ -5,6 +5,11 @@ SisterMart 本次上線 SQL（2026-10-19）
   - 含 H5 /admin /mock /products /api /sm-backend（不含 .env）
   - 解壓後請硬刷新；確保伺服器已有 sm-backend/.env
 
+【若頭像上傳 500／缺少 avatar_url】m28_favorites_avatar.sql
+  - 用途：member_favorites 表 + members.avatar_url 欄位（可重複）
+  - 頭像功能依賴此腳本；新版 API 也會嘗試自動 ALTER，並用原生 UPDATE 繞過 ThinkPHP 欄位緩存
+  - 若仍見「服務暫時不可用」：先執行本 SQL，再覆蓋 sm-backend（Uploads.php）並硬刷新 H5
+
 【必須執行】deploy_catalog_attrs.sql
   - 用途：角標主數據、商品參數（材質等）表結構 + 種子（new/hot/editor/flash、材質示例）
   - 可重複執行，安全

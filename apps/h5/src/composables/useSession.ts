@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { markLoggedIn } from './useFavorites'
 
 export type Member = {
@@ -36,10 +36,24 @@ function readMember(): Member | null {
   }
 }
 
+function readToken(): string {
+  return localStorage.getItem(TOKEN) || ''
+}
+
+/** 響應式令牌：模板／computed 才能在登錄後自動刷新 */
+export const authToken = ref(readToken())
 export const memberState = ref<Member | null>(readMember())
 
+/** 是否已登錄（響應式；勿用「每次讀 localStorage」的函數當模板依賴） */
+export const loggedIn = computed(() => Boolean(authToken.value))
+
 export function token() {
-  return localStorage.getItem(TOKEN) || ''
+  // 先對齊 storage，避免 keep-alive 頁仍持有登錄前的空 authToken
+  if (!authToken.value) {
+    const fromStore = readToken()
+    if (fromStore) authToken.value = fromStore
+  }
+  return authToken.value || readToken()
 }
 
 export function isLoggedIn() {
@@ -53,9 +67,16 @@ export function currentMember() {
   return memberState.value
 }
 
+/** 從 localStorage 拉齊內存（keep-alive 頁從登錄返回時用） */
+export function syncSessionFromStorage() {
+  authToken.value = readToken()
+  memberState.value = readMember()
+}
+
 export function setSession(tokenValue: string, member: Member) {
   localStorage.setItem(TOKEN, tokenValue)
   localStorage.setItem(MEMBER, JSON.stringify(member))
+  authToken.value = tokenValue
   memberState.value = member
   markLoggedIn()
 }
@@ -64,5 +85,6 @@ export function clearSession() {
   localStorage.removeItem(TOKEN)
   localStorage.removeItem(MEMBER)
   localStorage.removeItem('sm_session')
+  authToken.value = ''
   memberState.value = null
 }

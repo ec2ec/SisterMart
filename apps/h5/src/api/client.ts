@@ -32,6 +32,7 @@ export async function api<T>(path: string, init: RequestInit = {}, auth: 'member
     headers.set('Content-Type', 'application/json')
   }
   if (auth === 'member') {
+    // 與 useSession 同源；優先讀響應式寫入後的 localStorage
     const token = localStorage.getItem('sm_token')
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }

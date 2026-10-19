@@ -8,7 +8,15 @@ import { uploadAvatar } from '../api/trade'
 import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
-import { clearSession, isLoggedIn, memberState, type Member } from '../composables/useSession'
+import {
+  clearSession,
+  loggedIn,
+  memberState,
+  setSession,
+  syncSessionFromStorage,
+  token,
+  type Member,
+} from '../composables/useSession'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -23,7 +31,6 @@ const u = accountMock
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
 
-const loggedIn = computed(() => isLoggedIn() && memberState.value)
 const displayName = computed(
   () =>
     memberState.value?.nickname ||
@@ -42,13 +49,15 @@ const avatarSrc = computed(() => {
 })
 
 function openAccount() {
+  syncSessionFromStorage()
   if (loggedIn.value) return
   router.push({ name: 'login', query: { redirect: '/account' } })
 }
 
 function onAvatarClick() {
+  syncSessionFromStorage()
   if (!loggedIn.value) {
-    openAccount()
+    router.push({ name: 'login', query: { redirect: '/account' } })
     return
   }
   showAvatarCrop.value = true
@@ -58,8 +67,7 @@ async function onAvatarConfirm(blob: Blob) {
   avatarBusy.value = true
   try {
     const data = await uploadAvatar(blob)
-    memberState.value = data.member
-    localStorage.setItem('sm_member', JSON.stringify(data.member))
+    setSession(token(), data.member)
     showToast(t('account.avatarOk'))
   } catch (e) {
     const msg = e instanceof ApiError && e.message ? e.message : t('account.avatarFail')
@@ -69,19 +77,31 @@ async function onAvatarConfirm(blob: Blob) {
   }
 }
 
-onMounted(async () => {
-  if (!isLoggedIn()) return
+async function refreshAccount() {
+  syncSessionFromStorage()
+  if (!loggedIn.value) return
   try {
     const data = await api<Member>('/api/v1/members/me', {}, 'member')
-    memberState.value = data
-    localStorage.setItem('sm_member', JSON.stringify(data))
+    setSession(token(), data)
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) clearSession()
   }
-})
+}
 
+onMounted(() => {
+  void refreshAccount()
+})
 onDeactivated(() => saveRouteScroll(SCROLL_KEY))
-onActivated(() => restoreRouteScroll(SCROLL_KEY))
+let accountFirstActivate = true
+onActivated(() => {
+  if (accountFirstActivate) {
+    accountFirstActivate = false
+    restoreRouteScroll(SCROLL_KEY)
+    return
+  }
+  // keep-alive：從登錄頁返回時 onMounted 不會再跑，必須在此同步登錄態
+  void refreshAccount().then(() => restoreRouteScroll(SCROLL_KEY))
+})
 
 async function logout() {
   try {
@@ -141,6 +161,13 @@ const routePaths: Record<string, string> = {
   home: '/',
 }
 
+function requireAuth(redirect: string): boolean {
+  syncSessionFromStorage()
+  if (loggedIn.value) return true
+  router.push({ name: 'login', query: { redirect } })
+  return false
+}
+
 function goService(route: string) {
   if (!route) {
     showToast(t('pages.coming'))
@@ -148,51 +175,33 @@ function goService(route: string) {
   }
   const path = routePaths[route] || `/${route}`
   const needAuth = !['home', 'seckill', 'points-mall', 'coupon-center'].includes(route)
-  if (!isLoggedIn() && needAuth) {
-    router.push({ name: 'login', query: { redirect: path } })
-    return
-  }
+  if (needAuth && !requireAuth(path)) return
   router.push({ name: route })
 }
 
 function goLevel() {
-  if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/member-level' } })
-    return
-  }
+  if (!requireAuth('/member-level')) return
   router.push({ name: 'member-level' })
 }
 
 function goCoupons() {
-  if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/my-coupons' } })
-    return
-  }
+  if (!requireAuth('/my-coupons')) return
   router.push({ name: 'my-coupons' })
 }
 
 function goPoints() {
-  if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/point-logs' } })
-    return
-  }
+  if (!requireAuth('/point-logs')) return
   router.push({ name: 'point-logs' })
 }
 
 function goBills() {
-  if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/balance-logs' } })
-    return
-  }
+  if (!requireAuth('/balance-logs')) return
   router.push({ name: 'balance-logs' })
 }
 
 function goOrders(tab?: string) {
   const path = tab ? `/orders?tab=${tab}` : '/orders'
-  if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: path } })
-    return
-  }
+  if (!requireAuth(path)) return
   router.push({ name: 'orders', query: tab ? { tab } : {} })
 }
 </script>

@@ -22,7 +22,7 @@ import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
-import { isLoggedIn, memberState } from '../composables/useSession'
+import { isLoggedIn, loggedIn, memberState, syncSessionFromStorage } from '../composables/useSession'
 
 defineOptions({ name: 'HomeView' })
 
@@ -38,7 +38,7 @@ const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
 const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
-const showSubscribe = computed(() => !(isLoggedIn() && subscribed.value))
+const showSubscribe = computed(() => !(loggedIn.value && subscribed.value))
 const banners = ref<HomeBanner[]>(
   mockBanners.map((b, i) => ({
     id: i + 1,
@@ -161,7 +161,9 @@ onActivated(() => {
     homeFirstActivate = false
     return
   }
-  // 從商詳等返回：還原滾動；不重跑整頁請求（feedTab / banners 等實例內仍在）
+  // 從登錄返回：同步訂閱狀態；其餘實例內狀態保留
+  syncSessionFromStorage()
+  void loadSubscribeStatus()
   if (homeBooted) {
     restoreRouteScroll(SCROLL_KEY)
   }

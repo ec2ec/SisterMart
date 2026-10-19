@@ -1,10 +1,11 @@
 import { ref } from 'vue'
 import { fetchUnreadCount } from '../api/m7'
-import { isLoggedIn } from './useSession'
+import { isLoggedIn, syncSessionFromStorage } from './useSession'
 
 export const unreadCount = ref(0)
 
 export async function refreshUnread() {
+  syncSessionFromStorage()
   if (!isLoggedIn()) {
     unreadCount.value = 0
     return 0

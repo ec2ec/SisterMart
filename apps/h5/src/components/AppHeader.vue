@@ -3,7 +3,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
-import { isLoggedIn } from '../composables/useSession'
+import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { refreshUnread, unreadCount } from '../composables/useUnread'
 
 withDefaults(
@@ -21,17 +21,15 @@ const router = useRouter()
 onMounted(() => {
   refreshUnread()
 })
-watch(
-  () => isLoggedIn(),
-  () => refreshUnread(),
-)
+watch(loggedIn, () => refreshUnread())
 
 function goSearch() {
   router.push({ name: 'search' })
 }
 
 function goMessages() {
-  if (!isLoggedIn()) {
+  syncSessionFromStorage()
+  if (!loggedIn.value) {
     router.push({ name: 'login', query: { redirect: '/messages' } })
     return
   }
