@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { NButton, NCard, NFormItem, NInput, NInputNumber, NSelect, NSpace, NSwitch, useMessage } from 'naive-ui'
 import { api } from '../api'
+import { assetUrl } from '../utils/assetUrl'
 
 type Cat = {
   id: number
@@ -97,12 +98,17 @@ onMounted(load)
         <n-button type="primary" size="small" @click="startCreate">新增分類</n-button>
       </template>
       <div class="list-head">
+        <span class="col-thumb" />
         <span class="col-name">分類</span>
         <span class="col-status">狀態</span>
         <span class="col-action">操作</span>
       </div>
       <n-space vertical :size="0">
         <div v-for="row in flat" :key="row.id" class="row" :class="{ off: row.status !== 1 }">
+          <span class="col-thumb">
+            <img v-if="row.icon" class="thumb" :src="assetUrl(row.icon)" :alt="row.name['zh-HK']" />
+            <span v-else class="thumb placeholder" />
+          </span>
           <span class="col-name">{{ row.label }}</span>
           <span class="col-status" :class="row.status === 1 ? 'on' : 'off-tag'">
             {{ row.status === 1 ? '啟用' : '未啟用' }}
@@ -144,7 +150,7 @@ onMounted(load)
 .list-head,
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem;
+  grid-template-columns: 1.75rem minmax(0, 1fr) 4.5rem 3.5rem;
   gap: 0.75rem;
   align-items: center;
   padding: 0.4rem 0;
@@ -155,11 +161,31 @@ onMounted(load)
   color: #8a8378;
   border-bottom-color: #e5e0d8;
 }
+.col-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thumb {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.25rem;
+  object-fit: cover;
+  background: #f3f0ea;
+  display: block;
+}
+.thumb.placeholder {
+  border: 1px dashed #d5cfc4;
+  box-sizing: border-box;
+}
 .col-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.row.off .thumb {
+  opacity: 0.55;
 }
 .col-status {
   text-align: center;
