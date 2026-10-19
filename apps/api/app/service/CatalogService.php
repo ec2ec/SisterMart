@@ -153,9 +153,22 @@ class CatalogService
             $builder->whereIn('p.category_id', $ids);
         }
         if ($q !== '') {
-            $productIds = Db::name('product_i18n')
-                ->whereLike('name', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%')
-                ->column('product_id');
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%';
+            $idsFromName = Db::name('product_i18n')->whereLike('name', $like)->column('product_id');
+            $idsFromSummary = Db::name('product_i18n')->whereLike('summary', $like)->column('product_id');
+            $idsFromDetail = Db::name('product_i18n')->whereLike('detail', $like)->column('product_id');
+            $idsFromCode = Db::name('products')->whereLike('code', $like)->column('id');
+            $idsFromId = ctype_digit($q) ? [(int) $q] : [];
+            $productIds = array_values(array_unique(array_map(
+                'intval',
+                array_merge(
+                    $idsFromName ?: [],
+                    $idsFromSummary ?: [],
+                    $idsFromDetail ?: [],
+                    $idsFromCode ?: [],
+                    $idsFromId,
+                ),
+            )));
             if (!$productIds) {
                 return ['items' => [], 'sold_display_mode' => SoldDisplay::mode()];
             }
@@ -534,8 +547,28 @@ class CatalogService
             $name[$n['locale']] = $n['name'];
         }
         $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
+        $stock = (int) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->sum('stock') ?: 0);
         $badges = Db::name('product_badges')->where('product_id', $row['id'])->column('badge');
         $cat = Db::name('categories')->where('id', $row['category_id'])->find();
+        $categoryName = ['zh-HK' => '', 'en' => ''];
+        if ($cat) {
+            $catNames = Db::name('category_i18n')->where('category_id', $cat['id'])->select()->toArray();
+            foreach ($catNames as $cn) {
+                $categoryName[$cn['locale']] = $cn['name'];
+            }
+            if ($categoryName['zh-HK'] === '' && $categoryName['en'] === '') {
+                $categoryName['zh-HK'] = (string) ($cat['code'] ?? '');
+                $categoryName['en'] = (string) ($cat['code'] ?? '');
+            }
+        }
+        $image = (string) ($row['cover_url'] ?: '');
+        if ($image === '') {
+            $image = (string) (Db::name('product_media')
+                ->where('product_id', $row['id'])
+                ->where('media_type', 'image')
+                ->order('sort_order', 'asc')
+                ->value('url') ?: '');
+        }
 
         return [
             'id'       => (string) $row['code'],
@@ -545,9 +578,11 @@ class CatalogService
             'price'    => $price,
             'sold'     => SoldDisplay::label((int) $row['sold_count'], $mode),
             'sold_count' => (int) $row['sold_count'],
-            'image'    => $row['cover_url'] ?: '',
+            'stock'    => $stock,
+            'image'    => $image,
             'category' => $cat['code'] ?? '',
             'category_id' => (int) $row['category_id'],
+            'category_name' => $categoryName,
             'badges'   => array_values($badges),
             'status'   => (int) $row['status'],
             'commission_type' => $row['commission_type'] ?? null,
