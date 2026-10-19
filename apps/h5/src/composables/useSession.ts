@@ -47,6 +47,9 @@ export function isLoggedIn() {
 }
 
 export function currentMember() {
+  if (!memberState.value) {
+    memberState.value = readMember()
+  }
   return memberState.value
 }
 

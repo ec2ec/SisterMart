@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchDistributionOverview } from '../api/m7'
+import { buildShareUrl } from '../utils/shareUrl'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -16,7 +17,7 @@ onMounted(async () => {
 
 function copyLink() {
   if (!data.value) return
-  const url = new URL(data.value.share_link, location.origin).toString()
+  const url = buildShareUrl(data.value.share_link)
   navigator.clipboard?.writeText(url).catch(() => undefined)
   showToast(t('pdp.copied'))
 }

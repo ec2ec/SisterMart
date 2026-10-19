@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchPoster } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
+import { buildShareUrl } from '../utils/shareUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -16,10 +17,12 @@ onMounted(async () => {
 
 function copy() {
   if (!poster.value) return
-  const url = new URL(poster.value.qr_payload, location.origin).toString()
+  const url = buildShareUrl(poster.value.qr_payload)
   navigator.clipboard?.writeText(url).catch(() => undefined)
   showToast(t('pdp.copied'))
 }
+
+const posterLink = computed(() => (poster.value ? buildShareUrl(poster.value.qr_payload) : ''))
 </script>
 
 <template>
@@ -29,7 +32,7 @@ function copy() {
       <img :src="poster.image" alt="" />
       <h2>{{ text(poster.name) }}</h2>
       <p>HK$ {{ poster.price }}</p>
-      <div class="qr">{{ poster.qr_payload }}</div>
+      <div class="qr">{{ posterLink }}</div>
       <p class="ref">ref={{ poster.promo_code }}</p>
       <van-button round color="var(--sm-primary)" @click="copy">{{ t('m7.copyLink') }}</van-button>
     </div>

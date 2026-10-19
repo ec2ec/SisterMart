@@ -244,7 +244,8 @@ class DistributionService
             'pending_commission' => round($pending, 2),
             'total_commission' => round($total, 2),
             'downline_count' => $downlineCount,
-            'share_link' => '/?ref=' . $promo,
+            // Hash route: shared-host nginx has no SPA try_files; `/`+path deep links 404.
+            'share_link' => '/#/?ref=' . rawurlencode($promo),
             'withdraw_min' => TradeSettings::withdrawMin(),
         ];
     }
@@ -490,7 +491,7 @@ class DistributionService
             'name' => $name,
             'price' => (float) ($sku['price'] ?? 0),
             'image' => (string) ($product['cover_url'] ?: ($sku['image_url'] ?? '')),
-            'qr_payload' => '/product/' . $code . '?ref=' . $promo,
+            'qr_payload' => '/#/product/' . rawurlencode($code) . '?ref=' . rawurlencode($promo),
             'promo_code' => $promo,
         ];
     }

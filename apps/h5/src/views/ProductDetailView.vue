@@ -15,6 +15,7 @@ import { captureRefFromQuery, storedRef } from '../composables/useReferral'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
+import { buildShareUrl } from '../utils/shareUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -179,10 +180,12 @@ function toggleFav() {
 
 async function share() {
   if (!product.value) return
-  const url = new URL(`/product/${product.value.id}`, location.origin)
   const promo = currentMember()?.promo_code
-  if (isLoggedIn() && promo) url.searchParams.set('ref', promo)
-  const shareUrl = url.toString()
+  const path =
+    isLoggedIn() && promo
+      ? `/product/${product.value.id}?ref=${encodeURIComponent(promo)}`
+      : `/product/${product.value.id}`
+  const shareUrl = buildShareUrl(path)
   if (navigator.share) {
     try {
       await navigator.share({ title: name.value, url: shareUrl })

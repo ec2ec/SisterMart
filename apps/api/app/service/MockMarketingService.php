@@ -174,7 +174,7 @@ class MockMarketingService
             'pending_commission' => 36.0,
             'total_commission' => 520.8,
             'downline_count' => 3,
-            'share_link' => '/?ref=' . $promo,
+            'share_link' => '/#/?ref=' . rawurlencode($promo),
         ];
     }
 
@@ -278,7 +278,7 @@ class MockMarketingService
             'name' => ['zh-HK' => '推廣海報商品', 'en' => 'Poster product'],
             'price' => 128,
             'image' => '/mock/product-1.jpg',
-            'qr_payload' => '/product/' . $productId . '?ref=' . $promo,
+            'qr_payload' => '/#/product/' . rawurlencode((string) $productId) . '?ref=' . rawurlencode($promo),
             'promo_code' => $promo,
         ];
     }
