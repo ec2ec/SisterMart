@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 專案富文本標準組件（簡潔模式）。
+ * 用戶說「改成富文本」時複用本組件 + uploadImage(preset)，見 .cursor/rules/rich-text-editor.mdc
+ */
 import { shallowRef, onBeforeUnmount, watch, computed } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'

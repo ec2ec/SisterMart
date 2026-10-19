@@ -1,0 +1,38 @@
+---
+description: 富文本編輯器標準（wangEditor 簡潔模式 + 公共圖片壓縮落地）
+globs:
+  - apps/admin/**/*.{vue,ts}
+  - apps/api/app/**/*Upload*
+  - apps/api/app/support/ImageProcess.php
+alwaysApply: false
+---
+
+# 富文本標準
+
+用戶說「改成富文本 / 富文本編輯器」時，**一律按本標準**，不要自造另一套編輯器或直傳原圖。
+
+## 前端（Admin）
+
+1. 使用 `apps/admin/src/components/WangSimpleEditor.vue`（`@wangeditor/editor` + `editor-for-vue`，`mode="simple"`）。
+2. 新頁面直接 `import WangSimpleEditor`，不要再寫 `contenteditable` / 自製 toolbar，也不要換 Quill、TinyMCE 等。
+3. 圖片上傳必須走 `uploadImage()`（`apps/admin/src/api.ts`）→ `POST /api/v1/admin/uploads/image`，並選合適 `preset`（商品=`product`，Banner=`banner`，通用=`admin`）。
+4. 落庫 HTML 用相對路徑（`/storage/...`）；預覽用 `apps/admin/src/utils/assetUrl.ts` 的 `toPreviewHtml` / `toStoredHtml`。
+5. 若欄位本質是「圖片列表」而非長文（如商品媒體），編輯器用富文本插圖，保存時從 HTML 抽 `<img src>` 寫入結構化欄位（參考 `ProductEditView` 的 `htmlToMedia` / `mediaToHtml`）。
+
+## 後端（API）
+
+1. 壓縮與落地只用公共方法：
+   - `app\support\ImageProcess`（等比縮放 JPEG）
+   - `app\service\ImageUploadService`（preset + 落 `public/storage`）
+2. 禁止在控制器裡再複製一套 GD 壓縮邏輯；會員端評價/售後亦走同一 Service 的固定 preset。
+3. 新上傳入口需掛路由 + `AdminAcl` 權限。
+
+## H5 展示
+
+- 詳情類 HTML 用 `v-html` 渲染，並加基本樣式（圖片寬度 100% 等）；純文本舊數據仍可純文字顯示（可用簡單 HTML 檢測分支）。
+
+## 參考實現
+
+- 組件：`apps/admin/src/components/WangSimpleEditor.vue`
+- 商品編輯：`apps/admin/src/views/ProductEditView.vue`
+- 上傳：`apps/api/app/controller/admin/Uploads.php`
