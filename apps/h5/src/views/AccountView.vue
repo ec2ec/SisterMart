@@ -105,7 +105,7 @@ const orderItems = [
 const services = [
   { key: 'profile', icon: 'user-o', route: 'profile' },
   { key: 'address', icon: 'location-o', route: 'addresses' },
-  { key: 'wishlist', icon: 'star-o', route: 'wishlist' },
+  { key: 'wishlist', icon: 'like-o', route: 'wishlist' },
   { key: 'footprint', icon: 'browsing-history-o', route: 'footprint' },
   { key: 'bills', icon: 'balance-list-o', route: 'balance-logs' },
   { key: 'couponCenter', icon: 'coupon-o', route: 'coupon-center' },

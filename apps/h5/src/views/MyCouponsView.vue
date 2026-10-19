@@ -31,6 +31,17 @@ onMounted(load)
 function nameOf(row: Row) {
   return locale.value === 'en' ? row.coupon.name.en : row.coupon.name['zh-HK']
 }
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    unused: 'm6.unused',
+    used: 'm6.used',
+    expired: 'm6.expired',
+    frozen: 'm6.frozen',
+  }
+  const key = map[status]
+  return key ? t(key) : status
+}
 </script>
 
 <template>
@@ -48,7 +59,7 @@ function nameOf(row: Row) {
         :key="row.grant_id"
         :title="nameOf(row)"
         :label="`${row.coupon.code} · ≥HK$${row.coupon.threshold}`"
-        :value="row.status"
+        :value="statusLabel(row.status)"
       />
     </van-cell-group>
   </div>
