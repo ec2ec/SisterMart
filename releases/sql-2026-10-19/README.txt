@@ -5,6 +5,10 @@ SisterMart 本次上線 SQL（2026-10-19）
   - 含 H5 /admin /mock /products /api /sm-backend（不含 .env）
   - 解壓後請硬刷新；確保伺服器已有 sm-backend/.env
 
+【若訂閱／newsletter/me 500】m27_newsletter.sql
+  - 用途：建立 newsletter_subscribers 表（可重複）
+  - 新版 API 會嘗試自動建表；無權限時請手動執行
+
 【若簽到日曆 500】m14_checkin.sql
   - 用途：建立 member_checkins 表（可重複）
   - 新版 API 會嘗試自動建表；無權限時請手動執行本腳本
