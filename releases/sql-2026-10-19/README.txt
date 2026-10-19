@@ -1,0 +1,21 @@
+SisterMart 本次上線 SQL（2026-10-19）
+
+【必須執行】deploy_catalog_attrs.sql
+  - 用途：角標主數據、商品參數（材質等）表結構 + 種子（new/hot/editor/flash、材質示例）
+  - 可重複執行，安全
+  - 執行範例：
+    mysql -u帳號 -p 資料庫名 < deploy_catalog_attrs.sql
+    或在 phpMyAdmin 導入此檔
+
+【必須執行】deploy_tabbar_active.sql
+  - 用途：底部 Tab 選中點亮（深色圓底 + 實心圖標）
+  - 可重複執行，安全
+  - 執行範例：
+    mysql -u帳號 -p 資料庫名 < deploy_tabbar_active.sql
+    或在 phpMyAdmin 導入此檔
+
+【若 VPS 從未跑過早期腳本，才需要（此前已給過）】
+  - deploy_m28_m32.sql
+  - deploy_m11_m19_fix.sql
+  - deploy_vps_schema_gaps.sql
+  若首頁 banners / 秒殺 / 消息廣播 / 評價已正常，可跳過。

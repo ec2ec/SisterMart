@@ -12,6 +12,19 @@ export type CategoryNode = {
   children: CategoryNode[]
 }
 
+export type BadgeItem = {
+  code: string
+  color: string
+  name: Localized
+}
+
+export type ProductAttr = {
+  id: number
+  code: string
+  name: Localized
+  values: Array<{ id: number; code: string; name: Localized }>
+}
+
 export type ProductCard = {
   id: string
   db_id: number
@@ -22,7 +35,8 @@ export type ProductCard = {
   image: string
   category: string
   category_id: number
-  badges: Array<'flash' | 'hot' | 'new' | 'editor'>
+  badges: string[]
+  badge_items?: BadgeItem[]
   gallery?: string[]
   liked?: boolean
 }
@@ -53,6 +67,7 @@ export type ProductDetail = ProductCard & {
   spec_groups: SpecGroup[]
   skus: Sku[]
   tags: Localized[]
+  attrs?: ProductAttr[]
   reviews: Array<{
     id: number | string
     stars: number

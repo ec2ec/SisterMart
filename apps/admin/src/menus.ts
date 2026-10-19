@@ -16,6 +16,10 @@ export const adminMenus: AdminMenu[] = [
     children: [
       { label: '商品', key: '/catalog/products', path: '/catalog/products' },
       { label: '分類', key: '/catalog/categories', path: '/catalog/categories' },
+      { label: '角標', key: '/catalog/badges', path: '/catalog/badges' },
+      { label: '服務標籤', key: '/catalog/service-tags', path: '/catalog/service-tags' },
+      { label: '商品參數', key: '/catalog/attrs', path: '/catalog/attrs' },
+      { label: '規格管理', key: '/catalog/specs', path: '/catalog/specs' },
     ],
   },
   {

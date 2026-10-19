@@ -13,6 +13,8 @@ type CatNode = {
   children?: CatNode[]
 }
 
+type BadgeItem = { code: string; color: string; name: { 'zh-HK': string; en: string } }
+
 type Row = {
   db_id: number
   code: string
@@ -23,17 +25,11 @@ type Row = {
   stock: number
   status: number
   badges: string[]
+  badge_items?: BadgeItem[]
   image: string
   category: string
   category_id: number
   category_name: { 'zh-HK': string; en: string }
-}
-
-const BADGE_LABEL: Record<string, string> = {
-  new: '新品',
-  hot: '熱銷',
-  editor: '店長推薦',
-  flash: '秒殺',
 }
 
 const router = useRouter()
@@ -54,8 +50,13 @@ function flattenCats(nodes: CatNode[], depth = 0): Array<{ label: string; value:
   return out
 }
 
-function badgeLabel(b: string) {
-  return BADGE_LABEL[b] || b
+function badgeItems(row: Row): BadgeItem[] {
+  if (row.badge_items?.length) return row.badge_items
+  return (row.badges || []).map((code) => ({
+    code,
+    color: '#16162b',
+    name: { 'zh-HK': code, en: code },
+  }))
 }
 
 function categoryLabel(row: Row) {
@@ -150,10 +151,16 @@ onMounted(async () => {
           <td>{{ row.sold_count ?? row.sold }}</td>
           <td>{{ row.stock ?? 0 }}</td>
           <td>
-            <n-tag v-for="b in row.badges" :key="b" size="small" style="margin-right: 0.25rem">
-              {{ badgeLabel(b) }}
+            <n-tag
+              v-for="b in badgeItems(row)"
+              :key="b.code"
+              size="small"
+              :color="{ color: b.color, textColor: '#fff', borderColor: b.color }"
+              style="margin-right: 0.25rem"
+            >
+              {{ b.name['zh-HK'] }}
             </n-tag>
-            <span v-if="!row.badges?.length" class="muted">—</span>
+            <span v-if="!badgeItems(row).length" class="muted">—</span>
           </td>
           <td>{{ row.status === 1 ? '上架' : '下架' }}</td>
           <td>

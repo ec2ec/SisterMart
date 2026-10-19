@@ -14,6 +14,7 @@ const active = computed(() => {
   const p = route.path
   if (p.startsWith('/sales/orders/')) return '/sales/orders'
   if (p.startsWith('/catalog/products/') && p !== '/catalog/products') return '/catalog/products'
+  if (p.startsWith('/catalog/specs/') && p !== '/catalog/specs') return '/catalog/specs'
   return p === '/' ? '/' : p
 })
 const title = computed(() => String(route.meta.title || 'SisterMart'))

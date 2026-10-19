@@ -237,6 +237,12 @@ async function share() {
         <s>{{ money(compareAt) }}</s>
         <span>{{ t('pdp.stock', { n: stock }) }}</span>
       </p>
+      <div v-if="(product.attrs || []).length" class="attrs">
+        <div v-for="attr in product.attrs" :key="attr.id" class="attr-row">
+          <span class="attr-name">{{ text(attr.name) }}</span>
+          <span class="attr-vals">{{ attr.values.map((v) => text(v.name)).join(' · ') }}</span>
+        </div>
+      </div>
       <div class="tags">
         <span v-for="tag in product.tags" :key="tag['zh-HK']">{{ text(tag) }}</span>
       </div>
@@ -410,6 +416,24 @@ h1 {
   display: flex;
   gap: 0.75rem;
   margin: 0.25rem 0 0.75rem;
+}
+.attrs {
+  margin-bottom: 0.5rem;
+}
+.attr-row {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--sm-text-secondary);
+}
+.attr-name {
+  flex: 0 0 auto;
+  color: var(--sm-text-muted);
+}
+.attr-vals {
+  flex: 1;
+  min-width: 0;
 }
 .tags {
   display: flex;

@@ -1,11 +1,16 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import AdminLayout from '../layouts/AdminLayout.vue'
 import ArticlesView from '../views/ArticlesView.vue'
+import AttrsView from '../views/AttrsView.vue'
+import BadgesView from '../views/BadgesView.vue'
 import CategoriesView from '../views/CategoriesView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import ProductEditView from '../views/ProductEditView.vue'
+import ProductSpecsView from '../views/ProductSpecsView.vue'
 import ProductsView from '../views/ProductsView.vue'
+import ServiceTagsView from '../views/ServiceTagsView.vue'
+import SpecsView from '../views/SpecsView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
@@ -36,6 +41,11 @@ export const router = createRouter({
         { path: '/catalog/products', component: ProductsView, meta: { title: '商品' } },
         { path: '/catalog/products/:id', component: ProductEditView, meta: { title: '商品編輯' } },
         { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
+        { path: '/catalog/badges', component: BadgesView, meta: { title: '角標' } },
+        { path: '/catalog/service-tags', component: ServiceTagsView, meta: { title: '服務標籤' } },
+        { path: '/catalog/attrs', component: AttrsView, meta: { title: '商品參數' } },
+        { path: '/catalog/specs', component: SpecsView, meta: { title: '規格管理' } },
+        { path: '/catalog/specs/:id', component: ProductSpecsView, meta: { title: '規格編輯' } },
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
         { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
         { path: '/sales/aftersales', component: AftersalesView, meta: { title: '售後' } },

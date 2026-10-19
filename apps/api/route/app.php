@@ -153,7 +153,21 @@ Route::group('api/v1/admin', function () {
     Route::put('products/:id', 'admin.Products/update');
     Route::get('products', 'admin.Products/index');
     Route::post('products', 'admin.Products/store');
-    Route::get('service-tags', 'admin.Products/tags');
+
+    Route::get('badges', 'admin.Badges/index');
+    Route::post('badges', 'admin.Badges/store');
+    Route::put('badges/:id', 'admin.Badges/update');
+
+    Route::get('service-tags', 'admin.ServiceTags/index');
+    Route::post('service-tags', 'admin.ServiceTags/store');
+    Route::put('service-tags/:id', 'admin.ServiceTags/update');
+
+    Route::get('attrs', 'admin.Attrs/index');
+    Route::post('attrs', 'admin.Attrs/store');
+    Route::put('attrs/:id', 'admin.Attrs/update');
+    Route::post('attrs/:id/values', 'admin.Attrs/storeValue');
+    Route::put('attrs/:id/values/:valueId', 'admin.Attrs/updateValue');
+    Route::delete('attrs/:id/values/:valueId', 'admin.Attrs/destroyValue');
 
     Route::get('articles/:code', 'admin.Articles/read');
     Route::put('articles/:id', 'admin.Articles/update');

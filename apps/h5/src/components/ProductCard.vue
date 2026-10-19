@@ -16,8 +16,23 @@ const router = useRouter()
 const route = useRoute()
 
 const name = computed(() => text(props.product.name))
-const badges = computed(() => props.product.badges ?? [])
+const badgeItems = computed(() => {
+  if (props.product.badge_items?.length) return props.product.badge_items
+  return (props.product.badges ?? []).map((code) => ({
+    code,
+    color: code === 'editor' ? 'var(--sm-badge-alt)' : 'var(--sm-primary)',
+    name: { 'zh-HK': code, en: code },
+  }))
+})
 const liked = computed(() => isFavorite(props.product.id))
+
+function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } }) {
+  const fromApi = text(item.name)
+  if (fromApi && fromApi !== item.code) return fromApi
+  const key = `badge.${item.code}`
+  const fromI18n = t(key)
+  return fromI18n !== key ? fromI18n : fromApi || item.code
+}
 
 function openDetail() {
   router.push({ name: 'product-detail', params: { id: props.product.id } })
@@ -32,8 +47,13 @@ function onWish() {
   <article class="card" role="link" tabindex="0" @click="openDetail" @keydown.enter="openDetail">
     <div class="media">
       <img :src="product.image" :alt="name" />
-      <span v-if="badges.length" class="badges">
-        <span v-for="badge in badges" :key="badge" class="badge" :class="badge">{{ t(`badge.${badge}`) }}</span>
+      <span v-if="badgeItems.length" class="badges">
+        <span
+          v-for="badge in badgeItems"
+          :key="badge.code"
+          class="badge"
+          :style="{ background: badge.color }"
+        >{{ badgeLabel(badge) }}</span>
       </span>
       <button class="wish" type="button" :aria-label="t('pdp.fav')" @click.stop="onWish">
         <van-icon :name="liked ? 'like' : 'like-o'" color="var(--sm-primary)" />
@@ -88,10 +108,6 @@ function onWish() {
   color: #fff;
   font-size: 0.625rem;
   line-height: 1.4;
-}
-
-.badge.editor {
-  background: var(--sm-badge-alt);
 }
 
 .wish {

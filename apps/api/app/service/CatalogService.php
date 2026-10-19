@@ -367,9 +367,12 @@ class CatalogService
                 ]);
             }
 
+            $allowedBadges = Db::name('product_badge_defs')->where('status', 1)->column('code');
+            $allowedBadges = array_map('strval', $allowedBadges ?: []);
             Db::name('product_badges')->where('product_id', $id)->delete();
             foreach (($body['badges'] ?? []) as $badge) {
-                if (in_array($badge, ['new', 'editor', 'hot', 'flash'], true)) {
+                $badge = (string) $badge;
+                if (in_array($badge, $allowedBadges, true)) {
                     Db::name('product_badges')->insert(['product_id' => $id, 'badge' => $badge]);
                 }
             }
@@ -377,6 +380,32 @@ class CatalogService
             Db::name('product_service_tags')->where('product_id', $id)->delete();
             foreach (($body['service_tag_ids'] ?? []) as $tagId) {
                 Db::name('product_service_tags')->insert(['product_id' => $id, 'service_tag_id' => (int) $tagId]);
+            }
+
+            if (array_key_exists('attr_value_ids', $body)) {
+                Db::name('product_attr_links')->where('product_id', $id)->delete();
+                $valueIds = is_array($body['attr_value_ids']) ? $body['attr_value_ids'] : [];
+                $seen = [];
+                foreach ($valueIds as $vid) {
+                    $vid = (int) $vid;
+                    if ($vid <= 0 || isset($seen[$vid])) {
+                        continue;
+                    }
+                    $ok = Db::name('product_attr_values')->alias('v')
+                        ->join('product_attrs a', 'a.id = v.attr_id')
+                        ->where('v.id', $vid)
+                        ->where('v.status', 1)
+                        ->where('a.status', 1)
+                        ->find();
+                    if (!$ok) {
+                        continue;
+                    }
+                    $seen[$vid] = true;
+                    Db::name('product_attr_links')->insert([
+                        'product_id' => $id,
+                        'attr_value_id' => $vid,
+                    ]);
+                }
             }
 
             $oldGroups = Db::name('spec_groups')->where('product_id', $id)->column('id');
@@ -548,7 +577,8 @@ class CatalogService
         }
         $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
         $stock = (int) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->sum('stock') ?: 0);
-        $badges = Db::name('product_badges')->where('product_id', $row['id'])->column('badge');
+        $badgeItems = $this->presentBadgeItems((int) $row['id']);
+        $badges = array_map(static fn ($b) => (string) $b['code'], $badgeItems);
         $cat = Db::name('categories')->where('id', $row['category_id'])->find();
         $categoryName = ['zh-HK' => '', 'en' => ''];
         if ($cat) {
@@ -583,13 +613,113 @@ class CatalogService
             'category' => $cat['code'] ?? '',
             'category_id' => (int) $row['category_id'],
             'category_name' => $categoryName,
-            'badges'   => array_values($badges),
+            'badges'   => $badges,
+            'badge_items' => $badgeItems,
             'status'   => (int) $row['status'],
             'commission_type' => $row['commission_type'] ?? null,
             'commission_value' => isset($row['commission_value']) && $row['commission_value'] !== null
                 ? (float) $row['commission_value']
                 : null,
         ];
+    }
+
+    /**
+     * @return list<array{code: string, color: string, name: array{zh-HK: string, en: string}}>
+     */
+    private function presentBadgeItems(int $productId): array
+    {
+        $codes = Db::name('product_badges')->where('product_id', $productId)->column('badge');
+        if (!$codes) {
+            return [];
+        }
+        $defs = Db::name('product_badge_defs')
+            ->whereIn('code', $codes)
+            ->where('status', 1)
+            ->order('sort_order', 'asc')
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+        $out = [];
+        foreach ($defs as $def) {
+            $names = Db::name('product_badge_def_i18n')->where('badge_def_id', $def['id'])->select()->toArray();
+            $name = ['zh-HK' => (string) $def['code'], 'en' => (string) $def['code']];
+            foreach ($names as $n) {
+                $name[$n['locale']] = $n['name'];
+            }
+            $out[] = [
+                'code' => (string) $def['code'],
+                'color' => (string) $def['color'],
+                'name' => $name,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    private function presentProductAttrs(int $productId): array
+    {
+        $valueIds = Db::name('product_attr_links')->where('product_id', $productId)->column('attr_value_id');
+        if (!$valueIds) {
+            return [];
+        }
+        $values = Db::name('product_attr_values')
+            ->whereIn('id', $valueIds)
+            ->where('status', 1)
+            ->order('sort_order', 'asc')
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+        if (!$values) {
+            return [];
+        }
+        $byAttr = [];
+        foreach ($values as $v) {
+            $byAttr[(int) $v['attr_id']][] = $v;
+        }
+        $attrs = Db::name('product_attrs')
+            ->whereIn('id', array_keys($byAttr))
+            ->where('status', 1)
+            ->order('sort_order', 'asc')
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+        $out = [];
+        foreach ($attrs as $attr) {
+            $aid = (int) $attr['id'];
+            $names = Db::name('product_attr_i18n')->where('attr_id', $aid)->select()->toArray();
+            $name = ['zh-HK' => (string) $attr['code'], 'en' => (string) $attr['code']];
+            foreach ($names as $n) {
+                $name[$n['locale']] = $n['name'];
+            }
+            $valsOut = [];
+            foreach ($byAttr[$aid] ?? [] as $v) {
+                $vid = (int) $v['id'];
+                $vNames = Db::name('product_attr_value_i18n')->where('attr_value_id', $vid)->select()->toArray();
+                $vName = ['zh-HK' => (string) $v['code'], 'en' => (string) $v['code']];
+                foreach ($vNames as $n) {
+                    $vName[$n['locale']] = $n['name'];
+                }
+                $valsOut[] = [
+                    'id' => $vid,
+                    'code' => (string) $v['code'],
+                    'name' => $vName,
+                ];
+            }
+            if ($valsOut === []) {
+                continue;
+            }
+            $out[] = [
+                'id' => $aid,
+                'code' => (string) $attr['code'],
+                'name' => $name,
+                'values' => $valsOut,
+            ];
+        }
+
+        return $out;
     }
 
     private function presentDetail(array $row, string $mode, ?int $viewerMemberId = null): array
@@ -687,6 +817,11 @@ class CatalogService
             }
         }
 
+        $attrValueIds = array_map(
+            'intval',
+            Db::name('product_attr_links')->where('product_id', $row['id'])->column('attr_value_id') ?: [],
+        );
+
         return array_merge($card, [
             'summary'         => $summary,
             'detail'          => $detail,
@@ -696,6 +831,8 @@ class CatalogService
             'skus'            => $skusOut,
             'tags'            => $tags,
             'service_tag_ids' => array_map('intval', $tagIds),
+            'attrs'           => $this->presentProductAttrs((int) $row['id']),
+            'attr_value_ids'  => $attrValueIds,
             'reviews'         => (new ReviewService())->listForProduct((int) $row['id'], $viewerMemberId),
         ]);
     }

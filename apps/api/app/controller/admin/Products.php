@@ -30,8 +30,4 @@ class Products extends ApiController
         return $this->run(fn () => (new CatalogService())->saveProduct($this->payload(), $id));
     }
 
-    public function tags(): Response
-    {
-        return $this->run(fn () => ['items' => (new CatalogService())->serviceTags()]);
-    }
 }

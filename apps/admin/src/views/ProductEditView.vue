@@ -26,6 +26,15 @@ const message = useMessage()
 const isNew = computed(() => route.params.id === 'new')
 const categories = ref<Cat[]>([])
 const tags = ref<Array<{ label: string; value: number }>>([])
+const badgeOptions = ref<Array<{ label: string; value: string; color: string }>>([])
+const attrDefs = ref<
+  Array<{
+    id: number
+    code: string
+    name: { 'zh-HK': string; en: string }
+    values: Array<{ id: number; code: string; name: { 'zh-HK': string; en: string } }>
+  }>
+>([])
 
 const complex = ref(false)
 const original = ref<any>(null)
@@ -40,6 +49,7 @@ const form = ref({
   detail_en: '',
   badges: [] as string[],
   service_tag_ids: [] as number[],
+  attr_value_ids: [] as number[],
   mediaText: '',
   groupCode: 'style',
   groupNameZh: '款式',
@@ -111,12 +121,41 @@ function flattenCats(nodes: any[], depth = 0): Cat[] {
 }
 
 onMounted(async () => {
-  const [cats, tagData] = await Promise.all([
+  const [cats, tagData, badgeData, attrData] = await Promise.all([
     api<{ items: any[] }>('/api/v1/admin/categories', {}, true),
-    api<{ items: Array<{ id: number; name: { 'zh-HK': string } }> }>('/api/v1/admin/service-tags', {}, true),
+    api<{ items: Array<{ id: number; name: { 'zh-HK': string }; status: number }> }>(
+      '/api/v1/admin/service-tags?active_only=1',
+      {},
+      true,
+    ),
+    api<{ items: Array<{ code: string; color: string; name: { 'zh-HK': string }; status: number }> }>(
+      '/api/v1/admin/badges?active_only=1',
+      {},
+      true,
+    ),
+    api<{
+      items: Array<{
+        id: number
+        code: string
+        status: number
+        name: { 'zh-HK': string; en: string }
+        values: Array<{ id: number; code: string; status: number; name: { 'zh-HK': string; en: string } }>
+      }>
+    }>('/api/v1/admin/attrs?active_only=1', {}, true),
   ])
   categories.value = flattenCats(cats.items)
-  tags.value = tagData.items.map((t) => ({ label: t.name['zh-HK'], value: t.id }))
+  tags.value = tagData.items.filter((t) => t.status !== 0).map((t) => ({ label: t.name['zh-HK'], value: t.id }))
+  badgeOptions.value = badgeData.items
+    .filter((b) => b.status !== 0)
+    .map((b) => ({ label: b.name['zh-HK'], value: b.code, color: b.color }))
+  attrDefs.value = attrData.items
+    .filter((a) => a.status !== 0)
+    .map((a) => ({
+      id: a.id,
+      code: a.code,
+      name: a.name,
+      values: (a.values || []).filter((v) => v.status !== 0),
+    }))
   if (!isNew.value) {
     const p = await api<any>(`/api/v1/admin/products/${route.params.id}`, {}, true)
     original.value = p
@@ -131,6 +170,7 @@ onMounted(async () => {
     form.value.detail_en = p.detail.en
     form.value.badges = p.badges || []
     form.value.service_tag_ids = p.service_tag_ids || []
+    form.value.attr_value_ids = p.attr_value_ids || []
     form.value.mediaText = mediaToHtml(p.media || [])
     const g = p.spec_groups?.[0]
     if (g) {
@@ -181,6 +221,7 @@ async function save() {
     detail: { 'zh-HK': form.value.detail_zh, en: form.value.detail_en },
     badges: form.value.badges,
     service_tag_ids: form.value.service_tag_ids,
+    attr_value_ids: form.value.attr_value_ids,
     media,
     commission_type: form.value.commission_type,
     commission_value: form.value.commission_type ? form.value.commission_value : null,
@@ -275,10 +316,7 @@ async function save() {
     <div class="row-2">
       <n-form-item label="角標">
         <n-checkbox-group v-model:value="form.badges">
-          <n-checkbox value="new" label="新品" />
-          <n-checkbox value="hot" label="熱銷" />
-          <n-checkbox value="editor" label="店長推薦" />
-          <n-checkbox value="flash" label="秒殺" />
+          <n-checkbox v-for="b in badgeOptions" :key="b.value" :value="b.value" :label="b.label" />
         </n-checkbox-group>
       </n-form-item>
       <n-form-item label="服務標籤">
@@ -287,6 +325,18 @@ async function save() {
         </n-checkbox-group>
       </n-form-item>
     </div>
+
+    <n-form-item v-for="attr in attrDefs" :key="attr.id" :label="attr.name['zh-HK']">
+      <n-checkbox-group v-model:value="form.attr_value_ids">
+        <n-checkbox
+          v-for="v in attr.values"
+          :key="v.id"
+          :value="v.id"
+          :label="v.name['zh-HK']"
+        />
+      </n-checkbox-group>
+      <span v-if="!attr.values.length" class="muted">暫無取值，請先在「商品參數」維護</span>
+    </n-form-item>
 
     <n-form-item label="佣金類型">
       <n-select
@@ -346,6 +396,10 @@ async function save() {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem 1rem;
   align-items: start;
+}
+.muted {
+  color: #8a8378;
+  font-size: 0.8125rem;
 }
 @media (max-width: 900px) {
   .row-4 {
