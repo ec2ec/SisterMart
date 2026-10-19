@@ -12,8 +12,11 @@ use think\facade\Db;
  */
 class CheckinService
 {
+    private static bool $schemaReady = false;
+
     public function calendar(int $memberId): array
     {
+        $this->ensureSchema();
         $year = (int) date('Y');
         $month = (int) date('n');
         $daysInMonth = (int) date('t');
@@ -55,6 +58,7 @@ class CheckinService
 
     public function checkin(int $memberId): array
     {
+        $this->ensureSchema();
         $today = date('Y-m-d');
         $now = date('Y-m-d H:i:s');
         $result = [];
@@ -114,5 +118,62 @@ class CheckinService
         $streak = max(1, $streak);
 
         return min($cap, $base + ($streak - 1) * $bonus);
+    }
+
+    /**
+     * 生產庫若未跑 m14，查日曆會 500（表不存在 →「服務暫時不可用」）。
+     * 此處冪等建表並補預設積分設定。
+     */
+    private function ensureSchema(): void
+    {
+        if (self::$schemaReady) {
+            return;
+        }
+        $prefix = (string) (Db::getConnection()->getConfig('prefix') ?: '');
+        $table = $prefix . 'member_checkins';
+        try {
+            // 勿用 SHOW TABLES LIKE ?（PDO 預編譯不支持）；直接 IF NOT EXISTS
+            Db::execute(
+                "CREATE TABLE IF NOT EXISTS `{$table}` (
+                  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                  `member_id` BIGINT UNSIGNED NOT NULL,
+                  `checkin_date` DATE NOT NULL,
+                  `reward` INT NOT NULL DEFAULT 0,
+                  `streak` INT NOT NULL DEFAULT 1,
+                  `created_at` DATETIME NOT NULL,
+                  UNIQUE KEY `uk_member_checkins_day` (`member_id`, `checkin_date`),
+                  KEY `idx_member_checkins_member` (`member_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            );
+        } catch (\Throwable $e) {
+            throw new ApiException(
+                'SERVER',
+                '簽到表未就緒，請執行 m14_checkin.sql（releases/sql）',
+                500,
+                50014,
+            );
+        }
+        $now = date('Y-m-d H:i:s');
+        foreach (
+            [
+                'checkin.base_reward' => '10',
+                'checkin.streak_bonus' => '1',
+                'checkin.streak_cap' => '30',
+            ] as $key => $value
+        ) {
+            try {
+                $exists = Db::name('shop_settings')->where('setting_key', $key)->find();
+                if (!$exists) {
+                    Db::name('shop_settings')->insert([
+                        'setting_key' => $key,
+                        'setting_value' => $value,
+                        'updated_at' => $now,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // 設定表異常時仍用 TradeSettings 預設值
+            }
+        }
+        self::$schemaReady = true;
     }
 }
