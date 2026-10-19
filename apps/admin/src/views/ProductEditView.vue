@@ -58,6 +58,18 @@ const form = ref({
   commission_value: 0,
 })
 
+/** 含空選項，可明確置為「不計佣金」；亦支援 clearable 清空 */
+const commissionTypeOptions = [
+  { label: '不計佣金', value: '' },
+  { label: '百分比 percent', value: 'percent' },
+  { label: '固定金額 fixed', value: 'fixed' },
+]
+
+function onCommissionType(v: string | null) {
+  form.value.commission_type = v ? v : null
+  if (!form.value.commission_type) form.value.commission_value = 0
+}
+
 function flattenCats(nodes: any[], depth = 0): Cat[] {
   const out: Cat[] = []
   for (const n of nodes) {
@@ -204,41 +216,49 @@ async function save() {
 
 <template>
   <n-card :title="isNew ? '新增商品' : '編輯商品'">
-    <n-form-item label="代碼"><n-input v-model:value="form.code" /></n-form-item>
-    <n-form-item label="分類">
-      <n-select v-model:value="form.category_id" :options="categories.map((c) => ({ label: c.label, value: c.id }))" />
-    </n-form-item>
-    <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
-    <n-form-item label="已售件數"><n-input-number v-model:value="form.sold_count" :min="0" /></n-form-item>
+    <div class="row-4">
+      <n-form-item label="代碼"><n-input v-model:value="form.code" /></n-form-item>
+      <n-form-item label="分類">
+        <n-select
+          v-model:value="form.category_id"
+          :options="categories.map((c) => ({ label: c.label, value: c.id }))"
+        />
+      </n-form-item>
+      <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
+      <n-form-item label="已售數量"><n-input-number v-model:value="form.sold_count" :min="0" style="width: 100%" /></n-form-item>
+    </div>
+
     <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
     <n-form-item label="英文名稱"><n-input v-model:value="form.name_en" /></n-form-item>
     <n-form-item label="繁中詳情"><n-input v-model:value="form.detail_zh" type="textarea" /></n-form-item>
     <n-form-item label="英文詳情"><n-input v-model:value="form.detail_en" type="textarea" /></n-form-item>
-    <n-form-item label="角標">
-      <n-checkbox-group v-model:value="form.badges">
-        <n-checkbox value="new" label="新品" />
-        <n-checkbox value="hot" label="熱銷" />
-        <n-checkbox value="editor" label="店長推薦" />
-        <n-checkbox value="flash" label="秒殺" />
-      </n-checkbox-group>
-    </n-form-item>
-    <n-form-item label="服務標籤">
-      <n-checkbox-group v-model:value="form.service_tag_ids">
-        <n-checkbox v-for="tag in tags" :key="tag.value" :value="tag.value" :label="tag.label" />
-      </n-checkbox-group>
-    </n-form-item>
     <n-form-item label="媒體 URL（每行一張圖）">
       <n-input v-model:value="form.mediaText" type="textarea" :rows="4" />
     </n-form-item>
+
+    <div class="row-2">
+      <n-form-item label="角標">
+        <n-checkbox-group v-model:value="form.badges">
+          <n-checkbox value="new" label="新品" />
+          <n-checkbox value="hot" label="熱銷" />
+          <n-checkbox value="editor" label="店長推薦" />
+          <n-checkbox value="flash" label="秒殺" />
+        </n-checkbox-group>
+      </n-form-item>
+      <n-form-item label="服務標籤">
+        <n-checkbox-group v-model:value="form.service_tag_ids">
+          <n-checkbox v-for="tag in tags" :key="tag.value" :value="tag.value" :label="tag.label" />
+        </n-checkbox-group>
+      </n-form-item>
+    </div>
+
     <n-form-item label="佣金類型">
       <n-select
-        v-model:value="form.commission_type"
+        :value="form.commission_type ?? ''"
         clearable
         placeholder="不計佣金"
-        :options="[
-          { label: '百分比 percent', value: 'percent' },
-          { label: '固定金額 fixed', value: 'fixed' },
-        ]"
+        :options="commissionTypeOptions"
+        @update:value="onCommissionType"
       />
     </n-form-item>
     <n-form-item v-if="form.commission_type" label="佣金值">
@@ -277,3 +297,26 @@ async function save() {
     </n-space>
   </n-card>
 </template>
+
+<style scoped>
+.row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .row-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
