@@ -88,10 +88,20 @@ onMounted(load)
 <template>
   <div class="split">
     <n-card title="分類列表" class="pane">
-      <n-space vertical>
-        <div v-for="row in flat" :key="row.id" class="row">
-          <span>{{ row.label }}</span>
-          <n-button size="tiny" @click="edit(row)">編輯</n-button>
+      <div class="list-head">
+        <span class="col-name">分類</span>
+        <span class="col-status">狀態</span>
+        <span class="col-action">操作</span>
+      </div>
+      <n-space vertical :size="0">
+        <div v-for="row in flat" :key="row.id" class="row" :class="{ off: row.status !== 1 }">
+          <span class="col-name">{{ row.label }}</span>
+          <span class="col-status" :class="row.status === 1 ? 'on' : 'off-tag'">
+            {{ row.status === 1 ? '啟用' : '未啟用' }}
+          </span>
+          <span class="col-action">
+            <n-button size="tiny" @click="edit(row)">編輯</n-button>
+          </span>
         </div>
       </n-space>
     </n-card>
@@ -123,12 +133,46 @@ onMounted(load)
 .pane {
   min-width: 0;
 }
+.list-head,
 .row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.35rem 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.4rem 0;
   border-bottom: 1px solid #eee;
+}
+.list-head {
+  font-size: 0.75rem;
+  color: #8a8378;
+  border-bottom-color: #e5e0d8;
+}
+.col-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.col-status {
+  text-align: center;
+  font-size: 0.8125rem;
+}
+.col-status.on {
+  color: #18a058;
+}
+.col-status.off-tag {
+  color: #999;
+}
+.col-action {
+  text-align: right;
+}
+.row.off,
+.row.off .col-name,
+.row.off .col-status {
+  color: #b0aaa0;
+}
+.row.off .col-status.off-tag {
+  color: #b0aaa0;
 }
 @media (max-width: 900px) {
   .split {
