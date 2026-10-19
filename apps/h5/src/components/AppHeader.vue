@@ -60,9 +60,18 @@ function goMessages() {
       @click-input="goSearch"
     />
     <div class="actions">
-      <van-icon name="like-o" size="1.25rem" @click="router.push({ name: 'wishlist' })" />
+      <button
+        class="action-btn"
+        type="button"
+        :aria-label="t('pages.wishlist')"
+        @click="router.push({ name: 'wishlist' })"
+      >
+        <van-icon name="like-o" size="1.125rem" color="var(--sm-primary)" />
+      </button>
       <van-badge :content="unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''" :show-zero="false">
-        <van-icon name="envelop-o" size="1.25rem" @click="goMessages" />
+        <button class="action-btn" type="button" :aria-label="t('pages.messages')" @click="goMessages">
+          <van-icon name="envelop-o" size="1.125rem" color="var(--sm-primary)" />
+        </button>
       </van-badge>
     </div>
   </header>
@@ -135,12 +144,27 @@ function goMessages() {
 .actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding-right: 0.25rem;
-  color: #333;
+  gap: 0.375rem;
+  flex: 0 0 auto;
 }
 
-.overlay .actions {
-  color: #222;
+/* 與商品卡願望鈕同圓形樣式；邊長對齊搜索框高度；底色與搜索框一致 */
+.action-btn {
+  width: var(--van-search-input-height, 34px);
+  height: var(--van-search-input-height, 34px);
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.12);
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.solid .action-btn {
+  background: #f2f3f5;
+  box-shadow: none;
 }
 </style>
