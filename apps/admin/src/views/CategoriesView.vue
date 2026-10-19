@@ -63,6 +63,11 @@ function reset() {
   form.value = { id: 0, code: '', parent_id: 0, icon: '', sort: 0, status: true, name_zh: '', name_en: '' }
 }
 
+/** 標題旁「新增分類」：清空右側表單進入新建 */
+function startCreate() {
+  reset()
+}
+
 async function save() {
   const body = {
     code: form.value.code,
@@ -88,6 +93,9 @@ onMounted(load)
 <template>
   <div class="split">
     <n-card title="分類列表" class="pane">
+      <template #header-extra>
+        <n-button type="primary" size="small" @click="startCreate">新增分類</n-button>
+      </template>
       <div class="list-head">
         <span class="col-name">分類</span>
         <span class="col-status">狀態</span>
