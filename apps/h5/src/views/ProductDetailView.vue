@@ -84,6 +84,15 @@ const gallery = computed(() => {
 })
 const zoomImages = computed(() => gallery.value)
 
+const detailRaw = computed(() => (product.value ? text(product.value.detail) : ''))
+const detailIsHtml = computed(() => /<\/?[a-z][\s\S]*>/i.test(detailRaw.value))
+const detailHtml = computed(() => detailRaw.value)
+/** 詳情富文本未覆蓋的輪播剩餘圖，避免重複 */
+const detailExtraImages = computed(() => {
+  const html = detailRaw.value
+  return gallery.value.slice(1).filter((src) => !html.includes(src))
+})
+
 const quote = computed(() => {
   if (!product.value) return null
   const key = skuKey(selected.value, product.value.spec_groups)
@@ -248,8 +257,15 @@ async function share() {
       </div>
 
       <h2>{{ t('pdp.detail') }}</h2>
-      <p class="copy">{{ text(product.detail) }}</p>
-      <img v-for="src in gallery.slice(1)" :key="src" class="detail-img" :src="src" alt="" />
+      <div v-if="detailIsHtml" class="copy rich" v-html="detailHtml" />
+      <p v-else class="copy">{{ text(product.detail) }}</p>
+      <img
+        v-for="src in detailExtraImages"
+        :key="src"
+        class="detail-img"
+        :src="src"
+        alt=""
+      />
 
       <h2>{{ t('pdp.reviews') }}</h2>
       <p v-if="!(product.reviews || []).length" class="copy muted">{{ t('pdp.reviewsEmpty') }}</p>
@@ -443,6 +459,19 @@ h2 {
 }
 .copy.muted {
   color: #999;
+}
+.copy.rich :deep(img) {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
+  border-radius: 0.5rem;
+}
+.copy.rich :deep(p) {
+  margin: 0 0 0.5rem;
+}
+.copy.rich :deep(a) {
+  color: var(--sm-primary);
 }
 .reviews {
   list-style: none;

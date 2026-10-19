@@ -46,5 +46,12 @@ export default defineConfig({
     fs: {
       allow: [path.resolve(mockDir, '../..'), path.resolve('.')],
     },
+    proxy: {
+      // 本地預覽上傳圖：/storage → ThinkPHP public/storage
+      '/storage': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
 })

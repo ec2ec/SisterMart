@@ -15,6 +15,8 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import WangSimpleEditor from '../components/WangSimpleEditor.vue'
+import { toStoredUrl } from '../utils/assetUrl'
 
 type Cat = { id: number; label: string }
 
@@ -70,6 +72,35 @@ function onCommissionType(v: string | null) {
   if (!form.value.commission_type) form.value.commission_value = 0
 }
 
+/** 媒體列表 → 富文本（每張圖一段） */
+function mediaToHtml(items: Array<{ url?: string }> | string[]): string {
+  const urls = (items || [])
+    .map((m) => (typeof m === 'string' ? m : m?.url || ''))
+    .map((u) => u.trim())
+    .filter(Boolean)
+  if (!urls.length) return ''
+  return urls.map((u) => `<p><img src="${u}" alt="" /></p>`).join('')
+}
+
+/** 富文本 → 媒體 URL 列表（按出現順序去重） */
+function htmlToMedia(html: string): Array<{ media_type: string; url: string }> {
+  const doc = new DOMParser().parseFromString(html || '', 'text/html')
+  const seen = new Set<string>()
+  const out: Array<{ media_type: string; url: string }> = []
+  doc.querySelectorAll('img[src]').forEach((img) => {
+    const raw = (img.getAttribute('src') || '').trim()
+    if (!raw || raw.startsWith('data:')) return
+    const url = toStoredUrl(raw)
+    if (!url || seen.has(url)) return
+    seen.add(url)
+    out.push({
+      media_type: url.match(/\.(mp4|webm)(\?|$)/i) ? 'video' : 'image',
+      url,
+    })
+  })
+  return out
+}
+
 function flattenCats(nodes: any[], depth = 0): Cat[] {
   const out: Cat[] = []
   for (const n of nodes) {
@@ -100,7 +131,7 @@ onMounted(async () => {
     form.value.detail_en = p.detail.en
     form.value.badges = p.badges || []
     form.value.service_tag_ids = p.service_tag_ids || []
-    form.value.mediaText = (p.media || []).map((m: any) => m.url).join('\n')
+    form.value.mediaText = mediaToHtml(p.media || [])
     const g = p.spec_groups?.[0]
     if (g) {
       form.value.groupCode = g.code
@@ -137,11 +168,7 @@ onMounted(async () => {
 })
 
 async function save() {
-  const media = form.value.mediaText
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((url) => ({ media_type: url.match(/\.(mp4|webm)(\?|$)/i) ? 'video' : 'image', url }))
+  const media = htmlToMedia(form.value.mediaText)
   const g = form.value.groupCode
   const a = form.value.optionACode
   const b = form.value.optionBCode
@@ -230,10 +257,19 @@ async function save() {
 
     <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
     <n-form-item label="英文名稱"><n-input v-model:value="form.name_en" /></n-form-item>
-    <n-form-item label="繁中詳情"><n-input v-model:value="form.detail_zh" type="textarea" /></n-form-item>
-    <n-form-item label="英文詳情"><n-input v-model:value="form.detail_en" type="textarea" /></n-form-item>
-    <n-form-item label="媒體 URL（每行一張圖）">
-      <n-input v-model:value="form.mediaText" type="textarea" :rows="4" />
+    <n-form-item label="繁體中文詳情">
+      <WangSimpleEditor v-model="form.detail_zh" preset="product" placeholder="繁體中文詳情，可上傳圖片" :height="240" />
+    </n-form-item>
+    <n-form-item label="英文詳情">
+      <WangSimpleEditor v-model="form.detail_en" preset="product" placeholder="English detail" :height="240" />
+    </n-form-item>
+    <n-form-item label="媒體（輪播圖，插入圖片）">
+      <WangSimpleEditor
+        v-model="form.mediaText"
+        preset="product"
+        placeholder="上傳商品輪播圖；保存時按圖片順序寫入媒體列表"
+        :height="200"
+      />
     </n-form-item>
 
     <div class="row-2">

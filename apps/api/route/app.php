@@ -165,6 +165,7 @@ Route::group('api/v1/admin', function () {
     Route::put('home-banners/:id', 'admin.HomeBanners/update');
     Route::delete('home-banners/:id', 'admin.HomeBanners/destroy');
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
+    Route::post('uploads/image', 'admin.Uploads/image');
     Route::get('home-ops', 'admin.HomeOps/read');
     Route::put('home-ops', 'admin.HomeOps/update');
     /** M29 展示區 */
