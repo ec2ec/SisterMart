@@ -42,7 +42,13 @@ async function load() {
 
 onMounted(load)
 onDeactivated(() => saveRouteScroll(SCROLL_KEY))
+let cartFirstActivate = true
 onActivated(() => {
+  // keep-alive 首次會同時觸發 mounted+activated，跳過避免連打兩次
+  if (cartFirstActivate) {
+    cartFirstActivate = false
+    return
+  }
   // 購物車可能在其他頁被改過，回來刷新；再還原滾動
   void load().then(() => restoreRouteScroll(SCROLL_KEY))
 })

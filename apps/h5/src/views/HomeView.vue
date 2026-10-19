@@ -154,7 +154,13 @@ onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
 })
 
+let homeFirstActivate = true
 onActivated(() => {
+  // 首次 mounted+activated 同幀，無需還原
+  if (homeFirstActivate) {
+    homeFirstActivate = false
+    return
+  }
   // 從商詳等返回：還原滾動；不重跑整頁請求（feedTab / banners 等實例內仍在）
   if (homeBooted) {
     restoreRouteScroll(SCROLL_KEY)

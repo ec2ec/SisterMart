@@ -13,9 +13,11 @@ import { toggleLocale } from '../i18n'
 
 defineOptions({ name: 'AccountView' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const SCROLL_KEY = 'account'
+/** 按鈕表示「即將切換到」的語言：當前繁中 → 展示美國旗（切英文）；當前英文 → 香港區旗 */
+const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '🇭🇰'))
 const u = accountMock
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 const showAvatarCrop = ref(false)
@@ -198,9 +200,6 @@ function goOrders(tab?: string) {
 <template>
   <div class="page page--soft">
     <section class="hero">
-      <button class="settings" type="button" :title="t('account.switchLang')" @click="toggleLocale">
-        <van-icon name="setting-o" size="1.125rem" />
-      </button>
       <div class="user" role="button" @click="openAccount">
         <button type="button" class="avatar" :disabled="avatarBusy" @click.stop="onAvatarClick">
           <img v-if="avatarSrc" :src="avatarSrc" alt="" />
@@ -277,9 +276,12 @@ function goOrders(tab?: string) {
         <van-icon :name="s.icon" size="1.375rem" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>
+      <button type="button" :title="t('account.switchLang')" @click="toggleLocale">
+        <span class="flag" aria-hidden="true">{{ nextLocaleFlag }}</span>
+        <span>{{ t('account.switchLang') }}</span>
+      </button>
     </section>
 
-    <button type="button" class="lang" @click="toggleLocale">{{ t('account.switchLang') }}</button>
     <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
 
     <AvatarCropDialog v-model:show="showAvatarCrop" @confirm="onAvatarConfirm" />
@@ -293,20 +295,10 @@ function goOrders(tab?: string) {
   background: linear-gradient(180deg, #ffe8df 0%, #fff 70%);
 }
 
-.settings {
-  position: absolute;
-  top: 0.875rem;
-  right: 0.875rem;
-  border: 0;
-  background: transparent;
-  color: #666;
-}
-
 .user {
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
-  padding-right: 2.25rem;
 }
 
 .avatar {
@@ -472,6 +464,15 @@ function goOrders(tab?: string) {
   grid-template-columns: repeat(4, 1fr);
   gap: 0.25rem 0;
   margin-bottom: 0.5rem;
+}
+
+.flag {
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .lang {
