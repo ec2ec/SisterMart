@@ -92,11 +92,7 @@ class ImageUploadService
             $mb = max(1, (int) ceil($maxUpload / (1024 * 1024)));
             throw new ApiException('INVALID', '單張圖片不可超過 ' . $mb . 'MB', 422, 42289);
         }
-        $mime = (string) ($file->getMime() ?: '');
-        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        if (!isset($allowed[$mime])) {
-            throw new ApiException('INVALID', '僅支持 JPG / PNG / WebP', 422, 42290);
-        }
+        $ext = $this->resolveImageExt($file);
 
         $bucket = trim((string) ($options['bucket'] ?? $presetName), '/');
         if ($bucket === '' || !preg_match('#^[a-z0-9_\-]+$#i', $bucket)) {
@@ -109,7 +105,7 @@ class ImageUploadService
         if (!is_dir($tmpRoot) && !mkdir($tmpRoot, 0775, true) && !is_dir($tmpRoot)) {
             throw new ApiException('SERVER', '無法建立臨時目錄', 500, 50001);
         }
-        $tmpName = bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
+        $tmpName = bin2hex(random_bytes(8)) . '.' . $ext;
         $file->move($tmpRoot, $tmpName);
         $tmpPath = $tmpRoot . '/' . $tmpName;
 
@@ -157,5 +153,38 @@ class ImageUploadService
         }
 
         return $opts;
+    }
+
+    private function resolveImageExt(UploadedFile $file): string
+    {
+        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $mime = strtolower((string) ($file->getMime() ?: ''));
+        if (isset($allowed[$mime])) {
+            return $allowed[$mime];
+        }
+        $path = method_exists($file, 'getPathname') ? (string) $file->getPathname() : '';
+        if ($path !== '' && is_file($path)) {
+            $info = @getimagesize($path);
+            $type = (int) ($info[2] ?? 0);
+            $byType = [
+                IMAGETYPE_JPEG => 'jpg',
+                IMAGETYPE_PNG => 'png',
+                IMAGETYPE_WEBP => 'webp',
+            ];
+            if (isset($byType[$type])) {
+                return $byType[$type];
+            }
+        }
+        $name = strtolower((string) $file->getOriginalName());
+        if (preg_match('/\.(jpe?g)$/', $name)) {
+            return 'jpg';
+        }
+        if (preg_match('/\.png$/', $name)) {
+            return 'png';
+        }
+        if (preg_match('/\.webp$/', $name)) {
+            return 'webp';
+        }
+        throw new ApiException('INVALID', '僅支持 JPG／PNG／WebP', 422, 42290);
     }
 }
