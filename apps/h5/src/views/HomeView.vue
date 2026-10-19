@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -20,8 +20,11 @@ import {
 } from '../api/catalog'
 import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
+import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn, memberState } from '../composables/useSession'
+
+defineOptions({ name: 'HomeView' })
 
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
@@ -118,7 +121,12 @@ function onSectionViewAll(sec: HomeSection) {
   router.push({ name: 'product-list', query: { section: sec.code } })
 }
 
+const SCROLL_KEY = 'home'
+let homeBooted = false
+
 onMounted(() => {
+  // keep-alive 下 onMounted 只跑一次：首屏拉數
+  homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
   void fetchHomeBanners()
@@ -140,6 +148,17 @@ onMounted(() => {
       sections.value = items
     })
     .catch(() => undefined)
+})
+
+onDeactivated(() => {
+  saveRouteScroll(SCROLL_KEY)
+})
+
+onActivated(() => {
+  // 從商詳等返回：還原滾動；不重跑整頁請求（feedTab / banners 等實例內仍在）
+  if (homeBooted) {
+    restoreRouteScroll(SCROLL_KEY)
+  }
 })
 
 watch(feedTab, () => {

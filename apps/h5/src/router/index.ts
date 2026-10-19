@@ -96,7 +96,18 @@ export const router = createRouter({
     { path: '/distribution/poster', name: 'dist-poster', component: DistPosterView },
     { path: '/distribution/ranking', name: 'dist-ranking', component: DistRankingView },
   ],
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior(to, from, savedPosition) {
+    // 瀏覽器後退/前進：優先用歷史位置
+    if (savedPosition) return savedPosition
+    // 回到 keep-alive 的 Tab 頁（含從商詳返回首頁）：不強制置頂，由頁面 activated 還原
+    const cachedTabs = new Set(['home', 'category', 'cart', 'account'])
+    if (to.name && cachedTabs.has(String(to.name))) {
+      return false
+    }
+    // 其餘前進導航置頂
+    if (from.name) return { top: 0 }
+    return { top: 0 }
+  },
 })
 
 router.beforeEach((to) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -7,11 +7,15 @@ import { api, ApiError } from '../api/client'
 import { uploadAvatar } from '../api/trade'
 import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
+import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { clearSession, isLoggedIn, memberState, type Member } from '../composables/useSession'
 import { toggleLocale } from '../i18n'
 
+defineOptions({ name: 'AccountView' })
+
 const { t } = useI18n()
 const router = useRouter()
+const SCROLL_KEY = 'account'
 const u = accountMock
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 const showAvatarCrop = ref(false)
@@ -73,6 +77,9 @@ onMounted(async () => {
     if (error instanceof ApiError && error.status === 401) clearSession()
   }
 })
+
+onDeactivated(() => saveRouteScroll(SCROLL_KEY))
+onActivated(() => restoreRouteScroll(SCROLL_KEY))
 
 async function logout() {
   try {

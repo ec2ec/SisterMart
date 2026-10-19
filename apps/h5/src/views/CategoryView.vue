@@ -1,22 +1,33 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import { fetchCategories, type CategoryNode } from '../api/catalog'
+import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
+
+defineOptions({ name: 'CategoryView' })
 
 const { text } = useLocaleText()
 const router = useRouter()
 const active = ref(0)
 const categories = ref<CategoryNode[]>([])
 const loading = ref(true)
+const SCROLL_KEY = 'category'
+let booted = false
 
 onMounted(async () => {
   try {
     categories.value = await fetchCategories()
   } finally {
     loading.value = false
+    booted = true
   }
+})
+
+onDeactivated(() => saveRouteScroll(SCROLL_KEY))
+onActivated(() => {
+  if (booted) restoreRouteScroll(SCROLL_KEY)
 })
 
 const current = computed(() => categories.value[active.value] || categories.value[0])

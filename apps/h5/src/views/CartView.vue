@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
 import { refreshCartBadge } from '../composables/useCartBadge'
+import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { isLoggedIn } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
+
+defineOptions({ name: 'CartView' })
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -15,6 +18,7 @@ const router = useRouter()
 const items = ref<CartItem[]>([])
 const managing = ref(false)
 const loading = ref(false)
+const SCROLL_KEY = 'cart'
 
 async function load() {
   if (!isLoggedIn()) {
@@ -37,6 +41,11 @@ async function load() {
 }
 
 onMounted(load)
+onDeactivated(() => saveRouteScroll(SCROLL_KEY))
+onActivated(() => {
+  // 購物車可能在其他頁被改過，回來刷新；再還原滾動
+  void load().then(() => restoreRouteScroll(SCROLL_KEY))
+})
 
 const checkedCount = computed(() => items.value.filter((i) => i.checked && i.available).length)
 const allChecked = computed({
