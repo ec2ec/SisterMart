@@ -1,5 +1,7 @@
 import { reactive } from 'vue'
+import { showToast } from 'vant'
 import { api } from '../api/client'
+import { i18n } from '../i18n'
 
 const PENDING = 'sm_pending_fav'
 const STORE = 'sm_favorites'
@@ -95,10 +97,12 @@ export async function requestFavorite(
   try {
     // 以樂觀目標為準寫入（add/remove），避免 hydrate 覆蓋後再 toggle 反向
     await setFavoriteRemote(id, next)
+    showToast(next ? i18n.global.t('pdp.favAdded') : i18n.global.t('pdp.favRemoved'))
   } catch {
     liked[id] = !next
     if (next) delete liked[id]
     else liked[id] = true
     persist()
+    showToast(i18n.global.t('pdp.favFail'))
   }
 }
