@@ -1,5 +1,10 @@
 SisterMart 本次上線 SQL（2026-10-19）
 
+【程式全量包】releases/sistermart-vps-root.zip
+  - 解壓到網站根：unzip -o sistermart-vps-root.zip
+  - 含 H5 /admin /mock /products /api /sm-backend（不含 .env）
+  - 解壓後請硬刷新；確保伺服器已有 sm-backend/.env
+
 【必須執行】deploy_catalog_attrs.sql
   - 用途：角標主數據、商品參數（材質等）表結構 + 種子（new/hot/editor/flash、材質示例）
   - 可重複執行，安全
