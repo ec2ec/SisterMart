@@ -62,7 +62,7 @@ const statusType = (s: string) =>
 const statusLabel = (s: string) =>
   s === 'live' ? '進行中' : s === 'upcoming' ? '未開始' : '已結束'
 
-const formTitle = computed(() => (editingId.value ? `編輯場次 #${editingId.value}` : '新建場次'))
+const formTitle = computed(() => (editingId.value ? `編輯秒殺活動 #${editingId.value}` : '新建秒殺活動'))
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
@@ -230,23 +230,23 @@ onMounted(async () => {
   <n-space vertical size="large">
     <n-card :title="formTitle">
       <n-form label-placement="left" label-width="6rem" style="max-width: 44rem">
-        <n-form-item label="場次代碼">
+        <n-form-item label="活動代碼">
           <n-input v-model:value="form.code" :disabled="!!editingId" placeholder="如 sk-spring" />
         </n-form-item>
-        <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
+        <n-form-item label="活動名稱"><n-input v-model:value="form.name_zh" placeholder="中文名" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
-        <n-form-item label="開始">
+        <n-form-item label="開始時間">
           <input v-model="form.starts_at" type="datetime-local" class="dt" />
         </n-form-item>
-        <n-form-item label="結束">
+        <n-form-item label="結束時間">
           <input v-model="form.ends_at" type="datetime-local" class="dt" />
         </n-form-item>
       </n-form>
 
       <n-space vertical style="margin-bottom: 1rem">
         <n-space align="center">
-          <strong>秒殺商品</strong>
-          <n-button size="small" @click="addItem">加一行</n-button>
+          <strong>活動商品</strong>
+          <n-button size="small" @click="addItem">加入商品</n-button>
         </n-space>
         <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
           <n-select
@@ -265,19 +265,19 @@ onMounted(async () => {
           />
           <n-input-number v-model:value="item.seckill_price" :min="0.01" :step="1" placeholder="秒殺價" />
           <n-input-number v-model:value="item.origin_price" :min="0" :step="1" placeholder="原價" />
-          <n-input-number v-model:value="item.stock" :min="0" placeholder="庫存" />
+          <n-input-number v-model:value="item.stock" :min="0" placeholder="上架數量" />
           <span v-if="item.sold != null" class="sold">已售 {{ item.sold }}</span>
           <n-button size="tiny" @click="removeItem(idx)">移除</n-button>
         </div>
       </n-space>
 
       <n-space>
-        <n-button type="primary" :loading="saving" @click="save">{{ editingId ? '保存修改' : '新建場次' }}</n-button>
+        <n-button type="primary" :loading="saving" @click="save">{{ editingId ? '保存修改' : '新建活動' }}</n-button>
         <n-button v-if="editingId" @click="resetForm">取消編輯</n-button>
       </n-space>
     </n-card>
 
-    <n-card title="場次列表">
+    <n-card title="秒殺活動列表">
       <table class="table">
         <thead>
           <tr>

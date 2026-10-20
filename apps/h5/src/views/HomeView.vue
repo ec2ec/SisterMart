@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -18,11 +18,13 @@ import {
   type HomeSection,
   type ProductCard as Card,
 } from '../api/catalog'
+import { fetchSeckillSessions, type SeckillSession } from '../api/m7'
 import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn, loggedIn, memberState, syncSessionFromStorage } from '../composables/useSession'
+import { assetUrl } from '../utils/assetUrl'
 
 defineOptions({ name: 'HomeView' })
 
@@ -37,7 +39,11 @@ const feedBusy = ref(false)
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
-const flashRemain = ref(2 * 3600e3 + 14 * 60e3 + 8e3)
+/** 秒殺倒計時剩餘毫秒（動態）；目標為進行中→結束時間，未開始→開始時間 */
+const flashRemain = ref(0)
+const flashSession = ref<SeckillSession | null>(null)
+const flashNow = ref(Date.now())
+let flashTimer: number | null = null
 const showSubscribe = computed(() => !(loggedIn.value && subscribed.value))
 const banners = ref<HomeBanner[]>(
   mockBanners.map((b, i) => ({
@@ -129,6 +135,7 @@ onMounted(() => {
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
+  void loadSeckillHome().then(() => startFlashTimer())
   void fetchHomeBanners()
     .then((items) => {
       if (items.length) banners.value = items
@@ -152,15 +159,20 @@ onMounted(() => {
 
 onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
+  stopFlashTimer()
 })
+
+onUnmounted(() => stopFlashTimer())
 
 let homeFirstActivate = true
 onActivated(() => {
+  startFlashTimer()
   // 首次 mounted+activated 同幀，無需還原
   if (homeFirstActivate) {
     homeFirstActivate = false
     return
   }
+  void loadSeckillHome()
   // 從登錄返回：同步訂閱狀態；其餘實例內狀態保留
   syncSessionFromStorage()
   void loadSubscribeStatus()
@@ -198,7 +210,75 @@ function onPromoClick() {
   onLink(marquee.value.link_type, marquee.value.link_value)
 }
 
-const flashVisible = computed(() => products.value.filter((p) => p.badges.includes('flash')).slice(0, 4))
+/** 首頁秒殺橫滑：取當前場次商品（最多 4），價為秒殺價 */
+const flashVisible = computed<Card[]>(() => {
+  const session = flashSession.value
+  if (!session?.products?.length) return []
+  return session.products.slice(0, 4).map((p) => ({
+    id: p.product_id,
+    db_id: 0,
+    code: p.product_id,
+    name: p.name,
+    price: p.seckill_price,
+    sold: String(p.sold ?? 0),
+    image: assetUrl(p.image),
+    category: '',
+    category_id: 0,
+    badges: ['flash'],
+    badge_items: [{ code: 'flash', color: 'var(--sm-accent)', name: { 'zh-HK': '秒殺', en: 'Flash' } }],
+  }))
+})
+
+function parseSessionTime(v: string): number {
+  // API 多為 "YYYY-MM-DD HH:mm:ss"（可視為本地／伺服器時間）
+  const t = Date.parse(v.includes('T') ? v : v.replace(' ', 'T'))
+  return Number.isFinite(t) ? t : 0
+}
+
+function tickFlashCountdown() {
+  flashNow.value = Date.now()
+  const s = flashSession.value
+  if (!s) {
+    flashRemain.value = 0
+    return
+  }
+  const start = parseSessionTime(s.starts_at)
+  const end = parseSessionTime(s.ends_at)
+  const now = flashNow.value
+  if (s.status === 'upcoming' || now < start) {
+    flashRemain.value = Math.max(0, start - now)
+  } else {
+    flashRemain.value = Math.max(0, end - now)
+  }
+}
+
+function startFlashTimer() {
+  stopFlashTimer()
+  tickFlashCountdown()
+  flashTimer = window.setInterval(tickFlashCountdown, 50)
+}
+
+function stopFlashTimer() {
+  if (flashTimer != null) {
+    window.clearInterval(flashTimer)
+    flashTimer = null
+  }
+}
+
+async function loadSeckillHome() {
+  try {
+    const data = await fetchSeckillSessions()
+    const items = data.items || []
+    // 優先進行中，否則最近未開始
+    flashSession.value =
+      items.find((x) => x.status === 'live') || items.find((x) => x.status === 'upcoming') || items[0] || null
+    tickFlashCountdown()
+  } catch {
+    flashSession.value = null
+    flashRemain.value = 0
+  }
+}
+
 /** Home cats use backend-configured `categories.icon` only (admin/seed), not hardcoded assets. */
 const homeCategories = computed(() =>
   categories.value.slice(0, 6).map((c) => ({
@@ -244,9 +324,16 @@ function goList(categoryId?: string) {
   router.push({ name: 'product-list', query: categoryId ? { category: categoryId } : {} })
 }
 
-const hh = computed(() => String(Math.floor(flashRemain.value / 3600e3)).padStart(2, '0'))
-const mm = computed(() => String(Math.floor((flashRemain.value % 3600e3) / 60e3)).padStart(2, '0'))
-const ss = computed(() => String(Math.floor((flashRemain.value % 60e3) / 1e3)).padStart(2, '0'))
+const flashClock = computed(() => {
+  const t = Math.max(0, flashRemain.value)
+  const h = Math.floor(t / 3600e3)
+  const m = Math.floor((t % 3600e3) / 60e3)
+  const s = Math.floor((t % 60e3) / 1e3)
+  const ms = Math.floor(t % 1000)
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const pad3 = (n: number) => String(n).padStart(3, '0')
+  return `${pad2(h)}:${pad2(m)}:${pad2(s)}.${pad3(ms)}`
+})
 
 const tabLabel = (tab: HomeRecTab) => {
   if (tab === 'new') return t('home.new')
@@ -278,12 +365,12 @@ const tabLabel = (tab: HomeRecTab) => {
       {{ promoText }}
     </button>
 
-    <section class="flash">
+    <section v-if="flashSession || flashVisible.length" class="flash">
       <div class="section-title">
         <h2>{{ t('home.flashSale') }}</h2>
         <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
-        <div class="count">
-          <span>{{ hh }}</span>:<span>{{ mm }}</span>:<span>{{ ss }}</span>
+        <div class="count" :title="flashClock">
+          <span class="clock">{{ flashClock }}</span>
         </div>
       </div>
       <div class="flash-row">
@@ -408,15 +495,28 @@ const tabLabel = (tab: HomeRecTab) => {
   color: var(--sm-primary);
   font-size: 0.75rem;
 }
-.count span {
+.flash {
+  margin: 0.5rem 0.75rem 0.75rem;
+  padding: 0.65rem 0 0.25rem;
+  border-radius: var(--sm-radius);
+  background: linear-gradient(135deg, #f7edf9 0%, #c3d9fb 100%);
+  overflow: hidden;
+}
+.flash .section-title {
+  padding-top: 0;
+}
+.count .clock {
   display: inline-block;
-  min-width: 1.5rem;
-  padding: 0.125rem 0.25rem;
+  min-width: 7.5rem;
+  padding: 0.2rem 0.45rem;
   border-radius: 0.25rem;
-  background: var(--sm-primary-soft);
-  color: var(--sm-text-secondary);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--sm-text);
   text-align: center;
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
 }
 .flash-row {
   display: flex;
@@ -428,6 +528,8 @@ const tabLabel = (tab: HomeRecTab) => {
 .flash-row :deep(.card) {
   flex: 0 0 calc((100% - 0.75rem) / 2);
   scroll-snap-align: start;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 0.5rem;
 }
 .cats {
   display: grid;

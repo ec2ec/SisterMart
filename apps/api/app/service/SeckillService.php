@@ -12,8 +12,11 @@ use think\facade\Db;
  */
 class SeckillService
 {
+    private static bool $schemaReady = false;
+
     public function sessions(): array
     {
+        $this->ensureSchema();
         $now = date('Y-m-d H:i:s');
         $rows = Db::name('seckill_sessions')
             ->where('ends_at', '>', $now)
@@ -30,6 +33,7 @@ class SeckillService
 
     public function detail(string $id): array
     {
+        $this->ensureSchema();
         $row = $this->findSession($id);
 
         return array_merge($this->presentSession($row), ['mock' => false]);
@@ -37,6 +41,7 @@ class SeckillService
 
     public function product(string $productCode): array
     {
+        $this->ensureSchema();
         $now = date('Y-m-d H:i:s');
         $item = Db::name('seckill_items')->alias('i')
             ->join('seckill_sessions s', 's.id = i.session_id')
@@ -117,6 +122,7 @@ class SeckillService
     /** 後台：全部場次（含已結束），數值 id 便於編輯。 */
     public function adminList(): array
     {
+        $this->ensureSchema();
         $rows = Db::name('seckill_sessions')->order('starts_at', 'desc')->select()->toArray();
         $items = [];
         foreach ($rows as $row) {
@@ -128,6 +134,7 @@ class SeckillService
 
     public function adminRead(int $id): array
     {
+        $this->ensureSchema();
         $row = Db::name('seckill_sessions')->where('id', $id)->find();
         if (!$row) {
             throw new ApiException('NOT_FOUND', '秒殺場次不存在', 404, 40480);
@@ -141,6 +148,7 @@ class SeckillService
      */
     public function adminCreate(array $body): array
     {
+        $this->ensureSchema();
         $parsed = $this->parseSessionBody($body, requireCode: true);
         $now = date('Y-m-d H:i:s');
         $dup = Db::name('seckill_sessions')->where('code', $parsed['code'])->find();
@@ -170,6 +178,7 @@ class SeckillService
      */
     public function adminUpdate(int $id, array $body): array
     {
+        $this->ensureSchema();
         $row = Db::name('seckill_sessions')->where('id', $id)->find();
         if (!$row) {
             throw new ApiException('NOT_FOUND', '秒殺場次不存在', 404, 40480);
@@ -446,5 +455,60 @@ class SeckillService
         }
 
         return 'live';
+    }
+
+    /** 生產庫若未跑 m11，列表會空／500；冪等建表。 */
+    private function ensureSchema(): void
+    {
+        if (self::$schemaReady) {
+            return;
+        }
+        $prefix = (string) (Db::getConnection()->getConfig('prefix') ?: '');
+        $sessions = $prefix . 'seckill_sessions';
+        $items = $prefix . 'seckill_items';
+        try {
+            Db::execute(
+                "CREATE TABLE IF NOT EXISTS `{$sessions}` (
+                  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                  `code` VARCHAR(32) NOT NULL,
+                  `name_zh` VARCHAR(128) NOT NULL,
+                  `name_en` VARCHAR(128) NOT NULL,
+                  `starts_at` DATETIME NOT NULL,
+                  `ends_at` DATETIME NOT NULL,
+                  `created_at` DATETIME NOT NULL,
+                  `updated_at` DATETIME NOT NULL,
+                  UNIQUE KEY `uk_seckill_sessions_code` (`code`),
+                  KEY `idx_seckill_sessions_window` (`starts_at`, `ends_at`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            );
+            Db::execute(
+                "CREATE TABLE IF NOT EXISTS `{$items}` (
+                  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                  `session_id` BIGINT UNSIGNED NOT NULL,
+                  `product_id` BIGINT UNSIGNED NOT NULL,
+                  `product_code` VARCHAR(64) NOT NULL,
+                  `sku_id` BIGINT UNSIGNED NOT NULL,
+                  `seckill_price` DECIMAL(12,2) NOT NULL,
+                  `origin_price` DECIMAL(12,2) NOT NULL,
+                  `stock` INT NOT NULL DEFAULT 0,
+                  `sold` INT NOT NULL DEFAULT 0,
+                  `image_url` VARCHAR(512) NULL,
+                  `name_zh` VARCHAR(255) NOT NULL,
+                  `name_en` VARCHAR(255) NOT NULL,
+                  `created_at` DATETIME NOT NULL,
+                  `updated_at` DATETIME NOT NULL,
+                  KEY `idx_seckill_items_session` (`session_id`),
+                  KEY `idx_seckill_items_product_code` (`product_code`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            );
+            self::$schemaReady = true;
+        } catch (\Throwable $e) {
+            throw new ApiException(
+                'SERVER',
+                '秒殺表未就緒，請執行 m11_seckill.sql',
+                500,
+                50011,
+            );
+        }
     }
 }

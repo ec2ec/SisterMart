@@ -58,7 +58,7 @@ export const router = createRouter({
         { path: '/cms/newsletter', component: NewsletterView, meta: { title: '訂閱名單' } },
         { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
         { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },
-        { path: '/marketing/seckill', component: SeckillView, meta: { title: '秒殺' } },
+        { path: '/marketing/seckill', component: SeckillView, meta: { title: '秒殺活動' } },
         { path: '/marketing/distribution', component: DistributionView, meta: { title: '分銷' } },
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },

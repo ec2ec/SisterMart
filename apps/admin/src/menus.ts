@@ -55,7 +55,7 @@ export const adminMenus: AdminMenu[] = [
     children: [
       { label: '優惠券', key: '/marketing/coupons', path: '/marketing/coupons' },
       { label: '積分', key: '/marketing/points', path: '/marketing/points' },
-      { label: '秒殺', key: '/marketing/seckill', path: '/marketing/seckill' },
+      { label: '秒殺活動', key: '/marketing/seckill', path: '/marketing/seckill' },
       { label: '分銷', key: '/marketing/distribution', path: '/marketing/distribution' },
     ],
   },
