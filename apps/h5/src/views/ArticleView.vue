@@ -30,10 +30,11 @@ const body = computed(() => (article.value ? text(article.value.body) : ''))
 <template>
   <div class="page article">
     <SubPageNav :title="title" />
-    <article>
+    <article v-if="article">
       <h1>{{ title }}</h1>
-      <p>{{ body }}</p>
+      <div class="body" v-html="body" />
     </article>
+    <p v-else class="empty">{{ t('m7.loadFail') }}</p>
   </div>
 </template>
 
@@ -48,10 +49,23 @@ h1 {
   margin: 0 0 0.75rem;
   font-size: 1.25rem;
 }
-p {
+.body {
   margin: 0;
   line-height: 1.7;
   color: #333;
-  white-space: pre-wrap;
+  word-break: break-word;
+}
+.body :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+.body :deep(p) {
+  margin: 0 0 0.75rem;
+}
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #999;
+  font-size: 0.875rem;
 }
 </style>
