@@ -365,19 +365,6 @@ const tabLabel = (tab: HomeRecTab) => {
       {{ promoText }}
     </button>
 
-    <section v-if="flashSession || flashVisible.length" class="flash">
-      <div class="section-title">
-        <h2>{{ t('home.flashSale') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
-        <div class="count" :title="flashClock">
-          <span class="clock">{{ flashClock }}</span>
-        </div>
-      </div>
-      <div class="flash-row">
-        <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
-      </div>
-    </section>
-
     <section class="cats">
       <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
         <img
@@ -389,6 +376,19 @@ const tabLabel = (tab: HomeRecTab) => {
         <span v-else class="ph" />
         <span>{{ text(c.name) }}</span>
       </button>
+    </section>
+
+    <section v-if="flashSession || flashVisible.length" class="flash">
+      <div class="section-title">
+        <h2>{{ t('home.flashSale') }}</h2>
+        <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
+        <div class="count" :title="flashClock">
+          <span class="clock">{{ flashClock }}</span>
+        </div>
+      </div>
+      <div class="flash-row">
+        <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
+      </div>
     </section>
 
     <section v-for="sec in sections" :key="sec.id" class="showcase">
