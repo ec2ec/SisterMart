@@ -427,6 +427,11 @@ class SeckillService
 
     private function presentItem(array $row): array
     {
+        $product = Db::name('products')->where('id', (int) $row['product_id'])->find();
+        $soldLabel = $product
+            ? SoldDisplay::labelFromProduct($product)
+            : SoldDisplay::label((int) ($row['sold'] ?? 0));
+
         return [
             'id' => 'si-' . $row['id'],
             'seckill_item_id' => (int) $row['id'],
@@ -437,7 +442,10 @@ class SeckillService
             'seckill_price' => (float) $row['seckill_price'],
             'origin_price' => (float) $row['origin_price'],
             'stock' => (int) $row['stock'],
-            'sold' => (int) ($row['sold'] ?? 0),
+            /** 秒殺場次真實已售（後台只讀） */
+            'seckill_sold' => (int) ($row['sold'] ?? 0),
+            /** H5 展示：商品真實銷售 + 疊加，再套 50+ */
+            'sold' => $soldLabel,
             'in_seckill' => true,
         ];
     }

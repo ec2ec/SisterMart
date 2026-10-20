@@ -179,7 +179,7 @@ class CatalogService
             'newest' => $builder->order('p.id', 'desc'),
             'price_asc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) ASC'),
             'price_desc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) DESC'),
-            'sales' => $builder->order('p.sold_count', 'desc')->order('p.id', 'desc'),
+            'sales' => $builder->orderRaw('(p.sold_count + COALESCE(p.sold_boost, 0)) DESC')->order('p.id', 'desc'),
             default => $builder->order('p.id', 'asc'),
         };
         if ($limit > 0) {
@@ -221,7 +221,7 @@ class CatalogService
                 $rows = Db::name('products')
                     ->where('status', 1)
                     ->whereIn('category_id', $catIds)
-                    ->order('sold_count', 'desc')
+                    ->orderRaw('(sold_count + COALESCE(sold_boost, 0)) DESC')
                     ->order('id', 'desc')
                     ->limit($limit)
                     ->select()
@@ -242,7 +242,7 @@ class CatalogService
 
         $rows = Db::name('products')
             ->where('status', 1)
-            ->order('sold_count', 'desc')
+            ->orderRaw('(sold_count + COALESCE(sold_boost, 0)) DESC')
             ->order('id', 'desc')
             ->limit($limit)
             ->select()
@@ -263,7 +263,7 @@ class CatalogService
             throw new ApiException('NOT_FOUND', '商品不存在或已下架', 404, 40402);
         }
 
-        return $this->presentDetail($row, SoldDisplay::mode(), $viewerMemberId);
+        return $this->presentDetail($row, SoldDisplay::mode(), $viewerMemberId, $admin);
     }
 
     public function saveProduct(array $body, ?int $id = null): array
@@ -322,12 +322,14 @@ class CatalogService
             throw new ApiException('INVALID', '佣金值不可為負', 422, 42201);
         }
 
-        Db::transaction(function () use ($body, &$id, $code, $categoryId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue) {
+        $soldBoost = max(0, (int) ($body['sold_boost'] ?? 0));
+
+        Db::transaction(function () use ($body, &$id, $code, $categoryId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost) {
             $data = [
                 'code'        => $code,
                 'category_id' => $categoryId,
                 'status'      => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
-                'sold_count'  => max(0, (int) ($body['sold_count'] ?? 0)),
+                'sold_boost'  => $soldBoost,
                 'cover_url'   => $cover ?: null,
                 'commission_type' => $commissionType,
                 'commission_value' => $commissionValue,
@@ -337,8 +339,10 @@ class CatalogService
                 if (!Db::name('products')->where('id', $id)->find()) {
                     throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
                 }
+                // sold_count 真實銷售只由訂單加減，後台不可改
                 Db::name('products')->where('id', $id)->update($data);
             } else {
+                $data['sold_count'] = 0;
                 $data['created_at'] = $now;
                 $id = (int) Db::name('products')->insertGetId($data);
             }
@@ -467,6 +471,8 @@ class CatalogService
                     'code'       => $scode,
                     'price'      => round((float) ($sku['price'] ?? 0), 2),
                     'compare_at' => round((float) ($sku['compare_at'] ?? 0), 2),
+                    'agent_price' => round((float) ($sku['agent_price'] ?? 0), 2),
+                    'cost_price' => round((float) ($sku['cost_price'] ?? 0), 2),
                     'stock'      => max(0, (int) ($sku['stock'] ?? 0)),
                     'image_url'  => trim((string) ($sku['image'] ?? '')) ?: null,
                     'status'     => 1,
@@ -606,8 +612,9 @@ class CatalogService
             'code'     => (string) $row['code'],
             'name'     => $name,
             'price'    => $price,
-            'sold'     => SoldDisplay::label((int) $row['sold_count'], $mode),
-            'sold_count' => (int) $row['sold_count'],
+            'sold'     => SoldDisplay::labelFromProduct($row, $mode),
+            'sold_count' => (int) ($row['sold_count'] ?? 0),
+            'sold_boost' => (int) ($row['sold_boost'] ?? 0),
             'stock'    => $stock,
             'image'    => $image,
             'category' => $cat['code'] ?? '',
@@ -722,7 +729,7 @@ class CatalogService
         return $out;
     }
 
-    private function presentDetail(array $row, string $mode, ?int $viewerMemberId = null): array
+    private function presentDetail(array $row, string $mode, ?int $viewerMemberId = null, bool $admin = false): array
     {
         $card = $this->presentCard($row, $mode);
         $i18n = Db::name('product_i18n')->where('product_id', $row['id'])->select()->toArray();
@@ -794,7 +801,7 @@ class CatalogService
                     $selected[$opt['gcode']] = $opt['ocode'];
                 }
             }
-            $skusOut[] = [
+            $skuRow = [
                 'id'          => (int) $sku['id'],
                 'code'        => (string) $sku['code'],
                 'key'         => (string) $sku['code'],
@@ -805,6 +812,11 @@ class CatalogService
                 'option_refs' => $refs,
                 'selected'    => $selected,
             ];
+            if ($admin) {
+                $skuRow['agent_price'] = (float) ($sku['agent_price'] ?? 0);
+                $skuBag['cost_price'] = (float) ($sku['cost_price'] ?? 0);
+            }
+            $skusOut[] = $skuRow;
         }
 
         $tagIds = Db::name('product_service_tags')->where('product_id', $row['id'])->column('service_tag_id');

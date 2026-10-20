@@ -121,15 +121,18 @@ class OrderService
             $orderNo = 'SM' . date('Ymd') . str_pad((string) $orderId, 6, '0', STR_PAD_LEFT);
             Db::name('orders')->where('id', $orderId)->update(['order_no' => $orderNo]);
 
+            $soldByProduct = [];
             foreach ($lines as $line) {
                 $unit = (float) $line['price'];
                 $compareAt = (float) ($line['compare_at'] ?? 0);
                 if ($compareAt < $unit) {
                     $compareAt = $unit;
                 }
+                $pid = (int) $line['product_db_id'];
+                $qty = (int) $line['qty'];
                 Db::name('order_items')->insert([
                     'order_id' => $orderId,
-                    'product_id' => $line['product_db_id'],
+                    'product_id' => $pid,
                     'sku_id' => $line['sku_id'],
                     'product_code' => $line['product_id'],
                     'sku_code' => $line['sku_code'],
@@ -140,9 +143,13 @@ class OrderService
                     'image_url' => $line['image'],
                     'unit_price' => $unit,
                     'compare_at' => $compareAt,
-                    'qty' => $line['qty'],
-                    'line_amount' => round($unit * $line['qty'], 2),
+                    'qty' => $qty,
+                    'line_amount' => round($unit * $qty, 2),
                 ]);
+                $soldByProduct[$pid] = ($soldByProduct[$pid] ?? 0) + $qty;
+            }
+            foreach ($soldByProduct as $pid => $qty) {
+                Db::name('products')->where('id', $pid)->inc('sold_count', $qty)->update(['updated_at' => $now]);
             }
 
             if ($quote['coupon_grant_id']) {
@@ -737,8 +744,19 @@ class OrderService
                 return;
             }
             $items = Db::name('order_items')->where('order_id', $row['id'])->select()->toArray();
+            $soldByProduct = [];
             foreach ($items as $item) {
-                Db::name('skus')->where('id', $item['sku_id'])->inc('stock', (int) $item['qty'])->update(['updated_at' => $now]);
+                $qty = (int) $item['qty'];
+                Db::name('skus')->where('id', $item['sku_id'])->inc('stock', $qty)->update(['updated_at' => $now]);
+                $pid = (int) $item['product_id'];
+                $soldByProduct[$pid] = ($soldByProduct[$pid] ?? 0) + $qty;
+            }
+            foreach ($soldByProduct as $pid => $qty) {
+                $cur = (int) Db::name('products')->where('id', $pid)->value('sold_count');
+                Db::name('products')->where('id', $pid)->update([
+                    'sold_count' => max(0, $cur - $qty),
+                    'updated_at' => $now,
+                ]);
             }
             $seckillItemId = (int) ($row['seckill_item_id'] ?? 0);
             if ($seckillItemId > 0) {

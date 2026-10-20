@@ -10,7 +10,9 @@ export type SeckillProduct = {
   seckill_price: number
   origin_price: number
   stock: number
-  sold?: number
+  /** H5 展示字串（已含疊加與 50+）；秒殺場次真實已售見 seckill_sold */
+  sold?: number | string
+  seckill_sold?: number
 }
 
 export type SeckillSession = {

@@ -16,7 +16,16 @@ import {
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 
-type Sku = { id: number; code: string; price: number; compare_at: number; stock: number; image?: string }
+type Sku = {
+  id: number
+  code: string
+  price: number
+  compare_at: number
+  agent_price?: number
+  cost_price?: number
+  stock: number
+  image?: string
+}
 type ProductOpt = { label: string; value: string; skus: Sku[] }
 
 type SeckillItem = {
@@ -122,7 +131,9 @@ function onProductChange(item: SeckillItem) {
 function skuOptions(productCode: string) {
   const p = products.value.find((x) => x.value === productCode)
   return (p?.skus || []).map((s) => ({
-    label: `${s.code} · $${s.price}（庫存 ${s.stock}）`,
+    label: `${s.code} · 售$${s.price}` +
+      (s.agent_price != null && Number(s.agent_price) > 0 ? ` · 代$${s.agent_price}` : '') +
+      `（庫存 ${s.stock}）`,
     value: s.id,
   }))
 }
@@ -266,7 +277,7 @@ onMounted(async () => {
           <n-input-number v-model:value="item.seckill_price" :min="0.01" :step="1" placeholder="秒殺價" />
           <n-input-number v-model:value="item.origin_price" :min="0" :step="1" placeholder="原價" />
           <n-input-number v-model:value="item.stock" :min="0" placeholder="上架數量" />
-          <span v-if="item.sold != null" class="sold">已售 {{ item.sold }}</span>
+          <span v-if="item.sold != null" class="sold">秒殺已售 {{ item.sold }}（只讀）</span>
           <n-button size="tiny" @click="removeItem(idx)">移除</n-button>
         </div>
       </n-space>

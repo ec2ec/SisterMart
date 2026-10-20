@@ -22,6 +22,7 @@ type Row = {
   price: number
   sold: string
   sold_count: number
+  sold_boost?: number
   stock: number
   status: number
   badges: string[]
@@ -128,7 +129,8 @@ onMounted(async () => {
           <th>名稱</th>
           <th>分類</th>
           <th>售價起</th>
-          <th>已售</th>
+          <th>銷售數量</th>
+          <th>疊加數量</th>
           <th>庫存</th>
           <th>角標</th>
           <th>狀態</th>
@@ -148,7 +150,8 @@ onMounted(async () => {
           </td>
           <td>{{ categoryLabel(row) }}</td>
           <td>{{ row.price }}</td>
-          <td>{{ row.sold_count ?? row.sold }}</td>
+          <td>{{ row.sold_count ?? 0 }}</td>
+          <td>{{ row.sold_boost ?? 0 }}</td>
           <td>{{ row.stock ?? 0 }}</td>
           <td>
             <n-tag

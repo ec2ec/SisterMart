@@ -43,6 +43,7 @@ const form = ref({
   category_id: null as number | null,
   status: true,
   sold_count: 0,
+  sold_boost: 0,
   name_zh: '',
   name_en: '',
   detail_zh: '',
@@ -62,9 +63,13 @@ const form = ref({
   optionBEn: 'Detail',
   skuAPrice: 0,
   skuACompare: 0,
+  skuAAgent: 0,
+  skuACost: 0,
   skuAStock: 0,
   skuBPrice: 0,
   skuBCompare: 0,
+  skuBAgent: 0,
+  skuBCost: 0,
   skuBStock: 0,
   commission_type: null as string | null,
   commission_value: 0,
@@ -163,7 +168,8 @@ onMounted(async () => {
     form.value.code = p.code
     form.value.category_id = p.category_id
     form.value.status = p.status === 1
-    form.value.sold_count = p.sold_count
+    form.value.sold_count = Number(p.sold_count ?? 0)
+    form.value.sold_boost = Number(p.sold_boost ?? 0)
     form.value.name_zh = p.name['zh-HK']
     form.value.name_en = p.name.en
     form.value.detail_zh = p.detail['zh-HK']
@@ -195,11 +201,15 @@ onMounted(async () => {
     if (s0) {
       form.value.skuAPrice = s0.price
       form.value.skuACompare = s0.compare_at
+      form.value.skuAAgent = Number(s0.agent_price ?? 0)
+      form.value.skuACost = Number(s0.cost_price ?? 0)
       form.value.skuAStock = s0.stock
     }
     if (s1) {
       form.value.skuBPrice = s1.price
       form.value.skuBCompare = s1.compare_at
+      form.value.skuBAgent = Number(s1.agent_price ?? 0)
+      form.value.skuBCost = Number(s1.cost_price ?? 0)
       form.value.skuBStock = s1.stock
     }
     form.value.commission_type = p.commission_type || null
@@ -216,7 +226,7 @@ async function save() {
     code: form.value.code,
     category_id: form.value.category_id,
     status: form.value.status ? 1 : 0,
-    sold_count: form.value.sold_count,
+    sold_boost: form.value.sold_boost,
     name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
     detail: { 'zh-HK': form.value.detail_zh, en: form.value.detail_en },
     badges: form.value.badges,
@@ -240,6 +250,8 @@ async function save() {
       code: sku.code,
       price: sku.price,
       compare_at: sku.compare_at,
+      agent_price: Number(sku.agent_price ?? 0),
+      cost_price: Number(sku.cost_price ?? 0),
       stock: sku.stock,
       image: sku.image,
       option_refs: sku.option_refs,
@@ -260,6 +272,8 @@ async function save() {
         code: a,
         price: form.value.skuAPrice,
         compare_at: form.value.skuACompare,
+        agent_price: form.value.skuAAgent,
+        cost_price: form.value.skuACost,
         stock: form.value.skuAStock,
         option_refs: [`${g}:${a}`],
       },
@@ -267,6 +281,8 @@ async function save() {
         code: b,
         price: form.value.skuBPrice,
         compare_at: form.value.skuBCompare,
+        agent_price: form.value.skuBAgent,
+        cost_price: form.value.skuBCost,
         stock: form.value.skuBStock,
         option_refs: [`${g}:${b}`],
       },
@@ -293,7 +309,19 @@ async function save() {
         />
       </n-form-item>
       <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
-      <n-form-item label="已售數量"><n-input-number v-model:value="form.sold_count" :min="0" style="width: 100%" /></n-form-item>
+      <n-form-item label="疊加數量">
+        <n-input-number v-model:value="form.sold_boost" :min="0" style="width: 100%" />
+      </n-form-item>
+    </div>
+    <div class="row-4">
+      <n-form-item label="銷售數量">
+        <n-input-number :value="form.sold_count" :min="0" disabled style="width: 100%" />
+        <span class="field-hint">真實銷售，下單＋／取消退款－，不可改</span>
+      </n-form-item>
+      <n-form-item label="H5 顯示基數">
+        <n-input-number :value="form.sold_count + form.sold_boost" disabled style="width: 100%" />
+        <span class="field-hint">銷售＋疊加，再套 50+ 規則</span>
+      </n-form-item>
     </div>
 
     <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
@@ -364,16 +392,20 @@ async function save() {
         <n-form-item label="選項A"><n-input v-model:value="form.optionACode" /></n-form-item>
         <n-form-item label="A 繁中"><n-input v-model:value="form.optionAZh" /></n-form-item>
         <n-form-item label="A 英文"><n-input v-model:value="form.optionAEn" /></n-form-item>
-        <n-form-item label="A 價"><n-input-number v-model:value="form.skuAPrice" /></n-form-item>
+        <n-form-item label="A 售價"><n-input-number v-model:value="form.skuAPrice" /></n-form-item>
         <n-form-item label="A 劃線"><n-input-number v-model:value="form.skuACompare" /></n-form-item>
+        <n-form-item label="A 代理價"><n-input-number v-model:value="form.skuAAgent" :min="0" /></n-form-item>
+        <n-form-item label="A 成本價"><n-input-number v-model:value="form.skuACost" :min="0" /></n-form-item>
         <n-form-item label="A 庫存"><n-input-number v-model:value="form.skuAStock" :min="0" /></n-form-item>
       </n-space>
       <n-space>
         <n-form-item label="選項B"><n-input v-model:value="form.optionBCode" /></n-form-item>
         <n-form-item label="B 繁中"><n-input v-model:value="form.optionBZh" /></n-form-item>
         <n-form-item label="B 英文"><n-input v-model:value="form.optionBEn" /></n-form-item>
-        <n-form-item label="B 價"><n-input-number v-model:value="form.skuBPrice" /></n-form-item>
+        <n-form-item label="B 售價"><n-input-number v-model:value="form.skuBPrice" /></n-form-item>
         <n-form-item label="B 劃線"><n-input-number v-model:value="form.skuBCompare" /></n-form-item>
+        <n-form-item label="B 代理價"><n-input-number v-model:value="form.skuBAgent" :min="0" /></n-form-item>
+        <n-form-item label="B 成本價"><n-input-number v-model:value="form.skuBCost" :min="0" /></n-form-item>
         <n-form-item label="B 庫存"><n-input-number v-model:value="form.skuBStock" :min="0" /></n-form-item>
       </n-space>
     </n-card>
@@ -396,6 +428,12 @@ async function save() {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem 1rem;
   align-items: start;
+}
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #888;
 }
 .muted {
   color: #8a8378;

@@ -20,6 +20,8 @@ type SkuRow = {
   code: string
   price: number
   compare_at: number
+  agent_price: number
+  cost_price: number
   stock: number
   image?: string | null
   option_refs: string[]
@@ -73,6 +75,8 @@ function addSku() {
     code: '',
     price: 0,
     compare_at: 0,
+    agent_price: 0,
+    cost_price: 0,
     stock: 0,
     image: null,
     option_refs: [],
@@ -105,6 +109,7 @@ onMounted(async () => {
       category_id: p.category_id,
       status: p.status,
       sold_count: p.sold_count,
+      sold_boost: p.sold_boost ?? 0,
       name: p.name,
       detail: p.detail,
       summary: p.summary,
@@ -129,6 +134,8 @@ onMounted(async () => {
       code: s.code,
       price: Number(s.price || 0),
       compare_at: Number(s.compare_at || 0),
+      agent_price: Number(s.agent_price || 0),
+      cost_price: Number(s.cost_price || 0),
       stock: Number(s.stock || 0),
       image: s.image || null,
       option_refs: [...(s.option_refs || [])],
@@ -156,6 +163,8 @@ async function save() {
       code: s.code,
       price: s.price,
       compare_at: s.compare_at,
+      agent_price: s.agent_price,
+      cost_price: s.cost_price,
       stock: s.stock,
       image: s.image,
       option_refs: s.option_refs,
@@ -196,9 +205,11 @@ async function save() {
       <h4 class="sub">SKU</h4>
       <div v-for="(s, sIdx) in skus" :key="sIdx" class="sku-row">
         <n-input v-model:value="s.code" placeholder="SKU 代碼" style="width: 7rem" />
-        <n-input-number v-model:value="s.price" placeholder="價" style="width: 7rem" />
-        <n-input-number v-model:value="s.compare_at" placeholder="劃線" style="width: 7rem" />
-        <n-input-number v-model:value="s.stock" :min="0" placeholder="庫存" style="width: 6rem" />
+        <n-input-number v-model:value="s.price" placeholder="售價" style="width: 6.5rem" />
+        <n-input-number v-model:value="s.compare_at" placeholder="劃線" style="width: 6.5rem" />
+        <n-input-number v-model:value="s.agent_price" placeholder="代理價" style="width: 6.5rem" />
+        <n-input-number v-model:value="s.cost_price" placeholder="成本價" style="width: 6.5rem" />
+        <n-input-number v-model:value="s.stock" :min="0" placeholder="庫存" style="width: 5.5rem" />
         <n-input
           :value="refsText(s)"
           placeholder="option_refs"

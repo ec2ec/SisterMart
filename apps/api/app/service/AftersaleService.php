@@ -304,8 +304,17 @@ class AftersaleService
                 throw new ApiException('NOT_FOUND', '訂單或明細不存在', 404, 40440);
             }
 
-            Db::name('skus')->where('id', $item['sku_id'])->inc('stock', (int) $row['qty'])->update(['updated_at' => $now]);
-            Db::name('order_items')->where('id', $item['id'])->inc('refunded_qty', (int) $row['qty'])->update([]);
+            $refundQty = (int) $row['qty'];
+            Db::name('skus')->where('id', $item['sku_id'])->inc('stock', $refundQty)->update(['updated_at' => $now]);
+            Db::name('order_items')->where('id', $item['id'])->inc('refunded_qty', $refundQty)->update([]);
+            $pid = (int) $item['product_id'];
+            if ($pid > 0 && $refundQty > 0) {
+                $cur = (int) Db::name('products')->where('id', $pid)->value('sold_count');
+                Db::name('products')->where('id', $pid)->update([
+                    'sold_count' => max(0, $cur - $refundQty),
+                    'updated_at' => $now,
+                ]);
+            }
 
             $refundTo = $forceBalance ? 'balance' : $row['refund_to'];
             $amount = (float) $row['amount'];
