@@ -513,21 +513,19 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .flash .section-title {
   padding-top: 0;
-  padding-bottom: 0.15rem;
 }
 .flash-hint {
   margin: 0;
   padding: 0 0.875rem 0.5rem;
-  font-size: 0.8125rem;
-  color: #9b3bfc;
-  font-weight: 600;
+  font-size: 1rem;
+  color: var(--sm-text);
 }
 .count .clock {
   display: inline-block;
-  min-width: 8.5rem;
-  padding: 0.15rem 0.35rem;
+  min-width: 7.5rem;
+  padding: 0.2rem 0.45rem;
   border-radius: 0.25rem;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.72);
   color: #9b3bfc;
   text-align: center;
   font-size: 1rem;
