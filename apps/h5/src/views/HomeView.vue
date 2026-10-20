@@ -375,7 +375,7 @@ const tabLabel = (tab: HomeRecTab) => {
 
     <section v-if="homeCategories.length" class="cats">
       <div class="section-title">
-        <h2>{{ t('tabs.category') }}</h2>
+        <h2>{{ t('home.categories') }}</h2>
         <button type="button" class="more" @click="router.push({ name: 'category' })">
           {{ t('account.more') }}
         </button>
