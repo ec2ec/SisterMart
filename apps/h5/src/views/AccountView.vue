@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
+import { fetchCheckinCalendar } from '../api/m7'
 import { fetchOrderCounts, uploadAvatar, type OrderCounts } from '../api/trade'
 import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
@@ -37,11 +38,15 @@ const orderCounts = ref<OrderCounts>({
   to_review: 0,
   aftersales: 0,
 })
+const checkinStreak = ref(0)
+const checkinSignedToday = ref(false)
 
 function badgeText(n: number): string {
   if (n <= 0) return ''
   return n > 99 ? '99+' : String(n)
 }
+
+const checkinStreakDisplay = computed(() => (loggedIn.value ? checkinStreak.value : u.streak))
 
 const displayName = computed(
   () =>
@@ -107,20 +112,35 @@ async function refreshOrderCounts() {
   }
 }
 
+async function refreshCheckinStreak() {
+  if (!loggedIn.value) {
+    checkinStreak.value = 0
+    checkinSignedToday.value = false
+    return
+  }
+  try {
+    const cal = await fetchCheckinCalendar()
+    checkinStreak.value = Number(cal.streak) || 0
+    checkinSignedToday.value = Boolean(cal.signed_today)
+  } catch {
+    /* 簽到摘要失敗不擋頁面 */
+  }
+}
+
 async function refreshAccount() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    await refreshOrderCounts()
+    await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
     return
   }
   try {
     const data = await api<Member>('/api/v1/members/me', {}, 'member')
     setSession(token(), data)
-    await refreshOrderCounts()
+    await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       clearSession()
-      await refreshOrderCounts()
+      await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
     }
   }
 }
@@ -154,6 +174,8 @@ async function logout() {
     to_review: 0,
     aftersales: 0,
   }
+  checkinStreak.value = 0
+  checkinSignedToday.value = false
   showToast(t('auth.loggedOut'))
   router.replace('/')
 }
@@ -321,11 +343,11 @@ function goOrders(tab?: string) {
         <van-icon name="calendar-o" color="var(--sm-primary)" size="1.25rem" />
         <div>
           <p class="title">{{ t('account.checkinTitle') }}</p>
-          <p class="sub">{{ t('account.checkinSub', { n: loggedIn ? 0 : u.streak }) }}</p>
+          <p class="sub">{{ t('account.checkinSub', { n: checkinStreakDisplay }) }}</p>
         </div>
       </div>
       <van-button size="small" round color="var(--sm-primary)" @click="goService('checkin')">
-        {{ t('account.checkinBtn') }}
+        {{ loggedIn && checkinSignedToday ? t('m7.signed') : t('account.checkinBtn') }}
       </van-button>
     </section>
 
