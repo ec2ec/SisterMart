@@ -1,37 +1,33 @@
-SisterMart 本次上線 SQL（2026-10-19）
+SisterMart 本次上線 SQL（2026-10-19）— 已重新生成
+
+════════════════════════════════════════════════════════
+【推薦一次執行】deploy_all_gaps.sql
+  - 一次補齊：簽到表、訂閱表、收藏表、members.avatar_url
+  - 可重複執行，安全
+  - phpMyAdmin：選中業務庫 → 導入本檔
+  - 命令列：mysql -u帳號 -p 資料庫名 < deploy_all_gaps.sql
+════════════════════════════════════════════════════════
 
 【程式全量包】releases/sistermart-vps-root.zip
   - 解壓到網站根：unzip -o sistermart-vps-root.zip
   - 含 H5 /admin /mock /products /api /sm-backend（不含 .env）
   - 解壓後請硬刷新；確保伺服器已有 sm-backend/.env
 
-【若訂閱／newsletter/me 或 subscribe 500】m27_newsletter.sql
-  - 用途：建立 newsletter_subscribers 表（可重複）
-  - 新版 API 會嘗試自動建表；無權限時請手動執行
-  - 小熱修包：releases/sistermart-vps-newsletter-hotfix.zip（SQL + NewsletterService.php）
+【SQL 壓縮包】releases/sistermart-sql-2026-10-19.zip
+  - 內含本目錄全部 .sql + README
 
-【若簽到日曆 500】m14_checkin.sql
-  - 用途：建立 member_checkins 表（可重複）
-  - 新版 API 會嘗試自動建表；無權限時請手動執行本腳本
-
-【若頭像上傳 500／缺少 avatar_url】m28_favorites_avatar.sql
-  - 用途：member_favorites 表 + members.avatar_url 欄位（可重複）
-  - 頭像功能依賴此腳本；新版 API 也會嘗試自動 ALTER，並用原生 UPDATE 繞過 ThinkPHP 欄位緩存
-  - 若仍見「服務暫時不可用」：先執行本 SQL，再覆蓋 sm-backend（Uploads.php）並硬刷新 H5
+【分項腳本】（已含在 deploy_all_gaps.sql，一般不必單獨跑）
+  - m14_checkin.sql …… 簽到日曆 500
+  - m27_newsletter.sql … 訂閱 me/subscribe 500
+  - m28_favorites_avatar.sql … 頭像／收藏
 
 【必須執行】deploy_catalog_attrs.sql
-  - 用途：角標主數據、商品參數（材質等）表結構 + 種子（new/hot/editor/flash、材質示例）
-  - 可重複執行，安全
-  - 執行範例：
-    mysql -u帳號 -p 資料庫名 < deploy_catalog_attrs.sql
-    或在 phpMyAdmin 導入此檔
+  - 角標主數據、商品參數（材質等）表結構 + 種子
+  - 可重複執行
 
 【必須執行】deploy_tabbar_active.sql
-  - 用途：底部 Tab 選中點亮（深色圓底 + 實心圖標）
-  - 可重複執行，安全
-  - 執行範例：
-    mysql -u帳號 -p 資料庫名 < deploy_tabbar_active.sql
-    或在 phpMyAdmin 導入此檔
+  - 底部 Tab 選中點亮（深色圓底 + 實心圖標）
+  - 可重複執行
 
 【若 VPS 從未跑過早期腳本，才需要（此前已給過）】
   - deploy_m28_m32.sql

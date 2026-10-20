@@ -1,6 +1,5 @@
--- M28：收藏表 + 會員頭像欄
--- mysql -u... -p... sistermart < apps/api/database/m28_favorites_avatar.sql
--- 也可：cd apps/api && php database/m28_seed.php
+-- M28：收藏表 + 會員頭像欄（可重複執行）
+-- 修復：頭像上傳 500／收藏相關缺表
 
 CREATE TABLE IF NOT EXISTS member_favorites (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

@@ -1,4 +1,6 @@
 -- M27 訂閱郵箱名單（可重複執行）
+-- 修復：GET /newsletter/me、POST /newsletter/subscribe 500（缺表）
+
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(191) NOT NULL,
