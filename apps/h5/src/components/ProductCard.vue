@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { ProductCard } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
+import { forceSaveRouteScroll } from '../composables/useRouteScroll'
 
 const props = defineProps<{
   product: ProductCard
@@ -35,6 +36,11 @@ function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } 
 }
 
 function openDetail() {
+  // 點擊當下立刻記下 Tab 滾動，避免 hash 切換後 scrollY 已成 0
+  const tab = String(route.name || '')
+  if (tab === 'home' || tab === 'category' || tab === 'cart' || tab === 'account') {
+    forceSaveRouteScroll(tab)
+  }
   router.push({ name: 'product-detail', params: { id: props.product.id } })
 }
 
