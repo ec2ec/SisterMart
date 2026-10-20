@@ -289,7 +289,7 @@ async function loadSeckillHome() {
 
 /** Home cats use backend-configured `categories.icon` only (admin/seed), not hardcoded assets. */
 const homeCategories = computed(() =>
-  categories.value.slice(0, 6).map((c) => ({
+  categories.value.map((c) => ({
     ...c,
     icon: c.icon || null,
   })),
@@ -373,17 +373,25 @@ const tabLabel = (tab: HomeRecTab) => {
       {{ promoText }}
     </button>
 
-    <section class="cats">
-      <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
-        <img
-          v-if="c.icon"
-          :src="c.icon"
-          :alt="text(c.name)"
-          @error="onCatImgError($event)"
-        />
-        <span v-else class="ph" />
-        <span>{{ text(c.name) }}</span>
-      </button>
+    <section v-if="homeCategories.length" class="cats">
+      <div class="section-title">
+        <h2>{{ t('tabs.category') }}</h2>
+        <button type="button" class="more" @click="router.push({ name: 'category' })">
+          {{ t('account.more') }}
+        </button>
+      </div>
+      <div class="cats-row">
+        <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+          <img
+            v-if="c.icon"
+            :src="c.icon"
+            :alt="text(c.name)"
+            @error="onCatImgError($event)"
+          />
+          <span v-else class="ph" />
+          <span class="cat-name">{{ text(c.name) }}</span>
+        </button>
+      </div>
     </section>
 
     <section v-if="flashSession || flashVisible.length" class="flash">
@@ -548,12 +556,19 @@ const tabLabel = (tab: HomeRecTab) => {
   border-radius: 0.5rem;
 }
 .cats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  padding: 0.5rem 0.875rem 1rem;
+  padding-bottom: 0.5rem;
 }
-.cats button {
+.cats-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 0 0.875rem 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+.cats-row button {
+  flex: 0 0 calc((100% - 1.5rem) / 4);
+  scroll-snap-align: start;
   border: 0;
   background: transparent;
   display: flex;
@@ -562,15 +577,24 @@ const tabLabel = (tab: HomeRecTab) => {
   gap: 0.375rem;
   font-size: 0.75rem;
   color: var(--sm-text);
+  min-width: 0;
+  padding: 0;
 }
-.cats img,
-.ph {
-  width: 4.5rem;
-  height: 4.5rem;
+.cats-row img,
+.cats-row .ph {
+  width: 100%;
+  max-width: 4.5rem;
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 50%;
   background: var(--sm-bg-soft);
+}
+.cats-row .cat-name {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tabs {
   display: flex;
