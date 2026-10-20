@@ -175,6 +175,18 @@ export function fetchOrders(status?: string) {
   return api<{ items: Order[] }>(`/api/v1/orders${qs}`, {}, 'member')
 }
 
+export type OrderCounts = {
+  pending_payment: number
+  pending_shipment: number
+  pending_receipt: number
+  to_review: number
+  aftersales: number
+}
+
+export function fetchOrderCounts() {
+  return api<OrderCounts>('/api/v1/orders/counts', {}, 'member')
+}
+
 export function fetchOrder(id: string | number) {
   return api<Order>(`/api/v1/orders/${id}`, {}, 'member')
 }

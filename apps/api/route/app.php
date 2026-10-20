@@ -78,6 +78,7 @@ Route::group('api/v1', function () {
     Route::put('cart/check-all', 'api.Cart/checkAll');
 
     Route::post('checkout/quote', 'api.Orders/quote');
+    Route::get('orders/counts', 'api.Orders/counts');
     Route::get('orders/:orderId/shipment', 'api.Shipments/read');
     Route::post('orders/:id/confirm-receipt', 'api.Receipts/confirm');
     Route::post('orders/:id/cancel', 'api.Orders/cancel');

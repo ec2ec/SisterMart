@@ -213,6 +213,65 @@ class OrderService
         return ['items' => array_map(fn ($r) => $this->presentSummary($r), $rows)];
     }
 
+    /**
+     * 「我的」訂單中心角標：各狀態訂單數／待評價訂單數／進行中售後單數。
+     *
+     * @return array{
+     *   pending_payment: int,
+     *   pending_shipment: int,
+     *   pending_receipt: int,
+     *   to_review: int,
+     *   aftersales: int
+     * }
+     */
+    public function countsForMember(int $memberId): array
+    {
+        $this->closeExpired();
+        $pendingPayment = (int) Db::name('orders')
+            ->where(['member_id' => $memberId, 'status' => 'pending_payment'])
+            ->count();
+        $pendingShipment = (int) Db::name('orders')
+            ->where(['member_id' => $memberId, 'status' => 'pending_shipment'])
+            ->count();
+        $pendingReceipt = (int) Db::name('orders')
+            ->where(['member_id' => $memberId, 'status' => 'pending_receipt'])
+            ->count();
+
+        $toReview = 0;
+        $completed = Db::name('orders')
+            ->where(['member_id' => $memberId, 'status' => 'completed'])
+            ->field('id,status')
+            ->limit(200)
+            ->select()
+            ->toArray();
+        if ($completed) {
+            $reviews = new ReviewService();
+            foreach ($completed as $row) {
+                if ($reviews->orderNeedsReview($row)) {
+                    $toReview++;
+                }
+            }
+        }
+
+        $aftersales = 0;
+        try {
+            $aftersales = (int) Db::name('aftersales')
+                ->where('member_id', $memberId)
+                ->whereIn('status', ['pending_review', 'awaiting_return', 'pending_refund'])
+                ->count();
+        } catch (\Throwable) {
+            $aftersales = 0;
+        }
+
+        return [
+            'pending_payment' => $pendingPayment,
+            'pending_shipment' => $pendingShipment,
+            'pending_receipt' => $pendingReceipt,
+            'to_review' => $toReview,
+            'aftersales' => $aftersales,
+        ];
+    }
+
     public function listAdmin(?string $status = null): array
     {
         $this->closeExpired();

@@ -27,6 +27,11 @@ class Orders extends ApiController
         return $this->run(fn () => (new OrderService())->listForMember($this->memberId(), $status ?: null));
     }
 
+    public function counts(): Response
+    {
+        return $this->run(fn () => (new OrderService())->countsForMember($this->memberId()));
+    }
+
     public function store(): Response
     {
         return $this->run(fn () => (new OrderService())->create($this->memberId(), $this->payload()), 201);

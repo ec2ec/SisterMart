@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
-import { uploadAvatar } from '../api/trade'
+import { fetchOrderCounts, uploadAvatar, type OrderCounts } from '../api/trade'
 import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
@@ -30,6 +30,18 @@ const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '
 const u = accountMock
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
+const orderCounts = ref<OrderCounts>({
+  pending_payment: 0,
+  pending_shipment: 0,
+  pending_receipt: 0,
+  to_review: 0,
+  aftersales: 0,
+})
+
+function badgeText(n: number): string {
+  if (n <= 0) return ''
+  return n > 99 ? '99+' : String(n)
+}
 
 const displayName = computed(
   () =>
@@ -77,14 +89,39 @@ async function onAvatarConfirm(blob: Blob) {
   }
 }
 
+async function refreshOrderCounts() {
+  if (!loggedIn.value) {
+    orderCounts.value = {
+      pending_payment: 0,
+      pending_shipment: 0,
+      pending_receipt: 0,
+      to_review: 0,
+      aftersales: 0,
+    }
+    return
+  }
+  try {
+    orderCounts.value = await fetchOrderCounts()
+  } catch {
+    /* 角標失敗不擋頁面 */
+  }
+}
+
 async function refreshAccount() {
   syncSessionFromStorage()
-  if (!loggedIn.value) return
+  if (!loggedIn.value) {
+    await refreshOrderCounts()
+    return
+  }
   try {
     const data = await api<Member>('/api/v1/members/me', {}, 'member')
     setSession(token(), data)
+    await refreshOrderCounts()
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) clearSession()
+    if (error instanceof ApiError && error.status === 401) {
+      clearSession()
+      await refreshOrderCounts()
+    }
   }
 }
 
@@ -110,17 +147,29 @@ async function logout() {
     /* 本地仍清除令牌 */
   }
   clearSession()
+  orderCounts.value = {
+    pending_payment: 0,
+    pending_shipment: 0,
+    pending_receipt: 0,
+    to_review: 0,
+    aftersales: 0,
+  }
   showToast(t('auth.loggedOut'))
   router.replace('/')
 }
 
 const orderItems = [
-  { key: 'toPay', icon: 'credit-pay', tab: 'pending_payment' },
-  { key: 'toShip', icon: 'logistics', badge: u.toShipBadge, tab: 'pending_shipment' },
-  { key: 'toReceive', icon: 'send-gift-o', tab: 'pending_receipt' },
-  { key: 'toReview', icon: 'orders-o', tab: 'to_review' },
-  { key: 'returns', icon: 'replay', route: 'aftersales' },
+  { key: 'toPay', icon: 'credit-pay', tab: 'pending_payment', countKey: 'pending_payment' as const },
+  { key: 'toShip', icon: 'logistics', tab: 'pending_shipment', countKey: 'pending_shipment' as const },
+  { key: 'toReceive', icon: 'send-gift-o', tab: 'pending_receipt', countKey: 'pending_receipt' as const },
+  { key: 'toReview', icon: 'orders-o', tab: 'to_review', countKey: 'to_review' as const },
+  { key: 'returns', icon: 'replay', route: 'aftersales', countKey: 'aftersales' as const },
 ] as const
+
+function orderBadge(o: (typeof orderItems)[number]): string {
+  if (!loggedIn.value) return ''
+  return badgeText(orderCounts.value[o.countKey] || 0)
+}
 
 const services = [
   { key: 'profile', icon: 'user-o', route: 'profile' },
@@ -259,7 +308,7 @@ function goOrders(tab?: string) {
           type="button"
           @click="'route' in o && o.route ? goService(o.route) : goOrders('tab' in o ? o.tab : undefined)"
         >
-          <van-badge :content="(!loggedIn && 'badge' in o && o.badge) || ''" :show-zero="false">
+          <van-badge :content="orderBadge(o)" :show-zero="false">
             <van-icon :name="o.icon" size="1.375rem" />
           </van-badge>
           <span>{{ t(`account.${o.key}`) }}</span>
