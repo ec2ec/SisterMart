@@ -9,11 +9,15 @@ import { refreshUnread, unreadCount } from '../composables/useUnread'
 withDefaults(
   defineProps<{
     showLogo?: boolean
+    /** 商詳疊層等：左側返回，關閉疊層並還原底層 Tab */
+    showBack?: boolean
     /** solid: 白底；overlay: 浮在轮播上（透明） */
     variant?: 'solid' | 'overlay'
   }>(),
   { variant: 'solid' },
 )
+
+const emit = defineEmits<{ back: [] }>()
 
 const { t } = useI18n()
 const router = useRouter()
@@ -35,12 +39,25 @@ function goMessages() {
   }
   router.push({ name: 'messages' })
 }
+
+function onBack() {
+  emit('back')
+}
 </script>
 
 <template>
   <header class="app-header" :class="variant">
+    <button
+      v-if="showBack"
+      type="button"
+      class="back-btn"
+      :aria-label="t('pages.back')"
+      @click="onBack"
+    >
+      <van-icon name="arrow-left" size="1.125rem" />
+    </button>
     <div
-      v-if="showLogo"
+      v-else-if="showLogo"
       class="logo"
       role="button"
       tabindex="0"
@@ -97,6 +114,21 @@ function goMessages() {
 .app-header.overlay {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 100%);
   color: #111;
+}
+
+.back-btn {
+  flex: 0 0 auto;
+  width: var(--van-search-input-height, 34px);
+  height: var(--van-search-input-height, 34px);
+  border: 0;
+  border-radius: 50%;
+  background: #f2f3f5;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--sm-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .logo {

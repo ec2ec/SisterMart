@@ -16,11 +16,13 @@ import { refreshCartBadge } from '../composables/useCartBadge'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
+import { useTabShell } from '../composables/useTabShell'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
 const router = useRouter()
+const { closeOverlay } = useTabShell()
 
 const product = ref<ProductDetail | null>(null)
 const related = ref<Card[]>([])
@@ -236,7 +238,7 @@ async function share() {
 
 <template>
   <div v-if="product" class="page pdp">
-    <AppHeader show-logo />
+    <AppHeader show-back @back="closeOverlay" />
     <van-swipe v-model:active="slide" class="gallery" :show-indicators="false" :loop="gallery.length > 1">
       <van-swipe-item v-for="(src, index) in gallery" :key="`${product.id}-${index}`">
         <button type="button" class="shot" @click="zooming = true">
@@ -369,9 +371,11 @@ async function share() {
 
 <style scoped>
 .pdp {
+  /* 疊層下無 Tabbar：只留底部購買欄 + safe-area */
   padding-top: var(--sm-header-h);
-  padding-bottom: calc(var(--sm-tabbar-h) + 4.25rem + env(safe-area-inset-bottom, 0rem));
+  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0rem));
   background: #fff;
+  min-height: 100%;
 }
 .gallery {
   height: 17.5rem;
@@ -613,15 +617,16 @@ h2 {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  bottom: 0;
   display: grid;
   grid-template-columns: auto auto 1fr 1fr;
   gap: 0.5rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
   background: #fff;
   border-top: 0.0625rem solid var(--sm-border);
-  z-index: 20;
+  z-index: 210;
 }
 .ico {
   border: 0;

@@ -43,8 +43,9 @@ import DistPosterView from '../views/DistPosterView.vue'
 import DistRankingView from '../views/DistRankingView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import { captureRefFromQuery } from '../composables/useReferral'
+import { rememberTabScrollBeforeOverlay, TAB_ROUTE_NAMES } from '../composables/useTabShell'
 
-export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
+export { TAB_ROUTE_NAMES }
 
 export const router = createRouter({
   // Hash mode: shared-host nginx has no try_files yet; deep links like /payment/:id
@@ -58,7 +59,7 @@ export const router = createRouter({
     { path: '/account', name: 'account', component: AccountView, meta: { tab: true } },
     { path: '/profile', name: 'profile', component: ProfileView },
     { path: '/search', name: 'search', component: SearchView },
-    { path: '/product/:id', name: 'product-detail', component: ProductDetailView, meta: { tab: true } },
+    { path: '/product/:id', name: 'product-detail', component: ProductDetailView, meta: { overlay: true } },
     { path: '/products', name: 'product-list', component: ProductListView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
@@ -99,17 +100,23 @@ export const router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     // 瀏覽器後退/前進：優先用歷史位置
     if (savedPosition) return savedPosition
-    // 回到 keep-alive 的 Tab 頁（含從商詳返回首頁）：不強制置頂，由頁面 activated 還原
+    // 進入疊層：勿動 window，底層 Tab 滾動由 useTabShell 鎖定/還原
+    if (to.meta.overlay) return false
+    // 從疊層回到 Tab：同樣不動，由 shell 還原 scrollY
     const cachedTabs = new Set(['home', 'category', 'cart', 'account'])
+    if (from?.meta?.overlay && to.name && cachedTabs.has(String(to.name))) {
+      return false
+    }
+    // 回到 keep-alive 的 Tab 頁：不強制置頂
     if (to.name && cachedTabs.has(String(to.name))) {
       return false
     }
-    // 其餘前進導航置頂
-    if (from.name) return { top: 0 }
+    // 其餘前進導航置頂（含疊層 → 結算／登錄）
     return { top: 0 }
   },
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from) => {
   captureRefFromQuery(to.query.ref)
+  rememberTabScrollBeforeOverlay(Boolean(to.meta.overlay), Boolean(from.meta.overlay), from.name)
 })
