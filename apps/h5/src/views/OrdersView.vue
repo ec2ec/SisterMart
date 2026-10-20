@@ -4,21 +4,23 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchOrders, type Order } from '../api/trade'
+import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { isLoggedIn } from '../composables/useSession'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const { orderCounts, refreshOrderCounts } = useOrderCounts()
 const items = ref<Order[]>([])
 const loading = ref(false)
 
 const tabs = [
-  { name: 'all', status: '', label: 'orders.tabAll' },
-  { name: 'pending_payment', status: 'pending_payment', label: 'orders.pendingPayment' },
-  { name: 'pending_shipment', status: 'pending_shipment', label: 'orders.pendingShipment' },
-  { name: 'pending_receipt', status: 'pending_receipt', label: 'orders.pendingReceipt' },
-  { name: 'to_review', status: 'to_review', label: 'orders.toReview' },
-  { name: 'aftersale', status: 'aftersale', label: 'orders.tabAftersale' },
+  { name: 'all', status: '', label: 'orders.tabAll', countKey: null },
+  { name: 'pending_payment', status: 'pending_payment', label: 'orders.pendingPayment', countKey: 'pending_payment' as const },
+  { name: 'pending_shipment', status: 'pending_shipment', label: 'orders.pendingShipment', countKey: 'pending_shipment' as const },
+  { name: 'pending_receipt', status: 'pending_receipt', label: 'orders.pendingReceipt', countKey: 'pending_receipt' as const },
+  { name: 'to_review', status: 'to_review', label: 'orders.toReview', countKey: 'to_review' as const },
+  { name: 'aftersale', status: 'aftersale', label: 'orders.tabAftersale', countKey: 'aftersales' as const },
 ] as const
 
 const tab = ref('all')
@@ -30,6 +32,11 @@ const statusLabel: Record<string, string> = {
   completed: 'orders.completed',
   cancelled: 'orders.cancelled',
   refunded: 'orders.refunded',
+}
+
+function tabBadge(x: (typeof tabs)[number]): string {
+  if (!x.countKey || !isLoggedIn()) return ''
+  return badgeText(orderCounts.value[x.countKey] || 0)
 }
 
 async function load(status: string) {
@@ -44,6 +51,7 @@ async function load(status: string) {
   } finally {
     loading.value = false
   }
+  void refreshOrderCounts()
 }
 
 function onTabChange(name: string | number) {
@@ -69,7 +77,14 @@ watch(
   <div class="page">
     <SubPageNav :title="t('pages.orders')" />
     <van-tabs :active="tab" shrink sticky @change="onTabChange">
-      <van-tab v-for="x in tabs" :key="x.name" :name="x.name" :title="t(x.label)" />
+      <van-tab
+        v-for="x in tabs"
+        :key="x.name"
+        :name="x.name"
+        :title="t(x.label)"
+        :badge="tabBadge(x)"
+        :show-zero-badge="false"
+      />
     </van-tabs>
     <p v-if="!loading && !items.length" class="empty">{{ t('orders.empty') }}</p>
     <ul v-else class="list">

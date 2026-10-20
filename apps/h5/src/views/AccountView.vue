@@ -5,9 +5,10 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
 import { fetchCheckinCalendar } from '../api/m7'
-import { fetchOrderCounts, uploadAvatar, type OrderCounts } from '../api/trade'
+import { uploadAvatar } from '../api/trade'
 import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
+import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import {
   clearSession,
@@ -31,20 +32,9 @@ const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '
 const u = accountMock
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
-const orderCounts = ref<OrderCounts>({
-  pending_payment: 0,
-  pending_shipment: 0,
-  pending_receipt: 0,
-  to_review: 0,
-  aftersales: 0,
-})
+const { orderCounts, refreshOrderCounts, clearOrderCounts } = useOrderCounts()
 const checkinStreak = ref(0)
 const checkinSignedToday = ref(false)
-
-function badgeText(n: number): string {
-  if (n <= 0) return ''
-  return n > 99 ? '99+' : String(n)
-}
 
 const checkinStreakDisplay = computed(() => (loggedIn.value ? checkinStreak.value : u.streak))
 
@@ -91,24 +81,6 @@ async function onAvatarConfirm(blob: Blob) {
     showToast(msg)
   } finally {
     avatarBusy.value = false
-  }
-}
-
-async function refreshOrderCounts() {
-  if (!loggedIn.value) {
-    orderCounts.value = {
-      pending_payment: 0,
-      pending_shipment: 0,
-      pending_receipt: 0,
-      to_review: 0,
-      aftersales: 0,
-    }
-    return
-  }
-  try {
-    orderCounts.value = await fetchOrderCounts()
-  } catch {
-    /* 角標失敗不擋頁面 */
   }
 }
 
@@ -167,13 +139,7 @@ async function logout() {
     /* 本地仍清除令牌 */
   }
   clearSession()
-  orderCounts.value = {
-    pending_payment: 0,
-    pending_shipment: 0,
-    pending_receipt: 0,
-    to_review: 0,
-    aftersales: 0,
-  }
+  clearOrderCounts()
   checkinStreak.value = 0
   checkinSignedToday.value = false
   showToast(t('auth.loggedOut'))
