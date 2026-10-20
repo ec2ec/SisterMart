@@ -71,6 +71,10 @@ async function onConfirm() {
         {{ (order.address as any).region }} {{ (order.address as any).district }} {{ (order.address as any).detail }}
       </p>
     </section>
+    <section v-if="order.remark" class="card remark">
+      <h3>{{ t('checkout.remark') }}</h3>
+      <p>{{ order.remark }}</p>
+    </section>
     <section class="card">
       <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
         <img :src="item.image" alt="" />
@@ -194,6 +198,20 @@ async function onConfirm() {
   padding: 0.875rem;
   background: #fff;
   border-radius: 0.75rem;
+}
+.remark h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+}
+.remark p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .line {
   display: grid;
