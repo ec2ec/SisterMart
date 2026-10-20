@@ -126,11 +126,11 @@ async function onConfirm() {
         <span>{{ t('checkout.coupon') }}</span>
         <em>-{{ couponAmount.toFixed(2) }}</em>
       </p>
-      <p v-if="(order.points_amount || 0) > 0">
+      <p v-if="(order.points_amount || 0) > 0" class="discount">
         <span>{{ t('checkout.pointsLabel') }}</span>
         <em>-HK$ {{ Number(order.points_amount).toFixed(2) }}</em>
       </p>
-      <p v-if="(order.balance_amount || 0) > 0">
+      <p v-if="(order.balance_amount || 0) > 0" class="discount">
         <span>{{ t('checkout.balanceLabel') }}</span>
         <em>-HK$ {{ Number(order.balance_amount).toFixed(2) }}</em>
       </p>

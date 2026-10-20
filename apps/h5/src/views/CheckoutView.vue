@@ -193,9 +193,18 @@ async function submit() {
       </template>
       <template v-else>
         <p><span>{{ t('checkout.goods') }}</span><em>HK$ {{ quote.goods_amount.toFixed(2) }}</em></p>
-        <p><span>{{ t('checkout.coupon') }}</span><em>-HK$ {{ quote.coupon_amount.toFixed(2) }}</em></p>
-        <p><span>{{ t('checkout.pointsLabel') }}</span><em>-HK$ {{ quote.points_amount.toFixed(2) }}</em></p>
-        <p><span>{{ t('checkout.balanceLabel') }}</span><em>-HK$ {{ quote.balance_amount.toFixed(2) }}</em></p>
+        <p class="discount">
+          <span>{{ t('checkout.coupon') }}</span>
+          <em>-HK$ {{ quote.coupon_amount.toFixed(2) }}</em>
+        </p>
+        <p class="discount">
+          <span>{{ t('checkout.pointsLabel') }}</span>
+          <em>-HK$ {{ quote.points_amount.toFixed(2) }}</em>
+        </p>
+        <p class="discount">
+          <span>{{ t('checkout.balanceLabel') }}</span>
+          <em>-HK$ {{ quote.balance_amount.toFixed(2) }}</em>
+        </p>
       </template>
       <p>
         <span>{{ t('checkout.shipping') }}</span>
@@ -259,9 +268,18 @@ async function submit() {
   display: flex;
   justify-content: space-between;
   margin: 0.35rem 0;
+  color: inherit;
+  font-size: 0.8125rem;
 }
 .sum em {
   font-style: normal;
+}
+.sum .discount,
+.sum .discount em {
+  color: #e11d48;
+}
+.sum .discount em {
+  font-weight: 600;
 }
 .pay strong {
   color: var(--sm-primary);
