@@ -12,6 +12,8 @@ export const messages = {
     home: {
       promo: '首次下單最高享 4 折優惠 · 立即選購',
       flashSale: '秒殺',
+      flashUpcoming: '⚡️活動即將開始！',
+      flashLive: '⚡️秒殺進行中！',
       sold: '已售 {n}',
       necklaceCollection: '項鏈精選',
       viewAll: '查看全部 >',
@@ -472,6 +474,8 @@ export const messages = {
     home: {
       promo: 'Get up to 40% off on your 1st order · Shop now',
       flashSale: 'Flash Sale',
+      flashUpcoming: '⚡️Starting soon!',
+      flashLive: '⚡️Flash sale live!',
       sold: 'Sold {n}',
       necklaceCollection: 'Necklace picks',
       viewAll: 'View all >',

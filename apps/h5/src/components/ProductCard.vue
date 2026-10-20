@@ -25,6 +25,10 @@ const badgeItems = computed(() => {
   }))
 })
 const liked = computed(() => isFavorite(props.product.id))
+const showOrigin = computed(() => {
+  const origin = Number(props.product.compare_at ?? 0)
+  return origin > 0 && origin > Number(props.product.price)
+})
 
 function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } }) {
   const fromApi = text(item.name)
@@ -62,7 +66,10 @@ function onWish() {
     <div class="meta">
       <h3>{{ name }}</h3>
       <div class="row">
-        <span class="price">HK$ {{ product.price }}</span>
+        <span class="price-wrap">
+          <s v-if="showOrigin" class="origin">HK$ {{ product.compare_at }}</s>
+          <span class="price">HK$ {{ product.price }}</span>
+        </span>
         <span class="sold">{{ t('home.sold', { n: product.sold }) }}</span>
       </div>
     </div>
@@ -146,14 +153,30 @@ function onWish() {
   margin-top: 0.25rem;
 }
 
+.price-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.375rem;
+  min-width: 0;
+}
+
 .price {
   font-size: 0.875rem;
   color: var(--sm-text);
   font-weight: 700;
 }
 
+.origin {
+  font-size: 0.6875rem;
+  color: var(--sm-text-muted);
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
 .sold {
   font-size: 0.6875rem;
   color: var(--sm-text-muted);
+  flex-shrink: 0;
 }
 </style>

@@ -31,6 +31,8 @@ export type ProductCard = {
   code: string
   name: Localized
   price: number
+  /** 原價（秒殺等場景劃線展示）；有值且大於 price 時顯示 */
+  compare_at?: number
   sold: string
   image: string
   category: string

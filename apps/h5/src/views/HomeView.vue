@@ -220,6 +220,7 @@ const flashVisible = computed<Card[]>(() => {
     code: p.product_id,
     name: p.name,
     price: p.seckill_price,
+    compare_at: p.origin_price,
     sold: String(p.sold ?? 0),
     image: assetUrl(p.image),
     category: '',
@@ -227,6 +228,13 @@ const flashVisible = computed<Card[]>(() => {
     badges: ['flash'],
     badge_items: [{ code: 'flash', color: 'var(--sm-accent)', name: { 'zh-HK': '秒殺', en: 'Flash' } }],
   }))
+})
+
+const flashHint = computed(() => {
+  const s = flashSession.value
+  if (!s) return t('home.flashUpcoming')
+  if (s.status === 'live') return t('home.flashLive')
+  return t('home.flashUpcoming')
 })
 
 function parseSessionTime(v: string): number {
@@ -386,6 +394,7 @@ const tabLabel = (tab: HomeRecTab) => {
           <span class="clock">{{ flashClock }}</span>
         </div>
       </div>
+      <p class="flash-hint">{{ flashHint }}</p>
       <div class="flash-row">
         <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
       </div>
@@ -504,16 +513,25 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .flash .section-title {
   padding-top: 0;
+  padding-bottom: 0.15rem;
+}
+.flash-hint {
+  margin: 0;
+  padding: 0 0.875rem 0.5rem;
+  font-size: 0.8125rem;
+  color: #9b3bfc;
+  font-weight: 600;
 }
 .count .clock {
   display: inline-block;
-  min-width: 7.5rem;
-  padding: 0.2rem 0.45rem;
+  min-width: 8.5rem;
+  padding: 0.15rem 0.35rem;
   border-radius: 0.25rem;
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--sm-text);
+  background: transparent;
+  color: #9b3bfc;
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.02em;
