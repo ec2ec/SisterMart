@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
@@ -20,7 +20,7 @@ import {
 } from '../api/catalog'
 import { api, ApiError } from '../api/client'
 import { useHomeCatalog } from '../composables/useHomeCatalog'
-import { forceSaveRouteScroll, restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
+import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn, loggedIn, memberState, syncSessionFromStorage } from '../composables/useSession'
 
@@ -150,11 +150,6 @@ onMounted(() => {
     .catch(() => undefined)
 })
 
-onBeforeRouteLeave(() => {
-  // 早於 hash 變更／scrollBehavior，避免存到被置頂後的 0
-  forceSaveRouteScroll(SCROLL_KEY)
-})
-
 onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
 })
@@ -166,7 +161,7 @@ onActivated(() => {
     homeFirstActivate = false
     return
   }
-  // 從登錄／商詳返回：同步訂閱；還原滾動
+  // 從登錄返回：同步訂閱狀態；其餘實例內狀態保留
   syncSessionFromStorage()
   void loadSubscribeStatus()
   if (homeBooted) {
@@ -178,25 +173,17 @@ watch(feedTab, () => {
   void loadFeed()
 })
 
-function rememberHomeScroll() {
-  forceSaveRouteScroll(SCROLL_KEY)
-}
-
 function onLink(linkType: string, linkValue: string) {
   if (linkType === 'product' && linkValue) {
-    rememberHomeScroll()
     router.push({ name: 'product-detail', params: { id: linkValue } })
   } else if (linkType === 'category' && linkValue) {
-    rememberHomeScroll()
     goList(linkValue)
   } else if (linkType === 'article' && linkValue) {
-    rememberHomeScroll()
     router.push({ name: 'article', params: { id: linkValue } })
   } else if (linkType === 'url' && linkValue) {
     if (linkValue.startsWith('http')) {
       window.open(linkValue, '_blank', 'noopener')
     } else {
-      rememberHomeScroll()
       router.push(linkValue)
     }
   }

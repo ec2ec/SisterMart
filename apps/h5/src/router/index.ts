@@ -43,7 +43,6 @@ import DistPosterView from '../views/DistPosterView.vue'
 import DistRankingView from '../views/DistRankingView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import { captureRefFromQuery } from '../composables/useReferral'
-import { forceSaveRouteScroll, peekRouteScroll } from '../composables/useRouteScroll'
 
 export const TAB_ROUTE_NAMES = ['home', 'category', 'cart', 'account'] as const
 
@@ -97,26 +96,20 @@ export const router = createRouter({
     { path: '/distribution/poster', name: 'dist-poster', component: DistPosterView },
     { path: '/distribution/ranking', name: 'dist-ranking', component: DistRankingView },
   ],
-  scrollBehavior(to, _from, savedPosition) {
+  scrollBehavior(to, from, savedPosition) {
+    // 瀏覽器後退/前進：優先用歷史位置
+    if (savedPosition) return savedPosition
+    // 回到 keep-alive 的 Tab 頁（含從商詳返回首頁）：不強制置頂，由頁面 activated 還原
     const cachedTabs = new Set(['home', 'category', 'cart', 'account'])
-    // 瀏覽器後退/前進：優先用歷史位置（若非 0）
-    if (savedPosition && (savedPosition.top || 0) > 0) return savedPosition
-    // 回到 keep-alive Tab：用我們在離開前保存的位置（對抗 hash 切換置頂）
     if (to.name && cachedTabs.has(String(to.name))) {
-      const y = peekRouteScroll(String(to.name))
-      if (typeof y === 'number' && y > 0) return { top: y, left: 0 }
       return false
     }
     // 其餘前進導航置頂
+    if (from.name) return { top: 0 }
     return { top: 0 }
   },
 })
 
-router.beforeEach((to, from) => {
+router.beforeEach((to) => {
   captureRefFromQuery(to.query.ref)
-  // 離開 Tab 頁時盡早記下滾動（早於 hash 變更把 scrollY 打成 0）
-  const fromName = from.name ? String(from.name) : ''
-  if (fromName && (TAB_ROUTE_NAMES as readonly string[]).includes(fromName) && to.name !== from.name) {
-    forceSaveRouteScroll(fromName)
-  }
 })
