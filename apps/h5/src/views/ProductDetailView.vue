@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast, type SwipeInstance } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
@@ -27,6 +27,7 @@ const { closeOverlay } = useTabShell()
 const product = ref<ProductDetail | null>(null)
 const related = ref<Card[]>([])
 const slide = ref(0)
+const gallerySwipe = ref<SwipeInstance>()
 const zooming = ref(false)
 const showAllReviews = ref(false)
 const selected = ref<Record<string, string>>({})
@@ -148,8 +149,30 @@ const selectedImage = computed(() => {
 watch(selectedImage, (src) => {
   if (!src) return
   const index = gallery.value.indexOf(src)
-  if (index >= 0) slide.value = index
+  if (index < 0 || index === slide.value) return
+  slide.value = index
+  // Vant 4 Swipe 無 v-model:active，需 swipeTo 同步輪播位置
+  nextTick(() => gallerySwipe.value?.swipeTo(index))
 })
+
+function onGalleryChange(index: number) {
+  slide.value = index
+}
+
+function onZoomChange(index: number) {
+  slide.value = index
+  nextTick(() => gallerySwipe.value?.swipeTo(index, { immediate: true }))
+}
+
+function openZoom(index: number) {
+  slide.value = index
+  zooming.value = true
+}
+
+function closeZoom() {
+  zooming.value = false
+  nextTick(() => gallerySwipe.value?.swipeTo(slide.value, { immediate: true }))
+}
 
 function choose(groupId: string, optionId: string) {
   selected.value = { ...selected.value, [groupId]: optionId }
@@ -239,9 +262,17 @@ async function share() {
 <template>
   <div v-if="product" class="page pdp">
     <AppHeader show-back @back="closeOverlay" />
-    <van-swipe v-model:active="slide" class="gallery" :show-indicators="false" :loop="gallery.length > 1">
+    <van-swipe
+      :key="product.id"
+      ref="gallerySwipe"
+      class="gallery"
+      :initial-swipe="0"
+      :show-indicators="false"
+      :loop="gallery.length > 1"
+      @change="onGalleryChange"
+    >
       <van-swipe-item v-for="(src, index) in gallery" :key="`${product.id}-${index}`">
-        <button type="button" class="shot" @click="zooming = true">
+        <button type="button" class="shot" @click="openZoom(index)">
           <img :src="src" :alt="name" />
         </button>
       </van-swipe-item>
@@ -365,7 +396,13 @@ async function share() {
       <button type="button" class="buy" :disabled="stock <= 0" @click="buyNow">{{ t('pages.buyNow') }}</button>
     </div>
 
-    <ProductZoom v-if="zooming" :images="zoomImages" :start="slide" @close="zooming = false" />
+    <ProductZoom
+      v-if="zooming"
+      :images="zoomImages"
+      :start="slide"
+      @close="closeZoom"
+      @change="onZoomChange"
+    />
   </div>
 </template>
 
