@@ -112,6 +112,28 @@ const compareAt = computed(() =>
 const stock = computed(() => quote.value?.stock ?? 0)
 const liked = computed(() => (product.value ? isFavorite(product.value.id) : false))
 
+const badgeItems = computed(() => {
+  if (!product.value) return []
+  if (product.value.badge_items?.length) return product.value.badge_items
+  return (product.value.badges ?? []).map((code) => ({
+    code,
+    color: code === 'editor' ? 'var(--sm-badge-alt)' : 'var(--sm-primary)',
+    name: { 'zh-HK': code, en: code },
+  }))
+})
+
+const showTagRow = computed(
+  () => badgeItems.value.length > 0 || (product.value?.tags?.length ?? 0) > 0,
+)
+
+function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } }) {
+  const fromApi = text(item.name)
+  if (fromApi && fromApi !== item.code) return fromApi
+  const key = `badge.${item.code}`
+  const fromI18n = t(key)
+  return fromI18n !== key ? fromI18n : fromApi || item.code
+}
+
 const selectedImage = computed(() => {
   if (!product.value) return ''
   for (const group of product.value.spec_groups) {
@@ -243,8 +265,14 @@ async function share() {
           <span class="attr-vals">{{ attr.values.map((v) => text(v.name)).join(' · ') }}</span>
         </div>
       </div>
-      <div class="tags">
-        <span v-for="tag in product.tags" :key="tag['zh-HK']">{{ text(tag) }}</span>
+      <div v-if="showTagRow" class="tags">
+        <span
+          v-for="badge in badgeItems"
+          :key="`b-${badge.code}`"
+          class="tag-badge"
+          :style="{ background: badge.color }"
+        >{{ badgeLabel(badge) }}</span>
+        <span v-for="tag in product.tags" :key="tag['zh-HK']" class="tag-service">{{ text(tag) }}</span>
       </div>
 
       <div v-for="group in product.spec_groups" :key="group.id" class="spec">
@@ -438,10 +466,20 @@ h1 {
 .tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.375rem;
   margin-bottom: 0.75rem;
 }
-.tags span {
+.tag-badge {
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: #fff;
+  background: var(--sm-primary);
+}
+.tag-service {
   border: 0.0625rem solid var(--sm-border);
   border-radius: 0.25rem;
   padding: 0.125rem 0.375rem;
