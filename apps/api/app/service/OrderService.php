@@ -747,7 +747,8 @@ class OrderService
             'completed_at' => $row['completed_at'] ?? null,
             'aftersale_touched' => (int) ($row['aftersale_touched'] ?? 0) === 1,
             'expire_at' => $row['expire_at'],
-            'item_count' => count($items),
+            // 件數 = 各行 qty 合計（A×2 + B×1 → 3），不是 SKU 種類數
+            'item_count' => (int) array_sum(array_map(static fn ($i) => (int) ($i['qty'] ?? 0), $items)),
             'cover' => $items[0]['image_url'] ?? '',
             'title' => $items[0]['name_zh'] ?? '',
         ];
