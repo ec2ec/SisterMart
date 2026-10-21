@@ -4,7 +4,15 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { ApiError } from '../api/client'
-import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
+import {
+  checkAllCart,
+  deleteCartItems,
+  fetchCart,
+  fetchCartTrustTags,
+  patchCartItem,
+  type CartItem,
+  type CartTrustTag,
+} from '../api/trade'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
@@ -16,9 +24,53 @@ const { t } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 const items = ref<CartItem[]>([])
+const trustTags = ref<CartTrustTag[]>([])
+const activeTrust = ref<CartTrustTag | null>(null)
+const showTrustDetail = ref(false)
 const managing = ref(false)
 const loading = ref(false)
 const SCROLL_KEY = 'cart'
+
+/** API 失敗時回退本地文案（與種子一致） */
+const fallbackTrustTags = computed<CartTrustTag[]>(() => [
+  {
+    id: 1,
+    code: 'authentic',
+    sort: 1,
+    name: { 'zh-HK': t('cart.trust1'), en: t('cart.trust1') },
+    detail: { 'zh-HK': t('cart.trust1Detail'), en: t('cart.trust1Detail') },
+  },
+  {
+    id: 2,
+    code: 'craft',
+    sort: 2,
+    name: { 'zh-HK': t('cart.trust2'), en: t('cart.trust2') },
+    detail: { 'zh-HK': t('cart.trust2Detail'), en: t('cart.trust2Detail') },
+  },
+  {
+    id: 3,
+    code: 'aftersale',
+    sort: 3,
+    name: { 'zh-HK': t('cart.trust3'), en: t('cart.trust3') },
+    detail: { 'zh-HK': t('cart.trust3Detail'), en: t('cart.trust3Detail') },
+  },
+])
+
+const displayTrustTags = computed(() => (trustTags.value.length ? trustTags.value : fallbackTrustTags.value))
+
+async function loadTrustTags() {
+  try {
+    const data = await fetchCartTrustTags()
+    trustTags.value = data.items || []
+  } catch {
+    trustTags.value = []
+  }
+}
+
+function openTrust(tag: CartTrustTag) {
+  activeTrust.value = tag
+  showTrustDetail.value = true
+}
 
 async function load() {
   syncSessionFromStorage()
@@ -41,7 +93,10 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadTrustTags()
+})
 onDeactivated(() => saveRouteScroll(SCROLL_KEY))
 let cartFirstActivate = true
 onActivated(() => {
@@ -111,11 +166,27 @@ function reasonText(item: CartItem) {
 
 <template>
   <div class="page">
-    <div class="trust">
-      <span>{{ t('cart.trust1') }}</span>
-      <span>{{ t('cart.trust2') }}</span>
-      <span>{{ t('cart.trust3') }}</span>
+    <div v-if="displayTrustTags.length" class="trust">
+      <button
+        v-for="tag in displayTrustTags"
+        :key="tag.id"
+        type="button"
+        class="trust-tag"
+        @click="openTrust(tag)"
+      >
+        {{ text(tag.name) }}
+      </button>
     </div>
+
+    <van-popup v-model:show="showTrustDetail" round position="bottom" :style="{ maxHeight: '70%' }">
+      <div v-if="activeTrust" class="trust-sheet">
+        <h3>{{ text(activeTrust.name) }}</h3>
+        <p>{{ text(activeTrust.detail) || t('cart.trustNoDetail') }}</p>
+        <van-button block round color="var(--sm-primary)" @click="showTrustDetail = false">
+          {{ t('pages.back') }}
+        </van-button>
+      </div>
+    </van-popup>
 
     <div class="toolbar">
       <h1>{{ t('cart.items', { n: items.length }) }}</h1>
@@ -184,10 +255,40 @@ function reasonText(item: CartItem) {
 .trust {
   display: flex;
   justify-content: space-around;
-  padding: 0.625rem 0.5rem;
-  font-size: 0.6875rem;
-  color: #999;
+  gap: 0.25rem;
+  padding: 0.5rem 0.35rem;
   background: #fafafa;
+}
+.trust-tag {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0.35rem 0.25rem;
+  font-size: 0.6875rem;
+  color: #666;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trust-tag:active {
+  color: var(--sm-primary);
+}
+.trust-sheet {
+  padding: 1.25rem 1rem 1.5rem;
+}
+.trust-sheet h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  text-align: center;
+}
+.trust-sheet p {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #555;
+  white-space: pre-wrap;
 }
 .toolbar {
   display: flex;

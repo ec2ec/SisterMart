@@ -25,6 +25,8 @@ Route::post('api/v1/members', 'api.Members/store');
 Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
 Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
+/** 購物車頂部信任標籤（公開） */
+Route::get('api/v1/cart/trust-tags', 'api.CartTrustTags/index');
 
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
 /** 上傳圖公開讀取（共享主機常無 /storage 靜態別名；query 形式兼容 nginx） */
@@ -152,6 +154,10 @@ Route::group('api/v1/admin', function () {
     Route::put('admins/:id', 'admin.Admins/update');
     Route::get('tabbar', 'admin.Tabbar/index');
     Route::put('tabbar', 'admin.Tabbar/update');
+    Route::get('cart-trust-tags', 'admin.CartTrustTags/index');
+    Route::post('cart-trust-tags', 'admin.CartTrustTags/store');
+    Route::put('cart-trust-tags/:id', 'admin.CartTrustTags/update');
+    Route::delete('cart-trust-tags/:id', 'admin.CartTrustTags/destroy');
 
     Route::get('categories', 'admin.Categories/index');
     Route::post('categories', 'admin.Categories/store');

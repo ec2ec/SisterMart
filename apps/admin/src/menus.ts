@@ -64,6 +64,7 @@ export const adminMenus: AdminMenu[] = [
     key: 'settings',
     children: [
       { label: '底部導航', key: '/settings/tabbar', path: '/settings/tabbar' },
+      { label: '購物車標籤', key: '/settings/cart-trust-tags', path: '/settings/cart-trust-tags' },
       { label: '店鋪參數', key: '/settings/shop', path: '/settings/shop' },
       { label: '管理員與角色', key: '/settings/admins', path: '/settings/admins', roles: ['super'] },
     ],

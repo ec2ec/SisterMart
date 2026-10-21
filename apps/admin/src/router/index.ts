@@ -16,6 +16,7 @@ import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
 import AftersalesView from '../views/AftersalesView.vue'
 import TabbarView from '../views/TabbarView.vue'
+import CartTrustTagsView from '../views/CartTrustTagsView.vue'
 import CouponsView from '../views/CouponsView.vue'
 import PointsView from '../views/PointsView.vue'
 import MembersView from '../views/MembersView.vue'
@@ -61,6 +62,7 @@ export const router = createRouter({
         { path: '/marketing/seckill', component: SeckillView, meta: { title: '秒殺活動' } },
         { path: '/marketing/distribution', component: DistributionView, meta: { title: '分銷' } },
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
+        { path: '/settings/cart-trust-tags', component: CartTrustTagsView, meta: { title: '購物車標籤' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
         { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],

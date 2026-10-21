@@ -19,6 +19,18 @@ export type CartItem = {
   invalid_reason: string
 }
 
+export type CartTrustTag = {
+  id: number
+  code: string
+  sort: number
+  name: Localized
+  detail: Localized
+}
+
+export function fetchCartTrustTags() {
+  return api<{ items: CartTrustTag[] }>('/api/v1/cart/trust-tags')
+}
+
 export type Address = {
   id: number
   receiver: string
