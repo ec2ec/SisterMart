@@ -312,7 +312,15 @@ function goOrders(tab?: string) {
           <p class="sub">{{ t('account.checkinSub', { n: checkinStreakDisplay }) }}</p>
         </div>
       </div>
-      <van-button size="small" round color="var(--sm-primary)" @click="goService('checkin')">
+      <van-button
+        size="small"
+        round
+        class="checkin-btn"
+        :class="{ 'is-signed': loggedIn && checkinSignedToday }"
+        :plain="loggedIn && checkinSignedToday"
+        :color="loggedIn && checkinSignedToday ? '#9aa0a6' : '#c45c26'"
+        @click="goService('checkin')"
+      >
         {{ loggedIn && checkinSignedToday ? t('m7.signed') : t('account.checkinBtn') }}
       </van-button>
     </section>
@@ -503,6 +511,10 @@ function goOrders(tab?: string) {
   margin: 0.125rem 0 0;
   font-size: 0.6875rem;
   color: #999;
+}
+
+.checkin-btn.is-signed {
+  opacity: 0.85;
 }
 
 .services {

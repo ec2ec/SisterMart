@@ -36,7 +36,10 @@ async function sign() {
       <strong>+{{ cal.reward_today }}</strong>
       <van-button
         round
-        color="var(--sm-primary)"
+        class="sign-btn"
+        :class="{ 'is-signed': cal.signed_today }"
+        :plain="cal.signed_today"
+        :color="cal.signed_today ? '#9aa0a6' : '#f0c9a0'"
         :disabled="cal.signed_today"
         @click="sign"
       >
@@ -72,6 +75,16 @@ async function sign() {
   font-size: 2rem;
   margin: 0.5rem 0 1rem;
 }
+.sign-btn {
+  min-width: 8.5rem;
+  font-weight: 600;
+}
+.sign-btn:not(.is-signed) {
+  color: #2a2118 !important;
+}
+.sign-btn.is-signed {
+  opacity: 0.9;
+}
 .cal {
   padding: 0 1rem 2rem;
 }
@@ -93,10 +106,15 @@ async function sign() {
   font-size: 0.75rem;
 }
 .days .signed {
-  background: var(--sm-primary);
+  background: #5b8c5a;
   color: #fff;
 }
-.days .today {
-  outline: 2px solid #c45c26;
+.days .today:not(.signed) {
+  background: #ffe8dc;
+  color: #c45c26;
+  font-weight: 700;
+}
+.days .today.signed {
+  outline: 2px solid #3f6b3f;
 }
 </style>
