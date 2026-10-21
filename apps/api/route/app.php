@@ -206,6 +206,9 @@ Route::group('api/v1/admin', function () {
     Route::get('settings/maintenance', 'admin.ShopSettings/maintenance');
     Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
 
+    /** 概覽待辦與今日數字 */
+    Route::get('dashboard/summary', 'admin.Dashboard/summary');
+
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');
     Route::post('orders/:orderId/shipments', 'admin.Shipments/ship');

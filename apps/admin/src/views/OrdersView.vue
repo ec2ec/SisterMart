@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { NButton, NCard, NPagination, NSelect, NSpace, NTag } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
@@ -16,9 +16,10 @@ type Row = {
   title: string
 }
 
+const route = useRoute()
 const router = useRouter()
 const rows = ref<Row[]>([])
-const status = ref('')
+const status = ref(typeof route.query.status === 'string' ? route.query.status : '')
 const options = ORDER_STATUS_FILTER_OPTIONS
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const loadError = ref('')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
@@ -38,12 +38,17 @@ type Row = {
   } | null
 }
 
+const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
-const status = ref('pending_review')
-const hasEvidence = ref<string>('')
+const status = ref(
+  typeof route.query.status === 'string' ? route.query.status : 'pending_review',
+)
+const hasEvidence = ref<string>(
+  typeof route.query.has_evidence === 'string' ? route.query.has_evidence : '',
+)
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 function assetUrl(u: string) {
   return u.startsWith('http') ? u : `${apiBase}${u}`

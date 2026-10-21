@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   NButton,
   NCard,
@@ -32,12 +33,17 @@ type Row = {
   order_id?: number
 }
 
+const route = useRoute()
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
-const hiddenFilter = ref<string>('')
-const modFilter = ref<string>('pending')
-const productCode = ref('')
+const hiddenFilter = ref<string>(
+  typeof route.query.is_hidden === 'string' ? route.query.is_hidden : '',
+)
+const modFilter = ref<string>(
+  typeof route.query.moderation_status === 'string' ? route.query.moderation_status : 'pending',
+)
+const productCode = ref(typeof route.query.product_code === 'string' ? route.query.product_code : '')
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 function assetUrl(u: string) {
   return u.startsWith('http') ? u : `${apiBase}${u}`

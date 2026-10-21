@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { NButton, NCard, NPagination, NSelect, NSpace, NTabPane, NTabs, NTag, useMessage } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
@@ -34,8 +35,9 @@ type ProdRow = {
   commission_value: number | null
 }
 
+const route = useRoute()
 const message = useMessage()
-const tab = ref('withdrawals')
+const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'withdrawals')
 const withdrawals = ref<Withdrawal[]>([])
 const ranking = ref<RankRow[]>([])
 const commissions = ref<CommRow[]>([])
@@ -45,7 +47,7 @@ const { page: pPage, pageSize: pPageSize, total: pTotal, paged: pPaged } = useCl
 const { page: rPage, pageSize: rPageSize, total: rTotal, paged: rPaged } = useClientPager(ranking, 30)
 const { page: cPage, pageSize: cPageSize, total: cTotal, paged: cPaged } = useClientPager(commissions, 30)
 const period = ref('month')
-const filter = ref('')
+const filter = ref(typeof route.query.status === 'string' ? route.query.status : '')
 
 const statusOptions = [
   { label: '全部', value: '' },
@@ -98,7 +100,7 @@ async function onTab(name: string | number) {
 }
 
 onMounted(() => {
-  void loadWithdrawals()
+  void onTab(tab.value)
 })
 </script>
 
