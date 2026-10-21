@@ -1,7 +1,9 @@
--- SisterMart footer CMS (zh-HK + en for all 9 footer articles)
--- Prefer: php apps/api/database/m33_footer_cms_seed.php
+-- SisterMart footer CMS content (zh-HK + en)
+-- Generated: 2026-10-21T11:58:41Z
+-- Source of truth seed: php apps/api/database/m33_footer_cms_seed.php
+-- Import:
+--   mysql -uUSER -pPASSWORD DBNAME < apps/api/database/deploy_footer_cms_content.sql
 SET NAMES utf8mb4;
-
 INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
 SELECT 'about', 1, 1, 10, NOW(), NOW() FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM articles WHERE code='about');
