@@ -24,3 +24,10 @@ SisterMart 本次上線 SQL（2026-10-21）— PR #55 A2.3 / A5.2 / 積分商城
 【說明】
   - A2.3 賬單 type 篩選無 DB 變更，覆蓋 API／H5 即可
   - 積分商城種子 pm1/pm2：覆蓋 API 後訪問一次列表亦可自愈寫入
+
+════════════════════════════════════════════════════════
+【分銷 500 修復】deploy_m13_distribution.sql（2026-10-21 補）
+  - 根因：VPS 缺少 commissions / withdrawals 等 M13 表
+  - 影響：/api/v1/distribution/overview|orders|commissions → 500
+  - 可重複執行
+════════════════════════════════════════════════════════
