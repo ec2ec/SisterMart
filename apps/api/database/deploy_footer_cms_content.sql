@@ -1,4 +1,4 @@
--- SisterMart footer CMS content
+-- SisterMart footer CMS (zh-HK + en for all 9 footer articles)
 -- Prefer: php apps/api/database/m33_footer_cms_seed.php
 SET NAMES utf8mb4;
 
@@ -14,6 +14,20 @@ ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
 INSERT INTO article_i18n (article_id, locale, title, body)
 SELECT a.id, 'en', 'About Us', '<p><strong>SisterMart</strong> was founded in <strong>2026</strong> as a Hong Kong–based online boutique.</p>\n<p>We curate <strong>great value</strong> everyday finds—bringing <strong>affordable quality</strong> to our community with clear photos and honest pricing.</p>\n<h2>What we care about</h2>\n<ul>\n<li>Careful picks and real product photos</li>\n<li>Straightforward local shipping in Hong Kong</li>\n<li>Friendly support before and after your order</li>\n</ul>\n<p>Thanks for visiting SisterMart. Reach us anytime via Contact Us.</p>'
 FROM articles a WHERE a.code='about'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
+SELECT 'terms', 1, 1, 20, NOW(), NOW() FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM articles WHERE code='terms');
+UPDATE articles SET status=1, show_in_footer=1, sort_order=20, updated_at=NOW() WHERE code='terms';
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'zh-HK', '使用條款', '<p>歡迎使用 <strong>SisterMart（姐妹商店）</strong>。使用本網站或下單，即表示你同意本條款。若不同意，請停止使用本服務。</p>\n<h2>帳戶</h2>\n<ul>\n<li>你須提供真實、有效的電郵或手機資料以註冊／登入</li>\n<li>請妥善保管帳戶；因帳戶外洩導致的損失，請盡快聯絡我們</li>\n<li>我們可在發現欺詐、濫用或違法行為時暫停或終止帳戶</li>\n</ul>\n<h2>商品與訂單</h2>\n<ul>\n<li>商品圖片與描述力求準確；色差、手感等以實物為準</li>\n<li>下單並完成付款後，合約方告成立；庫存不足時我們會盡快通知並協助取消或改訂</li>\n<li>價格、優惠與運費以結帳頁最終顯示為準</li>\n</ul>\n<h2>付款與配送</h2>\n<p>請使用本店提供的付款方式。配送範圍、運費與時效見「運送政策」。</p>\n<h2>售後</h2>\n<p>退貨、退款規則見「退貨政策」與「退款政策」。爭議時我們會本著合理原則處理。</p>\n<h2>免責與修改</h2>\n<p>在法律允許範圍內，因不可抗力、物流或第三方服務中斷造成的延誤，我們不承擔超出合理範圍的責任。本條款可能更新，更新後以本頁最新版本為準。</p>'
+FROM articles a WHERE a.code='terms'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'en', 'Terms of Use', '<p>Welcome to <strong>SisterMart</strong>. By using this site or placing an order, you agree to these terms. If you do not agree, please stop using the service.</p>\n<h2>Accounts</h2>\n<ul>\n<li>Provide a valid email or phone number to register/sign in</li>\n<li>Keep your account secure; contact us promptly if it is compromised</li>\n<li>We may suspend or close accounts for fraud, abuse, or illegal use</li>\n</ul>\n<h2>Products &amp; orders</h2>\n<ul>\n<li>We aim for accurate photos and descriptions; minor color/feel differences may occur</li>\n<li>A contract forms after successful payment; if stock is short we will notify you and help cancel or adjust</li>\n<li>Price, promos, and shipping follow the final checkout amounts</li>\n</ul>\n<h2>Payment &amp; shipping</h2>\n<p>Please use the payment methods we offer. Coverage, fees, and timing are in the Shipping Policy.</p>\n<h2>After-sales</h2>\n<p>Returns and refunds follow the Return Policy and Refund Policy. We handle disputes reasonably.</p>\n<h2>Liability &amp; updates</h2>\n<p>To the extent allowed by law, we are not liable beyond a reasonable scope for delays from force majeure, logistics, or third-party outages. These terms may be updated; the latest version on this page applies.</p>'
+FROM articles a WHERE a.code='terms'
 ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
 
 INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
@@ -70,6 +84,34 @@ ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
 INSERT INTO article_i18n (article_id, locale, title, body)
 SELECT a.id, 'en', 'Refund Policy', '<p>This policy explains when and how SisterMart issues refunds, together with the Return Policy.</p>\n<h2>When we refund</h2>\n<ul>\n<li>After an approved return passes inspection</li>\n<li>Long delay before shipment where you choose to cancel</li>\n<li>Verified duplicate charges, system errors, or overcharged shipping</li>\n</ul>\n<h2>Method &amp; timing</h2>\n<ul>\n<li>Refunds go back to the <strong>original payment method</strong> when possible (card/wallet/balance, etc.)</li>\n<li>After we confirm, funds usually arrive in <strong>3–10 business days</strong> (bank/provider dependent)</li>\n<li>Orders with coupons/points may restore benefits by rule; cash portion is calculated separately</li>\n</ul>\n<h2>Partial refunds</h2>\n<p>For multi-item orders we may refund only eligible items. Shipping refunds depend on whether the remaining order still meets free-shipping rules and the return reason.</p>\n<p>Contact us with your order number for case-specific help.</p>'
 FROM articles a WHERE a.code='refund'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
+SELECT 'service', 1, 1, 70, NOW(), NOW() FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM articles WHERE code='service');
+UPDATE articles SET status=1, show_in_footer=1, sort_order=70, updated_at=NOW() WHERE code='service';
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'zh-HK', '客戶服務', '<p>SisterMart 希望每次購物都簡單安心。以下是常用服務說明。</p>\n<h2>服務範圍</h2>\n<ul>\n<li>商品咨詢與尺碼／材質建議</li>\n<li>訂單、付款、配送進度查詢</li>\n<li>退貨、換貨、退款協助</li>\n<li>帳戶登入與驗證碼問題</li>\n</ul>\n<h2>聯絡方式</h2>\n<p>請前往「聯絡我們」：工作時間內優先使用 <strong>WhatsApp</strong>；亦可於 Facebook 留言（繁忙時或需排隊）。</p>\n<h2>回覆時效</h2>\n<ul>\n<li>工作時間（10:00–19:00，香港時間）內：一般數小時內回覆</li>\n<li>非工作時段：下一工作時段處理</li>\n</ul>\n<p>為加快處理，請準備<strong>訂單編號</strong>與問題說明／圖片。</p>'
+FROM articles a WHERE a.code='service'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'en', 'Customer Service', '<p>SisterMart aims to make shopping simple. Here is how we support you.</p>\n<h2>What we help with</h2>\n<ul>\n<li>Product questions and fit/material advice</li>\n<li>Order, payment, and shipping updates</li>\n<li>Returns, exchanges, and refunds</li>\n<li>Account login and verification codes</li>\n</ul>\n<h2>How to reach us</h2>\n<p>See <strong>Contact Us</strong>: prefer <strong>WhatsApp</strong> during business hours; Facebook messages are welcome too (may queue when busy).</p>\n<h2>Response time</h2>\n<ul>\n<li>During hours (10:00–19:00 HKT): usually within a few hours</li>\n<li>Outside hours: handled in the next working window</li>\n</ul>\n<p>Please include your <strong>order number</strong> and a short description/photos so we can help faster.</p>'
+FROM articles a WHERE a.code='service'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
+SELECT 'payment', 1, 1, 80, NOW(), NOW() FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM articles WHERE code='payment');
+UPDATE articles SET status=1, show_in_footer=1, sort_order=80, updated_at=NOW() WHERE code='payment';
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'zh-HK', '付款政策', '<p>本頁說明 SisterMart 的付款方式與注意事項。</p>\n<h2>可用付款方式</h2>\n<p>結帳頁會顯示當前可用渠道（例如線上支付、轉數快或其他本店已開通的方式）。請以結帳頁即時選項為準。</p>\n<h2>付款與訂單</h2>\n<ul>\n<li>請在時限內完成付款；逾時未付訂單可能自動取消並釋放庫存</li>\n<li>付款成功後，可在「我的訂單」查看狀態</li>\n<li>如顯示已扣款但訂單未更新，請保留憑證並聯絡客服，我們會協助核對</li>\n</ul>\n<h2>貨幣與收據</h2>\n<p>本店以 <strong>港幣（HKD）</strong>標價與結算。電子收據／訂單詳情可於帳戶訂單中查看。</p>\n<h2>安全</h2>\n<p>請勿向非官方渠道提供驗證碼或完整卡資料。我們不會以非官方連結要求你重複付款。</p>'
+FROM articles a WHERE a.code='payment'
+ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
+
+INSERT INTO article_i18n (article_id, locale, title, body)
+SELECT a.id, 'en', 'Payment Policy', '<p>This page explains how payment works at SisterMart.</p>\n<h2>Available methods</h2>\n<p>Checkout shows the methods currently enabled (e.g. online pay, FPS, or other channels we support). Always follow the live options on the checkout page.</p>\n<h2>Payment &amp; orders</h2>\n<ul>\n<li>Pay within the time limit; unpaid orders may auto-cancel and release stock</li>\n<li>After successful payment, check status under My Orders</li>\n<li>If you were charged but the order did not update, keep the receipt and contact support for verification</li>\n</ul>\n<h2>Currency &amp; receipts</h2>\n<p>Prices and settlement use <strong>Hong Kong Dollars (HKD)</strong>. Order details/receipts are available in your account orders.</p>\n<h2>Safety</h2>\n<p>Never share OTP codes or full card details via unofficial channels. We will not ask you to pay again through suspicious links.</p>'
+FROM articles a WHERE a.code='payment'
 ON DUPLICATE KEY UPDATE title=VALUES(title), body=VALUES(body);
 
 INSERT INTO articles (code, status, show_in_footer, sort_order, created_at, updated_at)
