@@ -7,15 +7,21 @@ import SubPageNav from '../components/SubPageNav.vue'
 import { fetchPointsMallItem } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn, memberState } from '../composables/useSession'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
 const router = useRouter()
 const item = ref<Awaited<ReturnType<typeof fetchPointsMallItem>> | null>(null)
+const loadError = ref('')
 
 onMounted(async () => {
-  item.value = await fetchPointsMallItem(String(route.params.id))
+  try {
+    item.value = await fetchPointsMallItem(String(route.params.id))
+  } catch (e) {
+    loadError.value = e instanceof Error && e.message ? e.message : t('m7.loadFail')
+  }
 })
 
 function exchange() {
@@ -44,30 +50,42 @@ function exchange() {
 </script>
 
 <template>
-  <div class="page" v-if="item">
-    <SubPageNav :title="text(item.name)" />
-    <img class="hero" :src="item.image" alt="" />
-    <section class="info">
-      <h1>{{ text(item.name) }}</h1>
-      <p class="cost">{{ item.points_cost }} {{ t('account.points') }}</p>
-      <p class="stock">{{ t('pdp.stock', { n: item.stock }) }}</p>
-      <p>{{ text(item.detail) }}</p>
-    </section>
-    <div class="bar">
-      <van-button
-        block
-        round
-        color="var(--sm-primary)"
-        :disabled="item.stock <= 0"
-        @click="exchange"
-      >
-        {{ t('m7.exchange') }}
-      </van-button>
-    </div>
+  <div class="page">
+    <SubPageNav :title="item ? text(item.name) : t('account.pointsMall')" />
+    <p v-if="loadError" class="hint err">{{ loadError }}</p>
+    <template v-else-if="item">
+      <img class="hero" :src="assetUrl(item.image)" alt="" />
+      <section class="info">
+        <h1>{{ text(item.name) }}</h1>
+        <p class="cost">{{ item.points_cost }} {{ t('account.points') }}</p>
+        <p class="stock">{{ t('pdp.stock', { n: item.stock }) }}</p>
+        <p>{{ text(item.detail) }}</p>
+      </section>
+      <div class="bar">
+        <van-button
+          block
+          round
+          color="var(--sm-primary)"
+          :disabled="item.stock <= 0"
+          @click="exchange"
+        >
+          {{ t('m7.exchange') }}
+        </van-button>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
+.hint {
+  margin: 1.5rem 1rem;
+  text-align: center;
+  color: #999;
+  font-size: 0.875rem;
+}
+.hint.err {
+  color: #c45c26;
+}
 .hero {
   width: 100%;
   aspect-ratio: 1;

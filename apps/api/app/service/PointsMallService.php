@@ -12,8 +12,11 @@ use think\facade\Db;
  */
 class PointsMallService
 {
+    private static bool $schemaReady = false;
+
     public function list(): array
     {
+        $this->ensureSchema();
         $rows = Db::name('points_mall_items')
             ->where('status', 1)
             ->where('stock', '>', 0)
@@ -29,6 +32,7 @@ class PointsMallService
 
     public function detail(string $id): array
     {
+        $this->ensureSchema();
         $row = $this->findItem($id);
         if ((int) $row['status'] !== 1) {
             throw new ApiException('NOT_FOUND', '積分商品不存在', 404, 40482);
@@ -48,6 +52,7 @@ class PointsMallService
      */
     public function assertAvailable(int $itemId, int $qty = 1, bool $forUpdate = false): array
     {
+        $this->ensureSchema();
         $q = Db::name('points_mall_items')->where('id', $itemId)->where('status', 1);
         $item = $forUpdate ? $q->lock(true)->find() : $q->find();
         if (!$item) {
@@ -62,6 +67,7 @@ class PointsMallService
 
     public function deduct(int $itemId, int $qty, string $now): void
     {
+        $this->ensureSchema();
         $affected = Db::name('points_mall_items')
             ->where('id', $itemId)
             ->where('stock', '>=', $qty)
@@ -75,6 +81,7 @@ class PointsMallService
 
     public function release(int $itemId, int $qty, string $now): void
     {
+        $this->ensureSchema();
         $row = Db::name('points_mall_items')->where('id', $itemId)->find();
         if (!$row) {
             return;
@@ -88,6 +95,7 @@ class PointsMallService
 
     public function listAdmin(): array
     {
+        $this->ensureSchema();
         $rows = Db::name('points_mall_items')->order('id', 'desc')->select()->toArray();
 
         return [
@@ -97,6 +105,7 @@ class PointsMallService
 
     public function saveAdmin(array $body, ?int $id = null): array
     {
+        $this->ensureSchema();
         $code = trim((string) ($body['code'] ?? ''));
         $productCode = trim((string) ($body['product_code'] ?? $body['product_id'] ?? ''));
         $skuId = (int) ($body['sku_id'] ?? 0);
@@ -171,6 +180,7 @@ class PointsMallService
 
     public function deleteAdmin(int $id): array
     {
+        $this->ensureSchema();
         $row = Db::name('points_mall_items')->where('id', $id)->find();
         if (!$row) {
             throw new ApiException('NOT_FOUND', '積分商品不存在', 404, 40482);
@@ -178,6 +188,129 @@ class PointsMallService
         Db::name('points_mall_items')->where('id', $id)->delete();
 
         return ['id' => $id, 'deleted' => true];
+    }
+
+    /**
+     * 生產庫若未跑 m12，列表會 500（表不存在 →「服務暫時不可用」）。
+     * 冪等建表；若表為空則種子 pm1/pm2（依賴商品 p3/p4）。
+     */
+    private function ensureSchema(): void
+    {
+        if (self::$schemaReady) {
+            return;
+        }
+        $prefix = (string) (Db::getConnection()->getConfig('prefix') ?: '');
+        $table = $prefix . 'points_mall_items';
+        try {
+            Db::execute(
+                "CREATE TABLE IF NOT EXISTS `{$table}` (
+                  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                  `code` VARCHAR(32) NOT NULL,
+                  `product_id` BIGINT UNSIGNED NOT NULL,
+                  `product_code` VARCHAR(64) NOT NULL,
+                  `sku_id` BIGINT UNSIGNED NOT NULL,
+                  `points_cost` INT NOT NULL,
+                  `stock` INT NOT NULL DEFAULT 0,
+                  `sold` INT NOT NULL DEFAULT 0,
+                  `status` TINYINT NOT NULL DEFAULT 1,
+                  `image_url` VARCHAR(512) NULL,
+                  `name_zh` VARCHAR(255) NOT NULL,
+                  `name_en` VARCHAR(255) NOT NULL,
+                  `detail_zh` TEXT NULL,
+                  `detail_en` TEXT NULL,
+                  `created_at` DATETIME NOT NULL,
+                  `updated_at` DATETIME NOT NULL,
+                  UNIQUE KEY `uk_points_mall_items_code` (`code`),
+                  KEY `idx_points_mall_items_product` (`product_code`),
+                  KEY `idx_points_mall_items_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            );
+            $this->ensureOrdersColumn($prefix);
+            $this->ensureSeedIfEmpty();
+            self::$schemaReady = true;
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw new ApiException(
+                'SERVER',
+                '積分商城表未就緒，請執行 m12_points_mall.sql',
+                500,
+                50012,
+            );
+        }
+    }
+
+    private function ensureOrdersColumn(string $prefix): void
+    {
+        $orders = $prefix . 'orders';
+        try {
+            $rows = Db::query("SHOW COLUMNS FROM `{$orders}` LIKE 'points_mall_item_id'");
+            if ($rows) {
+                return;
+            }
+            Db::execute(
+                "ALTER TABLE `{$orders}` ADD COLUMN `points_mall_item_id` BIGINT UNSIGNED NULL AFTER `seckill_item_id`",
+            );
+        } catch (\Throwable $e) {
+            // 兌換下單時再暴露；列表不依賴此欄
+        }
+    }
+
+    /** 表為空時寫入 pm1/pm2；商品/SKU 缺失則跳過。 */
+    private function ensureSeedIfEmpty(): void
+    {
+        $count = (int) Db::name('points_mall_items')->count();
+        if ($count > 0) {
+            return;
+        }
+        $catalog = [
+            'pm1' => [
+                'product' => 'p3',
+                'points' => 800,
+                'stock' => 20,
+                'name_zh' => '四葉草手鏈（積分兌）',
+                'name_en' => 'Clover (Points)',
+                'detail_zh' => '積分商城兌換商品。結算扣積分；運費按現金規則（未滿包郵門檻需支付運費）。',
+                'detail_en' => 'Points-mall item. Redeem with points; shipping follows cash rules.',
+            ],
+            'pm2' => [
+                'product' => 'p4',
+                'points' => 1200,
+                'stock' => 8,
+                'name_zh' => '紅心手鏈（積分兌）',
+                'name_en' => 'Heart (Points)',
+                'detail_zh' => '積分商城兌換商品。結算扣積分；運費按現金規則（未滿包郵門檻需支付運費）。',
+                'detail_en' => 'Points-mall item. Redeem with points; shipping follows cash rules.',
+            ],
+        ];
+        $now = date('Y-m-d H:i:s');
+        foreach ($catalog as $code => $cfg) {
+            $product = Db::name('products')->where('code', $cfg['product'])->where('status', 1)->find();
+            if (!$product) {
+                continue;
+            }
+            $sku = Db::name('skus')->where('product_id', $product['id'])->where('status', 1)->order('id', 'asc')->find();
+            if (!$sku) {
+                continue;
+            }
+            Db::name('points_mall_items')->insert([
+                'code' => $code,
+                'product_id' => (int) $product['id'],
+                'product_code' => $cfg['product'],
+                'sku_id' => (int) $sku['id'],
+                'points_cost' => $cfg['points'],
+                'stock' => $cfg['stock'],
+                'sold' => 0,
+                'status' => 1,
+                'image_url' => $sku['image_url'] ?: ($product['cover_url'] ?? null),
+                'name_zh' => $cfg['name_zh'],
+                'name_en' => $cfg['name_en'],
+                'detail_zh' => $cfg['detail_zh'],
+                'detail_en' => $cfg['detail_en'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
     }
 
     private function findItem(string $id): array
