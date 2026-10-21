@@ -1,2 +1,4 @@
+# SisterMart API — 禁止搜索引擎、爬蟲與 AI 抓取
 User-agent: *
-Disallow:
+Content-Signal: search=no, ai-input=no, ai-train=no
+Disallow: /

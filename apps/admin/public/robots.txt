@@ -1,0 +1,4 @@
+# SisterMart Admin — 禁止搜索引擎、爬蟲與 AI 抓取
+User-agent: *
+Content-Signal: search=no, ai-input=no, ai-train=no
+Disallow: /

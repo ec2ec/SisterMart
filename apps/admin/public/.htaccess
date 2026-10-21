@@ -1,4 +1,8 @@
 # SisterMart Admin SPA
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex"
+</IfModule>
+
 <IfModule mod_rewrite.c>
   Options -MultiViews
   RewriteEngine On

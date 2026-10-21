@@ -29,6 +29,8 @@ class Cors
             'Access-Control-Allow-Headers'     => 'Authorization, Content-Type, X-Requested-With, Accept, Origin',
             'Access-Control-Allow-Credentials' => 'true',
             'Access-Control-Max-Age'           => '86400',
+            // 禁止搜索引擎／爬蟲索引 API 響應
+            'X-Robots-Tag'                     => 'noindex, nofollow, noarchive, nosnippet, noimageindex',
         ]);
 
         return $response;

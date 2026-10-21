@@ -1,4 +1,8 @@
 # SisterMart H5 SPA — Apache / 部分面板「伪静态」會讀此檔
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex"
+</IfModule>
+
 <IfModule mod_rewrite.c>
   Options -MultiViews
   RewriteEngine On

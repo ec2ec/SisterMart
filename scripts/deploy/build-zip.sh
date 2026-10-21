@@ -79,6 +79,15 @@ pack_zip() {
   echo "==> Stage H5 → zip root"
   cp -a "$h5_dist"/. "$STAGING/"
 
+  # 全站禁止爬蟲：確保根目錄 robots.txt（vite 會從 public 帶入 dist）
+  if [[ ! -f "$STAGING/robots.txt" && -f "$ROOT/apps/h5/public/robots.txt" ]]; then
+    cp "$ROOT/apps/h5/public/robots.txt" "$STAGING/robots.txt"
+  fi
+  if [[ ! -f "$STAGING/admin/robots.txt" && -f "$ROOT/apps/admin/public/robots.txt" ]]; then
+    mkdir -p "$STAGING/admin"
+    cp "$ROOT/apps/admin/public/robots.txt" "$STAGING/admin/robots.txt"
+  fi
+
   # mock：優先 dist/mock，否則 design-assets
   if [[ -d "$h5_dist/mock" && -n "$(ls -A "$h5_dist/mock" 2>/dev/null || true)" ]]; then
     cp -a "$h5_dist/mock"/. "$STAGING/mock/"
