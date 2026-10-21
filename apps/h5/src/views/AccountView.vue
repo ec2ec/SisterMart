@@ -330,7 +330,11 @@ function goOrders(tab?: string) {
 
     <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
 
-    <AvatarCropDialog v-model:show="showAvatarCrop" @confirm="onAvatarConfirm" />
+    <AvatarCropDialog
+      v-model:show="showAvatarCrop"
+      :current-src="avatarSrc"
+      @confirm="onAvatarConfirm"
+    />
   </div>
 </template>
 
