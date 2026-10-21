@@ -111,6 +111,7 @@ const channelOptions = [
 ]
 
 const reviewOpen = ref(false)
+const approveConfirmOpen = ref(false)
 const reviewAction = ref<'approve' | 'reject'>('approve')
 const reviewRow = ref<Withdrawal | null>(null)
 const reviewNote = ref('')
@@ -215,12 +216,16 @@ async function confirmReview() {
     return
   }
   if (action === 'approve') {
-    const ok = window.confirm(
-      `確認已線下打款？\n將標記 #${row.id} · HK$ ${row.amount.toFixed(2)}（FPS ${row.fps_id || '-'}）為已打款。`,
-    )
-    if (!ok) return
+    // 3-B：與駁回同風格的 Naive 二次確認，取代 window.confirm
+    approveConfirmOpen.value = true
+    return
   }
   await submitReview(row.id, action, note)
+}
+
+async function confirmApprovePaid() {
+  if (!reviewRow.value) return
+  await submitReview(reviewRow.value.id, 'approve', reviewNote.value.trim())
 }
 
 async function submitReview(id: number, action: 'approve' | 'reject', note: string) {
@@ -233,6 +238,7 @@ async function submitReview(id: number, action: 'approve' | 'reject', note: stri
     )
     message.success(action === 'approve' ? '已標記打款通過' : '已駁回')
     reviewOpen.value = false
+    approveConfirmOpen.value = false
     await loadWithdrawals()
   } catch (e: any) {
     message.error(e?.message || '審核失敗')
@@ -455,7 +461,13 @@ onMounted(() => {
         #{{ reviewRow.id }} · HK$ {{ reviewRow.amount.toFixed(2) }} ·
         {{ reviewRow.fps_name || '-' }} / {{ reviewRow.fps_id || '-' }}
       </p>
-      <p class="hint">審核備註（會寫入記錄；駁回時一併通知會員）</p>
+      <p class="hint">
+        {{
+          reviewAction === 'approve'
+            ? '審核備註（會寫入記錄；請確認已完成線下打款）'
+            : '審核備註（會寫入記錄；駁回時一併通知會員）'
+        }}
+      </p>
       <n-input v-model:value="reviewNote" type="textarea" :rows="3" placeholder="備註" />
       <n-space v-if="reviewAction === 'reject'" style="margin-top: 0.65rem" wrap>
         <n-button
@@ -472,11 +484,32 @@ onMounted(() => {
         <n-space justify="end">
           <n-button @click="reviewOpen = false">取消</n-button>
           <n-button
-            :loading="reviewBusy"
+            :loading="reviewBusy && reviewAction === 'reject'"
             :type="reviewAction === 'approve' ? 'primary' : 'error'"
             @click="confirmReview"
           >
-            {{ reviewAction === 'approve' ? '確認通過' : '確認駁回' }}
+            {{ reviewAction === 'approve' ? '下一步' : '確認駁回' }}
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <n-modal
+      v-model:show="approveConfirmOpen"
+      preset="card"
+      title="確認已線下打款"
+      style="width: 28rem; max-width: 94vw"
+    >
+      <p v-if="reviewRow" class="modal-lead">
+        將標記 #{{ reviewRow.id }} · HK$ {{ reviewRow.amount.toFixed(2) }}（FPS
+        {{ reviewRow.fps_id || '-' }}）為已打款。此操作不可撤銷。
+      </p>
+      <p v-if="reviewNote.trim()" class="hint">備註：{{ reviewNote.trim() }}</p>
+      <template #footer>
+        <n-space justify="end">
+          <n-button :disabled="reviewBusy" @click="approveConfirmOpen = false">返回</n-button>
+          <n-button type="primary" :loading="reviewBusy" @click="confirmApprovePaid">
+            確認已線下打款
           </n-button>
         </n-space>
       </template>
