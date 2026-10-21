@@ -445,7 +445,7 @@ class DistributionService
             if ($action === 'approve') {
                 Db::name('withdrawals')->where('id', $withdrawalId)->update([
                     'status' => 'paid',
-                    'review_note' => $note,
+                    'review_note' => $note !== '' ? $note : '已審核通過',
                     'reviewed_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -454,7 +454,7 @@ class DistributionService
             }
             Db::name('withdrawals')->where('id', $withdrawalId)->update([
                 'status' => 'rejected',
-                'review_note' => $note,
+                'review_note' => $note !== '' ? $note : '不符合提現條件',
                 'reviewed_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -463,7 +463,19 @@ class DistributionService
             ]);
         });
 
-        return Db::name('withdrawals')->where('id', $withdrawalId)->find() ?: [];
+        $fresh = Db::name('withdrawals')->where('id', $withdrawalId)->find() ?: [];
+        if ($fresh) {
+            try {
+                (new MessageService())->notifyWithdrawalEvent(
+                    $fresh,
+                    $action === 'approve' ? 'paid' : 'rejected',
+                );
+            } catch (\Throwable) {
+                /* 消息失敗不回滾審核 */
+            }
+        }
+
+        return $fresh;
     }
 
     public function poster(int $memberId, ?string $productId = null): array

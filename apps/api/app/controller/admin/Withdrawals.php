@@ -15,16 +15,46 @@ class Withdrawals extends ApiController
     {
         return $this->run(function () {
             $status = (string) $this->request->get('status', '');
-            $q = Db::name('withdrawals')->order('id', 'desc')->limit(100);
+            $channel = (string) $this->request->get('channel', '');
+            $q = (string) $this->request->get('q', '');
+            $limit = max(1, min(500, (int) $this->request->get('limit', 200)));
+
+            $query = Db::name('withdrawals')->alias('w')
+                ->leftJoin('members m', 'm.id = w.member_id')
+                ->field('w.*, m.nickname AS member_nickname, m.phone AS member_phone, m.email AS member_email, m.commission_available')
+                ->order('w.id', 'desc')
+                ->limit($limit);
             if ($status !== '') {
-                $q->where('status', $status);
+                $query->where('w.status', $status);
             }
-            $rows = $q->select()->toArray();
+            if ($channel !== '' && in_array($channel, ['fps', 'balance'], true)) {
+                $query->where('w.channel', $channel);
+            }
+            if ($q !== '') {
+                $like = '%' . addcslashes($q, '%_\\') . '%';
+                $query->where(function ($w) use ($like, $q) {
+                    $w->whereLike('w.fps_id', $like)
+                        ->whereOr('w.fps_name', 'like', $like)
+                        ->whereOr('m.nickname', 'like', $like)
+                        ->whereOr('m.phone', 'like', $like)
+                        ->whereOr('m.email', 'like', $like);
+                    if (ctype_digit($q)) {
+                        $w->whereOr('w.member_id', (int) $q)->whereOr('w.id', (int) $q);
+                    }
+                });
+            }
+            $rows = $query->select()->toArray();
+            $pendingCount = (int) Db::name('withdrawals')->where('status', 'pending_review')->count();
 
             return [
+                'pending_count' => $pendingCount,
                 'items' => array_map(fn ($r) => [
                     'id' => (int) $r['id'],
                     'member_id' => (int) $r['member_id'],
+                    'member_nickname' => (string) ($r['member_nickname'] ?? ''),
+                    'member_phone' => (string) ($r['member_phone'] ?? ''),
+                    'member_email' => (string) ($r['member_email'] ?? ''),
+                    'commission_available' => (float) ($r['commission_available'] ?? 0),
                     'channel' => $r['channel'],
                     'amount' => (float) $r['amount'],
                     'status' => $r['status'],
@@ -51,6 +81,7 @@ class Withdrawals extends ApiController
                 'status' => $row['status'],
                 'amount' => (float) $row['amount'],
                 'channel' => $row['channel'],
+                'review_note' => $row['review_note'] ?? null,
                 'reviewed_at' => $row['reviewed_at'],
             ];
         });

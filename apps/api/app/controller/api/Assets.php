@@ -25,8 +25,9 @@ class Assets extends ApiController
         return $this->run(function () {
             $member = app('sistermart.member');
             $limit = (int) $this->request->get('limit', 50);
+            $type = (string) $this->request->get('type', '');
 
-            return (new AssetService())->balanceLogs((int) $member['id'], $limit);
+            return (new AssetService())->balanceLogs((int) $member['id'], $limit, $type !== '' ? $type : null);
         });
     }
 

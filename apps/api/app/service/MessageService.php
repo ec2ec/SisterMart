@@ -153,6 +153,49 @@ class MessageService
     }
 
     /**
+     * 提現審核結果寫入系統消息 Tab（PRD §16.1）。
+     */
+    public function notifyWithdrawalEvent(array $withdrawal, string $event): void
+    {
+        $memberId = (int) ($withdrawal['member_id'] ?? 0);
+        $wid = (int) ($withdrawal['id'] ?? 0);
+        if ($memberId <= 0 || $wid <= 0) {
+            return;
+        }
+        $amount = number_format((float) ($withdrawal['amount'] ?? 0), 2, '.', '');
+        $note = trim((string) ($withdrawal['review_note'] ?? ''));
+        if ($event === 'approved' || $event === 'paid') {
+            $titleZh = '提現已通過';
+            $titleEn = 'Withdrawal approved';
+            $bodyZh = '提現申請 #' . $wid . '（HK$ ' . $amount . '）已通過，請留意收款帳戶。';
+            $bodyEn = 'Withdrawal #' . $wid . ' (HK$ ' . $amount . ') approved. Please check your payee account.';
+        } elseif ($event === 'rejected') {
+            $titleZh = '提現已駁回';
+            $titleEn = 'Withdrawal rejected';
+            $bodyZh = '提現申請 #' . $wid . '（HK$ ' . $amount . '）未通過，金額已退回可提現佣金。';
+            $bodyEn = 'Withdrawal #' . $wid . ' (HK$ ' . $amount . ') rejected. Amount returned to available commission.';
+            if ($note !== '') {
+                $bodyZh .= ' 原因：' . $note;
+                $bodyEn .= ' Reason: ' . $note;
+            }
+        } else {
+            return;
+        }
+        $this->insertOnce([
+            'member_id' => $memberId,
+            'type' => 'system',
+            'title_zh' => $titleZh,
+            'title_en' => $titleEn,
+            'body_zh' => $bodyZh,
+            'body_en' => $bodyEn,
+            'ref_type' => 'withdrawal',
+            'ref_id' => $wid,
+            'event_key' => 'withdrawal:' . $wid . ':' . $event,
+            'batch_id' => null,
+        ]);
+    }
+
+    /**
      * 售後審核結果寫入訂單消息 Tab。
      */
     public function notifyAftersaleEvent(array $aftersale, string $event): void

@@ -227,13 +227,26 @@ class AssetService
         ];
     }
 
-    public function balanceLogs(int $memberId, int $limit = 50): array
+    /** @var list<string> */
+    public const BALANCE_LOG_TYPES = [
+        'order_deduct',
+        'order_release',
+        'commission_to_balance',
+        'aftersale_refund',
+        'admin_adjust',
+    ];
+
+    public function balanceLogs(int $memberId, int $limit = 50, ?string $type = null): array
     {
-        $rows = Db::name('balance_logs')
+        $q = Db::name('balance_logs')
             ->where('member_id', $memberId)
             ->order('id', 'desc')
-            ->limit(max(1, min(200, $limit)))
-            ->select()->toArray();
+            ->limit(max(1, min(200, $limit)));
+        $type = $type !== null ? trim($type) : '';
+        if ($type !== '' && in_array($type, self::BALANCE_LOG_TYPES, true)) {
+            $q->where('type', $type);
+        }
+        $rows = $q->select()->toArray();
 
         return [
             'items' => array_map(fn ($r) => [
@@ -246,6 +259,7 @@ class AssetService
                 'remark' => $r['remark'],
                 'created_at' => $r['created_at'],
             ], $rows),
+            'types' => self::BALANCE_LOG_TYPES,
         ];
     }
 

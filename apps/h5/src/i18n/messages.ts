@@ -262,6 +262,7 @@ export const messages = {
     bill: {
       title: '賬單明細',
       empty: '暫無餘額變動',
+      filterAll: '全部類型',
       types: {
         order_deduct: '下單扣餘額',
         order_release: '關單退回',
@@ -299,6 +300,7 @@ export const messages = {
       ended: '已結束',
       loading: '載入中…',
       empty: '暫無秒殺活動',
+      pointsEmpty: '暫無積分商品',
       loadFail: '載入失敗，請稍後再試',
       noProducts: '此活動暫無商品',
       notStarted: '場次尚未開始',
@@ -328,8 +330,8 @@ export const messages = {
       fpsName: '收款姓名',
       fpsId: '轉數快識別碼',
       submitWithdraw: '提交提現',
-      withdrawDone: '已轉入餘額（Mock）',
-      withdrawPending: '已提交審核（Mock）',
+      withdrawDone: '已轉入餘額',
+      withdrawPending: '已提交審核，請等待處理',
       withdrawFail: '提現失敗',
       month: '本月',
       total: '累計',
@@ -736,6 +738,7 @@ export const messages = {
     bill: {
       title: 'Balance ledger',
       empty: 'No balance changes yet',
+      filterAll: 'All types',
       types: {
         order_deduct: 'Order deduction',
         order_release: 'Order release',
@@ -773,6 +776,7 @@ export const messages = {
       ended: 'Ended',
       loading: 'Loading…',
       empty: 'No flash sales yet',
+      pointsEmpty: 'No rewards items yet',
       loadFail: 'Failed to load. Please try again.',
       noProducts: 'No products in this sale',
       notStarted: 'Not started yet',
@@ -802,8 +806,8 @@ export const messages = {
       fpsName: 'Payee name',
       fpsId: 'FPS ID',
       submitWithdraw: 'Submit',
-      withdrawDone: 'Moved to balance (mock)',
-      withdrawPending: 'Pending review (mock)',
+      withdrawDone: 'Moved to balance',
+      withdrawPending: 'Submitted for review',
       withdrawFail: 'Withdraw failed',
       month: 'This month',
       total: 'All time',
