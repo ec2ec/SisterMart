@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { showToast } from 'vant'
 import { cropSquareCover } from '../utils/imageCompress'
 
+/** 選圖上限 5MB；落庫由服務端再壓縮 */
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{
   'update:show': [boolean]
@@ -47,6 +50,10 @@ function onFile(ev: Event) {
   if (!f) return
   if (!f.type.startsWith('image/')) {
     showToast(t('account.avatarType'))
+    return
+  }
+  if (f.size > MAX_AVATAR_BYTES) {
+    showToast(t('account.avatarTooLarge'))
     return
   }
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)

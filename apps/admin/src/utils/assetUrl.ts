@@ -5,12 +5,19 @@ export function assetOrigin(): string {
   return apiBase.replace(/\/api\/index\.php\/?$/i, '').replace(/\/api\/?$/i, '')
 }
 
-/** 後台預覽用：相對路徑補全域名 */
+/**
+ * 後台預覽用：/storage/... 走 API 媒體代理（共享主機常無靜態 /storage）。
+ */
 export function assetUrl(u: string): string {
   if (!u) return ''
   if (/^https?:\/\//i.test(u) || u.startsWith('data:')) return u
+  const path = u.startsWith('/') ? u : `/${u}`
+  if (path.startsWith('/storage/')) {
+    const rel = path.slice('/storage/'.length)
+    return `${apiBase.replace(/\/$/, '')}/api/v1/files?path=${encodeURIComponent(rel)}`
+  }
   const origin = assetOrigin()
-  return `${origin}${u.startsWith('/') ? u : `/${u}`}`
+  return `${origin}${path}`
 }
 
 /** 落庫前：把本站絕對地址還原成 /storage/... 相對路徑 */

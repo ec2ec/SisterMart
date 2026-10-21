@@ -6,10 +6,9 @@ namespace app\controller\api;
 
 use app\controller\ApiController;
 use app\service\ImageUploadService;
+use app\service\MemberAuthService;
 use app\support\ApiException;
-use app\support\ImageProcess;
 use think\facade\Db;
-use think\file\UploadedFile;
 use think\Response;
 
 class Uploads extends ApiController
@@ -71,39 +70,19 @@ class Uploads extends ApiController
         if (!$file) {
             throw new ApiException('INVALID', '請選擇圖片（上傳可能被主機禁用，請換 JPG 再試）', 422, 42201);
         }
-        $size = (int) $file->getSize();
-        if ($size <= 0 || $size > 5 * 1024 * 1024) {
-            throw new ApiException('INVALID', '圖片過大（上限 5MB）', 422, 42289);
-        }
-        $ext = $this->resolveImageExt($file);
-        $relDir = 'avatar/' . $memberId . '/' . date('Ymd');
-        $root = app()->getRootPath() . 'public/storage/' . $relDir;
-        if (!is_dir($root) && !mkdir($root, 0775, true) && !is_dir($root)) {
-            throw new ApiException('SERVER', '無法建立上傳目錄，請檢查 sm-backend/public/storage 寫入權限', 500, 50001);
-        }
-        $tmpName = bin2hex(random_bytes(8)) . '.' . $ext;
-        try {
-            $file->move($root, $tmpName);
-        } catch (\Throwable $e) {
-            throw new ApiException('SERVER', '圖片寫入失敗：' . mb_substr($e->getMessage(), 0, 80), 500, 50001);
-        }
-        $tmpPath = $root . '/' . $tmpName;
-        if (!is_file($tmpPath)) {
-            throw new ApiException('SERVER', '圖片寫入失敗（移動後找不到檔案）', 500, 50001);
-        }
-        $outName = bin2hex(random_bytes(8)) . '.jpg';
-        $destPath = $root . '/' . $outName;
-        try {
-            ImageProcess::compress($tmpPath, $destPath, [
-                'max_edge' => 512,
-                'max_bytes' => 512 * 1024,
-                'quality' => 85,
-            ]);
+
+        // 上傳上限 5MB；落庫經 ImageUploadService avatar preset 壓縮（512px / ≤512KB）
+        $uploader = new ImageUploadService();
+        $stored = $uploader->store($file, [
+            'preset' => 'avatar',
+            'bucket' => 'avatar',
+            'owner_id' => $memberId,
+        ]);
+        $url = (string) $stored['url'];
+        $destPath = $uploader->absolutePath($url);
+        if (is_file($destPath)) {
             $this->cropSquare($destPath, 512);
-        } finally {
-            @unlink($tmpPath);
         }
-        $url = '/storage/' . $relDir . '/' . $outName;
         $now = date('Y-m-d H:i:s');
         // 必須用原生 SQL：ThinkPHP 在同請求內若已緩存 members 欄位表（如 MemberAuth 先查過），
         // ALTER 後 Db::name()->update(['avatar_url'=>…]) 仍會報 fields not exists:[avatar_url]
@@ -126,7 +105,7 @@ class Uploads extends ApiController
 
         return [
             'url' => $url,
-            'member' => (new \app\service\MemberAuthService())->present($row),
+            'member' => (new MemberAuthService())->present($row),
         ];
     }
 
@@ -185,45 +164,19 @@ class Uploads extends ApiController
                 50003,
             );
         }
+        if (str_contains($raw, 'finfo_open') || str_contains($raw, 'fileinfo')) {
+            return new ApiException(
+                'SERVER',
+                '圖片類型檢測失敗（主機未啟用 fileinfo），請部署最新 API 後重試',
+                500,
+                50002,
+            );
+        }
         if (str_contains($raw, 'Permission denied') || str_contains($raw, 'Disk quota') || str_contains($raw, 'Read-only')) {
             return new ApiException('SERVER', '無法寫入上傳目錄，請檢查 public/storage 權限', 500, 50001);
         }
 
         return new ApiException('SERVER', '頭像保存失敗：' . mb_substr($raw, 0, 120), 500, 50001);
-    }
-
-    /** 優先 MIME，失敗則用 getimagesize／副檔名推斷（兼容 Blob 無 Content-Type）。 */
-    private function resolveImageExt(UploadedFile $file): string
-    {
-        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        $mime = strtolower((string) ($file->getMime() ?: ''));
-        if (isset($allowed[$mime])) {
-            return $allowed[$mime];
-        }
-        $path = method_exists($file, 'getPathname') ? (string) $file->getPathname() : '';
-        if ($path !== '' && is_file($path)) {
-            $info = @getimagesize($path);
-            $type = (int) ($info[2] ?? 0);
-            $byType = [
-                IMAGETYPE_JPEG => 'jpg',
-                IMAGETYPE_PNG => 'png',
-                IMAGETYPE_WEBP => 'webp',
-            ];
-            if (isset($byType[$type])) {
-                return $byType[$type];
-            }
-        }
-        $name = strtolower((string) $file->getOriginalName());
-        if (preg_match('/\.(jpe?g)$/', $name)) {
-            return 'jpg';
-        }
-        if (preg_match('/\.png$/', $name)) {
-            return 'png';
-        }
-        if (preg_match('/\.webp$/', $name)) {
-            return 'webp';
-        }
-        throw new ApiException('INVALID', '僅支持 JPG／PNG／WebP', 422, 42290);
     }
 
     private function cropSquare(string $path, int $side): void

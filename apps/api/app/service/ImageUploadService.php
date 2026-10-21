@@ -6,12 +6,14 @@ namespace app\service;
 
 use app\support\ApiException;
 use app\support\ImageProcess;
+use app\support\UploadImage;
 use think\file\UploadedFile;
 
 /**
  * 通用圖片上傳 + 壓縮。
  *
  * 預設 preset（可被顯式參數覆蓋）：
+ * - avatar    上傳≤5MB，最長邊 512，目標 ≤512KB，質量 85（落庫再裁正方）
  * - review    上傳≤5MB，最長邊 1200，目標 ≤500KB，質量 85
  * - aftersale 上傳≤5MB，最長邊 1200，目標 ≤500KB，質量 85
  * - banner    上傳≤5MB，最長邊 1920，目標 ≤800KB，質量 85
@@ -22,6 +24,13 @@ class ImageUploadService
 {
     /** @var array<string, array{max_upload_bytes: int, max_edge: int, max_bytes: int, quality: int, min_quality: int}> */
     public const PRESETS = [
+        'avatar' => [
+            'max_upload_bytes' => 5 * 1024 * 1024,
+            'max_edge' => 512,
+            'max_bytes' => 512 * 1024,
+            'quality' => 85,
+            'min_quality' => 40,
+        ],
         'review' => [
             'max_upload_bytes' => 5 * 1024 * 1024,
             'max_edge' => 1200,
@@ -92,7 +101,7 @@ class ImageUploadService
             $mb = max(1, (int) ceil($maxUpload / (1024 * 1024)));
             throw new ApiException('INVALID', '單張圖片不可超過 ' . $mb . 'MB', 422, 42289);
         }
-        $ext = $this->resolveImageExt($file);
+        $ext = UploadImage::resolveExt($file);
 
         $bucket = trim((string) ($options['bucket'] ?? $presetName), '/');
         if ($bucket === '' || !preg_match('#^[a-z0-9_\-]+$#i', $bucket)) {
@@ -137,6 +146,18 @@ class ImageUploadService
         ];
     }
 
+    /** 將 /storage/... URL 轉為 public 絕對路徑（供後續裁切等）。 */
+    public function absolutePath(string $url): string
+    {
+        $path = str_replace('\\', '/', $url);
+        if (str_starts_with($path, '/storage/')) {
+            $path = substr($path, strlen('/storage/'));
+        }
+        $path = ltrim($path, '/');
+
+        return app()->getRootPath() . 'public/storage/' . $path;
+    }
+
     /**
      * 從請求合併 preset + 可選覆蓋參數（form / query / json）。
      *
@@ -153,38 +174,5 @@ class ImageUploadService
         }
 
         return $opts;
-    }
-
-    private function resolveImageExt(UploadedFile $file): string
-    {
-        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        $mime = strtolower((string) ($file->getMime() ?: ''));
-        if (isset($allowed[$mime])) {
-            return $allowed[$mime];
-        }
-        $path = method_exists($file, 'getPathname') ? (string) $file->getPathname() : '';
-        if ($path !== '' && is_file($path)) {
-            $info = @getimagesize($path);
-            $type = (int) ($info[2] ?? 0);
-            $byType = [
-                IMAGETYPE_JPEG => 'jpg',
-                IMAGETYPE_PNG => 'png',
-                IMAGETYPE_WEBP => 'webp',
-            ];
-            if (isset($byType[$type])) {
-                return $byType[$type];
-            }
-        }
-        $name = strtolower((string) $file->getOriginalName());
-        if (preg_match('/\.(jpe?g)$/', $name)) {
-            return 'jpg';
-        }
-        if (preg_match('/\.png$/', $name)) {
-            return 'png';
-        }
-        if (preg_match('/\.webp$/', $name)) {
-            return 'webp';
-        }
-        throw new ApiException('INVALID', '僅支持 JPG／PNG／WebP', 422, 42290);
     }
 }

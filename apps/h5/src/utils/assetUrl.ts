@@ -7,6 +7,7 @@ export function assetOrigin(): string {
 
 /**
  * 預覽上傳圖：/storage/... 走媒體代理（query），避免 nginx 對多段 PATH_INFO 404。
+ * 使用 /files（非 /media）：部分共享主機對 media 路徑異常。
  */
 export function assetUrl(u: string): string {
   if (!u) return ''
@@ -14,7 +15,7 @@ export function assetUrl(u: string): string {
   const path = u.startsWith('/') ? u : `/${u}`
   if (path.startsWith('/storage/')) {
     const rel = path.slice('/storage/'.length)
-    return `${apiBase.replace(/\/$/, '')}/api/v1/media?path=${encodeURIComponent(rel)}`
+    return `${apiBase.replace(/\/$/, '')}/api/v1/files?path=${encodeURIComponent(rel)}`
   }
   const origin = assetOrigin()
   return `${origin}${path}`

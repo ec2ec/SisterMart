@@ -30,6 +30,9 @@ Route::get('api/v1/tabbar', 'api.Tabbar/index');
 /** 上傳圖公開讀取（共享主機常無 /storage 靜態別名；query 形式兼容 nginx） */
 Route::get('api/v1/media/<path>', 'api.Media/show')->pattern(['path' => '.*']);
 Route::get('api/v1/media', 'api.Media/show');
+/** 別名：部分主機對 media 路徑異常時可走 files */
+Route::get('api/v1/files/<path>', 'api.Media/show')->pattern(['path' => '.*']);
+Route::get('api/v1/files', 'api.Media/show');
 
 Route::get('api/v1/categories', 'api.Categories/index');
 Route::get('api/v1/products/:id', 'api.Products/read');
