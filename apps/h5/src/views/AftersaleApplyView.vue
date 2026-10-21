@@ -11,6 +11,7 @@ import {
   type Order,
 } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
+import { openCustomerWhatsApp } from '../composables/useCustomerService'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -27,7 +28,6 @@ const fileList = ref<UploaderFileListItem[]>([])
 const submitting = ref(false)
 
 const expired = computed(() => Boolean(order.value?.aftersale_expired))
-const whatsappDigits = computed(() => (order.value?.cs_whatsapp || '').replace(/\D/g, ''))
 
 async function load() {
   order.value = null
@@ -43,15 +43,18 @@ async function load() {
 
 watch(() => route.params.id, load, { immediate: true })
 
-function openWhatsApp() {
-  if (!whatsappDigits.value) {
-    showToast(t('fulfill.whatsappMissing'))
+async function openWhatsApp() {
+  const digits = (order.value?.cs_whatsapp || '').replace(/\D/g, '')
+  const prefill = t('fulfill.whatsappPrefill', { no: order.value?.order_no || '' })
+  if (digits) {
+    window.open(
+      `https://wa.me/${digits}?text=${encodeURIComponent(prefill)}`,
+      '_blank',
+      'noopener',
+    )
     return
   }
-  const textMsg = encodeURIComponent(
-    t('fulfill.whatsappPrefill', { no: order.value?.order_no || '' }),
-  )
-  window.open(`https://wa.me/${whatsappDigits.value}?text=${textMsg}`, '_blank', 'noopener')
+  await openCustomerWhatsApp(prefill)
 }
 
 async function afterRead(item: UploaderFileListItem | UploaderFileListItem[]) {
@@ -119,14 +122,7 @@ async function submit() {
 
     <section v-if="expired" class="card expired">
       <p class="msg">{{ t('fulfill.expired') }}</p>
-      <van-button
-        block
-        type="primary"
-        color="var(--sm-primary)"
-        round
-        :disabled="!whatsappDigits"
-        @click="openWhatsApp"
-      >
+      <van-button block type="primary" color="var(--sm-primary)" round @click="openWhatsApp">
         {{ t('fulfill.contactWhatsapp') }}
       </van-button>
     </section>

@@ -8,6 +8,7 @@ const mode = ref<'exact' | 'fuzzy'>('fuzzy')
 const form = reactive({
   aftersale_window_days: 30,
   cs_whatsapp: '',
+  cs_facebook_url: '',
 })
 
 onMounted(async () => {
@@ -15,10 +16,12 @@ onMounted(async () => {
     sold_display_mode: 'exact' | 'fuzzy'
     aftersale_window_days: number
     cs_whatsapp: string
+    cs_facebook_url?: string
   }>('/api/v1/admin/settings/shop', {}, true)
   mode.value = data.sold_display_mode
   form.aftersale_window_days = data.aftersale_window_days
   form.cs_whatsapp = data.cs_whatsapp || ''
+  form.cs_facebook_url = data.cs_facebook_url || ''
 })
 
 async function saveSold() {
@@ -38,6 +41,7 @@ async function saveShop() {
       body: JSON.stringify({
         aftersale_window_days: form.aftersale_window_days,
         cs_whatsapp: form.cs_whatsapp,
+        cs_facebook_url: form.cs_facebook_url,
       }),
     },
     true,
@@ -66,6 +70,14 @@ async function saveShop() {
     <div class="row">
       <label>客服 WhatsApp（E.164，如 85290001234）</label>
       <n-input v-model:value="form.cs_whatsapp" placeholder="85290001234" style="max-width: 20rem" />
+    </div>
+    <div class="row">
+      <label>Facebook 粉絲頁（完整 URL）</label>
+      <n-input
+        v-model:value="form.cs_facebook_url"
+        placeholder="https://www.facebook.com/…"
+        style="max-width: 28rem"
+      />
     </div>
     <n-button type="primary" @click="saveShop">保存售後與客服</n-button>
   </n-card>

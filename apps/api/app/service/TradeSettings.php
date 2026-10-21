@@ -75,6 +75,12 @@ class TradeSettings
         return trim(self::get('cs.whatsapp', ''));
     }
 
+    /** 客服 Facebook 粉絲頁完整 URL */
+    public static function csFacebookUrl(): string
+    {
+        return trim(self::get('cs.facebook_url', ''));
+    }
+
     public static function set(string $key, string $value): void
     {
         $now = date('Y-m-d H:i:s');

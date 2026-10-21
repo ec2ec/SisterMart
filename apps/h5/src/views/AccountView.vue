@@ -19,6 +19,7 @@ import {
   token,
   type Member,
 } from '../composables/useSession'
+import { openCustomerWhatsApp } from '../composables/useCustomerService'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -172,7 +173,7 @@ const services = [
   { key: 'dailyCheckin', icon: 'calendar-o', route: 'checkin' },
   { key: 'flashSale', icon: 'clock-o', route: 'seckill' },
   { key: 'affiliate', icon: 'friends-o', route: 'distribution' },
-  { key: 'support', icon: 'chat-o', route: 'messages' },
+  { key: 'support', icon: 'chat-o', action: 'whatsapp' as const },
 ] as const
 
 const spentDisplay = computed(() => {
@@ -194,7 +195,6 @@ const routePaths: Record<string, string> = {
   checkin: '/checkin',
   seckill: '/seckill',
   distribution: '/distribution',
-  messages: '/messages',
   home: '/',
 }
 
@@ -214,6 +214,14 @@ function goService(route: string) {
   const needAuth = !['home', 'seckill', 'points-mall', 'coupon-center'].includes(route)
   if (needAuth && !requireAuth(path)) return
   router.push({ name: route })
+}
+
+async function onServiceClick(s: (typeof services)[number]) {
+  if ('action' in s && s.action === 'whatsapp') {
+    await openCustomerWhatsApp()
+    return
+  }
+  if ('route' in s && s.route) goService(s.route)
 }
 
 function goLevel() {
@@ -318,7 +326,7 @@ function goOrders(tab?: string) {
     </section>
 
     <section class="card services">
-      <button v-for="s in services" :key="s.key" type="button" @click="goService(s.route)">
+      <button v-for="s in services" :key="s.key" type="button" @click="onServiceClick(s)">
         <van-icon :name="s.icon" size="1.375rem" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>

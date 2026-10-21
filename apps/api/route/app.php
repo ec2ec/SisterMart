@@ -27,6 +27,8 @@ Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
 /** 店鋪狀態（維護模式，公開） */
 Route::get('api/v1/shop/status', 'api.ShopStatus/index');
+/** 客服聯絡（WhatsApp / Facebook，公開） */
+Route::get('api/v1/shop/contact', 'api.ShopContact/index');
 
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
 /** 上傳圖公開讀取（共享主機常無 /storage 靜態別名；query 形式兼容 nginx） */
