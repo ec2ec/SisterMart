@@ -7,6 +7,7 @@ const router = useRouter()
 
 <template>
   <van-nav-bar
+    class="sub-nav"
     :title="title"
     left-arrow
     fixed
@@ -15,3 +16,11 @@ const router = useRouter()
     @click-left="router.back()"
   />
 </template>
+
+<style scoped>
+/* 固定頂欄蓋過列表卡片／心願鈕，避免上滑遮擋 */
+.sub-nav {
+  z-index: 300;
+  background: #fff;
+}
+</style>

@@ -101,15 +101,30 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
   flex: 1;
   display: flex;
   min-height: 0;
+  overflow: hidden;
 }
 .side {
   width: 5.5rem;
   flex-shrink: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--sm-bg-soft);
+}
+.side :deep(.van-sidebar) {
+  width: 100%;
 }
 .content {
   flex: 1;
-  overflow: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0.75rem;
   background: #fff;
 }

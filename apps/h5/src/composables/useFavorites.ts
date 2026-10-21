@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import { showToast } from 'vant'
 import { api } from '../api/client'
 import { i18n } from '../i18n'
@@ -16,6 +16,9 @@ function readStore(): Record<string, boolean> {
 
 const liked = reactive<Record<string, boolean>>(readStore())
 let hydrating: Promise<void> | null = null
+
+/** 頂欄心願清單角標 */
+export const favoriteCount = computed(() => Object.keys(liked).filter((k) => liked[k]).length)
 
 function persist() {
   localStorage.setItem(STORE, JSON.stringify(liked))

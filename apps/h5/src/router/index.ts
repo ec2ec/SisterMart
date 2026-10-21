@@ -64,7 +64,8 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
     { path: '/forgot', name: 'forgot', component: ForgotView },
-    { path: '/article/:id', name: 'article', component: ArticleView },
+    /** overlay：從首頁進條款後返回，保留 Tab 滾動（同商詳） */
+    { path: '/article/:id', name: 'article', component: ArticleView, meta: { overlay: true } },
     { path: '/wishlist', name: 'wishlist', component: WishlistView },
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/orders', name: 'orders', component: OrdersView },

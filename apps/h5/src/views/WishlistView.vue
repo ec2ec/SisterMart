@@ -35,7 +35,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page">
+  <div class="page wishlist-page">
     <SubPageNav :title="t('pages.wishlist')" />
     <p v-if="loaded && !items.length" class="empty">{{ t('account.wishlistEmpty') }}</p>
     <div v-else class="grid">
@@ -48,6 +48,10 @@ onMounted(load)
 </template>
 
 <style scoped>
+.wishlist-page {
+  min-height: 100%;
+  background: #fff;
+}
 .empty {
   text-align: center;
   color: #999;
@@ -58,9 +62,12 @@ onMounted(load)
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem 1.5rem;
+  position: relative;
+  z-index: 0;
 }
 .cell {
   position: relative;
+  z-index: 0;
 }
 .badge {
   position: absolute;

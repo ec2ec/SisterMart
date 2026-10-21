@@ -3,6 +3,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
+import { favoriteCount, hydrateFavorites } from '../composables/useFavorites'
 import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { refreshUnread, unreadCount } from '../composables/useUnread'
 
@@ -24,11 +25,24 @@ const router = useRouter()
 
 onMounted(() => {
   refreshUnread()
+  if (loggedIn.value) void hydrateFavorites()
 })
-watch(loggedIn, () => refreshUnread())
+watch(loggedIn, (v) => {
+  refreshUnread()
+  if (v) void hydrateFavorites()
+})
 
 function goSearch() {
   router.push({ name: 'search' })
+}
+
+function goWishlist() {
+  syncSessionFromStorage()
+  if (!loggedIn.value) {
+    router.push({ name: 'login', query: { redirect: '/wishlist' } })
+    return
+  }
+  router.push({ name: 'wishlist' })
 }
 
 function goMessages() {
@@ -75,14 +89,19 @@ function onBack() {
       @click-input="goSearch"
     />
     <div class="actions">
-      <button
-        class="action-btn"
-        type="button"
-        :aria-label="t('pages.wishlist')"
-        @click="router.push({ name: 'wishlist' })"
+      <van-badge
+        :content="favoriteCount > 0 ? (favoriteCount > 99 ? '99+' : favoriteCount) : ''"
+        :show-zero="false"
       >
-        <van-icon name="like-o" size="1.125rem" color="var(--sm-primary)" />
-      </button>
+        <button
+          class="action-btn"
+          type="button"
+          :aria-label="t('pages.wishlist')"
+          @click="goWishlist"
+        >
+          <van-icon name="like-o" size="1.125rem" color="var(--sm-primary)" />
+        </button>
+      </van-badge>
       <van-badge :content="unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''" :show-zero="false">
         <button class="action-btn" type="button" :aria-label="t('pages.messages')" @click="goMessages">
           <van-icon name="envelop-o" size="1.125rem" color="var(--sm-primary)" />
