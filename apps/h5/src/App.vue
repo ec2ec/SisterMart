@@ -51,9 +51,9 @@ onMounted(() => {
     </keep-alive>
 
     <router-view v-slot="{ Component, route: r }">
-      <!-- 商詳等疊層：蓋在 Tab 之上 -->
-      <div v-if="r.meta.overlay && Component" class="sm-route-overlay">
-        <component :is="Component" />
+      <!-- 商詳等疊層：蓋在 Tab 之上；按 fullPath 強制重掛，避免協議 A→B 複用實例閃舊文 -->
+      <div v-if="r.meta.overlay && Component" :key="r.fullPath" class="sm-route-overlay">
+        <component :is="Component" :key="r.fullPath" />
       </div>
       <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
       <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->

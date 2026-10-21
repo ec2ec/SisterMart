@@ -216,4 +216,10 @@ function onBack() {
   background: #f2f3f5;
   box-shadow: none;
 }
+
+/* 頂欄心願／消息角標位置微調（其餘 Vant 屬性不變） */
+.actions :deep(.van-badge--top-right) {
+  top: 0.2rem;
+  right: 0.2rem;
+}
 </style>

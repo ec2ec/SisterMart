@@ -179,8 +179,13 @@ function onChange(name: string | number) {
           :class="{ on: isOn(item) }"
           :style="{ background: isOn(item) ? item.icon_bg_active : item.icon_bg, color: bubbleFg(item) }"
         >
-          <img v-if="isUrl(iconOf(item))" :src="iconOf(item)" alt="" />
-          <van-icon v-else :name="iconOf(item)" />
+          <img
+            v-if="isUrl(iconOf(item))"
+            :src="iconOf(item)"
+            alt=""
+            :class="{ lit: isOn(item) }"
+          />
+          <van-icon v-else :name="iconOf(item)" :color="bubbleFg(item)" />
         </span>
       </template>
     </van-tabbar-item>
@@ -195,16 +200,27 @@ function onChange(name: string | number) {
   display: grid;
   place-items: center;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  /* 蓋過 van-tabbar active-color，避免選中深底上圖標變深色 */
+  color: inherit;
 }
 
 .bubble.on {
   transform: scale(1.06);
 }
 
+.bubble :deep(.van-icon) {
+  color: inherit;
+}
+
 .bubble img {
   width: 1rem;
   height: 1rem;
   object-fit: contain;
+}
+
+/* 選中態自定義圖：提亮，避免灰暗 */
+.bubble img.lit {
+  filter: brightness(0) invert(1);
 }
 
 .label {

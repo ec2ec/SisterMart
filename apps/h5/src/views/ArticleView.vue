@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
@@ -10,20 +10,36 @@ const { t } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
 const article = ref<Article | null>(null)
+const loading = ref(true)
+/** 進行中的請求序號，避免舊協議響應覆蓋新頁 */
+let loadSeq = 0
 
-async function load() {
-  const code = String(route.params.id || 'terms')
+async function load(code: string) {
+  const seq = ++loadSeq
+  // 先清空，避免協議 A→返回→協議 B 時短暫顯示 A 的正文
+  article.value = null
+  loading.value = true
   try {
-    article.value = await fetchArticle(code)
+    const next = await fetchArticle(code)
+    if (seq !== loadSeq) return
+    article.value = next
   } catch {
+    if (seq !== loadSeq) return
     article.value = null
+  } finally {
+    if (seq === loadSeq) loading.value = false
   }
 }
 
-onMounted(load)
-watch(() => route.params.id, load)
+watch(
+  () => String(route.params.id || 'terms'),
+  (code) => {
+    void load(code)
+  },
+  { immediate: true },
+)
 
-const title = computed(() => (article.value ? text(article.value.title) : t('auth.termsTitle')))
+const title = computed(() => (article.value ? text(article.value.title) : ''))
 const body = computed(() => (article.value ? text(article.value.body) : ''))
 </script>
 
@@ -34,6 +50,7 @@ const body = computed(() => (article.value ? text(article.value.body) : ''))
       <h1>{{ title }}</h1>
       <div class="body" v-html="body" />
     </article>
+    <p v-else-if="loading" class="empty">{{ t('m7.loading') }}</p>
     <p v-else class="empty">{{ t('m7.loadFail') }}</p>
   </div>
 </template>
