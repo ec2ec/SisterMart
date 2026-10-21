@@ -1,4 +1,6 @@
 -- 頁腳 9 欄文章種子（可重跑；已存在則只確保上架／頁腳展示／排序，不覆蓋正文）
+-- 正文請用：php apps/api/database/m33_footer_cms_seed.php
+--   或 mysql ... < apps/api/database/deploy_footer_cms_content.sql
 -- mysql -uUSER -pPASSWORD DBNAME < apps/api/database/deploy_footer_articles.sql
 --
 -- 佈局（三欄）：

@@ -1,0 +1,342 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * SisterMart 頁腳 CMS 文章（精簡版，zh-HK / en）
+ *
+ * 覆蓋：about / contact / privacy / shipping / return / refund
+ * 用法：php apps/api/database/m33_footer_cms_seed.php
+ *
+ * 聯絡頁連結讀取 shop_settings：
+ *   cs.whatsapp      （純數字，如 85290001234）
+ *   cs.facebook_url  （粉絲專頁完整 URL；可後改）
+ */
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$app = new think\App(dirname(__DIR__));
+$app->initialize();
+
+use think\facade\Db;
+
+function now(): string
+{
+    return date('Y-m-d H:i:s');
+}
+
+function ensureSetting(string $key, string $value): string
+{
+    $row = Db::name('shop_settings')->where('setting_key', $key)->find();
+    if ($row) {
+        return (string) $row['setting_value'];
+    }
+    Db::name('shop_settings')->insert([
+        'setting_key' => $key,
+        'setting_value' => $value,
+        'updated_at' => now(),
+    ]);
+
+    return $value;
+}
+
+function upsertArticle(string $code, string $zhTitle, string $zhBody, string $enTitle, string $enBody, int $sort): void
+{
+    $row = Db::name('articles')->where('code', $code)->find();
+    $data = [
+        'code' => $code,
+        'status' => 1,
+        'show_in_footer' => 1,
+        'sort_order' => $sort,
+        'updated_at' => now(),
+    ];
+    if ($row) {
+        Db::name('articles')->where('id', $row['id'])->update($data);
+        $id = (int) $row['id'];
+    } else {
+        $data['created_at'] = now();
+        $id = (int) Db::name('articles')->insertGetId($data);
+    }
+    foreach (['zh-HK' => [$zhTitle, $zhBody], 'en' => [$enTitle, $enBody]] as $locale => [$title, $body]) {
+        $exists = Db::name('article_i18n')->where(['article_id' => $id, 'locale' => $locale])->find();
+        if ($exists) {
+            Db::name('article_i18n')->where(['article_id' => $id, 'locale' => $locale])->update([
+                'title' => $title,
+                'body' => $body,
+            ]);
+        } else {
+            Db::name('article_i18n')->insert([
+                'article_id' => $id,
+                'locale' => $locale,
+                'title' => $title,
+                'body' => $body,
+            ]);
+        }
+    }
+}
+
+$whatsapp = preg_replace('/\D+/', '', ensureSetting('cs.whatsapp', '85290001234')) ?: '85290001234';
+$facebook = trim(ensureSetting('cs.facebook_url', 'https://www.facebook.com/'));
+if ($facebook === '') {
+    $facebook = 'https://www.facebook.com/';
+}
+$waLink = 'https://wa.me/' . $whatsapp;
+$fbEsc = htmlspecialchars($facebook, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$waEsc = htmlspecialchars($waLink, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+$iconWa = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-0.35em;margin-right:0.4rem"><path fill="#25D366" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.44 17.5 2 12.04 2zm5.76 14.02c-.24.68-1.42 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.67-.62-2.94-1.27-4.85-4.24-5-4.44-.14-.2-1.18-1.57-1.18-3 0-1.42.74-2.12 1.01-2.41.26-.28.58-.35.77-.35h.55c.18 0 .42-.06.66.5.24.58.82 2 .89 2.15.07.14.12.32.02.51-.1.2-.14.32-.28.5-.14.17-.3.39-.43.52-.14.14-.29.3-.12.58.16.28.73 1.2 1.57 1.95 1.08.96 1.99 1.26 2.27 1.4.28.14.45.12.61-.07.17-.2.7-.81.88-1.09.19-.28.37-.23.63-.14.26.1 1.64.77 1.92.91.28.14.47.21.54.32.07.12.07.68-.17 1.36z"/></svg>';
+$iconFb = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-0.35em;margin-right:0.4rem"><path fill="#1877F2" d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.18 8.45 9.93v-7.02H7.9v-2.91h2.41V9.84c0-2.38 1.42-3.69 3.6-3.69 1.04 0 2.13.19 2.13.19v2.34h-1.2c-1.18 0-1.55.73-1.55 1.48v1.78h2.64l-.42 2.91h-2.22V22c4.79-.75 8.45-4.91 8.45-9.93z"/></svg>';
+
+$linkStyle = 'display:inline-flex;align-items:center;gap:0.15rem;padding:0.55rem 0.85rem;border-radius:999px;text-decoration:none;font-weight:600;';
+
+// ——— 關於我們 ———
+upsertArticle(
+    'about',
+    '關於我們',
+    <<<HTML
+<p><strong>SisterMart（姐妹商店）</strong>於 <strong>2026 年</strong>成立，是一間立足香港的線上選品小店。</p>
+<p>我們專注優選<strong>高性價比</strong>的各類好物，希望把<strong>實惠與品質</strong>同時帶給姐妹們——好看、好用、價錢也公道。</p>
+<h2>我們在意什麼</h2>
+<ul>
+<li>嚴選商品與清晰實拍，減少「貨不對板」</li>
+<li>香港本地配送體驗，流程簡單好跟進</li>
+<li>售前售後都聽得見你的聲音</li>
+</ul>
+<p>謝謝你來到 SisterMart。有任何想法，都歡迎透過「聯絡我們」告訴我們。</p>
+HTML,
+    'About Us',
+    <<<HTML
+<p><strong>SisterMart</strong> was founded in <strong>2026</strong> as a Hong Kong–based online boutique.</p>
+<p>We curate <strong>great value</strong> everyday finds—bringing <strong>affordable quality</strong> to our community with clear photos and honest pricing.</p>
+<h2>What we care about</h2>
+<ul>
+<li>Careful picks and real product photos</li>
+<li>Straightforward local shipping in Hong Kong</li>
+<li>Friendly support before and after your order</li>
+</ul>
+<p>Thanks for visiting SisterMart. Reach us anytime via Contact Us.</p>
+HTML,
+    10,
+);
+
+// ——— 聯絡我們 ———
+upsertArticle(
+    'contact',
+    '聯絡我們',
+    <<<HTML
+<p>購物、訂單或售後問題，歡迎透過以下方式聯絡 <strong>SisterMart 姐妹商店</strong>。</p>
+<h2>1. 線上聊天（WhatsApp）</h2>
+<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f8ef;color:#128C7E">{$iconWa}WhatsApp 客服</a></p>
+<p>工作時間：每日 <strong>10:00–19:00</strong>（香港時間）。非工作時段留言，我們會在下一工作時段回覆。</p>
+<h2>2. 社交媒體</h2>
+<p>你也可以在社交平台找到我們。繁忙時段該服務<strong>可能需要排隊</strong>，感謝耐心等候。</p>
+<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f1ff;color:#1877F2">{$iconFb}Facebook</a></p>
+HTML,
+    'Contact Us',
+    <<<HTML
+<p>For shopping, orders, or after-sales questions, contact <strong>SisterMart</strong> below.</p>
+<h2>1. Live chat (WhatsApp)</h2>
+<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f8ef;color:#128C7E">{$iconWa}WhatsApp support</a></p>
+<p>Hours: daily <strong>10:00–19:00</strong> (Hong Kong time). Messages outside hours will be answered in the next working window.</p>
+<h2>2. Social media</h2>
+<p>You can also find us on social media. During busy periods this channel <strong>may require queuing</strong>—thanks for your patience.</p>
+<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f1ff;color:#1877F2">{$iconFb}Facebook</a></p>
+HTML,
+    40,
+);
+
+// ——— 私隱協議（原創精簡；非照搬外部條款） ———
+upsertArticle(
+    'privacy',
+    '私隱協議',
+    <<<HTML
+<p>SisterMart（姐妹商店）重視你的私隱。本協議說明我們如何收集、使用與保護個人資料。使用本店服務，即表示你知悉本協議內容。</p>
+<h2>我們收集的資料</h2>
+<ul>
+<li>帳戶資料：電郵、手機號碼、暱稱／頭像等</li>
+<li>訂單與配送：收件人姓名、電話、地址、訂單內容</li>
+<li>登入與驗證：驗證碼發送記錄、裝置／瀏覽的基本技術資訊</li>
+<li>客服溝通：你透過 WhatsApp 或站內訊息提供的內容</li>
+</ul>
+<h2>用途</h2>
+<ul>
+<li>建立帳戶、登入驗證（電郵或 WhatsApp）</li>
+<li>處理訂單、付款核對、配送與售後</li>
+<li>發送與訂單／帳戶相關的必要通知</li>
+<li>改善網站體驗與防止欺詐（在合理範圍內）</li>
+</ul>
+<h2>分享與保存</h2>
+<p>我們不會出售你的個人資料。僅在配送、支付或法律要求等必要情況下，與受託服務方共享完成服務所需的最少資料。資料保存至業務與法律所需期間，期後刪除或匿名化。</p>
+<h2>你的選擇</h2>
+<p>你可在帳戶設定更新資料或退出登錄。如需查閱、更正或刪除個人資料，請透過「聯絡我們」提出。我們可能不時更新本協議，更新後以本頁最新版本為準。</p>
+HTML,
+    'Privacy Policy',
+    <<<HTML
+<p>SisterMart respects your privacy. This notice explains what we collect and how we use it. Using our shop means you acknowledge this policy.</p>
+<h2>Data we collect</h2>
+<ul>
+<li>Account details: email, phone, nickname/avatar</li>
+<li>Order &amp; delivery: recipient name, phone, address, order items</li>
+<li>Sign-in &amp; verification: OTP delivery logs and basic device/browser data</li>
+<li>Support messages you send via WhatsApp or in-app chat</li>
+</ul>
+<h2>How we use it</h2>
+<ul>
+<li>Account creation and login (email or WhatsApp)</li>
+<li>Orders, payment checks, shipping, and after-sales</li>
+<li>Necessary account/order notifications</li>
+<li>Improving the site and preventing abuse, within reason</li>
+</ul>
+<h2>Sharing &amp; retention</h2>
+<p>We do not sell your personal data. We only share the minimum needed with trusted providers (e.g. delivery or payment) or when required by law. We keep data only as long as needed for business and legal purposes, then delete or anonymize it.</p>
+<h2>Your choices</h2>
+<p>You can update your profile or log out in account settings. To access, correct, or delete personal data, contact us via Contact Us. We may update this page from time to time; the latest version here applies.</p>
+HTML,
+    50,
+);
+
+// ——— 運送政策（對齊現有運費設定：滿 200 包郵／否則 25） ———
+upsertArticle(
+    'shipping',
+    '運送政策',
+    <<<HTML
+<p>SisterMart 目前主要服務<strong>香港地區</strong>配送（離島／偏遠地區或需另議）。</p>
+<h2>運費</h2>
+<ul>
+<li>訂單滿 <strong>HK\$200</strong>：香港本地<strong>免運費</strong></li>
+<li>未滿 HK\$200：運費 <strong>HK\$25</strong></li>
+</ul>
+<p>實際金額以結帳頁顯示為準；如有活動調整會在頁面另行說明。</p>
+<h2>出貨與時效</h2>
+<ul>
+<li>現貨訂單一般於付款確認後 <strong>1–2 個工作天</strong>安排出貨</li>
+<li>送達時間視物流公司與收件地區而定，通常數個工作天內</li>
+<li>遇公眾假期、天氣或物流繁忙，或會稍有延遲</li>
+</ul>
+<h2>訂單追蹤</h2>
+<p>出貨後可在「我的訂單」查看物流狀態。地址請務必填寫正確；因資料錯誤導致的延誤或退回，可能需另行協調補寄費用。</p>
+HTML,
+    'Shipping Policy',
+    <<<HTML
+<p>SisterMart currently ships mainly within <strong>Hong Kong</strong> (outlying/remote areas may need special arrangement).</p>
+<h2>Shipping fees</h2>
+<ul>
+<li>Orders <strong>HK\$200+</strong>: <strong>free</strong> local shipping</li>
+<li>Under HK\$200: <strong>HK\$25</strong> shipping</li>
+</ul>
+<p>The checkout page always shows the final amount. Promo changes will be noted on site.</p>
+<h2>Dispatch &amp; timing</h2>
+<ul>
+<li>In-stock orders usually ship within <strong>1–2 business days</strong> after payment</li>
+<li>Delivery typically takes a few business days depending on the courier and district</li>
+<li>Public holidays, weather, or peak periods may cause delays</li>
+</ul>
+<h2>Tracking</h2>
+<p>After dispatch, track status under My Orders. Please enter a correct address—delays or returns caused by wrong details may require extra reship fees.</p>
+HTML,
+    30,
+);
+
+// ——— 退貨政策 ———
+upsertArticle(
+    'return',
+    '退貨政策',
+    <<<HTML
+<p>我們希望你收到滿意的商品。以下為 SisterMart 退貨說明（簡要）。</p>
+<h2>可申請情形</h2>
+<ul>
+<li>收到商品後 <strong>7 天內</strong>（以簽收日計）</li>
+<li>商品未穿用／未使用、吊牌與包裝完整、不影響二次銷售</li>
+<li>質量問題或與頁面描述明顯不符</li>
+</ul>
+<h2>不適用／限制</h2>
+<ul>
+<li>個人衛生相關、已拆封的貼身／美容耗材等（法律或衛生原因）</li>
+<li>特價清貨、訂製或註明不可退換的商品</li>
+<li>人為損壞、洗滌後、或缺少配件</li>
+</ul>
+<h2>如何辦理</h2>
+<ol>
+<li>在訂單進入售後申請，或透過「聯絡我們」的 WhatsApp 說明訂單編號與原因</li>
+<li>按指引寄回（保留寄件證明）</li>
+<li>我們收貨檢驗後，再安排換貨或按退款政策處理</li>
+</ol>
+<p>非質量問題的退貨，來回運費一般由顧客承擔；質量問題則由我們承擔合理運費。</p>
+HTML,
+    'Return Policy',
+    <<<HTML
+<p>We want you to be happy with your order. Here is SisterMart’s simple return guide.</p>
+<h2>Eligible cases</h2>
+<ul>
+<li>Within <strong>7 days</strong> of delivery (signed date)</li>
+<li>Unused item with tags/packaging intact and resalable</li>
+<li>Quality issues or clear mismatch with the product page</li>
+</ul>
+<h2>Not eligible / limits</h2>
+<ul>
+<li>Hygiene-sensitive or opened intimate/beauty consumables</li>
+<li>Final sale, made-to-order, or items marked non-returnable</li>
+<li>Damage from use/washing, or missing accessories</li>
+</ul>
+<h2>How to return</h2>
+<ol>
+<li>Open an after-sales request on the order, or WhatsApp us with order no. and reason</li>
+<li>Ship back as instructed (keep the receipt)</li>
+<li>After inspection we arrange exchange or refund per the Refund Policy</li>
+</ol>
+<p>For non-quality returns, shipping is usually paid by the customer; for quality issues we cover reasonable return shipping.</p>
+HTML,
+    90,
+);
+
+// ——— 退款政策 ———
+upsertArticle(
+    'refund',
+    '退款政策',
+    <<<HTML
+<p>本政策說明 SisterMart 何時及如何退款，並與「退貨政策」一併適用。</p>
+<h2>可退款情況</h2>
+<ul>
+<li>退貨檢驗通過後</li>
+<li>付款後長時間未能出貨，且你選擇取消</li>
+<li>重複扣款、系統錯誤或多收運費等經核實的情況</li>
+</ul>
+<h2>退款方式與時間</h2>
+<ul>
+<li>原則退回<strong>原支付途徑</strong>（如信用卡／支付平台／帳戶餘額等）</li>
+<li>我們確認退款後，一般於 <strong>3–10 個工作天</strong>到帳（視銀行或支付平台而定）</li>
+<li>使用優惠券／積分的訂單，退款時可能按規則回退券額或積分，現金部分另行計算</li>
+</ul>
+<h2>部分退款</h2>
+<p>若訂單含多件商品，可只退回符合條件的部分；運費是否退還視整筆訂單是否仍達免運門檻及退貨原因而定。</p>
+<p>詳情可於「聯絡我們」查詢你的訂單編號。</p>
+HTML,
+    'Refund Policy',
+    <<<HTML
+<p>This policy explains when and how SisterMart issues refunds, together with the Return Policy.</p>
+<h2>When we refund</h2>
+<ul>
+<li>After an approved return passes inspection</li>
+<li>Long delay before shipment where you choose to cancel</li>
+<li>Verified duplicate charges, system errors, or overcharged shipping</li>
+</ul>
+<h2>Method &amp; timing</h2>
+<ul>
+<li>Refunds go back to the <strong>original payment method</strong> when possible (card/wallet/balance, etc.)</li>
+<li>After we confirm, funds usually arrive in <strong>3–10 business days</strong> (bank/provider dependent)</li>
+<li>Orders with coupons/points may restore benefits by rule; cash portion is calculated separately</li>
+</ul>
+<h2>Partial refunds</h2>
+<p>For multi-item orders we may refund only eligible items. Shipping refunds depend on whether the remaining order still meets free-shipping rules and the return reason.</p>
+<p>Contact us with your order number for case-specific help.</p>
+HTML,
+    60,
+);
+
+echo "m33_footer_cms_seed ok\n";
+echo "whatsapp={$whatsapp} facebook={$facebook}\n";
+foreach (['about', 'contact', 'privacy', 'shipping', 'return', 'refund'] as $code) {
+    $row = Db::name('articles')->where('code', $code)->find();
+    $zh = Db::name('article_i18n')->where(['article_id' => $row['id'], 'locale' => 'zh-HK'])->find();
+    echo " - {$code}: {$zh['title']} (" . strlen((string) $zh['body']) . " bytes)\n";
+}

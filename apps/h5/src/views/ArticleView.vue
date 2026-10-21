@@ -79,6 +79,21 @@ h1 {
 .body :deep(p) {
   margin: 0 0 0.75rem;
 }
+.body :deep(h2) {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.05rem;
+}
+.body :deep(ul),
+.body :deep(ol) {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+.body :deep(li) {
+  margin: 0.25rem 0;
+}
+.body :deep(a) {
+  color: var(--sm-primary, #16162b);
+}
 .empty {
   padding: 2rem 1rem;
   text-align: center;
