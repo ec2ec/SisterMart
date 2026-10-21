@@ -41,10 +41,11 @@ const backgroundComponent = computed(() => {
       <component :is="Component" />
     </div>
     <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
+    <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->
     <component
       :is="Component"
       v-else-if="Component && !routeIsTab(r) && !r.meta.overlay"
-      :key="r.fullPath"
+      :key="r.name === 'orders' ? 'orders' : r.fullPath"
     />
   </router-view>
 

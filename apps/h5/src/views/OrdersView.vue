@@ -1,29 +1,28 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
-import { fetchOrders, type Order } from '../api/trade'
 import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
+import { isOrdersTabName, useOrdersList, type OrdersTabName } from '../composables/useOrdersList'
 import { isLoggedIn } from '../composables/useSession'
+
+defineOptions({ name: 'OrdersView' })
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const { orderCounts, refreshOrderCounts } = useOrderCounts()
-const items = ref<Order[]>([])
-const loading = ref(false)
+const { items, loading, showInitialPlaceholder, showEmpty, load, activeTab } = useOrdersList()
 
 const tabs = [
-  { name: 'all', status: '', label: 'orders.tabAll', countKey: null },
-  { name: 'pending_payment', status: 'pending_payment', label: 'orders.pendingPayment', countKey: 'pending_payment' as const },
-  { name: 'pending_shipment', status: 'pending_shipment', label: 'orders.pendingShipment', countKey: 'pending_shipment' as const },
-  { name: 'pending_receipt', status: 'pending_receipt', label: 'orders.pendingReceipt', countKey: 'pending_receipt' as const },
-  { name: 'to_review', status: 'to_review', label: 'orders.toReview', countKey: 'to_review' as const },
-  { name: 'aftersale', status: 'aftersale', label: 'orders.tabAftersale', countKey: 'aftersales' as const },
-] as const
-
-const tab = ref('all')
+  { name: 'all' as const, label: 'orders.tabAll', countKey: null },
+  { name: 'pending_payment' as const, label: 'orders.pendingPayment', countKey: 'pending_payment' as const },
+  { name: 'pending_shipment' as const, label: 'orders.pendingShipment', countKey: 'pending_shipment' as const },
+  { name: 'pending_receipt' as const, label: 'orders.pendingReceipt', countKey: 'pending_receipt' as const },
+  { name: 'to_review' as const, label: 'orders.toReview', countKey: 'to_review' as const },
+  { name: 'aftersale' as const, label: 'orders.tabAftersale', countKey: 'aftersales' as const },
+]
 
 const statusLabel: Record<string, string> = {
   pending_payment: 'orders.pendingPayment',
@@ -39,35 +38,36 @@ function tabBadge(x: (typeof tabs)[number]): string {
   return badgeText(orderCounts.value[x.countKey] || 0)
 }
 
-async function load(status: string) {
+function resolveTab(name: string): OrdersTabName {
+  return isOrdersTabName(name) ? name : 'all'
+}
+
+async function ensureLoaded(tab: OrdersTabName) {
   if (!isLoggedIn()) {
     router.replace({ name: 'login', query: { redirect: route.fullPath } })
     return
   }
-  loading.value = true
-  try {
-    const data = await fetchOrders(status || undefined)
-    items.value = data.items
-  } finally {
-    loading.value = false
-  }
+  await load(tab)
   void refreshOrderCounts()
 }
 
 function onTabChange(name: string | number) {
-  const next = String(name)
-  tab.value = next
+  const next = resolveTab(String(name))
+  activeTab.value = next
   const query = next === 'all' ? {} : { tab: next }
+  // 同步 URL；App 對 orders 使用穩定 key，不會因此 remount
   router.replace({ name: 'orders', query })
+  void ensureLoaded(next)
 }
 
 watch(
   () => String(route.query.tab || 'all'),
   (name) => {
-    const valid = tabs.some((x) => x.name === name) ? name : 'all'
-    tab.value = valid
-    const current = tabs.find((x) => x.name === valid) || tabs[0]
-    load(current.status)
+    const valid = resolveTab(name)
+    if (activeTab.value !== valid) {
+      activeTab.value = valid
+    }
+    void ensureLoaded(valid)
   },
   { immediate: true },
 )
@@ -76,7 +76,7 @@ watch(
 <template>
   <div class="page">
     <SubPageNav :title="t('pages.orders')" />
-    <van-tabs :active="tab" shrink sticky @change="onTabChange">
+    <van-tabs :active="activeTab" shrink sticky @change="onTabChange">
       <van-tab
         v-for="x in tabs"
         :key="x.name"
@@ -86,8 +86,10 @@ watch(
         :show-zero-badge="false"
       />
     </van-tabs>
-    <p v-if="!loading && !items.length" class="empty">{{ t('orders.empty') }}</p>
-    <ul v-else class="list">
+
+    <p v-if="showInitialPlaceholder" class="hint">{{ t('m7.loading') }}</p>
+    <p v-else-if="showEmpty" class="empty">{{ t('orders.empty') }}</p>
+    <ul v-else-if="items.length" class="list" :class="{ refreshing: loading }">
       <li
         v-for="o in items"
         :key="o.id"
@@ -115,10 +117,12 @@ watch(
 </template>
 
 <style scoped>
+.hint,
 .empty {
   text-align: center;
   color: #999;
   padding: 2rem;
+  font-size: 0.875rem;
 }
 .list {
   list-style: none;
@@ -127,6 +131,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+.list.refreshing {
+  opacity: 0.92;
 }
 .row {
   display: grid;
