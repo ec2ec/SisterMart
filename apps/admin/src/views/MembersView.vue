@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   NButton,
   NCard,
@@ -28,8 +29,9 @@ type Member = {
   created_at?: string
 }
 
+const route = useRoute()
 const message = useMessage()
-const q = ref('')
+const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const rows = ref<Member[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const show = ref(false)

@@ -53,6 +53,7 @@ Db::execute("CREATE TABLE IF NOT EXISTS withdrawals (
   review_note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL,
   reviewed_at DATETIME NULL,
+  reviewed_by_admin_id BIGINT UNSIGNED NULL,
   updated_at DATETIME NOT NULL,
   KEY idx_withdrawals_member (member_id, status),
   KEY idx_withdrawals_status (status)
@@ -61,6 +62,11 @@ Db::execute("CREATE TABLE IF NOT EXISTS withdrawals (
 ensureColumn('products', 'commission_type', "commission_type VARCHAR(16) NULL COMMENT 'percent|fixed' AFTER cover_url");
 ensureColumn('products', 'commission_value', 'commission_value DECIMAL(12,2) NULL AFTER commission_type');
 ensureColumn('members', 'commission_available', 'commission_available DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER points');
+ensureColumn(
+    'withdrawals',
+    'reviewed_by_admin_id',
+    'reviewed_by_admin_id BIGINT UNSIGNED NULL AFTER reviewed_at',
+);
 
 $now = date('Y-m-d H:i:s');
 Db::name('products')->where('code', 'p1')->update([

@@ -23,6 +23,9 @@ class Members extends ApiController
                     $w->whereLike('email', '%' . $q . '%')
                         ->whereOr('phone', 'like', '%' . $q . '%')
                         ->whereOr('promo_code', 'like', '%' . $q . '%');
+                    if (ctype_digit($q)) {
+                        $w->whereOr('id', (int) $q);
+                    }
                 });
             }
             $rows = $query->select()->toArray();

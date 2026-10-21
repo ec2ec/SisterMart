@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
+  NDatePicker,
   NInput,
   NModal,
   NPagination,
@@ -32,6 +33,9 @@ type Withdrawal = {
   review_note: string | null
   created_at: string
   reviewed_at?: string | null
+  reviewed_by_admin_id?: number | null
+  reviewer_name?: string
+  reviewer_email?: string
 }
 
 type RankRow = { rank: number; nickname: string; commission: number }
@@ -68,6 +72,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const route = useRoute()
+const router = useRouter()
 const message = useMessage()
 const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'withdrawals')
 const withdrawals = ref<Withdrawal[]>([])
@@ -75,7 +80,9 @@ const pendingCount = ref(0)
 const ranking = ref<RankRow[]>([])
 const commissions = ref<CommRow[]>([])
 const products = ref<ProdRow[]>([])
-const { page: wPage, pageSize: wPageSize, total: wTotal, paged: wPaged } = useClientPager(withdrawals, 30)
+const wPage = ref(1)
+const wPageSize = ref(30)
+const wTotal = ref(0)
 const { page: pPage, pageSize: pPageSize, total: pTotal, paged: pPaged } = useClientPager(products, 30)
 const { page: rPage, pageSize: rPageSize, total: rTotal, paged: rPaged } = useClientPager(ranking, 30)
 const { page: cPage, pageSize: cPageSize, total: cTotal, paged: cPaged } = useClientPager(commissions, 30)
@@ -85,6 +92,10 @@ const filter = ref(
 )
 const channelFilter = ref(typeof route.query.channel === 'string' ? route.query.channel : '')
 const keyword = ref('')
+const createdFrom = ref<string | null>(null)
+const createdTo = ref<string | null>(null)
+const reviewedFrom = ref<string | null>(null)
+const reviewedTo = ref<string | null>(null)
 
 const statusOptions = [
   { label: '全部狀態', value: '' },
@@ -125,19 +136,47 @@ function memberLabel(row: Withdrawal) {
   return name ? `${name} · #${row.member_id}` : `會員 #${row.member_id}`
 }
 
+function reviewerLabel(row: Withdrawal) {
+  if (row.reviewer_name) return row.reviewer_name
+  if (row.reviewer_email) return row.reviewer_email
+  if (row.reviewed_by_admin_id) return `管理員 #${row.reviewed_by_admin_id}`
+  return ''
+}
+
+function goMember(row: Withdrawal) {
+  void router.push({ path: '/customers/members', query: { q: String(row.member_id) } })
+}
+
 async function loadWithdrawals() {
   const qs = new URLSearchParams()
   if (filter.value) qs.set('status', filter.value)
   if (channelFilter.value) qs.set('channel', channelFilter.value)
   if (keyword.value.trim()) qs.set('q', keyword.value.trim())
-  const q = qs.toString() ? `?${qs}` : ''
-  const data = await api<{ items: Withdrawal[]; pending_count?: number }>(
-    `/api/v1/admin/withdrawals${q}`,
-    {},
-    true,
-  )
+  if (createdFrom.value) qs.set('created_from', createdFrom.value)
+  if (createdTo.value) qs.set('created_to', createdTo.value)
+  if (reviewedFrom.value) qs.set('reviewed_from', reviewedFrom.value)
+  if (reviewedTo.value) qs.set('reviewed_to', reviewedTo.value)
+  qs.set('page', String(wPage.value))
+  qs.set('page_size', String(wPageSize.value))
+  const data = await api<{
+    items: Withdrawal[]
+    pending_count?: number
+    total?: number
+    page?: number
+    page_size?: number
+  }>(`/api/v1/admin/withdrawals?${qs}`, {}, true)
   withdrawals.value = data.items
+  wTotal.value = data.total ?? data.items.length
+  if (data.page) wPage.value = data.page
   pendingCount.value = data.pending_count ?? data.items.filter((x) => x.status === 'pending_review').length
+}
+
+function reloadWithdrawalsFromFilters() {
+  if (wPage.value !== 1) {
+    wPage.value = 1
+    return
+  }
+  void loadWithdrawals()
 }
 
 async function loadRanking() {
@@ -210,6 +249,10 @@ async function onTab(name: string | number) {
   if (tab.value === 'products') await loadProducts()
 }
 
+watch([wPage, wPageSize], () => {
+  if (tab.value === 'withdrawals') void loadWithdrawals()
+})
+
 onMounted(() => {
   void onTab(tab.value)
 })
@@ -219,31 +262,76 @@ onMounted(() => {
   <n-card title="分銷">
     <n-tabs :value="tab" type="line" @update:value="onTab">
       <n-tab-pane name="withdrawals" :tab="withdrawalsTabLabel">
-        <n-space style="margin-bottom: 1rem" wrap>
+        <n-space style="margin-bottom: 0.75rem" wrap>
           <n-select
             v-model:value="filter"
             :options="statusOptions"
             style="width: 9rem"
-            @update:value="loadWithdrawals"
+            @update:value="reloadWithdrawalsFromFilters"
           />
           <n-select
             v-model:value="channelFilter"
             :options="channelOptions"
             style="width: 8rem"
-            @update:value="loadWithdrawals"
+            @update:value="reloadWithdrawalsFromFilters"
           />
           <n-input
             v-model:value="keyword"
             clearable
             placeholder="會員 / FPS / 單號"
             style="width: 12rem"
-            @keyup.enter="loadWithdrawals"
+            @keyup.enter="reloadWithdrawalsFromFilters"
           />
-          <n-button @click="loadWithdrawals">刷新</n-button>
+          <n-button @click="reloadWithdrawalsFromFilters">刷新</n-button>
         </n-space>
-        <div v-for="row in wPaged" :key="row.id" class="row">
+        <n-space style="margin-bottom: 1rem" wrap align="center">
+          <span class="filter-label">申請日</span>
+          <n-date-picker
+            v-model:formatted-value="createdFrom"
+            type="date"
+            value-format="yyyy-MM-dd"
+            clearable
+            placeholder="起"
+            style="width: 9.5rem"
+            @update:formatted-value="reloadWithdrawalsFromFilters"
+          />
+          <n-date-picker
+            v-model:formatted-value="createdTo"
+            type="date"
+            value-format="yyyy-MM-dd"
+            clearable
+            placeholder="止"
+            style="width: 9.5rem"
+            @update:formatted-value="reloadWithdrawalsFromFilters"
+          />
+          <span class="filter-label">審核日</span>
+          <n-date-picker
+            v-model:formatted-value="reviewedFrom"
+            type="date"
+            value-format="yyyy-MM-dd"
+            clearable
+            placeholder="起"
+            style="width: 9.5rem"
+            @update:formatted-value="reloadWithdrawalsFromFilters"
+          />
+          <n-date-picker
+            v-model:formatted-value="reviewedTo"
+            type="date"
+            value-format="yyyy-MM-dd"
+            clearable
+            placeholder="止"
+            style="width: 9.5rem"
+            @update:formatted-value="reloadWithdrawalsFromFilters"
+          />
+        </n-space>
+        <div v-for="row in withdrawals" :key="row.id" class="row">
           <div>
-            <strong>#{{ row.id }} · {{ memberLabel(row) }}</strong>
+            <strong>
+              #{{ row.id }} ·
+              <button type="button" class="member-link" @click="goMember(row)">
+                {{ memberLabel(row) }}
+              </button>
+            </strong>
             <p>
               {{ row.channel === 'fps' ? '轉數快' : '轉餘額' }} · HK$ {{ row.amount.toFixed(2) }} ·
               {{ row.created_at }}
@@ -256,7 +344,10 @@ onMounted(() => {
               當前可提現 HK$ {{ Number(row.commission_available).toFixed(2) }}
             </p>
             <p v-if="row.review_note" class="muted">備註：{{ row.review_note }}</p>
-            <p v-if="row.reviewed_at" class="muted">審核於 {{ row.reviewed_at }}</p>
+            <p v-if="row.reviewed_at" class="muted">
+              審核於 {{ row.reviewed_at
+              }}<template v-if="reviewerLabel(row)"> · {{ reviewerLabel(row) }}</template>
+            </p>
           </div>
           <n-space v-if="row.status === 'pending_review'">
             <n-button size="tiny" type="primary" @click="openReview(row, 'approve')">通過</n-button>
@@ -409,9 +500,13 @@ onMounted(() => {
 }
 .muted,
 .hint,
-.empty {
+.empty,
+.filter-label {
   color: #888;
   font-size: 0.8125rem;
+}
+.filter-label {
+  white-space: nowrap;
 }
 .hint {
   margin: 0 0 0.75rem;
@@ -428,5 +523,19 @@ onMounted(() => {
 .modal-lead {
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
+}
+.member-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2080f0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.member-link:hover {
+  color: #1060c9;
 }
 </style>

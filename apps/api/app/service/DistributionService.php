@@ -427,14 +427,19 @@ class DistributionService
         return $result;
     }
 
-    public function reviewWithdrawal(int $withdrawalId, string $action, string $note = ''): array
-    {
+    public function reviewWithdrawal(
+        int $withdrawalId,
+        string $action,
+        string $note = '',
+        int $reviewedByAdminId = 0,
+    ): array {
         $action = strtolower($action);
         if (!in_array($action, ['approve', 'reject'], true)) {
             throw new ApiException('INVALID', '審核動作無效', 422, 42201);
         }
         $now = date('Y-m-d H:i:s');
-        Db::transaction(function () use ($withdrawalId, $action, $note, $now) {
+        $adminId = $reviewedByAdminId > 0 ? $reviewedByAdminId : null;
+        Db::transaction(function () use ($withdrawalId, $action, $note, $now, $adminId) {
             $row = Db::name('withdrawals')->where('id', $withdrawalId)->lock(true)->find();
             if (!$row) {
                 throw new ApiException('NOT_FOUND', '提現單不存在', 404, 40490);
@@ -443,21 +448,29 @@ class DistributionService
                 throw new ApiException('INVALID_STATUS', '提現單不可審核', 422, 42291);
             }
             if ($action === 'approve') {
-                Db::name('withdrawals')->where('id', $withdrawalId)->update([
+                $payload = [
                     'status' => 'paid',
                     'review_note' => $note !== '' ? $note : '已審核通過',
                     'reviewed_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ];
+                if ($adminId !== null) {
+                    $payload['reviewed_by_admin_id'] = $adminId;
+                }
+                Db::name('withdrawals')->where('id', $withdrawalId)->update($payload);
 
                 return;
             }
-            Db::name('withdrawals')->where('id', $withdrawalId)->update([
+            $payload = [
                 'status' => 'rejected',
                 'review_note' => $note !== '' ? $note : '不符合提現條件',
                 'reviewed_at' => $now,
                 'updated_at' => $now,
-            ]);
+            ];
+            if ($adminId !== null) {
+                $payload['reviewed_by_admin_id'] = $adminId;
+            }
+            Db::name('withdrawals')->where('id', $withdrawalId)->update($payload);
             Db::name('members')->where('id', $row['member_id'])->inc('commission_available', (float) $row['amount'])->update([
                 'updated_at' => $now,
             ]);
