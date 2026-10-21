@@ -12,6 +12,7 @@ import ProductsView from '../views/ProductsView.vue'
 import ServiceTagsView from '../views/ServiceTagsView.vue'
 import SpecsView from '../views/SpecsView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
+import MaintenanceView from '../views/MaintenanceView.vue'
 import OrdersView from '../views/OrdersView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
 import AftersalesView from '../views/AftersalesView.vue'
@@ -61,6 +62,7 @@ export const router = createRouter({
         { path: '/marketing/seckill', component: SeckillView, meta: { title: '秒殺活動' } },
         { path: '/marketing/distribution', component: DistributionView, meta: { title: '分銷' } },
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
+        { path: '/settings/maintenance', component: MaintenanceView, meta: { title: '店鋪維護' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
         { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],

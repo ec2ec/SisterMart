@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import { computed, onMounted, type Component } from 'vue'
 import AppTabbar from './components/AppTabbar.vue'
 import HomeView from './views/HomeView.vue'
 import CategoryView from './views/CategoryView.vue'
 import CartView from './views/CartView.vue'
 import AccountView from './views/AccountView.vue'
+import MaintenanceView from './views/MaintenanceView.vue'
+import { useMaintenance } from './composables/useMaintenance'
 import { useTabShell, routeIsTab } from './composables/useTabShell'
 
 /** 與各頁 defineOptions({ name }) 對齊 */
@@ -18,38 +20,52 @@ const TAB_COMPONENTS: Record<string, Component> = {
 }
 
 const { backgroundTabName, showTabbar } = useTabShell()
+const { status, enabled: maintenanceOn, loaded: maintenanceLoaded, refresh: refreshMaintenance } =
+  useMaintenance()
 
 const backgroundComponent = computed(() => {
   const name = backgroundTabName.value
   return name ? TAB_COMPONENTS[name] : null
 })
+
+onMounted(() => {
+  void refreshMaintenance()
+})
 </script>
 
 <template>
-  <!-- 底層 Tab：進商詳疊層時不卸載，保留滾動位置 -->
-  <keep-alive :include="KEEP_ALIVE_NAMES">
-    <component
-      :is="backgroundComponent"
-      v-if="backgroundComponent && backgroundTabName"
-      :key="backgroundTabName"
-    />
-  </keep-alive>
+  <MaintenanceView
+    v-if="maintenanceLoaded && maintenanceOn && status"
+    :status="status"
+    @retry="refreshMaintenance"
+  />
 
-  <router-view v-slot="{ Component, route: r }">
-    <!-- 商詳等疊層：蓋在 Tab 之上 -->
-    <div v-if="r.meta.overlay && Component" class="sm-route-overlay">
-      <component :is="Component" />
-    </div>
-    <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
-    <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->
-    <component
-      :is="Component"
-      v-else-if="Component && !routeIsTab(r) && !r.meta.overlay"
-      :key="r.name === 'orders' ? 'orders' : r.fullPath"
-    />
-  </router-view>
+  <template v-else>
+    <!-- 底層 Tab：進商詳疊層時不卸載，保留滾動位置 -->
+    <keep-alive :include="KEEP_ALIVE_NAMES">
+      <component
+        :is="backgroundComponent"
+        v-if="backgroundComponent && backgroundTabName"
+        :key="backgroundTabName"
+      />
+    </keep-alive>
 
-  <AppTabbar v-if="showTabbar" />
+    <router-view v-slot="{ Component, route: r }">
+      <!-- 商詳等疊層：蓋在 Tab 之上 -->
+      <div v-if="r.meta.overlay && Component" class="sm-route-overlay">
+        <component :is="Component" />
+      </div>
+      <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
+      <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->
+      <component
+        :is="Component"
+        v-else-if="Component && !routeIsTab(r) && !r.meta.overlay"
+        :key="r.name === 'orders' ? 'orders' : r.fullPath"
+      />
+    </router-view>
+
+    <AppTabbar v-if="showTabbar" />
+  </template>
 </template>
 
 <style scoped>

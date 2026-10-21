@@ -2,6 +2,15 @@ export const messages = {
   'zh-HK': {
     brandSister: 'Sister',
     brandMart: 'Mart',
+    maintenance: {
+      title: '商店維護中',
+      message: '暫時不能為你提供服務。感謝你的支持，我們會盡快回來。',
+      thanks: '感謝你的支持',
+      window: '預計維護時間 {start} 至 {end}',
+      windowStart: '預計開始時間 {start}',
+      windowEnd: '預計結束時間 {end}',
+      retry: '刷新試試',
+    },
     searchPlaceholder: '在這裏搜索商品',
     tab: {
       home: '首頁',
@@ -466,6 +475,15 @@ export const messages = {
   en: {
     brandSister: 'Sister',
     brandMart: 'Mart',
+    maintenance: {
+      title: 'Under Maintenance',
+      message: 'We are temporarily unavailable. Thank you for your support — we will be back soon.',
+      thanks: 'Thank you for your support',
+      window: 'Expected window {start} – {end}',
+      windowStart: 'Starts {start}',
+      windowEnd: 'Ends {end}',
+      retry: 'Try again',
+    },
     searchPlaceholder: 'Search jewelry',
     tab: {
       home: 'Home',

@@ -25,6 +25,8 @@ Route::post('api/v1/members', 'api.Members/store');
 Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
 Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
+/** 店鋪狀態（維護模式，公開） */
+Route::get('api/v1/shop/status', 'api.ShopStatus/index');
 
 /** M3 公開商品與文章（帶參數路由須排在集合路由之前，避免前綴誤匹配） */
 /** 上傳圖公開讀取（共享主機常無 /storage 靜態別名；query 形式兼容 nginx） */
@@ -201,6 +203,8 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
     Route::get('settings/shop', 'admin.ShopSettings/shop');
     Route::put('settings/shop', 'admin.ShopSettings/updateShop');
+    Route::get('settings/maintenance', 'admin.ShopSettings/maintenance');
+    Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
 
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');
