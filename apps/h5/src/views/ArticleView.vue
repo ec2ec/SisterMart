@@ -58,6 +58,7 @@ const body = computed(() => (article.value ? text(article.value.body) : ''))
 <style scoped>
 .article {
   background: #fff;
+  contain: layout style;
 }
 article {
   padding: 1rem 1rem 2rem;
@@ -93,6 +94,25 @@ h1 {
 }
 .body :deep(a) {
   color: var(--sm-primary, #16162b);
+}
+.body :deep(.sm-contact-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+.body :deep(.sm-contact-wa) {
+  background: #e8f8ef;
+  color: #128c7e;
+}
+.body :deep(.sm-contact-fb) {
+  background: #e8f1ff;
+  color: #1877f2;
 }
 .empty {
   padding: 2rem 1rem;

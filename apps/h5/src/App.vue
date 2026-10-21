@@ -19,7 +19,7 @@ const TAB_COMPONENTS: Record<string, Component> = {
   account: AccountView,
 }
 
-const { backgroundTabName, showTabbar } = useTabShell()
+const { backgroundTabName, showTabbar, isOverlay } = useTabShell()
 const { status, enabled: maintenanceOn, loaded: maintenanceLoaded, refresh: refreshMaintenance } =
   useMaintenance()
 
@@ -41,14 +41,16 @@ onMounted(() => {
   />
 
   <template v-else>
-    <!-- 底層 Tab：進商詳疊層時不卸載，保留滾動位置 -->
-    <keep-alive :include="KEEP_ALIVE_NAMES">
-      <component
-        :is="backgroundComponent"
-        v-if="backgroundComponent && backgroundTabName"
-        :key="backgroundTabName"
-      />
-    </keep-alive>
+    <!-- 底層 Tab：進疊層時不卸載；隱藏繪製以免協議／商詳滾動卡頓 -->
+    <div class="sm-tab-shell" :class="{ under: isOverlay }" :aria-hidden="isOverlay ? 'true' : undefined">
+      <keep-alive :include="KEEP_ALIVE_NAMES">
+        <component
+          :is="backgroundComponent"
+          v-if="backgroundComponent && backgroundTabName"
+          :key="backgroundTabName"
+        />
+      </keep-alive>
+    </div>
 
     <router-view v-slot="{ Component, route: r }">
       <!-- 商詳等疊層：蓋在 Tab 之上；按 fullPath 強制重掛，避免協議 A→B 複用實例閃舊文 -->
@@ -69,6 +71,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.sm-tab-shell.under {
+  /* 保留 DOM／滾動位置，但跳過繪製與命中測試 */
+  content-visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
 .sm-route-overlay {
   position: fixed;
   inset: 0;
@@ -78,5 +86,6 @@ onMounted(() => {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  contain: layout paint;
 }
 </style>

@@ -86,10 +86,9 @@ $waLink = 'https://wa.me/' . $whatsapp;
 $fbEsc = htmlspecialchars($facebook, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $waEsc = htmlspecialchars($waLink, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-$iconWa = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-0.35em;margin-right:0.4rem"><path fill="#25D366" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.44 17.5 2 12.04 2zm5.76 14.02c-.24.68-1.42 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.67-.62-2.94-1.27-4.85-4.24-5-4.44-.14-.2-1.18-1.57-1.18-3 0-1.42.74-2.12 1.01-2.41.26-.28.58-.35.77-.35h.55c.18 0 .42-.06.66.5.24.58.82 2 .89 2.15.07.14.12.32.02.51-.1.2-.14.32-.28.5-.14.17-.3.39-.43.52-.14.14-.29.3-.12.58.16.28.73 1.2 1.57 1.95 1.08.96 1.99 1.26 2.27 1.4.28.14.45.12.61-.07.17-.2.7-.81.88-1.09.19-.28.37-.23.63-.14.26.1 1.64.77 1.92.91.28.14.47.21.54.32.07.12.07.68-.17 1.36z"/></svg>';
-$iconFb = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-0.35em;margin-right:0.4rem"><path fill="#1877F2" d="M22 12.07C22 6.48 17.52 2 11.93 2S1.86 6.48 1.86 12.07c0 5.02 3.66 9.18 8.45 9.93v-7.02H7.9v-2.91h2.41V9.84c0-2.38 1.42-3.69 3.6-3.69 1.04 0 2.13.19 2.13.19v2.34h-1.2c-1.18 0-1.55.73-1.55 1.48v1.78h2.64l-.42 2.91h-2.22V22c4.79-.75 8.45-4.91 8.45-9.93z"/></svg>';
-
-$linkStyle = 'display:inline-flex;align-items:center;gap:0.15rem;padding:0.55rem 0.85rem;border-radius:999px;text-decoration:none;font-weight:600;';
+// 輕量按鈕（避免內聯 SVG 造成 H5 v-html／後台富文本卡頓）
+$btnWa = 'class="sm-contact-btn sm-contact-wa"';
+$btnFb = 'class="sm-contact-btn sm-contact-fb"';
 
 // ——— 關於我們 ———
 upsertArticle(
@@ -128,21 +127,21 @@ upsertArticle(
     <<<HTML
 <p>購物、訂單或售後問題，歡迎透過以下方式聯絡 <strong>SisterMart 姐妹商店</strong>。</p>
 <h2>1. 線上聊天（WhatsApp）</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f8ef;color:#128C7E">{$iconWa}WhatsApp 客服</a></p>
+<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp 客服</a></p>
 <p>工作時間：每日 <strong>10:00–19:00</strong>（香港時間）。非工作時段留言，我們會在下一工作時段回覆。</p>
 <h2>2. 社交媒體</h2>
 <p>你也可以在社交平台找到我們。繁忙時段該服務<strong>可能需要排隊</strong>，感謝耐心等候。</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f1ff;color:#1877F2">{$iconFb}Facebook</a></p>
+<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
 HTML,
     'Contact Us',
     <<<HTML
 <p>For shopping, orders, or after-sales questions, contact <strong>SisterMart</strong> below.</p>
 <h2>1. Live chat (WhatsApp)</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f8ef;color:#128C7E">{$iconWa}WhatsApp support</a></p>
+<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp support</a></p>
 <p>Hours: daily <strong>10:00–19:00</strong> (Hong Kong time). Messages outside hours will be answered in the next working window.</p>
 <h2>2. Social media</h2>
 <p>You can also find us on social media. During busy periods this channel <strong>may require queuing</strong>—thanks for your patience.</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" style="{$linkStyle}background:#e8f1ff;color:#1877F2">{$iconFb}Facebook</a></p>
+<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
 HTML,
     40,
 );

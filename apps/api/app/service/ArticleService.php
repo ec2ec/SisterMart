@@ -9,7 +9,10 @@ use think\facade\Db;
 
 class ArticleService
 {
-    public function list(bool $activeOnly = false): array
+    /**
+     * @param bool $withBody false 時列表不帶正文（後台列表用，避免大 HTML／富文本卡死）
+     */
+    public function list(bool $activeOnly = false, bool $withBody = true): array
     {
         $q = Db::name('articles')->order('sort_order', 'asc')->order('id', 'asc');
         if ($activeOnly) {
@@ -17,7 +20,7 @@ class ArticleService
         }
         $rows = $q->select()->toArray();
 
-        return array_map(fn ($row) => $this->present($row), $rows);
+        return array_map(fn ($row) => $this->present($row, $withBody), $rows);
     }
 
     public function byCode(string $code, bool $activeOnly = true): array
@@ -27,7 +30,7 @@ class ArticleService
             throw new ApiException('NOT_FOUND', '文章不存在', 404, 40403);
         }
 
-        return $this->present($row);
+        return $this->present($row, true);
     }
 
     public function save(array $body, ?int $id = null): array
@@ -79,24 +82,33 @@ class ArticleService
         return $this->byCode($code, false);
     }
 
-    private function present(array $row): array
+    private function present(array $row, bool $withBody = true): array
     {
         $i18n = Db::name('article_i18n')->where('article_id', $row['id'])->select()->toArray();
         $title = ['zh-HK' => '', 'en' => ''];
         $body = ['zh-HK' => '', 'en' => ''];
+        $hasBody = false;
         foreach ($i18n as $n) {
-            $title[$n['locale']] = $n['title'];
-            $body[$n['locale']] = $n['body'];
+            $locale = (string) $n['locale'];
+            $title[$locale] = (string) $n['title'];
+            $text = (string) $n['body'];
+            if (trim(strip_tags($text)) !== '') {
+                $hasBody = true;
+            }
+            if ($withBody) {
+                $body[$locale] = $text;
+            }
         }
 
         return [
             'id'             => (int) $row['id'],
-            'code'           => (string) $row['code'],
+            'code'           => trim((string) $row['code']),
             'status'         => (int) $row['status'],
             'show_in_footer' => (int) $row['show_in_footer'] === 1,
             'sort'           => (int) $row['sort_order'],
             'title'          => $title,
-            'body'           => $body,
+            'body'           => $withBody ? $body : ['zh-HK' => '', 'en' => ''],
+            'has_body'       => $hasBody,
         ];
     }
 }

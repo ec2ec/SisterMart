@@ -12,7 +12,8 @@ class Articles extends ApiController
 {
     public function index(): Response
     {
-        return $this->run(fn () => ['items' => (new ArticleService())->list(false)]);
+        // 列表不帶正文，避免九篇 HTML 塞進雙富文本導致後台卡死／誤顯示未建檔
+        return $this->run(fn () => ['items' => (new ArticleService())->list(false, false)]);
     }
 
     public function read(string $code): Response
