@@ -99,10 +99,10 @@ onMounted(async () => {
       </n-form-item>
       <div class="grid">
         <n-form-item label="預計開始（本地時間）">
-          <n-input v-model:value="form.starts_at" type="datetime-local" />
+          <input v-model="form.starts_at" type="datetime-local" class="dt" />
         </n-form-item>
         <n-form-item label="預計結束（本地時間）">
-          <n-input v-model:value="form.ends_at" type="datetime-local" />
+          <input v-model="form.ends_at" type="datetime-local" class="dt" />
         </n-form-item>
         <n-form-item label="標題（繁中）">
           <n-input v-model:value="form.title_zh" maxlength="40" />
@@ -141,6 +141,21 @@ onMounted(async () => {
   margin-left: 0.75rem;
   font-size: 0.8125rem;
   color: #555;
+}
+.dt {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 0.75rem;
+  border: 1px solid #e0e0e6;
+  border-radius: 3px;
+  background: #fff;
+  font: inherit;
+  color: #333;
+}
+.dt:focus {
+  outline: none;
+  border-color: #36ad6a;
 }
 .grid {
   display: grid;
