@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
@@ -10,13 +10,17 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; change: [index: number] }>()
 const { t } = useI18n()
 
-const index = ref(Math.min(Math.max(0, props.start), Math.max(0, props.images.length - 1)))
+const index = ref(0)
 const scale = ref(1)
 const panX = ref(0)
 const panY = ref(0)
-/** 未放大時跟手橫滑位移 */
+/** 未放大時相對當前頁的跟手偏移（px） */
 const dragX = ref(0)
+const dragging = ref(false)
 const animating = ref(false)
+/** 換頁瞬間關閉過渡，避免 Vue :style 蓋掉 DOM 上手寫的 transition:none */
+const skipTransition = ref(false)
+const stageW = ref(typeof window !== 'undefined' ? window.innerWidth : 375)
 
 let startX = 0
 let startY = 0
@@ -27,16 +31,17 @@ let axis: 'x' | 'y' | '' = ''
 let pinchBase = 1
 let pinchDist = 0
 let lastTap = 0
+let animTimer = 0
 
-watch(
-  () => props.start,
-  (value) => {
-    index.value = Math.min(Math.max(0, value), Math.max(0, props.images.length - 1))
-    resetZoom()
-    dragX.value = 0
-  },
-  { immediate: true },
-)
+const stageRef = ref<HTMLElement | null>(null)
+
+function clampIndex(n: number) {
+  return Math.min(props.images.length - 1, Math.max(0, n))
+}
+
+function measure() {
+  stageW.value = stageRef.value?.clientWidth || window.innerWidth || 375
+}
 
 function resetZoom() {
   scale.value = 1
@@ -44,17 +49,31 @@ function resetZoom() {
   panY.value = 0
 }
 
-function goTo(next: number) {
-  const clamped = Math.min(props.images.length - 1, Math.max(0, next))
-  if (clamped === index.value) {
-    dragX.value = 0
-    return
-  }
+function syncIndex(next: number, notify = true) {
+  const clamped = clampIndex(next)
   index.value = clamped
   resetZoom()
   dragX.value = 0
-  emit('change', clamped)
+  if (notify) emit('change', clamped)
 }
+
+watch(
+  () => [props.start, props.images.length] as const,
+  () => {
+    syncIndex(props.start, false)
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  measure()
+  window.addEventListener('resize', measure)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', measure)
+  if (animTimer) window.clearTimeout(animTimer)
+})
 
 function toggleZoom() {
   if (scale.value > 1) resetZoom()
@@ -66,7 +85,7 @@ function distance(a: Touch, b: Touch) {
 }
 
 function onStart(event: TouchEvent) {
-  if (animating.value) return
+  if (animating.value || skipTransition.value) return
   dragging.value = true
   if (event.touches.length === 2) {
     pinchDist = distance(event.touches[0], event.touches[1])
@@ -84,14 +103,13 @@ function onStart(event: TouchEvent) {
 }
 
 function onMove(event: TouchEvent) {
-  if (animating.value) return
+  if (animating.value || skipTransition.value) return
   if (event.touches.length === 2 && pinchDist) {
     const next = pinchBase * (distance(event.touches[0], event.touches[1]) / pinchDist)
     scale.value = Math.min(4, Math.max(1, next))
     if (scale.value === 1) {
       panX.value = 0
       panY.value = 0
-      dragX.value = 0
     }
     return
   }
@@ -105,18 +123,43 @@ function onMove(event: TouchEvent) {
     axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y'
   }
 
+  // 放大：只平移當前圖，不切頁
   if (scale.value > 1) {
     panX.value = originPanX + dx
     panY.value = originPanY + dy
     return
   }
 
-  // 未放大：橫向跟手滑動切圖
   if (axis === 'x') {
     const atStart = index.value === 0 && dx > 0
     const atEnd = index.value >= props.images.length - 1 && dx < 0
     dragX.value = atStart || atEnd ? dx * 0.35 : dx
   }
+}
+
+function finishSwipe(dir: -1 | 1) {
+  const w = stageW.value || window.innerWidth
+  const target = index.value + dir
+  if (target < 0 || target >= props.images.length) {
+    dragX.value = 0
+    animating.value = false
+    return
+  }
+  animating.value = true
+  dragging.value = false
+  // 軌道滑到相鄰頁中心：-index*w ± w == -target*w
+  dragX.value = dir > 0 ? -w : w
+  if (animTimer) window.clearTimeout(animTimer)
+  animTimer = window.setTimeout(() => {
+    // 與 syncIndex 同幀：transform 已在目標位 + transition none，無二次滑入
+    skipTransition.value = true
+    syncIndex(target, true)
+    void nextTick(() => {
+      void stageRef.value?.offsetHeight
+      skipTransition.value = false
+      animating.value = false
+    })
+  }, 220)
 }
 
 function onEnd(event: TouchEvent) {
@@ -125,7 +168,6 @@ function onEnd(event: TouchEvent) {
   dragging.value = false
 
   if (scale.value > 1) {
-    // 放大態結束：保留平移；輕點雙擊邏輯
     if (moved < 12) {
       const now = Date.now()
       if (now - lastTap < 280) toggleZoom()
@@ -136,23 +178,23 @@ function onEnd(event: TouchEvent) {
   }
 
   const dx = dragX.value
-  const threshold = Math.min(72, (typeof window !== 'undefined' ? window.innerWidth : 320) * 0.18)
+  const threshold = Math.min(64, stageW.value * 0.18)
 
   if (axis === 'x' && Math.abs(dx) > threshold) {
-    animating.value = true
-    const width = typeof window !== 'undefined' ? window.innerWidth : 375
-    // 先滑出當前圖，再換頁歸零（跟手 → 慣性收尾）
-    dragX.value = dx < 0 ? -width : width
-    window.setTimeout(() => {
-      goTo(index.value + (dx < 0 ? 1 : -1))
-      animating.value = false
-    }, 160)
+    finishSwipe(dx < 0 ? 1 : -1)
     axis = ''
     return
   }
 
-  // 未過閾值：彈回
-  dragX.value = 0
+  // 未過閾值：彈回當前頁
+  if (dx !== 0) {
+    animating.value = true
+    dragX.value = 0
+    if (animTimer) window.clearTimeout(animTimer)
+    animTimer = window.setTimeout(() => {
+      animating.value = false
+    }, 220)
+  }
 
   if (moved < 12) {
     const now = Date.now()
@@ -162,17 +204,31 @@ function onEnd(event: TouchEvent) {
   axis = ''
 }
 
-const dragging = ref(false)
-
-const imgStyle = computed(() => {
-  const x = scale.value > 1 ? panX.value : dragX.value
-  const y = scale.value > 1 ? panY.value : 0
-  const follow = scale.value === 1 && dragging.value
+/** 軌道位移：整頁寬 * index + 跟手偏移 */
+const trackStyle = computed(() => {
+  const w = stageW.value
+  const x = -index.value * w + dragX.value
+  const follow = scale.value === 1 && dragging.value && !animating.value
   return {
-    transform: `translate3d(${x}px, ${y}px, 0) scale(${scale.value})`,
-    transition: follow ? 'none' : 'transform 0.16s ease-out',
+    width: `${Math.max(1, props.images.length) * w}px`,
+    transform: `translate3d(${x}px, 0, 0)`,
+    transition:
+      skipTransition.value || follow ? 'none' : 'transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1)',
   }
 })
+
+function slideBoxStyle() {
+  return { width: `${stageW.value}px` }
+}
+
+function imgStyle(i: number) {
+  const active = i === index.value
+  const zooming = active && scale.value > 1
+  return {
+    transform: zooming ? `translate3d(${panX.value}px, ${panY.value}px, 0) scale(${scale.value})` : undefined,
+    transition: zooming && dragging.value ? 'none' : zooming ? 'transform 0.16s ease-out' : undefined,
+  }
+}
 </script>
 
 <template>
@@ -182,8 +238,12 @@ const imgStyle = computed(() => {
       <b>{{ index + 1 }} / {{ images.length }}</b>
       <span />
     </div>
-    <div class="stage" @dblclick="toggleZoom">
-      <img :src="images[index]" alt="" :style="imgStyle" />
+    <div ref="stageRef" class="stage" @dblclick="toggleZoom">
+      <div class="track" :style="trackStyle">
+        <div v-for="(src, i) in images" :key="`${src}-${i}`" class="slide" :style="slideBoxStyle()">
+          <img :src="src" alt="" :style="imgStyle(i)" />
+        </div>
+      </div>
     </div>
     <p>{{ t('pdp.swipeHint') }}</p>
   </div>
@@ -223,13 +283,27 @@ const imgStyle = computed(() => {
 
 .stage {
   flex: 1;
+  overflow: hidden;
+  touch-action: none;
+  position: relative;
+}
+
+.track {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
+}
+
+.slide {
+  height: 100%;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
-  touch-action: none;
 }
 
-.stage img {
+.slide img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
