@@ -565,6 +565,13 @@ const tabLabel = (tab: HomeRecTab) => {
   scroll-snap-type: x mandatory;
   padding: 0 0.875rem 0.75rem;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cats-row::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .cats-row button {
   flex: 0 0 calc((100% - 1.5rem) / 4);
