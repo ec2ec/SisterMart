@@ -159,6 +159,14 @@ PHP
     cp -a "$ROOT/releases/vps-spa"/. "$STAGING/vps-spa/" 2>/dev/null || true
   fi
 
+  # 發佈通道目錄：禁止 Web 直鏈（Apache）；Nginx 見 scripts/deploy/nginx.sistermart.conf.example
+  mkdir -p "$STAGING/_releases"
+  cat > "$STAGING/_releases/.htaccess" <<'HT'
+Require all denied
+Deny from all
+HT
+  : > "$STAGING/_releases/index.html"
+
   cat > "$STAGING/README-DEPLOY.txt" <<EOF
 SisterMart VPS root overlay — $(date -u +%Y-%m-%dT%H:%MZ)
 
@@ -166,6 +174,9 @@ Contains: H5 (/) + Admin (/admin) + mock + products + API (/api/index.php → sm
 
 unzip -o $(basename "$ZIP_OUT")   # at website ROOT
 Then hard refresh. Ensure sm-backend/.env exists on server (not shipped).
+
+Release channel: set RELEASE_ENABLED=true and RELEASE_HMAC_SECRET in sm-backend/.env
+Pack: RELEASE_HMAC_SECRET=... pnpm release pack
 
 H5:    https://your-domain/
 Admin: https://your-domain/admin/

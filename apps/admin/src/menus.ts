@@ -66,6 +66,7 @@ export const adminMenus: AdminMenu[] = [
       { label: '底部導航', key: '/settings/tabbar', path: '/settings/tabbar' },
       { label: '店鋪維護', key: '/settings/maintenance', path: '/settings/maintenance' },
       { label: '店鋪參數', key: '/settings/shop', path: '/settings/shop' },
+      { label: '發佈通道', key: '/settings/releases', path: '/settings/releases', roles: ['super'] },
       { label: '管理員與角色', key: '/settings/admins', path: '/settings/admins', roles: ['super'] },
     ],
   },

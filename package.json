@@ -6,7 +6,9 @@
   "scripts": {
     "build": "bash scripts/deploy/build-zip.sh",
     "zip": "bash scripts/deploy/build-zip.sh zip",
-    "build:zip": "bash scripts/deploy/build-zip.sh zip"
+    "build:zip": "bash scripts/deploy/build-zip.sh zip",
+    "release": "bash scripts/deploy/pack-release.sh",
+    "release:pack": "bash scripts/deploy/pack-release.sh"
   },
   "engines": {
     "node": ">=20"

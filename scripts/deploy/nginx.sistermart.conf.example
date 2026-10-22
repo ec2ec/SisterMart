@@ -11,6 +11,12 @@ server {
     root /var/www/sistermart/apps/h5/dist;
     index index.html;
 
+    # 窄版發佈通道：禁止直鏈下載 pending/snapshots
+    location ^~ /_releases/ {
+        deny all;
+        return 404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

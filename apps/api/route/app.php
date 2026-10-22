@@ -206,6 +206,18 @@ Route::group('api/v1/admin', function () {
     Route::get('settings/maintenance', 'admin.ShopSettings/maintenance');
     Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
 
+    /** 窄版發佈通道（僅超管；需 RELEASE_ENABLED + RELEASE_HMAC_SECRET） */
+    Route::get('releases/state', 'admin.Releases/state');
+    Route::get('releases/audit', 'admin.Releases/audit');
+    Route::post('releases/rollback', 'admin.Releases/rollback');
+    Route::put('releases/:id/chunks/:n', 'admin.Releases/chunk');
+    Route::post('releases/:id/complete', 'admin.Releases/complete');
+    Route::post('releases/:id/publish', 'admin.Releases/publish');
+    Route::get('releases/:id', 'admin.Releases/read');
+    Route::delete('releases/:id', 'admin.Releases/destroy');
+    Route::get('releases', 'admin.Releases/index');
+    Route::post('releases', 'admin.Releases/store');
+
     /** 概覽待辦與今日數字 */
     Route::get('dashboard/summary', 'admin.Dashboard/summary');
 

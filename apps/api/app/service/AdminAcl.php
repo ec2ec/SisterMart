@@ -20,6 +20,8 @@ class AdminAcl
     public const PERM_CUSTOMERS = 'customers';
     public const PERM_CMS = 'cms';
     public const PERM_MARKETING = 'marketing';
+    /** 窄版發佈通道：僅 super（*）具備 */
+    public const PERM_RELEASES = 'releases';
 
     /** @return list<string> */
     public static function permissionsForRole(string $roleCode): array
@@ -76,6 +78,7 @@ class AdminAcl
         }
         $map = [
             '/api/v1/admin/admins' => self::PERM_ADMINS,
+            '/api/v1/admin/releases' => self::PERM_RELEASES,
             '/api/v1/admin/settings' => self::PERM_SETTINGS,
             '/api/v1/admin/tabbar' => self::PERM_SETTINGS,
             '/api/v1/admin/categories' => self::PERM_CATALOG,

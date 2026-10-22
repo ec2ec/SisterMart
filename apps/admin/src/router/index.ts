@@ -28,6 +28,7 @@ import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
 import ReviewsView from '../views/ReviewsView.vue'
 import HomeBannersView from '../views/HomeBannersView.vue'
+import ReleasesView from '../views/ReleasesView.vue'
 
 export const router = createRouter({
   // Hash until shared-host nginx try_files covers /admin/* (releases/vps-spa).
@@ -64,6 +65,7 @@ export const router = createRouter({
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
         { path: '/settings/maintenance', component: MaintenanceView, meta: { title: '店鋪維護' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
+        { path: '/settings/releases', component: ReleasesView, meta: { title: '發佈通道', roles: ['super'] } },
         { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],
     },
