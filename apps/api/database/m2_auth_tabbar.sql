@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS tabbar_items (
 
 INSERT INTO tabbar_items
   (slot, label_zh, label_en, icon, icon_active, icon_bg, icon_bg_active, text_color, text_color_active, sort_order)
-SELECT 'home', '首頁', 'Home', 'home-o', 'home', '#f6f3ee', '#16162b', '#8a8378', '#16162b', 1 FROM DUAL
+SELECT 'home', '首頁', 'Home', 'home-o', 'wap-home', '#f6f3ee', '#16162b', '#8a8378', '#16162b', 1 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM tabbar_items WHERE slot = 'home');
 INSERT INTO tabbar_items
   (slot, label_zh, label_en, icon, icon_active, icon_bg, icon_bg_active, text_color, text_color_active, sort_order)
@@ -137,7 +137,7 @@ SELECT 'account', '我的', 'Account', 'user-o', 'user', '#f6f3ee', '#16162b', '
 WHERE NOT EXISTS (SELECT 1 FROM tabbar_items WHERE slot = 'account');
 
 -- 已有環境：選中態改為深底 + 實心圖標，避免與未選中幾乎無差別
-UPDATE tabbar_items SET icon_active = 'home', icon_bg_active = '#16162b', text_color_active = '#16162b' WHERE slot = 'home';
+UPDATE tabbar_items SET icon_active = 'wap-home', icon_bg_active = '#16162b', text_color_active = '#16162b' WHERE slot = 'home';
 UPDATE tabbar_items SET icon_active = 'apps-o', icon_bg_active = '#16162b', text_color_active = '#16162b' WHERE slot = 'category';
 UPDATE tabbar_items SET icon_active = 'shopping-cart', icon_bg_active = '#16162b', text_color_active = '#16162b' WHERE slot = 'cart';
 UPDATE tabbar_items SET icon_active = 'user', icon_bg_active = '#16162b', text_color_active = '#16162b' WHERE slot = 'account';

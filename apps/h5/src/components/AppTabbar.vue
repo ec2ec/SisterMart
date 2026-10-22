@@ -26,21 +26,29 @@ type TabbarConfig = {
   items: TabItem[]
 }
 
-/** 預設：未選線框淺底；選中實心深底白標，點亮對比清晰 */
+/** 預設：未選線框淺底；選中實心深底白標，點亮對比清晰
+ * 注意：Vant 4 無實心 `home`，選中須用 `wap-home`（有 glyph），否則只剩空圓。 */
 const builtin: TabbarConfig = {
   bar_bg: '#ffffff',
   items: [
-    { slot: 'home', label_zh: '首頁', label_en: 'Home', icon: 'home-o', icon_active: 'home', icon_bg: '#f6f3ee', icon_bg_active: '#16162b', text_color: '#8a8378', text_color_active: '#16162b', sort: 1 },
+    { slot: 'home', label_zh: '首頁', label_en: 'Home', icon: 'home-o', icon_active: 'wap-home', icon_bg: '#f6f3ee', icon_bg_active: '#16162b', text_color: '#8a8378', text_color_active: '#16162b', sort: 1 },
     { slot: 'category', label_zh: '分類', label_en: 'Category', icon: 'apps-o', icon_active: 'apps-o', icon_bg: '#f6f3ee', icon_bg_active: '#16162b', text_color: '#8a8378', text_color_active: '#16162b', sort: 2 },
     { slot: 'cart', label_zh: '購物車', label_en: 'Cart', icon: 'shopping-cart-o', icon_active: 'shopping-cart', icon_bg: '#f6f3ee', icon_bg_active: '#16162b', text_color: '#8a8378', text_color_active: '#16162b', sort: 3 },
     { slot: 'account', label_zh: '我的', label_en: 'Account', icon: 'user-o', icon_active: 'user', icon_bg: '#f6f3ee', icon_bg_active: '#16162b', text_color: '#8a8378', text_color_active: '#16162b', sort: 4 },
   ],
 }
 
+/** 線框 → 實心（僅 Vant 實際存在的 glyph） */
 const FILLED: Record<string, string> = {
-  'home-o': 'home',
+  'home-o': 'wap-home',
+  'wap-home-o': 'wap-home',
   'shopping-cart-o': 'shopping-cart',
   'user-o': 'user',
+}
+
+/** 歷史錯誤名：Vant 4 沒有 `home` 實心圖 */
+const ICON_ALIAS: Record<string, string> = {
+  home: 'wap-home',
 }
 
 const CACHE = 'sm_tabbar'
@@ -58,21 +66,34 @@ function readCache(): TabbarConfig | null {
   }
 }
 
-/** 舊配置 icon/icon_active 相同且底色過近時，升級為可辨識的選中態 */
+function resolveIcon(name: string): string {
+  const n = (name || '').trim()
+  if (!n) return n
+  if (ICON_ALIAS[n]) return ICON_ALIAS[n]
+  return n
+}
+
+/** 舊配置：無效 home、icon/icon_active 相同、底色過近 → 升級為可辨識選中態 */
 function normalizeConfig(raw: TabbarConfig): TabbarConfig {
   return {
     bar_bg: raw.bar_bg || builtin.bar_bg,
     items: (raw.items || []).map((item) => {
       const fallback = builtin.items.find((b) => b.slot === item.slot)
-      let iconActive = item.icon_active || item.icon
-      if (iconActive === item.icon && FILLED[item.icon]) {
-        iconActive = FILLED[item.icon]
+      let icon = resolveIcon(item.icon)
+      let iconActive = resolveIcon(item.icon_active || item.icon)
+      if (iconActive === icon && FILLED[icon]) {
+        iconActive = FILLED[icon]
+      }
+      // 首頁選中仍指向不存在的 home 時強制 wap-home
+      if (item.slot === 'home' && (iconActive === 'home' || !iconActive)) {
+        iconActive = 'wap-home'
       }
       const sameBg =
         (item.icon_bg_active || '').toLowerCase() === (item.icon_bg || '').toLowerCase() ||
         (item.icon_bg_active || '').toLowerCase() === '#efeae3'
       return {
         ...item,
+        icon,
         icon_active: iconActive,
         icon_bg_active: sameBg ? (fallback?.icon_bg_active ?? '#16162b') : item.icon_bg_active,
         text_color_active: item.text_color_active || fallback?.text_color_active || '#16162b',

@@ -87,18 +87,36 @@ class TabbarService
 
     private function present(array $row): array
     {
+        $icon = $this->normalizeIconName((string) $row['icon']);
+        $iconActive = $this->normalizeIconName((string) $row['icon_active']);
+        // Vant 4 無實心 home；歷史庫存 home → wap-home，避免選中只剩空圓
+        if ((string) $row['slot'] === 'home' && ($iconActive === '' || $iconActive === 'home')) {
+            $iconActive = 'wap-home';
+        }
+
         return [
             'slot'              => (string) $row['slot'],
             'label_zh'          => (string) $row['label_zh'],
             'label_en'          => (string) $row['label_en'],
-            'icon'              => (string) $row['icon'],
-            'icon_active'       => (string) $row['icon_active'],
+            'icon'              => $icon,
+            'icon_active'       => $iconActive,
             'icon_bg'           => (string) $row['icon_bg'],
             'icon_bg_active'    => (string) $row['icon_bg_active'],
             'text_color'        => (string) $row['text_color'],
             'text_color_active' => (string) $row['text_color_active'],
             'sort'              => (int) $row['sort_order'],
         ];
+    }
+
+    /** @return non-empty-string|string */
+    private function normalizeIconName(string $name): string
+    {
+        $name = trim($name);
+        if ($name === 'home') {
+            return 'wap-home';
+        }
+
+        return $name;
     }
 
     private static function sortOf(string $slot): int
