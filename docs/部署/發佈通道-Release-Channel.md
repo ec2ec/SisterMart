@@ -27,6 +27,14 @@ Apache 包內已帶 `/_releases/.htaccess`（Deny from all）。
 
 ## 打包
 
+覆蓋安裝約定：**默認不打包 `/mock`、`/products`**（服務器已有）。僅當本次有新的靜態資源圖時：
+
+```bash
+INCLUDE_STATIC_ASSETS=1 pnpm build zip
+# 或
+pnpm build zip -- --with-static-assets
+```
+
 ```bash
 export RELEASE_HMAC_SECRET='與 VPS 相同'
 export RELEASE_TITLE='修復 PDP 購買欄'

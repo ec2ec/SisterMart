@@ -4,15 +4,19 @@
 # 用法（倉庫根）：
 #   RELEASE_HMAC_SECRET=... pnpm release pack
 #   RELEASE_HMAC_SECRET=... bash scripts/deploy/pack-release.sh [--migrate path.sql] [--skip-build]
+#   INCLUDE_STATIC_ASSETS=1 … pnpm release pack   # 本次有新 mock/products 圖時
 #
 # 產出：
 #   releases/sistermart-release-<stamp>.tar
 #   內含 package.zip + manifest.json + 可選 migrate.sql
 #
+# 覆蓋約定：默認 package 不含 /mock、/products（與 build-zip 一致）。
+#
 # 環境變量：
 #   RELEASE_HMAC_SECRET   必填（與 VPS sm-backend/.env 相同）
 #   RELEASE_TITLE / RELEASE_DESC / RELEASE_VERSION
 #   ZIP_OUT               預設先跑 build-zip 的產物
+#   INCLUDE_STATIC_ASSETS 傳給 build-zip（默認 0）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -48,7 +52,12 @@ fi
 
 ZIP_OUT="${ZIP_OUT:-$ROOT/releases/sistermart-vps-root.zip}"
 if [[ "$SKIP_BUILD" != "1" ]]; then
-  bash "$ROOT/scripts/deploy/build-zip.sh" zip
+  # 透傳靜態資源開關（默認不帶 mock/products）
+  if [[ "${INCLUDE_STATIC_ASSETS:-0}" == "1" ]]; then
+    bash "$ROOT/scripts/deploy/build-zip.sh" zip --with-static-assets
+  else
+    bash "$ROOT/scripts/deploy/build-zip.sh" zip
+  fi
 fi
 [[ -f "$ZIP_OUT" ]] || { echo "缺少 $ZIP_OUT" >&2; exit 1; }
 

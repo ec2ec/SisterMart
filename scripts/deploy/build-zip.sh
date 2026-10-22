@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-# SisterMart：構建前端，可選打完整 VPS 根目錄 zip。
+# SisterMart：構建前端，可選打 VPS 根目錄覆蓋 zip。
 #
 # 用法（倉庫根目錄）：
 #   pnpm build          # 只構建 H5 + Admin
 #   pnpm build zip      # 構建 + 打 releases/sistermart-vps-root.zip
 #   pnpm zip            # 用已有 dist 只打包（不重建）
+#   pnpm build zip -- --with-static-assets   # 本次含新 mock/products 圖時再帶上
+#
+# 覆蓋安裝約定：
+#   默認不打包 /mock、/products（服務器已有且未更新，避免白傳）。
+#   僅當本次更新涉及新的靜態資源圖時，設 INCLUDE_STATIC_ASSETS=1 或傳 --with-static-assets。
 #
 # 環境變量：
-#   VITE_API_BASE   預設 https://sistermart.vip/api/index.php
-#   ZIP_OUT         預設 releases/sistermart-vps-root.zip
+#   VITE_API_BASE              預設 https://sistermart.vip/api/index.php
+#   ZIP_OUT                    預設 releases/sistermart-vps-root.zip
+#   INCLUDE_STATIC_ASSETS      1=打入 mock/ + products/（默認 0）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -19,11 +25,35 @@ ZIP_OUT="${ZIP_OUT:-$ROOT/releases/sistermart-vps-root.zip}"
 STAGING="${TMPDIR:-/tmp}/sistermart-vps-pack-$$"
 DO_BUILD=1
 DO_ZIP=0
+INCLUDE_STATIC_ASSETS="${INCLUDE_STATIC_ASSETS:-0}"
 
 # pnpm build zip  → $1=zip
 # pnpm zip        → 腳本名/第一參為 zip-only
 # pnpm build      → 只構建
 MODE="${1:-}"
+shift || true
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --with-static-assets|with-static-assets)
+      INCLUDE_STATIC_ASSETS=1
+      shift
+      ;;
+    --no-static-assets|no-static-assets)
+      INCLUDE_STATIC_ASSETS=0
+      shift
+      ;;
+    --) shift ;;
+    zip|build|pack|release)
+      # pnpm 多餘參數
+      shift
+      ;;
+    *)
+      echo "未知參數: $1（可用 --with-static-assets）" >&2
+      exit 1
+      ;;
+  esac
+done
+
 case "$MODE" in
   zip)
     DO_ZIP=1
@@ -40,7 +70,7 @@ case "$MODE" in
     DO_ZIP=0
     ;;
   *)
-    echo "用法: pnpm build | pnpm build zip | pnpm zip" >&2
+    echo "用法: pnpm build | pnpm build zip | pnpm zip [-- --with-static-assets]" >&2
     exit 1
     ;;
 esac
@@ -74,7 +104,7 @@ pack_zip() {
   [[ -d "$api/vendor" ]] || { echo "缺少 apps/api/vendor，請在 apps/api 執行 composer install" >&2; exit 1; }
 
   rm -rf "$STAGING"
-  mkdir -p "$STAGING/admin" "$STAGING/api" "$STAGING/sm-backend" "$STAGING/mock" "$STAGING/products" "$STAGING/vps-spa"
+  mkdir -p "$STAGING/admin" "$STAGING/api" "$STAGING/sm-backend" "$STAGING/vps-spa"
 
   echo "==> Stage H5 → zip root"
   cp -a "$h5_dist"/. "$STAGING/"
@@ -88,16 +118,21 @@ pack_zip() {
     cp "$ROOT/apps/admin/public/robots.txt" "$STAGING/admin/robots.txt"
   fi
 
-  # mock：優先 dist/mock，否則 design-assets
-  if [[ -d "$h5_dist/mock" && -n "$(ls -A "$h5_dist/mock" 2>/dev/null || true)" ]]; then
-    cp -a "$h5_dist/mock"/. "$STAGING/mock/"
-  elif [[ -d "$mock_src" ]]; then
-    cp -a "$mock_src"/. "$STAGING/mock/"
-  fi
-
-  # products：H5 public（分類子圖等）
-  if [[ -d "$products_src" ]]; then
-    cp -a "$products_src"/. "$STAGING/products/"
+  # 覆蓋安裝：默認不帶 mock/products（dist 可能已從 public 拷入，需剔除）
+  if [[ "$INCLUDE_STATIC_ASSETS" == "1" ]]; then
+    echo "==> INCLUDE_STATIC_ASSETS=1 → 打入 /mock + /products"
+    mkdir -p "$STAGING/mock" "$STAGING/products"
+    if [[ -d "$h5_dist/mock" && -n "$(ls -A "$h5_dist/mock" 2>/dev/null || true)" ]]; then
+      cp -a "$h5_dist/mock"/. "$STAGING/mock/"
+    elif [[ -d "$mock_src" ]]; then
+      cp -a "$mock_src"/. "$STAGING/mock/"
+    fi
+    if [[ -d "$products_src" ]]; then
+      cp -a "$products_src"/. "$STAGING/products/"
+    fi
+  else
+    echo "==> 跳過 /mock、/products（覆蓋安裝約定；需要時加 --with-static-assets）"
+    rm -rf "$STAGING/mock" "$STAGING/products"
   fi
 
   echo "==> Stage Admin → /admin"
@@ -167,13 +202,23 @@ Deny from all
 HT
   : > "$STAGING/_releases/index.html"
 
+  local assets_note="mock/products: OMITTED (server already has them)"
+  if [[ "$INCLUDE_STATIC_ASSETS" == "1" ]]; then
+    assets_note="mock/products: INCLUDED"
+  fi
+
   cat > "$STAGING/README-DEPLOY.txt" <<EOF
 SisterMart VPS root overlay — $(date -u +%Y-%m-%dT%H:%MZ)
 
-Contains: H5 (/) + Admin (/admin) + mock + products + API (/api/index.php → sm-backend)
+Contains: H5 (/) + Admin (/admin) + API (/api/index.php → sm-backend)
+Static:   $assets_note
 
-unzip -o $(basename "$ZIP_OUT")   # at website ROOT
+unzip -o $(basename "$ZIP_OUT")   # at website ROOT (overlay; does not delete existing mock/products)
 Then hard refresh. Ensure sm-backend/.env exists on server (not shipped).
+
+Default pack skips /mock and /products. New image assets:
+  INCLUDE_STATIC_ASSETS=1 pnpm build zip
+  # or: pnpm build zip -- --with-static-assets
 
 Release channel: set RELEASE_ENABLED=true and RELEASE_HMAC_SECRET in sm-backend/.env
 Pack: RELEASE_HMAC_SECRET=... pnpm release pack
