@@ -415,7 +415,10 @@ async function share() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100%;
+  /* 覆蓋全局 .page：疊層無 Tabbar，勿留底欄空白；勿用 100vh（易高出 fixed 疊層） */
+  min-height: 0;
+  max-height: 100%;
+  padding-bottom: 0;
   background: #fff;
   box-sizing: border-box;
 }
