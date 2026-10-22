@@ -180,6 +180,7 @@ function onChange(name: string | number) {
     :model-value="active"
     active-color="#16162b"
     inactive-color="#8a8378"
+    :safe-area-inset-bottom="false"
     :style="{ background: config.bar_bg, '--van-tabbar-background': config.bar_bg }"
     @change="onChange"
   >
@@ -215,12 +216,12 @@ function onChange(name: string | number) {
 
 <style scoped>
 /* 根節點即 .van-tabbar：勿用 :deep 後代選擇器（會選不到自身）
- * content-box：上下 padding 疊在 height 外；safe-area 仍由 van-safe-area-bottom 處理 */
+ * content-box：上下 padding 疊在 height 外；safe-area 併入 padding-bottom（已關 Vant 默認） */
 :deep(.van-tabbar),
 .van-tabbar {
   height: var(--van-tabbar-height);
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-top: var(--sm-tabbar-pad-y, 0.5rem);
+  padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
   box-sizing: content-box;
 }
 

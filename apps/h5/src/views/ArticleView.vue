@@ -44,7 +44,8 @@ const body = computed(() => (article.value ? text(article.value.body) : ''))
 </script>
 
 <template>
-  <div class="page article">
+  <!-- 疊層勿用全局 .page（會預留 Tabbar 底距） -->
+  <div class="article">
     <SubPageNav :title="title" />
     <article v-if="article">
       <h1>{{ title }}</h1>

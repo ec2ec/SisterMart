@@ -119,8 +119,10 @@ function buy() {
   justify-content: flex-end;
   align-items: center;
   /* 與首頁 tabbar / 商詳 buybar 同垂直內邊距 */
-  padding: 0.5rem 0.75rem;
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
+  padding-top: var(--sm-tabbar-pad-y, 0.5rem);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
   background: #fff;
   border-top: 1px solid #f0f0f0;
   box-sizing: content-box;

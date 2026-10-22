@@ -262,7 +262,8 @@ async function share() {
 </script>
 
 <template>
-  <div v-if="product" class="page pdp">
+  <!-- 勿用全局 .page：其 padding-bottom 為 Tabbar 預留，疊層商詳會在購買欄下留白 -->
+  <div v-if="product" class="pdp">
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
     <div class="pdp-scroll">
@@ -422,10 +423,10 @@ async function share() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  /* 覆蓋全局 .page：疊層無 Tabbar，勿留底欄空白；勿用 100vh（易高出 fixed 疊層） */
+  /* 無全局 .page：勿用 100vh（易高出 fixed 疊層）；底部不預留 Tabbar */
   min-height: 0;
   max-height: 100%;
-  padding-bottom: 0;
+  padding-bottom: 0 !important;
   background: #fff;
   box-sizing: border-box;
 }
@@ -673,9 +674,11 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  /* 與首頁 tabbar 同垂直內邊距 */
-  padding: 0.5rem 0.75rem;
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
+  /* 與首頁 tabbar 同垂直內邊距（--sm-tabbar-pad-y）；safe-area 疊加在底邊 */
+  padding-top: var(--sm-tabbar-pad-y, 0.5rem);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
   background: #fff;
   border-top: 0.0625rem solid var(--sm-border);
   z-index: 210;

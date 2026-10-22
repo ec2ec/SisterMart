@@ -20,7 +20,9 @@ html {
   --sm-brand-sister: #de46ad;
   --sm-radius: 0.75rem;
   --sm-header-h: calc(3.25rem + env(safe-area-inset-top, 0rem));
-  /* 頁面底部避讓 = 欄高 + 上下 padding（各 0.5rem）；safe-area 另加 */
+  /* Tabbar / 商詳 buybar 共用垂直內邊距 */
+  --sm-tabbar-pad-y: 0.5rem;
+  /* 頁面底部避讓 = 欄高 + 上下 padding；safe-area 另加（見 .page） */
   --sm-tabbar-h: 4.125rem;
   --van-primary-color: var(--sm-primary);
   --van-tabbar-height: 3.125rem;
