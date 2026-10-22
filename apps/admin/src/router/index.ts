@@ -19,6 +19,7 @@ import AftersalesView from '../views/AftersalesView.vue'
 import TabbarView from '../views/TabbarView.vue'
 import CouponsView from '../views/CouponsView.vue'
 import PointsView from '../views/PointsView.vue'
+import PointsMallEditView from '../views/PointsMallEditView.vue'
 import MembersView from '../views/MembersView.vue'
 import LevelsView from '../views/LevelsView.vue'
 import AdminsView from '../views/AdminsView.vue'
@@ -60,6 +61,11 @@ export const router = createRouter({
         { path: '/cms/newsletter', component: NewsletterView, meta: { title: '訂閱名單' } },
         { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
         { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },
+        {
+          path: '/marketing/points-mall/:id',
+          component: PointsMallEditView,
+          meta: { title: '積分商品編輯' },
+        },
         { path: '/marketing/seckill', component: SeckillView, meta: { title: '秒殺活動' } },
         { path: '/marketing/distribution', component: DistributionView, meta: { title: '分銷' } },
         { path: '/settings/tabbar', component: TabbarView, meta: { title: '底部導航' } },
