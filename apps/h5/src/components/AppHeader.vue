@@ -162,11 +162,11 @@ function onBack() {
 }
 
 .logo-sister {
-  color: #111;
+  color: var(--sm-brand-sister);
 }
 
 .overlay .logo-sister {
-  color: #111;
+  color: var(--sm-brand-sister);
 }
 
 .logo-mart {

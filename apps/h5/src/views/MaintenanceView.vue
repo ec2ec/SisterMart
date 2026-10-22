@@ -98,7 +98,7 @@ const windowText = computed(() => {
   line-height: 1;
 }
 .sister {
-  color: #111;
+  color: var(--sm-brand-sister);
 }
 .mart {
   color: var(--sm-accent);

@@ -12,7 +12,7 @@ const { t } = useI18n()
 <template>
   <div class="auth">
     <div class="logo">
-      <span>{{ t('brandSister') }}</span><span class="mart">{{ t('brandMart') }}</span>
+      <span class="sister">{{ t('brandSister') }}</span><span class="mart">{{ t('brandMart') }}</span>
     </div>
     <h1>{{ title }}</h1>
     <p v-if="hint" class="hint">{{ hint }}</p>
@@ -33,6 +33,10 @@ const { t } = useI18n()
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+.sister {
+  color: var(--sm-brand-sister);
 }
 
 .mart {

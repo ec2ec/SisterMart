@@ -16,6 +16,8 @@ html {
   --sm-badge-alt: #6b4a2a;
   --sm-accent: #c45c4a;
   --sm-danger: #c45c4a;
+  /* 品牌標題「Sister」字色（非正文內容） */
+  --sm-brand-sister: #de46ad;
   --sm-radius: 0.75rem;
   --sm-header-h: calc(3.25rem + env(safe-area-inset-top, 0rem));
   /* 頁面底部避讓 = 欄高 + 上下 padding（各 0.5rem）；safe-area 另加 */
