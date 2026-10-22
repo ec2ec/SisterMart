@@ -214,6 +214,16 @@ function onChange(name: string | number) {
 </template>
 
 <style scoped>
+/* 根節點即 .van-tabbar：勿用 :deep 後代選擇器（會選不到自身）
+ * content-box：上下 padding 疊在 height 外；safe-area 仍由 van-safe-area-bottom 處理 */
+:deep(.van-tabbar),
+.van-tabbar {
+  height: var(--van-tabbar-height);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  box-sizing: content-box;
+}
+
 .bubble {
   width: 1.75rem;
   height: 1.75rem;

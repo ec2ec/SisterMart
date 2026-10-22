@@ -132,7 +132,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.06')
+  console.log('新包 v1.07')
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
@@ -353,6 +353,7 @@ const tabLabel = (tab: HomeRecTab) => {
 
 <template>
   <div class="page home">
+    <AppHeader show-logo />
     <section class="hero-wrap">
       <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
         <van-swipe-item v-for="b in banners" :key="b.id">
@@ -361,7 +362,6 @@ const tabLabel = (tab: HomeRecTab) => {
           </button>
         </van-swipe-item>
       </van-swipe>
-      <AppHeader show-logo variant="overlay" />
     </section>
 
     <button
@@ -457,6 +457,7 @@ const tabLabel = (tab: HomeRecTab) => {
 
 <style scoped>
 .home {
+  padding-top: var(--sm-header-h);
   padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
 }
 .hero-wrap {

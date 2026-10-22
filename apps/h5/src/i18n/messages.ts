@@ -188,6 +188,7 @@ export const messages = {
       stRejected: '已駁回',
     },
     account: {
+      guest: '遊客',
       spent: '★★★ 累計 HK$ {n}',
       balance: '餘額',
       coupons: '優惠券',
@@ -664,6 +665,7 @@ export const messages = {
       stRejected: 'Rejected',
     },
     account: {
+      guest: 'Guest',
       spent: '★★★ Spent HK$ {n}',
       balance: 'Balance',
       coupons: 'Coupons',
