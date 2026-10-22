@@ -717,17 +717,11 @@ class ReleaseService
             }
         }
         try {
+            // 共享主機常 disable_functions=exec，禁止 shell tar；僅用 PharData
             $phar = new \PharData($pharPath);
             $phar->extractTo($dest, null, true);
         } catch (\Throwable $e) {
-            // 回退到系統 tar
-            $cmd = 'tar -xf ' . escapeshellarg($tarPath) . ' -C ' . escapeshellarg($dest) . ' 2>&1';
-            $out = [];
-            $code = 0;
-            exec($cmd, $out, $code);
-            if ($code !== 0) {
-                throw new ApiException('INVALID', '解壓 tar 失敗：' . implode(' ', $out), 422, 42203);
-            }
+            throw new ApiException('INVALID', '解壓 tar 失敗：' . $e->getMessage(), 422, 42203);
         } finally {
             if ($tmpGz && is_file($tmpGz)) {
                 @unlink($tmpGz);
@@ -927,19 +921,18 @@ class ReleaseService
                 $paths[] = $p;
             }
         }
-        $tar = $dir . '/files.tgz';
+        // 用 ZipArchive（不依賴 exec/tar；共享主機常禁 shell）
+        $zipPath = $dir . '/files.zip';
         if ($paths !== []) {
-            $cmd = 'tar -C ' . escapeshellarg($site)
-                . ' --exclude=sm-backend/.env --exclude=sm-backend/runtime --exclude=sm-backend/public/storage'
-                . ' -czf ' . escapeshellarg($tar) . ' ' . implode(' ', array_map('escapeshellarg', $paths)) . ' 2>&1';
-            $out = [];
-            $code = 0;
-            exec($cmd, $out, $code);
-            if ($code !== 0 || !is_file($tar)) {
-                throw new ApiException('SERVER', '文件快照失敗：' . implode(' ', $out), 500, 50001);
-            }
+            $this->zipSnapshotFromSite($site, $paths, $zipPath);
+            $this->logLine($releaseId, $log, 'snapshot zip ok bytes=' . (filesize($zipPath) ?: 0));
         } else {
-            file_put_contents($tar, '');
+            // 空快照：建一個空 zip
+            $z = new ZipArchive();
+            if ($z->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                throw new ApiException('SERVER', '無法創建空快照', 500, 50001);
+            }
+            $z->close();
             $this->logLine($releaseId, $log, 'snapshot empty files (fresh site)');
         }
 
@@ -954,8 +947,9 @@ class ReleaseService
             'release_id' => $releaseId,
             'created_at' => gmdate('c'),
             'created_by' => $adminId,
-            'has_files' => is_file($tar) && (filesize($tar) ?: 0) > 0,
+            'has_files' => is_file($zipPath) && (filesize($zipPath) ?: 0) > 22,
             'has_db' => $dbFile !== null && is_file($dbFile),
+            'files_format' => 'zip',
         ];
         $this->writeJson($dir . '/meta.json', $meta);
         $this->pruneSnapshots(5);
@@ -963,41 +957,119 @@ class ReleaseService
         return $snapId;
     }
 
+    /**
+     * 純 PHP 打快照 zip（排除 .env / runtime / storage）。
+     *
+     * @param list<string> $paths 相對網站根的白名單路徑
+     */
+    private function zipSnapshotFromSite(string $site, array $paths, string $zipPath): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new ApiException('SERVER', '無法創建文件快照 zip', 500, 50001);
+        }
+        $excludePrefixes = [
+            'sm-backend/.env',
+            'sm-backend/runtime/',
+            'sm-backend/public/storage/',
+        ];
+        $count = 0;
+        foreach ($paths as $relRoot) {
+            $abs = $site . '/' . $relRoot;
+            if (is_file($abs)) {
+                if ($this->snapshotPathExcluded($relRoot, $excludePrefixes)) {
+                    continue;
+                }
+                $zip->addFile($abs, $relRoot);
+                $count++;
+                continue;
+            }
+            if (!is_dir($abs)) {
+                continue;
+            }
+            $it = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($abs, \FilesystemIterator::SKIP_DOTS),
+            );
+            foreach ($it as $file) {
+                /** @var \SplFileInfo $file */
+                if (!$file->isFile()) {
+                    continue;
+                }
+                $full = $file->getPathname();
+                $rel = ltrim(str_replace('\\', '/', substr($full, strlen($site))), '/');
+                if ($this->snapshotPathExcluded($rel, $excludePrefixes)) {
+                    continue;
+                }
+                $zip->addFile($full, $rel);
+                $count++;
+            }
+        }
+        $zip->close();
+        if ($count === 0 || !is_file($zipPath)) {
+            throw new ApiException('SERVER', '文件快照為空或寫入失敗', 500, 50001);
+        }
+    }
+
+    /** @param list<string> $excludePrefixes */
+    private function snapshotPathExcluded(string $rel, array $excludePrefixes): bool
+    {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        foreach ($excludePrefixes as $ex) {
+            if ($rel === rtrim($ex, '/') || str_starts_with($rel, $ex)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @param list<string> $log */
     private function dumpDb(string $outGz, array &$log): void
     {
-        $host = (string) env('DB_HOST', '127.0.0.1');
-        $port = (string) env('DB_PORT', '3306');
-        $name = (string) env('DB_NAME', '');
-        $user = (string) env('DB_USER', '');
-        $pass = (string) env('DB_PASS', '');
-        if ($name === '' || $user === '') {
-            throw new ApiException('CONFIG', '數據庫配置不完整，無法備份', 500, 50002);
+        // 純 PDO，不依賴 mysqldump / exec
+        try {
+            /** @var \PDO $pdo */
+            $pdo = Db::connect()->getPdo();
+        } catch (\Throwable $e) {
+            throw new ApiException('CONFIG', '無法連接數據庫做備份：' . $e->getMessage(), 500, 50002);
         }
-        $tmpCnf = tempnam(sys_get_temp_dir(), 'smcnf');
-        if ($tmpCnf === false) {
-            throw new ApiException('SERVER', '無法創建憑證臨時文件', 500, 50001);
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $dbName = (string) env('DB_NAME', '');
+        $sql = "-- SisterMart PHP dump\n-- db={$dbName}\nSET FOREIGN_KEY_CHECKS=0;\n\n";
+        $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($tables as $table) {
+            $table = (string) $table;
+            $create = $pdo->query('SHOW CREATE TABLE `' . str_replace('`', '``', $table) . '`')->fetch(\PDO::FETCH_ASSOC);
+            $createSql = (string) ($create['Create Table'] ?? $create['Create View'] ?? '');
+            if ($createSql === '') {
+                continue;
+            }
+            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n{$createSql};\n\n";
+            $rows = $pdo->query('SELECT * FROM `' . str_replace('`', '``', $table) . '`');
+            while ($row = $rows->fetch(\PDO::FETCH_ASSOC)) {
+                $cols = [];
+                $vals = [];
+                foreach ($row as $k => $v) {
+                    $cols[] = '`' . str_replace('`', '``', (string) $k) . '`';
+                    if ($v === null) {
+                        $vals[] = 'NULL';
+                    } else {
+                        $vals[] = $pdo->quote((string) $v);
+                    }
+                }
+                $sql .= 'INSERT INTO `' . $table . '` (' . implode(',', $cols) . ') VALUES (' . implode(',', $vals) . ");\n";
+            }
+            $sql .= "\n";
         }
-        file_put_contents($tmpCnf, "[client]\nhost={$host}\nport={$port}\nuser={$user}\npassword=\"{$pass}\"\n");
-        $sqlTmp = $outGz . '.sql';
-        $cmd = 'mysqldump --defaults-extra-file=' . escapeshellarg($tmpCnf)
-            . ' --single-transaction --routines --no-tablespaces '
-            . escapeshellarg($name) . ' > ' . escapeshellarg($sqlTmp) . ' 2>&1';
-        $out = [];
-        $code = 0;
-        exec($cmd, $out, $code);
-        @unlink($tmpCnf);
-        if ($code !== 0 || !is_file($sqlTmp) || (filesize($sqlTmp) ?: 0) < 10) {
-            @unlink($sqlTmp);
-            throw new ApiException('SERVER', 'mysqldump 失敗：' . implode(' ', $out), 500, 50001);
+        $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+        $encoded = gzencode($sql, 6);
+        if ($encoded === false) {
+            throw new ApiException('SERVER', '壓縮 DB 快照失敗', 500, 50001);
         }
-        $raw = file_get_contents($sqlTmp);
-        @unlink($sqlTmp);
-        if ($raw === false) {
-            throw new ApiException('SERVER', '讀取 dump 失敗', 500, 50001);
+        if (file_put_contents($outGz, $encoded) === false) {
+            throw new ApiException('SERVER', '寫入 DB 快照失敗', 500, 50001);
         }
-        file_put_contents($outGz, gzencode($raw, 6));
-        $this->logLine('db', $log, 'mysqldump ok bytes=' . strlen($raw));
+        $this->logLine('db', $log, 'php dump ok tables=' . count($tables) . ' bytes=' . strlen($sql));
     }
 
     /** @param list<string> $log */
@@ -1006,19 +1078,66 @@ class ReleaseService
         if (!preg_match('/^snap_[A-Za-z0-9_]+$/', $snapId)) {
             throw new ApiException('INVALID', '無效 snapshot id', 422, 42201);
         }
-        $tar = $this->releasesRoot() . '/snapshots/' . $snapId . '/files.tgz';
-        if (!is_file($tar) || (filesize($tar) ?: 0) === 0) {
-            throw new ApiException('INVALID', '快照無文件可還原', 409, 40902);
-        }
+        $base = $this->releasesRoot() . '/snapshots/' . $snapId;
+        $zipPath = $base . '/files.zip';
+        $tgzPath = $base . '/files.tgz';
         $site = $this->siteRoot();
-        $cmd = 'tar -C ' . escapeshellarg($site) . ' -xzf ' . escapeshellarg($tar) . ' 2>&1';
-        $out = [];
-        $code = 0;
-        exec($cmd, $out, $code);
-        if ($code !== 0) {
-            throw new ApiException('SERVER', '還原文件失敗：' . implode(' ', $out), 500, 50001);
+
+        if (is_file($zipPath) && (filesize($zipPath) ?: 0) > 22) {
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath) !== true) {
+                throw new ApiException('SERVER', '無法打開快照 zip', 500, 50001);
+            }
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                if ($stat === false) {
+                    continue;
+                }
+                $name = str_replace('\\', '/', (string) $stat['name']);
+                if ($name === '' || str_ends_with($name, '/')) {
+                    continue;
+                }
+                if (str_contains($name, '..') || str_starts_with($name, '/')) {
+                    $zip->close();
+                    throw new ApiException('INVALID', '快照含非法路徑', 422, 42205);
+                }
+            }
+            if (!$zip->extractTo($site)) {
+                $zip->close();
+                throw new ApiException('SERVER', '還原文件失敗（zip）', 500, 50001);
+            }
+            $zip->close();
+            $this->logLine('rollback', $log, 'files restored from zip ' . $snapId);
+
+            return;
         }
-        $this->logLine('rollback', $log, 'files restored from ' . $snapId);
+
+        if (is_file($tgzPath) && (filesize($tgzPath) ?: 0) > 0) {
+            // 舊格式：嘗試 PharData（仍不依賴 exec）
+            $tmp = $base . '/_restore.tar';
+            $raw = file_get_contents($tgzPath);
+            if ($raw === false) {
+                throw new ApiException('SERVER', '讀取 tgz 失敗', 500, 50001);
+            }
+            $decoded = @gzdecode($raw);
+            if ($decoded === false) {
+                throw new ApiException('SERVER', '解壓 tgz 失敗', 500, 50001);
+            }
+            file_put_contents($tmp, $decoded);
+            try {
+                $phar = new \PharData($tmp);
+                $phar->extractTo($site, null, true);
+            } catch (\Throwable $e) {
+                @unlink($tmp);
+                throw new ApiException('SERVER', '還原 tgz 失敗：' . $e->getMessage(), 500, 50001);
+            }
+            @unlink($tmp);
+            $this->logLine('rollback', $log, 'files restored from tgz ' . $snapId);
+
+            return;
+        }
+
+        throw new ApiException('INVALID', '快照無文件可還原', 409, 40902);
     }
 
     /** @param list<string> $log */
@@ -1028,39 +1147,22 @@ class ReleaseService
         if (!is_file($gz)) {
             throw new ApiException('INVALID', '快照無數據庫備份', 409, 40902);
         }
-        $host = (string) env('DB_HOST', '127.0.0.1');
-        $port = (string) env('DB_PORT', '3306');
-        $name = (string) env('DB_NAME', '');
-        $user = (string) env('DB_USER', '');
-        $pass = (string) env('DB_PASS', '');
-        $tmpCnf = tempnam(sys_get_temp_dir(), 'smcnf');
-        if ($tmpCnf === false) {
-            throw new ApiException('SERVER', '無法創建憑證臨時文件', 500, 50001);
-        }
-        file_put_contents($tmpCnf, "[client]\nhost={$host}\nport={$port}\nuser={$user}\npassword=\"{$pass}\"\n");
-        $sqlTmp = $gz . '.restore.sql';
         $raw = file_get_contents($gz);
         if ($raw === false) {
-            @unlink($tmpCnf);
             throw new ApiException('SERVER', '讀取 db 快照失敗', 500, 50001);
         }
         $sql = @gzdecode($raw);
         if ($sql === false) {
-            @unlink($tmpCnf);
             throw new ApiException('SERVER', '解壓 db 快照失敗', 500, 50001);
         }
-        file_put_contents($sqlTmp, $sql);
-        $cmd = 'mysql --defaults-extra-file=' . escapeshellarg($tmpCnf) . ' ' . escapeshellarg($name)
-            . ' < ' . escapeshellarg($sqlTmp) . ' 2>&1';
-        $out = [];
-        $code = 0;
-        exec($cmd, $out, $code);
-        @unlink($tmpCnf);
-        @unlink($sqlTmp);
-        if ($code !== 0) {
-            throw new ApiException('SERVER', '還原數據庫失敗：' . implode(' ', $out), 500, 50001);
+        $tmp = $gz . '.restore.sql';
+        file_put_contents($tmp, $sql);
+        try {
+            $n = $this->runSqlFile($tmp, $log);
+            $this->logLine('rollback', $log, 'db restored statements=' . $n . ' from ' . $snapId);
+        } finally {
+            @unlink($tmp);
         }
-        $this->logLine('rollback', $log, 'db restored from ' . $snapId);
     }
 
     /** @param list<string> $log */
