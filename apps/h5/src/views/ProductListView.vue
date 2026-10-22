@@ -5,17 +5,44 @@ import { useRoute } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import {
+  fetchCategories,
   fetchHomeSectionProducts,
   fetchProducts,
+  type CategoryNode,
+  type Localized,
   type ProductCard as Card,
 } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
 const list = ref<Card[]>([])
 const title = ref(t('pages.productList'))
+
+function findCategoryName(nodes: CategoryNode[], code: string): Localized | null {
+  for (const node of nodes) {
+    if (node.code === code) return node.name
+    const child = findCategoryName(node.children || [], code)
+    if (child) return child
+  }
+  return null
+}
+
+async function resolveCategoryTitle(category: string): Promise<string> {
+  if (!category) return t('pages.productList')
+  try {
+    const nodes = await fetchCategories()
+    const name = findCategoryName(nodes, category)
+    if (name) {
+      const label = text(name)
+      if (label) return label
+    }
+  } catch {
+    /* 標題回退為通用列表名 */
+  }
+  return t('pages.productList')
+}
 
 async function load() {
   const category = String(route.query.category || '')
@@ -28,11 +55,11 @@ async function load() {
   }
   const data = await fetchProducts(category ? { category } : {})
   list.value = data.items
-  title.value = category || t('pages.productList')
+  title.value = await resolveCategoryTitle(category)
 }
 
 onMounted(load)
-watch(() => [route.query.category, route.query.section], load)
+watch(() => [route.query.category, route.query.section, locale.value], load)
 </script>
 
 <template>

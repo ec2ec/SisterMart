@@ -214,6 +214,14 @@ function onChange(name: string | number) {
 </template>
 
 <style scoped>
+/* content-box：上下 padding 疊在 height 外；safe-area 仍由 van-safe-area-bottom 處理 */
+:deep(.van-tabbar) {
+  height: var(--van-tabbar-height);
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+  box-sizing: content-box;
+}
+
 .bubble {
   width: 1.75rem;
   height: 1.75rem;
