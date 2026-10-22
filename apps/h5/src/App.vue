@@ -86,6 +86,7 @@ onMounted(() => {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  contain: layout paint;
+  /* 勿用 contain:paint — 會讓子元素 position:fixed 相對疊層定位，隨滾動「跟著走」 */
+  contain: layout;
 }
 </style>

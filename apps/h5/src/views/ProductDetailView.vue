@@ -262,6 +262,8 @@ async function share() {
 <template>
   <div v-if="product" class="page pdp">
     <AppHeader show-back @back="closeOverlay" />
+    <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
+    <div class="pdp-scroll">
     <van-swipe
       :key="product.id"
       ref="gallerySwipe"
@@ -376,6 +378,7 @@ async function share() {
     <div v-if="related.length" class="grid">
       <ProductCard v-for="item in related" :key="item.id" :product="item" />
     </div>
+    </div>
 
     <div class="buybar">
       <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
@@ -408,11 +411,23 @@ async function share() {
 
 <style scoped>
 .pdp {
-  /* 疊層下無 Tabbar：只留底部購買欄 + safe-area */
-  padding-top: var(--sm-header-h);
-  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0rem));
-  background: #fff;
+  /* 疊層內自管滾動：購買欄用 flex 釘底，避免 fixed 被 overflow 祖先帶著滑 */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   min-height: 100%;
+  background: #fff;
+  box-sizing: border-box;
+}
+.pdp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-top: var(--sm-header-h);
+  padding-bottom: 0.75rem;
 }
 .gallery {
   height: 17.5rem;
@@ -651,10 +666,7 @@ h2 {
   padding: 0 0.75rem 1rem;
 }
 .buybar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: auto auto 1fr 1fr;
   gap: 0.5rem;
