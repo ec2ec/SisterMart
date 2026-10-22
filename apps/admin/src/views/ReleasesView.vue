@@ -170,7 +170,8 @@ async function onFile(ev: Event) {
 }
 
 async function sha256Hex(data: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', data)
+  const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+  const hash = await crypto.subtle.digest('SHA-256', ab)
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
