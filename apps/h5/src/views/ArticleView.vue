@@ -58,8 +58,11 @@ const body = computed(() => (article.value ? text(article.value.body) : ''))
 
 <style scoped>
 .article {
+  min-height: 100%;
+  padding-bottom: 0 !important;
   background: #fff;
   contain: layout style;
+  box-sizing: border-box;
 }
 article {
   padding: 1rem 1rem 2rem;
