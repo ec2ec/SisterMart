@@ -82,6 +82,11 @@ a {
   text-decoration: none;
 }
 
+/* 圖標按鈕：Vant 圖標統一粗體（覆蓋 vant-icon 默認 normal） */
+.van-icon {
+  font-weight: 700 !important;
+}
+
 .page {
   min-height: 100vh;
   padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
