@@ -31,6 +31,12 @@ class ReleaseService
         'favicon.ico',
         'robots.txt',
         '.htaccess',
+        'site.webmanifest',
+        'icons.svg',
+        'apple-touch-icon.png',
+        'apple-touch-icon-180x180.png',
+        'android-chrome-192x192.png',
+        'android-chrome-512x512.png',
         'assets/',
         'admin/',
         'api/',
@@ -829,8 +835,32 @@ class ReleaseService
                 return true;
             }
         }
+        // 根目錄常見靜態資源（favicon / PWA 圖標等）；manifest 未列全時仍放行
+        if ($this->isSafeRootStatic($rel)) {
+            return true;
+        }
 
         return false;
+    }
+
+    /** 僅允許網站根下單層安全靜態檔（無子路徑） */
+    private function isSafeRootStatic(string $rel): bool
+    {
+        if ($rel === '' || str_contains($rel, '/') || str_contains($rel, '\\')) {
+            return false;
+        }
+        if ($rel === '.htaccess' || $rel === 'site.webmanifest' || $rel === 'README-DEPLOY.txt') {
+            return true;
+        }
+        // favicon* / apple-touch-icon* / android-chrome* / icons.svg 等
+        if (preg_match('/^(favicon|apple-touch-icon|android-chrome)[a-zA-Z0-9._-]*\.(ico|png|svg)$/i', $rel)) {
+            return true;
+        }
+        if (preg_match('/^icons\.svg$/i', $rel)) {
+            return true;
+        }
+        // 其餘根目錄 png/ico/svg（防漏列）
+        return (bool) preg_match('/\.(png|ico|svg|webmanifest)$/i', $rel);
     }
 
     private function prefixMatch(string $rel, string $rule): bool

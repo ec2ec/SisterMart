@@ -103,6 +103,9 @@ $manifest = [
     'targets' => ['h5', 'admin', 'api', 'mock', 'products'],
     'path_whitelist' => [
         'index.html', 'favicon.svg', 'favicon.ico', 'robots.txt', '.htaccess',
+        'site.webmanifest', 'icons.svg',
+        'apple-touch-icon.png', 'apple-touch-icon-180x180.png',
+        'android-chrome-192x192.png', 'android-chrome-512x512.png',
         'assets/', 'admin/', 'api/', 'sm-backend/', 'mock/', 'products/', 'vps-spa/',
         'README-DEPLOY.txt',
     ],
