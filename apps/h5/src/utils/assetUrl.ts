@@ -11,8 +11,22 @@ export function assetOrigin(): string {
  */
 export function assetUrl(u: string): string {
   if (!u) return ''
-  if (/^https?:\/\//i.test(u) || u.startsWith('data:')) return u
-  const path = u.startsWith('/') ? u : `/${u}`
+  if (u.startsWith('data:')) return u
+  // 已是 files 代理（相對或絕對）
+  if (/\/api\/v1\/files\?path=/i.test(u)) {
+    if (/^https?:\/\//i.test(u)) return u
+    return `${apiBase.replace(/\/$/, '')}${u.startsWith('/') ? u : `/${u}`}`
+  }
+  let path = u
+  if (/^https?:\/\//i.test(u)) {
+    try {
+      const parsed = new URL(u)
+      path = parsed.pathname + parsed.search
+    } catch {
+      return u
+    }
+  }
+  path = path.startsWith('/') ? path : `/${path}`
   if (path.startsWith('/storage/')) {
     const rel = path.slice('/storage/'.length)
     return `${apiBase.replace(/\/$/, '')}/api/v1/files?path=${encodeURIComponent(rel)}`

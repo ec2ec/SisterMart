@@ -17,6 +17,7 @@ import {
 import { api } from '../api'
 import ProductMediaGallery, { type MediaItem } from '../components/ProductMediaGallery.vue'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
+import { toStoredUrl } from '../utils/assetUrl'
 
 type Cat = { id: number; label: string }
 
@@ -150,7 +151,7 @@ onMounted(async () => {
     form.value.attr_value_ids = p.attr_value_ids || []
     form.value.media = (p.media || [])
       .map((m: { url?: string; media_type?: string }) => ({
-        url: String(m.url || '').trim(),
+        url: toStoredUrl(String(m.url || '').trim()),
         media_type: m.media_type || (/\.(mp4|webm)(\?|$)/i.test(String(m.url || '')) ? 'video' : 'image'),
       }))
       .filter((m: MediaItem) => !!m.url)
@@ -194,7 +195,9 @@ onMounted(async () => {
 })
 
 async function save() {
-  const media = form.value.media.filter((m) => m.url)
+  const media = form.value.media
+    .map((m) => ({ ...m, url: toStoredUrl(m.url) }))
+    .filter((m) => m.url)
   const g = form.value.groupCode
   const a = form.value.optionACode
   const b = form.value.optionBCode

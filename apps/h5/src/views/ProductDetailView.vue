@@ -16,6 +16,7 @@ import { refreshCartBadge } from '../composables/useCartBadge'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
+import { assetUrl } from '../utils/assetUrl'
 import { useTabShell } from '../composables/useTabShell'
 
 const { t } = useI18n()
@@ -82,18 +83,30 @@ const name = computed(() => (product.value ? text(product.value.name) : ''))
 const gallery = computed(() => {
   const images = (product.value?.media || [])
     .filter((m) => m.media_type === 'image')
-    .map((m) => m.url)
-  return images.length ? images : product.value?.gallery || []
+    .map((m) => assetUrl(m.url))
+    .filter(Boolean)
+  if (images.length) return images
+  return (product.value?.gallery || []).map((u) => assetUrl(u)).filter(Boolean)
 })
 const zoomImages = computed(() => gallery.value)
 
 const detailRaw = computed(() => (product.value ? text(product.value.detail) : ''))
 const detailIsHtml = computed(() => /<\/?[a-z][\s\S]*>/i.test(detailRaw.value))
-const detailHtml = computed(() => detailRaw.value)
+const detailHtml = computed(() => {
+  const raw = detailRaw.value
+  if (!detailIsHtml.value) return raw
+  return raw.replace(/(src=["'])(\/[^"']+)(["'])/gi, (_, a, path, b) => `${a}${assetUrl(path)}${b}`)
+})
 /** 詳情富文本未覆蓋的輪播剩餘圖，避免重複 */
 const detailExtraImages = computed(() => {
   const html = detailRaw.value
-  return gallery.value.slice(1).filter((src) => !html.includes(src))
+  return gallery.value.slice(1).filter((src) => {
+    // 比對原始 /storage 路徑與代理 URL
+    const raw = (product.value?.media || [])
+      .map((m) => m.url)
+      .concat(product.value?.gallery || [])
+    return !raw.some((u) => u && (html.includes(u) || src.includes(encodeURIComponent(u.replace(/^\/storage\//, '')))))
+  })
 })
 
 const quote = computed(() => {
@@ -141,9 +154,9 @@ const selectedImage = computed(() => {
   if (!product.value) return ''
   for (const group of product.value.spec_groups) {
     const option = group.options.find((item) => item.id === selected.value[group.id])
-    if (option?.image) return option.image
+    if (option?.image) return assetUrl(option.image)
   }
-  return quote.value?.image || ''
+  return assetUrl(quote.value?.image || '')
 })
 
 watch(selectedImage, (src) => {

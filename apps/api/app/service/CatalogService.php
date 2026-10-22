@@ -311,8 +311,10 @@ class CatalogService
         $cover = null;
         foreach ($media as $item) {
             if (($item['media_type'] ?? 'image') === 'image') {
-                $cover = (string) ($item['url'] ?? '');
-                break;
+                $cover = $this->normalizeStoredMediaUrl(trim((string) ($item['url'] ?? '')));
+                if ($cover !== '') {
+                    break;
+                }
             }
         }
 
@@ -363,7 +365,7 @@ class CatalogService
 
             Db::name('product_media')->where('product_id', $id)->delete();
             foreach (array_values($media) as $i => $item) {
-                $url = trim((string) ($item['url'] ?? ''));
+                $url = $this->normalizeStoredMediaUrl(trim((string) ($item['url'] ?? '')));
                 if ($url === '') {
                     continue;
                 }
@@ -570,6 +572,28 @@ class CatalogService
         }
 
         return $ids;
+    }
+
+    /**
+     * 落庫媒體 URL：files 代理 / 絕對地址 → /storage/...
+     */
+    private function normalizeStoredMediaUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (preg_match('#/api/v1/files\?path=([^&]+)#i', $url, $m)) {
+            return '/storage/' . ltrim(rawurldecode($m[1]), '/');
+        }
+        if (preg_match('#https?://[^/]+(/storage/.+)$#i', $url, $m)) {
+            return $m[1];
+        }
+        if (str_starts_with($url, 'storage/')) {
+            return '/' . $url;
+        }
+
+        return $url;
     }
 
     /** @param array<string,mixed> $row */

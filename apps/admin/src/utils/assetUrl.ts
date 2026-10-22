@@ -20,11 +20,23 @@ export function assetUrl(u: string): string {
   return `${origin}${path}`
 }
 
-/** 落庫前：把本站絕對地址還原成 /storage/... 相對路徑 */
+/** 落庫前：把本站絕對地址 / files 代理還原成 /storage/... 相對路徑 */
 export function toStoredUrl(u: string): string {
   if (!u) return u
+  const files = u.match(/\/api\/v1\/files\?path=([^&]+)/i)
+  if (files) {
+    return `/storage/${decodeURIComponent(files[1]).replace(/^\/+/, '')}`
+  }
   const origin = assetOrigin()
   if (u.startsWith(origin)) return u.slice(origin.length) || '/'
+  if (/^https?:\/\//i.test(u)) {
+    try {
+      const parsed = new URL(u)
+      if (parsed.pathname.startsWith('/storage/')) return parsed.pathname
+    } catch {
+      /* keep */
+    }
+  }
   return u
 }
 
