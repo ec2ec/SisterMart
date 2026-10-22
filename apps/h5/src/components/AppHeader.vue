@@ -152,7 +152,7 @@ function onBack() {
 
 .logo {
   flex: 0 0 auto;
-  font-size: 0.9375rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   white-space: nowrap;
