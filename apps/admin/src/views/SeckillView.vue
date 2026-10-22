@@ -15,18 +15,12 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import ProductPickerDialog, {
+  type ProductPickResult,
+  type ProductSku,
+} from '../components/ProductPickerDialog.vue'
 
-type Sku = {
-  id: number
-  code: string
-  price: number
-  compare_at: number
-  agent_price?: number
-  cost_price?: number
-  stock: number
-  image?: string
-}
-type ProductOpt = { label: string; value: string; skus: Sku[] }
+type Sku = ProductSku
 
 type SeckillItem = {
   id?: number
@@ -37,6 +31,7 @@ type SeckillItem = {
   stock: number
   sold?: number
   name?: { 'zh-HK': string; en: string }
+  product_label?: string
 }
 
 type Session = {
@@ -52,9 +47,13 @@ type Session = {
 const message = useMessage()
 const rows = ref<Session[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
-const products = ref<ProductOpt[]>([])
+const skuCache = ref<Record<string, Sku[]>>({})
+const labelCache = ref<Record<string, string>>({})
 const editingId = ref<number | null>(null)
 const saving = ref(false)
+const pickerShow = ref(false)
+/** null = 新增；number = 替換該行商品 */
+const pickerTarget = ref<number | null>(null)
 
 const form = reactive({
   code: '',
@@ -88,6 +87,10 @@ function toLocalFromApi(v: string) {
   return v.slice(0, 16).replace(' ', 'T')
 }
 
+function productLabel(item: SeckillItem) {
+  return item.product_label || labelCache.value[item.product_code] || item.product_code || '未選商品'
+}
+
 function resetForm() {
   editingId.value = null
   const start = new Date(Date.now() + 3600_000)
@@ -100,64 +103,92 @@ function resetForm() {
   form.items = []
 }
 
-function addItem() {
-  const first = products.value[0]
-  const sku = first?.skus[0]
-  form.items.push({
-    product_code: first?.value || '',
-    sku_id: sku?.id || 0,
-    seckill_price: sku ? Number(sku.price) : 0,
-    origin_price: sku ? Number(sku.compare_at || sku.price) : 0,
+function openAddPicker() {
+  pickerTarget.value = null
+  pickerShow.value = true
+}
+
+function openReplacePicker(idx: number) {
+  pickerTarget.value = idx
+  pickerShow.value = true
+}
+
+function cacheFromPick(result: ProductPickResult) {
+  skuCache.value[result.code] = result.skus
+  labelCache.value[result.code] =
+    `${result.code} · ${result.name['zh-HK']}` + (result.name.en ? ` / ${result.name.en}` : '')
+}
+
+function onPicked(result: ProductPickResult) {
+  if (!result.sku) {
+    message.warning('請選擇 SKU')
+    return
+  }
+  cacheFromPick(result)
+  const next: SeckillItem = {
+    product_code: result.code,
+    sku_id: result.sku.id,
+    seckill_price: Number(result.sku.price),
+    origin_price: Number(result.sku.compare_at || result.sku.price),
     stock: 10,
-  })
+    product_label: labelCache.value[result.code],
+  }
+  if (pickerTarget.value == null) {
+    form.items.push(next)
+  } else {
+    const prev = form.items[pickerTarget.value]
+    form.items[pickerTarget.value] = {
+      ...next,
+      id: prev?.id,
+      sold: prev?.sold,
+      stock: prev?.stock ?? 10,
+      seckill_price: prev?.seckill_price ?? next.seckill_price,
+      origin_price: prev?.origin_price ?? next.origin_price,
+      sku_id: result.sku.id,
+      product_code: result.code,
+      product_label: next.product_label,
+    }
+  }
+  pickerTarget.value = null
 }
 
 function removeItem(idx: number) {
   form.items.splice(idx, 1)
 }
 
-function onProductChange(item: SeckillItem) {
-  const p = products.value.find((x) => x.value === item.product_code)
-  const sku = p?.skus[0]
-  if (sku) {
-    item.sku_id = sku.id
-    item.seckill_price = Number(sku.price)
-    item.origin_price = Number(sku.compare_at || sku.price)
-  } else {
-    item.sku_id = 0
-  }
+function onSkuChange(item: SeckillItem) {
+  const sku = (skuCache.value[item.product_code] || []).find((s) => s.id === item.sku_id)
+  if (!sku) return
+  item.seckill_price = Number(sku.price)
+  item.origin_price = Number(sku.compare_at || sku.price)
 }
 
 function skuOptions(productCode: string) {
-  const p = products.value.find((x) => x.value === productCode)
-  return (p?.skus || []).map((s) => ({
-    label: `${s.code} · 售$${s.price}` +
+  return (skuCache.value[productCode] || []).map((s) => ({
+    label:
+      `${s.code} · 售$${s.price}` +
       (s.agent_price != null && Number(s.agent_price) > 0 ? ` · 代$${s.agent_price}` : '') +
       `（庫存 ${s.stock}）`,
     value: s.id,
   }))
 }
 
-async function loadProducts() {
-  const data = await api<{ items: Array<{ code: string; name: { 'zh-HK': string }; db_id?: number }> }>(
-    '/api/v1/admin/products',
-    {},
-    true,
-  )
-  const opts: ProductOpt[] = []
-  for (const row of data.items || []) {
+async function ensureProductMeta(code: string) {
+  if (!code || skuCache.value[code]) return
+  try {
     const detail = await api<{
       code: string
-      name: { 'zh-HK': string }
+      name: { 'zh-HK': string; en: string }
       skus: Sku[]
-    }>(`/api/v1/admin/products/${row.code}`, {}, true)
-    opts.push({
-      label: `${detail.code} · ${detail.name['zh-HK']}`,
-      value: detail.code,
-      skus: detail.skus || [],
-    })
+    }>(`/api/v1/admin/products/${encodeURIComponent(code)}`, {}, true)
+    skuCache.value[code] = detail.skus || []
+    labelCache.value[code] =
+      `${detail.code} · ${detail.name['zh-HK']}` +
+      (detail.name.en ? ` / ${detail.name.en}` : '')
+  } catch {
+    labelCache.value[code] = code
+    skuCache.value[code] = []
   }
-  products.value = opts
 }
 
 async function load() {
@@ -165,7 +196,7 @@ async function load() {
   rows.value = data.items
 }
 
-function edit(row: Session) {
+async function edit(row: Session) {
   editingId.value = row.id
   form.code = row.code
   form.name_zh = row.name['zh-HK']
@@ -180,7 +211,21 @@ function edit(row: Session) {
     origin_price: Number(it.origin_price),
     stock: Number(it.stock),
     sold: it.sold,
+    name: it.name,
+    product_label: it.name?.['zh-HK']
+      ? `${it.product_code} · ${it.name['zh-HK']}`
+      : it.product_code,
   }))
+  await Promise.all(
+    [...new Set(form.items.map((it) => it.product_code).filter(Boolean))].map((code) =>
+      ensureProductMeta(code),
+    ),
+  )
+  form.items.forEach((it) => {
+    if (labelCache.value[it.product_code]) {
+      it.product_label = labelCache.value[it.product_code]
+    }
+  })
 }
 
 async function save() {
@@ -190,6 +235,10 @@ async function save() {
   }
   if (!form.items.length) {
     message.warning('請至少加一個秒殺商品')
+    return
+  }
+  if (form.items.some((it) => !it.product_code || !it.sku_id)) {
+    message.warning('請為每個商品選擇商品與 SKU')
     return
   }
   saving.value = true
@@ -233,7 +282,7 @@ async function save() {
 
 onMounted(async () => {
   resetForm()
-  await Promise.all([load(), loadProducts()])
+  await load()
 })
 </script>
 
@@ -257,22 +306,19 @@ onMounted(async () => {
       <n-space vertical style="margin-bottom: 1rem">
         <n-space align="center">
           <strong>活動商品</strong>
-          <n-button size="small" @click="addItem">加入商品</n-button>
+          <n-button size="small" type="primary" secondary @click="openAddPicker">加入商品</n-button>
         </n-space>
         <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
-          <n-select
-            v-model:value="item.product_code"
-            :options="products"
-            filterable
-            placeholder="商品"
-            style="min-width: 12rem"
-            @update:value="onProductChange(item)"
-          />
+          <div class="picked">
+            <span class="picked-label" :title="productLabel(item)">{{ productLabel(item) }}</span>
+            <n-button size="tiny" quaternary @click="openReplacePicker(idx)">更換</n-button>
+          </div>
           <n-select
             v-model:value="item.sku_id"
             :options="skuOptions(item.product_code)"
             placeholder="SKU"
             style="min-width: 12rem"
+            @update:value="onSkuChange(item)"
           />
           <n-input-number v-model:value="item.seckill_price" :min="0.01" :step="1" placeholder="秒殺價" />
           <n-input-number v-model:value="item.origin_price" :min="0" :step="1" placeholder="原價" />
@@ -323,6 +369,13 @@ onMounted(async () => {
       />
     </div>
     </n-card>
+
+    <ProductPickerDialog
+      v-model:show="pickerShow"
+      title="選擇秒殺商品"
+      :require-sku="true"
+      @select="onPicked"
+    />
   </n-space>
 </template>
 
@@ -344,6 +397,25 @@ td {
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.5rem;
+}
+.picked {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 12rem;
+  max-width: 18rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #e8e8e8;
+  border-radius: 0.25rem;
+  background: #fafafa;
+}
+.picked-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
 }
 .sold {
   font-size: 0.75rem;

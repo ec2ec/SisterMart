@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   NButton,
   NCard,
@@ -13,6 +13,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
 
 type Item = {
   points_mall_item_id: number
@@ -31,11 +32,14 @@ type Item = {
 const message = useMessage()
 const items = ref<Item[]>([])
 const { page, pageSize, total, paged } = useClientPager(items, 30)
+const pickerShow = ref(false)
 const form = ref({
   id: 0,
   code: '',
   product_code: '',
   sku_id: 0,
+  sku_label: '',
+  product_label: '',
   points_cost: 100,
   stock: 10,
   status: true,
@@ -44,6 +48,13 @@ const form = ref({
   image_url: '',
   detail_zh: '',
   detail_en: '',
+})
+
+const pickedSummary = computed(() => {
+  if (!form.value.product_code) return ''
+  const base = form.value.product_label || form.value.product_code
+  const sku = form.value.sku_label || (form.value.sku_id ? `SKU #${form.value.sku_id}` : '')
+  return sku ? `${base} · ${sku}` : base
 })
 
 async function load() {
@@ -57,6 +68,8 @@ function reset() {
     code: '',
     product_code: '',
     sku_id: 0,
+    sku_label: '',
+    product_label: '',
     points_cost: 100,
     stock: 10,
     status: true,
@@ -74,6 +87,8 @@ function edit(row: Item) {
     code: row.id,
     product_code: row.product_id,
     sku_id: row.sku_id,
+    sku_label: `SKU #${row.sku_id}`,
+    product_label: `${row.product_id} · ${row.name['zh-HK']}`,
     points_cost: row.points_cost,
     stock: row.stock,
     status: row.status === 1,
@@ -85,7 +100,35 @@ function edit(row: Item) {
   }
 }
 
+function onPicked(result: ProductPickResult) {
+  if (!result.sku) {
+    message.warning('請選擇 SKU')
+    return
+  }
+  form.value.product_code = result.code
+  form.value.sku_id = result.sku.id
+  form.value.product_label =
+    `${result.code} · ${result.name['zh-HK']}` + (result.name.en ? ` / ${result.name.en}` : '')
+  form.value.sku_label =
+    `${result.sku.code} · 售$${result.sku.price}` +
+    (result.sku.agent_price != null && Number(result.sku.agent_price) > 0
+      ? ` · 代$${result.sku.agent_price}`
+      : '')
+  if (!form.value.name_zh.trim()) form.value.name_zh = result.name['zh-HK'] || ''
+  if (!form.value.name_en.trim()) form.value.name_en = result.name.en || ''
+  if (!form.value.image_url.trim() && result.image) {
+    form.value.image_url = result.sku.image || result.image
+  }
+  if (!form.value.stock || form.value.stock <= 0) {
+    form.value.stock = Math.max(0, Number(result.sku.stock) || 0)
+  }
+}
+
 async function save() {
+  if (!form.value.product_code || !form.value.sku_id) {
+    message.warning('請先選擇商品與 SKU')
+    return
+  }
   const body = {
     code: form.value.code || undefined,
     product_code: form.value.product_code,
@@ -149,8 +192,15 @@ onMounted(load)
     </n-card>
     <n-card :title="form.id ? `編輯 #${form.id}` : '新增積分商品'">
       <n-form-item label="code"><n-input v-model:value="form.code" placeholder="可空自動生成" /></n-form-item>
-      <n-form-item label="商品 code"><n-input v-model:value="form.product_code" placeholder="p3" /></n-form-item>
-      <n-form-item label="SKU id"><n-input-number v-model:value="form.sku_id" :min="1" /></n-form-item>
+      <n-form-item label="關聯商品">
+        <n-space vertical style="width: 100%">
+          <n-space>
+            <n-button @click="pickerShow = true">{{ form.product_code ? '更換商品' : '選擇商品' }}</n-button>
+            <span v-if="pickedSummary" class="picked">{{ pickedSummary }}</span>
+            <span v-else class="hint">通過彈框搜索中英文名稱或代碼選擇</span>
+          </n-space>
+        </n-space>
+      </n-form-item>
       <n-form-item label="積分價"><n-input-number v-model:value="form.points_cost" :min="1" /></n-form-item>
       <n-form-item label="庫存"><n-input-number v-model:value="form.stock" :min="0" /></n-form-item>
       <n-form-item label="繁中名"><n-input v-model:value="form.name_zh" /></n-form-item>
@@ -164,6 +214,13 @@ onMounted(load)
         <n-button v-if="form.id" @click="reset">新建</n-button>
       </n-space>
     </n-card>
+
+    <ProductPickerDialog
+      v-model:show="pickerShow"
+      title="選擇積分兌換商品"
+      :require-sku="true"
+      @select="onPicked"
+    />
   </n-space>
 </template>
 
@@ -186,5 +243,19 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+
+.picked {
+  font-size: 0.8125rem;
+  color: #333;
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 0.8125rem;
+  color: #888;
 }
 </style>
