@@ -177,10 +177,14 @@ class CatalogService
         $builder->field('p.*');
         match ($sort) {
             'newest' => $builder->order('p.id', 'desc'),
+            'oldest' => $builder->order('p.id', 'asc'),
             'price_asc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) ASC'),
             'price_desc' => $builder->orderRaw('(SELECT MIN(price) FROM skus WHERE product_id = p.id AND status = 1) DESC'),
             'sales' => $builder->orderRaw('(p.sold_count + COALESCE(p.sold_boost, 0)) DESC')->order('p.id', 'desc'),
-            default => $builder->order('p.id', 'asc'),
+            // 後台默認按加入時間倒序；前台 default 仍按 id 升序
+            default => $admin
+                ? $builder->order('p.id', 'desc')
+                : $builder->order('p.id', 'asc'),
         };
         if ($limit > 0) {
             $builder->limit(max(1, min(100, $limit)));

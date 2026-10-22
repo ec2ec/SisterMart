@@ -54,6 +54,7 @@ export async function uploadImage(
     preset?: 'admin' | 'banner' | 'product' | 'review' | 'aftersale'
     max_edge?: number
     max_bytes?: number
+    max_upload_bytes?: number
     quality?: number
     min_quality?: number
     bucket?: string
