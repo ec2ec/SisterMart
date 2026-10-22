@@ -6,7 +6,6 @@ import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
 import { fetchCheckinCalendar } from '../api/m7'
 import { uploadAvatar } from '../api/trade'
-import { accountMock } from '../mock/data'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
 import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
@@ -29,26 +28,30 @@ const router = useRouter()
 const SCROLL_KEY = 'account'
 /** 按鈕表示「即將切換到」的語言：當前繁中 → 展示美國旗（切英文）；當前英文 → 香港區旗 */
 const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '🇭🇰'))
-const u = accountMock
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
 const { orderCounts, refreshOrderCounts, clearOrderCounts } = useOrderCounts()
 const checkinStreak = ref(0)
 const checkinSignedToday = ref(false)
+const guestDash = '-'
 
-const checkinStreakDisplay = computed(() => (loggedIn.value ? checkinStreak.value : u.streak))
+const checkinStreakDisplay = computed(() => (loggedIn.value ? checkinStreak.value : guestDash))
 
-const displayName = computed(
-  () =>
+const displayName = computed(() => {
+  if (!loggedIn.value) return t('account.guest')
+  return (
     memberState.value?.nickname ||
     memberState.value?.email ||
     memberState.value?.phone ||
-    u.name,
-)
+    t('account.guest')
+  )
+})
 const displaySub = computed(() =>
-  memberState.value ? t('account.promo', { code: memberState.value.promo_code }) : u.phone,
+  loggedIn.value && memberState.value
+    ? t('account.promo', { code: memberState.value.promo_code })
+    : guestDash,
 )
-const avatarLetter = computed(() => (displayName.value || 'S').slice(0, 1).toUpperCase())
+const avatarLetter = computed(() => (displayName.value || 'G').slice(0, 1).toUpperCase())
 const avatarSrc = computed(() => {
   const url = memberState.value?.avatar_url
   if (!url) return ''
@@ -176,10 +179,23 @@ const services = [
 ] as const
 
 const spentDisplay = computed(() => {
-  const n = loggedIn.value ? Number(memberState.value?.total_spent ?? 0).toFixed(0) : String(u.spent)
-  const stars = '★'.repeat(loggedIn.value ? memberState.value?.level?.stars || 1 : 3)
+  if (!loggedIn.value) {
+    return t('account.spent', { n: guestDash }).replace(/★+\s*/g, '')
+  }
+  const n = Number(memberState.value?.total_spent ?? 0).toFixed(0)
+  const stars = '★'.repeat(memberState.value?.level?.stars || 1)
   return t('account.spent', { n }).replace(/★+/g, stars)
 })
+
+const statBalance = computed(() =>
+  loggedIn.value ? Number(memberState.value?.balance ?? 0).toFixed(2) : guestDash,
+)
+const statCoupons = computed(() =>
+  loggedIn.value ? String(memberState.value?.coupon_count ?? 0) : guestDash,
+)
+const statPoints = computed(() =>
+  loggedIn.value ? String(memberState.value?.points ?? 0) : guestDash,
+)
 
 const routePaths: Record<string, string> = {
   profile: '/profile',
@@ -259,15 +275,15 @@ function goOrders(tab?: string) {
       </div>
       <div class="stats">
         <div role="button" @click="goBills">
-          <strong>{{ loggedIn ? (memberState?.balance ?? 0).toFixed(2) : u.balance }}</strong>
+          <strong>{{ statBalance }}</strong>
           <span>{{ t('account.balance') }}</span>
         </div>
         <div role="button" @click="goCoupons">
-          <strong>{{ loggedIn ? (memberState?.coupon_count ?? 0) : u.coupons }}</strong>
+          <strong>{{ statCoupons }}</strong>
           <span>{{ t('account.coupons') }}</span>
         </div>
         <div role="button" @click="goPoints">
-          <strong>{{ loggedIn ? (memberState?.points ?? 0) : u.points }}</strong>
+          <strong>{{ statPoints }}</strong>
           <span>{{ t('account.points') }}</span>
         </div>
       </div>
