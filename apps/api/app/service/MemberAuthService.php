@@ -63,7 +63,7 @@ class MemberAuthService
         $this->consumeCode($email, 'register', (string) ($body['code'] ?? ''));
 
         $parentId = $this->parentId(trim((string) ($body['ref'] ?? '')));
-        $locale = $this->locale((string) ($body['locale'] ?? 'zh-HK'));
+        $locale = $this->locale((string) ($body['locale'] ?? 'en'));
         $now = date('Y-m-d H:i:s');
 
         $id = (int) Db::transaction(function () use ($email, $phone, $password, $locale, $parentId, $now) {

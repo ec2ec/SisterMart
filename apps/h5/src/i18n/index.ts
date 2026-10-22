@@ -3,7 +3,8 @@ import { api } from '../api/client'
 import { isLoggedIn } from '../composables/useSession'
 import { messages, type LocaleKey } from './messages'
 
-const saved = (localStorage.getItem('sm_locale') as LocaleKey | null) || 'zh-HK'
+/** 新用戶（無本地偏好）默認英文；已選語言仍讀 localStorage */
+const saved = (localStorage.getItem('sm_locale') as LocaleKey | null) || 'en'
 
 export const i18n = createI18n({
   legacy: false,
@@ -11,6 +12,8 @@ export const i18n = createI18n({
   fallbackLocale: 'en',
   messages,
 })
+
+document.documentElement.lang = saved
 
 export function setLocale(next: LocaleKey) {
   i18n.global.locale.value = next
