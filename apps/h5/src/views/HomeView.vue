@@ -132,6 +132,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
+  console.log('新包 v1.01')
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
