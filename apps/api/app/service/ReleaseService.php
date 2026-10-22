@@ -825,17 +825,23 @@ class ReleaseService
     private function pathAllowed(string $rel, array $whitelist, array $blacklist): bool
     {
         $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        // 黑名單始終生效（.env / runtime / storage / _releases）
         foreach ($blacklist as $b) {
             if ($this->prefixMatch($rel, $b)) {
                 return false;
             }
+        }
+        // 默認不強制白名單：包已 HMAC 簽名 + zip-slip 檢查足夠；
+        // 需嚴格模式時設 RELEASE_ENFORCE_PATH_WHITELIST=true
+        $enforce = filter_var(env('RELEASE_ENFORCE_PATH_WHITELIST', false), FILTER_VALIDATE_BOOLEAN);
+        if (!$enforce) {
+            return true;
         }
         foreach ($whitelist as $w) {
             if ($this->prefixMatch($rel, $w)) {
                 return true;
             }
         }
-        // 根目錄常見靜態資源（favicon / PWA 圖標等）；manifest 未列全時仍放行
         if ($this->isSafeRootStatic($rel)) {
             return true;
         }

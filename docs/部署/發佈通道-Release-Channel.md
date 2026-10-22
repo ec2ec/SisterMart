@@ -13,6 +13,8 @@ RELEASE_HMAC_SECRET = <至少16字符的隨機串，與打包機相同>
 RELEASE_SITE_ROOT =
 RELEASE_MAX_BYTES = 83886080
 RELEASE_ROLLBACK_FILES_ON_SQL_FAIL = true
+# 默認不強制路徑白名單（仍擋 .env / zip-slip）；要嚴格再設 true
+RELEASE_ENFORCE_PATH_WHITELIST = false
 ```
 
 Nginx 須拒絕直鏈（示例已寫入 `scripts/deploy/nginx.sistermart.conf.example`）：
