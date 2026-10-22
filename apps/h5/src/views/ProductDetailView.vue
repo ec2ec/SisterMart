@@ -97,17 +97,6 @@ const detailHtml = computed(() => {
   if (!detailIsHtml.value) return raw
   return raw.replace(/(src=["'])(\/[^"']+)(["'])/gi, (_, a, path, b) => `${a}${assetUrl(path)}${b}`)
 })
-/** 詳情富文本未覆蓋的輪播剩餘圖，避免重複 */
-const detailExtraImages = computed(() => {
-  const html = detailRaw.value
-  return gallery.value.slice(1).filter((src) => {
-    // 比對原始 /storage 路徑與代理 URL
-    const raw = (product.value?.media || [])
-      .map((m) => m.url)
-      .concat(product.value?.gallery || [])
-    return !raw.some((u) => u && (html.includes(u) || src.includes(encodeURIComponent(u.replace(/^\/storage\//, '')))))
-  })
-})
 
 const quote = computed(() => {
   if (!product.value) return null
@@ -341,13 +330,6 @@ async function share() {
       <h2>{{ t('pdp.detail') }}</h2>
       <div v-if="detailIsHtml" class="copy rich" v-html="detailHtml" />
       <p v-else class="copy">{{ text(product.detail) }}</p>
-      <img
-        v-for="src in detailExtraImages"
-        :key="src"
-        class="detail-img"
-        :src="src"
-        alt=""
-      />
 
       <h2>{{ t('pdp.reviews') }}</h2>
       <p v-if="!(product.reviews || []).length" class="copy muted">{{ t('pdp.reviewsEmpty') }}</p>
@@ -468,18 +450,11 @@ async function share() {
   padding: 0;
   background: #f6f6f6;
 }
-.shot img,
-.detail-img {
+.shot img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
-}
-.detail-img {
-  height: auto;
-  margin-top: 0.75rem;
-  border-radius: 0.5rem;
-  background: #f6f6f6;
 }
 .dots {
   display: flex;
