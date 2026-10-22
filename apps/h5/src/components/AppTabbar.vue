@@ -219,8 +219,8 @@ function onChange(name: string | number) {
 :deep(.van-tabbar),
 .van-tabbar {
   height: var(--van-tabbar-height);
-  padding-top: 0.375rem;
-  padding-bottom: 0.375rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
   box-sizing: content-box;
 }
 
