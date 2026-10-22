@@ -22,7 +22,7 @@ MIGRATE=""
 SKIP_BUILD=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    pack|release) # pnpm release pack
+    pack|release|-- ) # pnpm release pack [-- --skip-build]
       shift
       ;;
     --migrate)
