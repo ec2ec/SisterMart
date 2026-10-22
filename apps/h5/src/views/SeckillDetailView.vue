@@ -65,7 +65,13 @@ function buy() {
       <p class="hint">{{ t('m7.seckillOnlyBuy') }}</p>
     </section>
     <div class="bar">
-      <van-button block round color="var(--sm-primary)" :disabled="!live || product.stock <= 0" @click="buy">
+      <van-button
+        class="buy-btn"
+        round
+        color="#f75656"
+        :disabled="!live || product.stock <= 0"
+        @click="buy"
+      >
         {{ t('pages.buyNow') }}
       </van-button>
     </div>
@@ -109,8 +115,17 @@ function buy() {
 .bar {
   position: sticky;
   bottom: 0;
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  /* 與首頁 tabbar / 商詳 buybar 同垂直內邊距 */
+  padding: 0.5rem 0.75rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
   background: #fff;
   border-top: 1px solid #f0f0f0;
+  box-sizing: content-box;
+}
+.buy-btn {
+  min-width: 8.5rem;
 }
 </style>

@@ -381,22 +381,34 @@ async function share() {
     </div>
 
     <div class="buybar">
-      <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
-        <van-icon :name="liked ? 'like' : 'like-o'" size="1.25rem" />
-      </button>
-      <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
-        <van-icon name="guide-o" size="1.25rem" />
-      </button>
-      <button
-        v-if="!seckill.active"
-        type="button"
-        class="ghost"
-        :disabled="stock <= 0"
-        @click="addToCart"
-      >
-        {{ t('pages.addToCart') }}
-      </button>
-      <button type="button" class="buy" :disabled="stock <= 0" @click="buyNow">{{ t('pages.buyNow') }}</button>
+      <div class="buybar-icons">
+        <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
+          <van-icon :name="liked ? 'like' : 'like-o'" size="1.25rem" />
+        </button>
+        <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
+          <van-icon name="guide-o" size="1.25rem" />
+        </button>
+      </div>
+      <div class="buybar-actions" :class="{ seckill: seckill.active }">
+        <button
+          v-if="!seckill.active"
+          type="button"
+          class="ghost"
+          :disabled="stock <= 0"
+          @click="addToCart"
+        >
+          {{ t('pages.addToCart') }}
+        </button>
+        <button
+          type="button"
+          class="buy"
+          :class="{ seckill: seckill.active }"
+          :disabled="stock <= 0"
+          @click="buyNow"
+        >
+          {{ t('pages.buyNow') }}
+        </button>
+      </div>
     </div>
 
     <ProductZoom
@@ -670,20 +682,44 @@ h2 {
 }
 .buybar {
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: auto auto 1fr 1fr;
-  gap: 0.5rem;
+  display: flex;
   align-items: center;
+  gap: 0.5rem;
+  /* 與首頁 tabbar 同垂直內邊距 */
   padding: 0.5rem 0.75rem;
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
   background: #fff;
   border-top: 0.0625rem solid var(--sm-border);
   z-index: 210;
+  box-sizing: content-box;
+}
+.buybar-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.buybar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.buybar-actions.seckill {
+  flex: 0 0 auto;
 }
 .ico {
   border: 0;
   background: transparent;
   color: var(--sm-text);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 .ghost,
 .buy {
@@ -691,6 +727,13 @@ h2 {
   border-radius: 0.375rem;
   height: 2.25rem;
   font-size: 0.8125rem;
+  min-width: 6.5rem;
+  padding: 0 0.875rem;
+}
+.buybar-actions:not(.seckill) .ghost,
+.buybar-actions:not(.seckill) .buy {
+  flex: 1;
+  max-width: 9rem;
 }
 .ghost {
   background: #efeae3;
@@ -699,6 +742,10 @@ h2 {
 .buy {
   background: var(--sm-primary);
   color: #fff;
+}
+.buy.seckill {
+  background: #f75656;
+  min-width: 8.5rem;
 }
 .ghost:disabled,
 .buy:disabled {
