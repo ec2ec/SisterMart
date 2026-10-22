@@ -365,7 +365,7 @@ async function share() {
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
-            <img v-for="(img, i) in r.images" :key="i" :src="img" alt="" />
+            <img v-for="(img, i) in r.images" :key="i" :src="assetUrl(img)" alt="" />
           </div>
           <p v-if="r.follow" class="follow">
             <em>{{ t('pdp.follow') }}</em>

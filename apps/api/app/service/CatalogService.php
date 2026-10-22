@@ -633,6 +633,7 @@ class CatalogService
                 ->order('sort_order', 'asc')
                 ->value('url') ?: '');
         }
+        $image = $this->normalizeStoredMediaUrl($image);
 
         return [
             'id'       => (string) $row['code'],
@@ -771,13 +772,14 @@ class CatalogService
         $gallery = [];
         $mediaOut = [];
         foreach ($media as $m) {
+            $url = $this->normalizeStoredMediaUrl((string) ($m['url'] ?? ''));
             $mediaOut[] = [
                 'media_type' => $m['media_type'],
-                'url'        => $m['url'],
+                'url'        => $url,
                 'sort'       => (int) $m['sort_order'],
             ];
-            if ($m['media_type'] === 'image') {
-                $gallery[] = $m['url'];
+            if ($m['media_type'] === 'image' && $url !== '') {
+                $gallery[] = $url;
             }
         }
         $groups = Db::name('spec_groups')->where('product_id', $row['id'])->order('sort_order', 'asc')->select()->toArray();

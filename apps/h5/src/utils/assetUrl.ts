@@ -6,17 +6,20 @@ export function assetOrigin(): string {
 }
 
 /**
- * 預覽上傳圖：/storage/... 走媒體代理（query），避免 nginx 對多段 PATH_INFO 404。
+ * 預覽上傳圖：/storage/... 與殘留的 files 代理 URL 一律重建為乾淨代理。
  * 使用 /files（非 /media）：部分共享主機對 media 路徑異常。
+ * 避免把已含 /api/index.php 的路徑再拼到 VITE_API_BASE 造成雙重前綴 404。
  */
 export function assetUrl(u: string): string {
   if (!u) return ''
   if (u.startsWith('data:')) return u
-  // 已是 files 代理（相對或絕對）
-  if (/\/api\/v1\/files\?path=/i.test(u)) {
-    if (/^https?:\/\//i.test(u)) return u
-    return `${apiBase.replace(/\/$/, '')}${u.startsWith('/') ? u : `/${u}`}`
+
+  // 任意位置的 files 代理：抽出 path 後用 apiBase 重建（不雙重拼接）
+  const files = u.match(/\/api\/v1\/files\?path=([^&]*)/i)
+  if (files) {
+    return `${apiBase.replace(/\/$/, '')}/api/v1/files?path=${files[1]}`
   }
+
   let path = u
   if (/^https?:\/\//i.test(u)) {
     try {
@@ -27,6 +30,9 @@ export function assetUrl(u: string): string {
     }
   }
   path = path.startsWith('/') ? path : `/${path}`
+  // 偶發存成 /api/index.php/storage/...
+  path = path.replace(/^\/api\/index\.php(?=\/)/i, '')
+
   if (path.startsWith('/storage/')) {
     const rel = path.slice('/storage/'.length)
     return `${apiBase.replace(/\/$/, '')}/api/v1/files?path=${encodeURIComponent(rel)}`
