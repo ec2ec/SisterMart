@@ -52,7 +52,12 @@ class ReleaseService
         'sm-backend/.env',
         'sm-backend/runtime/',
         'sm-backend/public/storage/',
-        '_releases/',
+        // 只擋發佈通道運行時目錄；允許包內帶 _releases/.htaccess 護欄
+        '_releases/pending/',
+        '_releases/staging/',
+        '_releases/snapshots/',
+        '_releases/logs/',
+        '_releases/state.json',
         '.env',
     ];
 

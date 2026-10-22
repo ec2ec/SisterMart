@@ -194,13 +194,9 @@ PHP
     cp -a "$ROOT/releases/vps-spa"/. "$STAGING/vps-spa/" 2>/dev/null || true
   fi
 
-  # 發佈通道目錄：禁止 Web 直鏈（Apache）；Nginx 見 scripts/deploy/nginx.sistermart.conf.example
-  mkdir -p "$STAGING/_releases"
-  cat > "$STAGING/_releases/.htaccess" <<'HT'
-Require all denied
-Deny from all
-HT
-  : > "$STAGING/_releases/index.html"
+  # 不打包 _releases/：由服務端 ReleaseService 首次使用時自建（含 .htaccess）。
+  # 若打進包會命中黑名單 _releases/pending 等，且與運行時狀態衝突。
+  rm -rf "$STAGING/_releases"
 
   local assets_note="mock/products: OMITTED (server already has them)"
   if [[ "$INCLUDE_STATIC_ASSETS" == "1" ]]; then
