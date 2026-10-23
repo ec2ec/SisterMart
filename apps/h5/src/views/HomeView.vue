@@ -247,7 +247,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.27')
+  console.log('新包 v1.28')
   homeBooted = true
   feedInitial.value = true
   catsInitial.value = true
