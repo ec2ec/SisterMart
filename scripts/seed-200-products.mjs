@@ -40,6 +40,7 @@ if (!API || !EMAIL || !PASSWORD) {
   process.exit(1)
 }
 
+// 僅用線上已存在的圖（VPS 默認包不含全部 /mock）
 const MOCK_IMAGES = [
   '/mock/product-1.jpg',
   '/mock/product-1-detail.jpg',
@@ -47,16 +48,7 @@ const MOCK_IMAGES = [
   '/mock/product-2-detail-1.jpg',
   '/mock/product-3.jpg',
   '/mock/product-4.jpg',
-  '/mock/product-5.jpg',
-  '/mock/product-6.jpg',
-  '/mock/cart-heart-brace.jpg',
-  '/mock/cart-gourd-neck.jpg',
-  '/mock/hot-drops.jpg',
-  '/mock/hot-ring.jpg',
-  '/mock/flash-earrings.jpg',
-  '/mock/coll-pearl.jpg',
-  '/mock/sub-gold-bead.jpg',
-  '/mock/sub-pearl.jpg',
+  '/api/v1/files/product/1/20261022/d243e6b9be7eea6b.jpg',
 ]
 
 const NAMES = [
@@ -102,20 +94,13 @@ async function main() {
   let updated = 0
   let failed = 0
 
-  // 分頁拉現有 TSEED* 以便 PUT（冪等重跑）
+  // 先搜一輪現有 TSEED*（list 無 offset；缺的靠 code 探查後 PUT）
   const existing = new Map()
-  let listOffset = 0
-  for (;;) {
-    const listed = await req(`/api/v1/admin/products?limit=100&offset=${listOffset}`, { token })
-    const items = listed.items || []
-    for (const p of items) {
-      if (String(p.code || '').startsWith('TSEED')) existing.set(p.code, p.db_id || p.id)
-    }
-    if (items.length < 100) break
-    listOffset += items.length
-    if (listOffset > 5000) break
+  const listed = await req('/api/v1/admin/products?q=TSEED&limit=100', { token })
+  for (const p of listed.items || []) {
+    if (String(p.code || '').startsWith('TSEED')) existing.set(p.code, p.db_id || p.id)
   }
-  console.log(`existing TSEED: ${existing.size}`)
+  console.log(`existing TSEED cache: ${existing.size}`)
 
   for (let i = 1; i <= COUNT; i++) {
     const code = `TSEED${String(i).padStart(3, '0')}`
