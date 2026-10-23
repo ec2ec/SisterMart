@@ -239,7 +239,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.24')
+  console.log('新包 v1.25')
   homeBooted = true
   void refresh().then(() => loadFeed(true))
   void loadSubscribeStatus()
@@ -427,6 +427,11 @@ function goList(categoryId?: string) {
   router.push({ name: 'product-list', query: categoryId ? { category: categoryId } : {} })
 }
 
+/** 分類區標題 /「更多」→ 底欄分類頁 */
+function goCategory() {
+  router.push({ name: 'category' })
+}
+
 const flashClock = computed(() => {
   const t = Math.max(0, flashRemain.value)
   const h = Math.floor(t / 3600e3)
@@ -479,8 +484,10 @@ const tabLabel = (tab: HomeRecTab) => {
 
       <section v-if="homeCategories.length" class="cats">
         <div class="section-title">
-          <h2>{{ t('home.categories') }}</h2>
-          <button type="button" class="more" @click="router.push({ name: 'category' })">
+          <button type="button" class="section-title-btn" @click="goCategory">
+            <h2>{{ t('home.categories') }}</h2>
+          </button>
+          <button type="button" class="more" @click="goCategory">
             {{ t('account.more') }}
           </button>
         </div>
@@ -570,6 +577,16 @@ const tabLabel = (tab: HomeRecTab) => {
       </section>
       <HomeFooter :slogan="footerSlogan" />
     </van-pull-refresh>
+
+    <!-- 滾過約一屏後顯示；不 teleport，以便 scoped 樣式避開 tabbar -->
+    <van-back-top
+      class="home-back-top"
+      teleport=""
+      :offset="480"
+      :right="16"
+      :bottom="88"
+      z-index="30"
+    />
   </div>
 </template>
 
@@ -628,6 +645,20 @@ const tabLabel = (tab: HomeRecTab) => {
   margin: 0;
   font-size: 1rem;
 }
+.section-title-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.section-title-btn h2 {
+  margin: 0;
+  font-size: 1rem;
+}
 .section-title .more {
   margin-left: auto;
   margin-right: 0.5rem;
@@ -635,6 +666,12 @@ const tabLabel = (tab: HomeRecTab) => {
   background: none;
   color: var(--sm-primary);
   font-size: 0.75rem;
+}
+.home-back-top {
+  /* 覆蓋 props 的 bottom，貼合 tabbar + 安全區 */
+  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem) !important;
+  background: var(--sm-primary) !important;
+  box-shadow: 0 0.125rem 0.5rem rgba(22, 22, 43, 0.28);
 }
 .flash {
   margin: 0.5rem 0.75rem 0.75rem;
