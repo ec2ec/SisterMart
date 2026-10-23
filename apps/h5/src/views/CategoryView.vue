@@ -64,26 +64,45 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
   <div class="page page--soft category-page">
     <AppHeader />
     <div class="body">
-      <van-sidebar v-model="active" class="side">
-        <van-sidebar-item v-for="c in categories" :key="c.id" :title="text(c.name)" />
-      </van-sidebar>
-      <div class="content">
-        <p v-if="loading" class="empty">…</p>
-        <section v-else-if="current" class="sec">
+      <template v-if="loading">
+        <aside class="side sk-side" aria-hidden="true">
+          <span v-for="n in 7" :key="`sk-side-${n}`" class="sk-side-item sk-pulse" />
+        </aside>
+        <div class="content" aria-hidden="true">
           <div class="sec-title">
             <span />
-            <em>{{ text(current.name) }}</em>
+            <em class="sk-line sk-pulse sk-sec-name" />
             <span />
           </div>
           <div class="grid">
-            <button v-for="item in gridItems" :key="item.code" type="button" class="item" @click="openList(item)">
-              <img v-if="item.icon" :src="item.icon" :alt="text(item.name)" />
-              <span v-else class="ph" />
-              <span>{{ text(item.name) }}</span>
-            </button>
+            <div v-for="n in 6" :key="`sk-item-${n}`" class="item sk-item">
+              <span class="ph sk-pulse" />
+              <span class="sk-line sk-pulse" />
+            </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </template>
+      <template v-else>
+        <van-sidebar v-model="active" class="side">
+          <van-sidebar-item v-for="c in categories" :key="c.id" :title="text(c.name)" />
+        </van-sidebar>
+        <div class="content">
+          <section v-if="current" class="sec">
+            <div class="sec-title">
+              <span />
+              <em>{{ text(current.name) }}</em>
+              <span />
+            </div>
+            <div class="grid">
+              <button v-for="item in gridItems" :key="item.code" type="button" class="item" @click="openList(item)">
+                <img v-if="item.icon" :src="item.icon" :alt="text(item.name)" />
+                <span v-else class="ph" />
+                <span>{{ text(item.name) }}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -171,9 +190,48 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
   border-radius: 50%;
   background: var(--sm-bg-soft);
 }
-.empty {
-  margin: 2rem;
-  text-align: center;
-  color: var(--sm-text-muted);
+
+.sk-pulse {
+  background: linear-gradient(90deg, var(--sm-bg-soft) 0%, #ebe6de 45%, var(--sm-bg-soft) 90%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.sk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 0.5rem;
+  box-sizing: border-box;
+}
+.sk-side-item {
+  display: block;
+  height: 0.875rem;
+  width: 100%;
+  border-radius: 0.25rem;
+}
+.sk-line {
+  display: block;
+  height: 0.5rem;
+  width: 70%;
+  border-radius: 0.25rem;
+}
+.sk-sec-name {
+  width: 3.5rem;
+  height: 0.75rem;
+  flex: 0 0 auto;
+}
+.sk-item .sk-line {
+  width: 60%;
+}
+.sk-item .ph {
+  background: none;
 }
 </style>
