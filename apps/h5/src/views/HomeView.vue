@@ -32,7 +32,7 @@ const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 
-const feedTabs: HomeRecTab[] = ['hot', 'new', 'for_you']
+const feedTabs: HomeRecTab[] = ['new', 'hot', 'for_you']
 const feedTab = ref(0)
 const feedItems = ref<Card[]>([])
 const feedBusy = ref(false)
@@ -98,7 +98,7 @@ async function loadSubscribeStatus() {
 }
 
 async function loadFeed() {
-  const tab = feedTabs[feedTab.value] || 'hot'
+  const tab = feedTabs[feedTab.value] || 'new'
   feedBusy.value = true
   try {
     const data = await fetchHomeRecommendations(tab, 20)
@@ -196,7 +196,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.22')
+  console.log('新包 v1.23')
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
