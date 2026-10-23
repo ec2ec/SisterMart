@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onActivated, onDeactivated, onMounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -52,6 +52,14 @@ onActivated(() => {
   }
   // 購物車可能在其他頁被改過，回來刷新；再還原滾動
   void load().then(() => restoreRouteScroll(SCROLL_KEY))
+})
+
+/** 退出登錄後 keep-alive 實例仍在：立刻清空列表，避免串號 */
+watch(loggedIn, (v) => {
+  if (!v) {
+    items.value = []
+    managing.value = false
+  }
 })
 
 const checkedCount = computed(() => items.value.filter((i) => i.checked && i.available).length)

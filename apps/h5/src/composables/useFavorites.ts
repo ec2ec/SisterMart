@@ -62,6 +62,18 @@ export function markLoggedIn() {
   void hydrateFavorites()
 }
 
+/** 退出登錄：清空內存與本地收藏緩存（避免下一帳號看到上一帳號心願） */
+export function clearFavorites() {
+  for (const k of Object.keys(liked)) delete liked[k]
+  localStorage.removeItem(STORE)
+  try {
+    sessionStorage.removeItem(PENDING)
+  } catch {
+    /* private mode */
+  }
+  hydrating = null
+}
+
 async function setFavoriteRemote(id: string, want: boolean) {
   if (want) {
     const data = await api<{ favorited: boolean; product_code: string }>(

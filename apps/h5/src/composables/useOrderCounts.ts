@@ -47,6 +47,11 @@ async function fetchOrderCountsFallback(): Promise<OrderCounts> {
   }
 }
 
+/** 模組級清空（供 clearSession 調用，避免僅帳號頁記得清） */
+export function clearOrderCounts() {
+  orderCounts.value = emptyCounts()
+}
+
 export function useOrderCounts() {
   async function refreshOrderCounts() {
     if (!isLoggedIn()) {
@@ -63,10 +68,6 @@ export function useOrderCounts() {
       }
     }
     return orderCounts.value
-  }
-
-  function clearOrderCounts() {
-    orderCounts.value = emptyCounts()
   }
 
   return {

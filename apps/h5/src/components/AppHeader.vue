@@ -3,7 +3,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
-import { favoriteCount, hydrateFavorites } from '../composables/useFavorites'
+import { clearFavorites, favoriteCount, hydrateFavorites } from '../composables/useFavorites'
 import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { refreshUnread, unreadCount } from '../composables/useUnread'
 
@@ -30,6 +30,7 @@ onMounted(() => {
 watch(loggedIn, (v) => {
   refreshUnread()
   if (v) void hydrateFavorites()
+  else clearFavorites()
 })
 
 function goSearch() {

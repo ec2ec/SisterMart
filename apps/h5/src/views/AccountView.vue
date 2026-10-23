@@ -30,7 +30,7 @@ const SCROLL_KEY = 'account'
 const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '🇭🇰'))
 const showAvatarCrop = ref(false)
 const avatarBusy = ref(false)
-const { orderCounts, refreshOrderCounts, clearOrderCounts } = useOrderCounts()
+const { orderCounts, refreshOrderCounts } = useOrderCounts()
 const checkinStreak = ref(0)
 const checkinSignedToday = ref(false)
 const guestDash = '-'
@@ -142,7 +142,6 @@ async function logout() {
     /* 本地仍清除令牌 */
   }
   clearSession()
-  clearOrderCounts()
   checkinStreak.value = 0
   checkinSignedToday.value = false
   showToast(t('auth.loggedOut'))
