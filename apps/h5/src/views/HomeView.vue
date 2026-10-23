@@ -36,6 +36,8 @@ const feedTabs: HomeRecTab[] = ['hot', 'new', 'for_you']
 const feedTab = ref(0)
 const feedItems = ref<Card[]>([])
 const feedBusy = ref(false)
+/** 下拉刷新中（van-pull-refresh v-model） */
+const pulling = ref(false)
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
@@ -110,6 +112,58 @@ async function loadFeed() {
   }
 }
 
+async function loadBanners() {
+  try {
+    const items = await fetchHomeBanners()
+    if (items.length) banners.value = items
+  } catch {
+    /* 保留現有 */
+  }
+}
+
+async function loadOps() {
+  try {
+    const ops = await fetchHomeOps()
+    marquee.value = ops.marquee
+    footerSlogan.value = ops.footer_slogan
+  } catch {
+    /* 保留現有 */
+  } finally {
+    opsLoaded.value = true
+  }
+}
+
+async function loadSections() {
+  try {
+    sections.value = await fetchHomeSections()
+  } catch {
+    /* 保留現有 */
+  }
+}
+
+/** 下拉刷新：只重拉當前首頁可見狀態（當前 feed tab） */
+async function onPullRefresh() {
+  try {
+    const results = await Promise.allSettled([
+      refresh().then(() => loadFeed()),
+      loadSeckillHome().then(() => startFlashTimer()),
+      loadBanners(),
+      loadOps(),
+      loadSections(),
+    ])
+    if (results.some((r) => r.status === 'fulfilled')) {
+      showToast(t('home.refreshDone'))
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } else {
+      showToast(t('home.refreshFail'))
+    }
+  } catch {
+    showToast(t('home.refreshFail'))
+  } finally {
+    pulling.value = false
+  }
+}
+
 function onSectionViewAll(sec: HomeSection) {
   if (sec.view_all_type === 'category' && sec.view_all_value) {
     goList(sec.view_all_value)
@@ -132,30 +186,14 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.20')
+  console.log('新包 v1.21')
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
   void loadSeckillHome().then(() => startFlashTimer())
-  void fetchHomeBanners()
-    .then((items) => {
-      if (items.length) banners.value = items
-    })
-    .catch(() => undefined)
-  void fetchHomeOps()
-    .then((ops) => {
-      marquee.value = ops.marquee
-      footerSlogan.value = ops.footer_slogan
-      opsLoaded.value = true
-    })
-    .catch(() => {
-      opsLoaded.value = true
-    })
-  void fetchHomeSections()
-    .then((items) => {
-      sections.value = items
-    })
-    .catch(() => undefined)
+  void loadBanners()
+  void loadOps()
+  void loadSections()
 })
 
 onDeactivated(() => {
@@ -354,104 +392,114 @@ const tabLabel = (tab: HomeRecTab) => {
 <template>
   <div class="page home">
     <AppHeader show-logo />
-    <section class="hero-wrap">
-      <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
-        <van-swipe-item v-for="b in banners" :key="b.id">
-          <button type="button" class="hero-item" @click="onBannerClick(b)">
-            <img :src="b.image_url" :alt="text(b.title) || ''" />
-          </button>
-        </van-swipe-item>
-      </van-swipe>
-    </section>
-
-    <button
-      v-if="!opsLoaded || marquee?.enabled"
-      type="button"
-      class="promo"
-      :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
-      @click="onPromoClick"
+    <!-- Header / Tabbar 外：僅內容區下拉；滾到頂才觸發（van 內建） -->
+    <van-pull-refresh
+      v-model="pulling"
+      class="home-pull"
+      :pulling-text="t('home.refreshPulling')"
+      :loosing-text="t('home.refreshLoose')"
+      :loading-text="t('home.refreshLoading')"
+      @refresh="onPullRefresh"
     >
-      {{ promoText }}
-    </button>
+      <section class="hero-wrap">
+        <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
+          <van-swipe-item v-for="b in banners" :key="b.id">
+            <button type="button" class="hero-item" @click="onBannerClick(b)">
+              <img :src="b.image_url" :alt="text(b.title) || ''" />
+            </button>
+          </van-swipe-item>
+        </van-swipe>
+      </section>
 
-    <section v-if="homeCategories.length" class="cats">
-      <div class="section-title">
-        <h2>{{ t('home.categories') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'category' })">
-          {{ t('account.more') }}
-        </button>
-      </div>
-      <div class="cats-row">
-        <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
-          <img
-            v-if="c.icon"
-            :src="c.icon"
-            :alt="text(c.name)"
-            @error="onCatImgError($event)"
-          />
-          <span v-else class="ph" />
-          <span class="cat-name">{{ text(c.name) }}</span>
-        </button>
-      </div>
-    </section>
+      <button
+        v-if="!opsLoaded || marquee?.enabled"
+        type="button"
+        class="promo"
+        :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
+        @click="onPromoClick"
+      >
+        {{ promoText }}
+      </button>
 
-    <section v-if="flashSession || flashVisible.length" class="flash">
-      <div class="section-title">
-        <h2>{{ t('home.flashSale') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
-        <div class="count" :title="flashClock">
-          <span class="clock">{{ flashClock }}</span>
+      <section v-if="homeCategories.length" class="cats">
+        <div class="section-title">
+          <h2>{{ t('home.categories') }}</h2>
+          <button type="button" class="more" @click="router.push({ name: 'category' })">
+            {{ t('account.more') }}
+          </button>
         </div>
-      </div>
-      <p class="flash-hint">{{ flashHint }}</p>
-      <div class="flash-row">
-        <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
-      </div>
-    </section>
+        <div class="cats-row">
+          <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+            <img
+              v-if="c.icon"
+              :src="c.icon"
+              :alt="text(c.name)"
+              @error="onCatImgError($event)"
+            />
+            <span v-else class="ph" />
+            <span class="cat-name">{{ text(c.name) }}</span>
+          </button>
+        </div>
+      </section>
 
-    <section v-for="sec in sections" :key="sec.id" class="showcase">
-      <div class="section-title">
-        <h2>{{ text(sec.title) }}</h2>
-        <button
-          v-if="sec.view_all_type !== 'none'"
-          type="button"
-          class="more"
-          @click="onSectionViewAll(sec)"
-        >
-          {{ t('home.viewAll') }}
-        </button>
-      </div>
-      <div class="grid">
-        <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
-      </div>
-    </section>
+      <section v-if="flashSession || flashVisible.length" class="flash">
+        <div class="section-title">
+          <h2>{{ t('home.flashSale') }}</h2>
+          <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
+          <div class="count" :title="flashClock">
+            <span class="clock">{{ flashClock }}</span>
+          </div>
+        </div>
+        <p class="flash-hint">{{ flashHint }}</p>
+        <div class="flash-row">
+          <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
+        </div>
+      </section>
 
-    <section class="feed">
-      <div class="tabs">
-        <button
-          v-for="(tab, i) in feedTabs"
-          :key="tab"
-          type="button"
-          :class="{ on: feedTab === i }"
-          @click="feedTab = i"
-        >
-          {{ tabLabel(tab) }}
-        </button>
-      </div>
-      <div class="grid">
-        <ProductCard v-for="p in feedItems" :key="p.id" :product="p" />
-      </div>
-      <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
-    </section>
+      <section v-for="sec in sections" :key="sec.id" class="showcase">
+        <div class="section-title">
+          <h2>{{ text(sec.title) }}</h2>
+          <button
+            v-if="sec.view_all_type !== 'none'"
+            type="button"
+            class="more"
+            @click="onSectionViewAll(sec)"
+          >
+            {{ t('home.viewAll') }}
+          </button>
+        </div>
+        <div class="grid">
+          <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
+        </div>
+      </section>
 
-    <section v-if="showSubscribe" class="subscribe">
-      <h2>{{ t('home.subscribeTitle') }}</h2>
-      <div class="row">
-        <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
-        <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
-      </div>
-    </section>
-    <HomeFooter :slogan="footerSlogan" />
+      <section class="feed">
+        <div class="tabs">
+          <button
+            v-for="(tab, i) in feedTabs"
+            :key="tab"
+            type="button"
+            :class="{ on: feedTab === i }"
+            @click="feedTab = i"
+          >
+            {{ tabLabel(tab) }}
+          </button>
+        </div>
+        <div class="grid">
+          <ProductCard v-for="p in feedItems" :key="p.id" :product="p" />
+        </div>
+        <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
+      </section>
+
+      <section v-if="showSubscribe" class="subscribe">
+        <h2>{{ t('home.subscribeTitle') }}</h2>
+        <div class="row">
+          <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
+          <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
+        </div>
+      </section>
+      <HomeFooter :slogan="footerSlogan" />
+    </van-pull-refresh>
   </div>
 </template>
 
@@ -459,6 +507,10 @@ const tabLabel = (tab: HomeRecTab) => {
 .home {
   padding-top: var(--sm-header-h);
   padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+}
+.home-pull {
+  min-height: calc(100vh - var(--sm-header-h) - var(--sm-tabbar-h));
+  overflow: visible;
 }
 .hero-wrap {
   position: relative;
