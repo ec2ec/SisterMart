@@ -38,6 +38,9 @@ const feedItems = ref<Card[]>([])
 const feedBusy = ref(false)
 /** 下拉刷新中（van-pull-refresh v-model） */
 const pulling = ref(false)
+/** 上次真正打接口刷新的時間戳；30s 內再拉只提示、不請求 */
+const REFRESH_COOLDOWN_MS = 30_000
+let lastRefreshAt = 0
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
@@ -141,8 +144,14 @@ async function loadSections() {
   }
 }
 
-/** 下拉刷新：只重拉當前首頁可見狀態（當前 feed tab） */
+/** 下拉刷新：只重拉當前首頁可見狀態（當前 feed tab）；30s 內拒刷 */
 async function onPullRefresh() {
+  const now = Date.now()
+  if (lastRefreshAt > 0 && now - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+    showToast(t('home.refreshFresh'))
+    pulling.value = false
+    return
+  }
   try {
     const results = await Promise.allSettled([
       refresh().then(() => loadFeed()),
@@ -152,6 +161,7 @@ async function onPullRefresh() {
       loadSections(),
     ])
     if (results.some((r) => r.status === 'fulfilled')) {
+      lastRefreshAt = Date.now()
       showToast(t('home.refreshDone'))
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     } else {
@@ -186,7 +196,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.21')
+  console.log('新包 v1.22')
   homeBooted = true
   void refresh().then(() => loadFeed())
   void loadSubscribeStatus()
