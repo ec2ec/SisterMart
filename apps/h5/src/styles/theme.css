@@ -121,3 +121,31 @@ a {
   font-size: 0.75rem;
   color: var(--sm-text-muted);
 }
+
+/* 首頁回頂：掛 body，避開 pull-refresh / keep-alive 滾動父級問題 */
+.sm-back-top {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem);
+  z-index: 120;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sm-primary);
+  color: #fff;
+  box-shadow: 0 0.125rem 0.5rem rgba(22, 22, 43, 0.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sm-back-top:active {
+  opacity: 0.85;
+}
+.sm-back-top .van-icon {
+  font-size: 1.25rem;
+  font-weight: 700;
+}

@@ -239,7 +239,7 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.25')
+  console.log('新包 v1.26')
   homeBooted = true
   void refresh().then(() => loadFeed(true))
   void loadSubscribeStatus()
@@ -252,13 +252,18 @@ onMounted(() => {
 onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
   stopFlashTimer()
+  unbindBackTopScroll()
 })
 
-onUnmounted(() => stopFlashTimer())
+onUnmounted(() => {
+  stopFlashTimer()
+  unbindBackTopScroll()
+})
 
 let homeFirstActivate = true
 onActivated(() => {
   startFlashTimer()
+  bindBackTopScroll()
   // 首次 mounted+activated 同幀，無需還原
   if (homeFirstActivate) {
     homeFirstActivate = false
@@ -432,6 +437,34 @@ function goCategory() {
   router.push({ name: 'category' })
 }
 
+/** 回頂：直接聽 window（避開 van-back-top 在部分 WebView 找不到滾動父級） */
+const BACK_TOP_OFFSET = 280
+const showBackTop = ref(false)
+let backTopBound = false
+
+function onWindowScrollForBackTop() {
+  const y = window.scrollY || document.documentElement.scrollTop || 0
+  showBackTop.value = y >= BACK_TOP_OFFSET
+}
+
+function bindBackTopScroll() {
+  if (backTopBound || typeof window === 'undefined') return
+  window.addEventListener('scroll', onWindowScrollForBackTop, { passive: true })
+  backTopBound = true
+  onWindowScrollForBackTop()
+}
+
+function unbindBackTopScroll() {
+  if (!backTopBound || typeof window === 'undefined') return
+  window.removeEventListener('scroll', onWindowScrollForBackTop)
+  backTopBound = false
+  showBackTop.value = false
+}
+
+function scrollHomeTop(smooth = true) {
+  window.scrollTo({ top: 0, left: 0, behavior: smooth ? 'smooth' : 'auto' })
+}
+
 const flashClock = computed(() => {
   const t = Math.max(0, flashRemain.value)
   const h = Math.floor(t / 3600e3)
@@ -578,15 +611,17 @@ const tabLabel = (tab: HomeRecTab) => {
       <HomeFooter :slogan="footerSlogan" />
     </van-pull-refresh>
 
-    <!-- 滾過約一屏後顯示；不 teleport，以便 scoped 樣式避開 tabbar -->
-    <van-back-top
-      class="home-back-top"
-      teleport=""
-      :offset="480"
-      :right="16"
-      :bottom="88"
-      z-index="30"
-    />
+    <Teleport to="body">
+      <button
+        v-show="showBackTop"
+        type="button"
+        class="sm-back-top"
+        :aria-label="t('home.backTop')"
+        @click="scrollHomeTop(true)"
+      >
+        <van-icon name="back-top" />
+      </button>
+    </Teleport>
   </div>
 </template>
 
@@ -666,12 +701,6 @@ const tabLabel = (tab: HomeRecTab) => {
   background: none;
   color: var(--sm-primary);
   font-size: 0.75rem;
-}
-.home-back-top {
-  /* 覆蓋 props 的 bottom，貼合 tabbar + 安全區 */
-  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem) !important;
-  background: var(--sm-primary) !important;
-  box-shadow: 0 0.125rem 0.5rem rgba(22, 22, 43, 0.28);
 }
 .flash {
   margin: 0.5rem 0.75rem 0.75rem;

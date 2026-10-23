@@ -173,6 +173,13 @@ watch(loggedIn, () => {
 function onChange(name: string | number) {
   router.push({ name: String(name) })
 }
+
+/** 已在首頁時再點首頁圖標：快速回頂（Vant 同 tab 不觸發 change，靠 click） */
+function onItemClick(item: TabItem) {
+  if (item.slot === 'home' && active.value === 'home') {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+  }
+}
 </script>
 
 <template>
@@ -189,6 +196,7 @@ function onChange(name: string | number) {
       :key="item.slot"
       :name="item.slot"
       :badge="item.slot === 'cart' ? cartBadge : ''"
+      @click="onItemClick(item)"
     >
       <span
         class="label"
