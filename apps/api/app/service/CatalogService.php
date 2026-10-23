@@ -198,65 +198,97 @@ class CatalogService
 
     /**
      * 首頁推薦：hot=熱銷 / new=新品 / for_you=猜你喜歡（足跡分類，無則回退熱銷）。
+     * 先按規則有序切片（保證第 N 頁整體新/熱於第 N+1 頁），再頁內 shuffle；
+     * offset 超過總量時取模回到前面（往復），每次請求重新打亂。
      *
-     * @return array{tab: string, source: string, items: list<array<string,mixed>>, sold_display_mode: string}
+     * @return array{
+     *   tab: string,
+     *   source: string,
+     *   items: list<array<string,mixed>>,
+     *   sold_display_mode: string,
+     *   total: int,
+     *   offset: int,
+     *   next_offset: int,
+     *   limit: int,
+     *   wrapped: bool
+     * }
      */
-    public function homeRecommendations(string $tab, ?int $viewerMemberId = null, int $limit = 20): array
+    public function homeRecommendations(string $tab, ?int $viewerMemberId = null, int $limit = 16, int $offset = 0): array
     {
         $tab = in_array($tab, ['hot', 'new', 'for_you'], true) ? $tab : 'hot';
         $limit = max(1, min(40, $limit));
+        $offset = max(0, $offset);
         $mode = SoldDisplay::mode();
-        $source = $tab;
+        $source = 'sales';
+        $categoryIds = null;
 
         if ($tab === 'new') {
-            $rows = Db::name('products')->where('status', 1)->order('id', 'desc')->limit($limit)->select()->toArray();
-
-            return [
-                'tab' => $tab,
-                'source' => 'newest',
-                'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
-                'sold_display_mode' => $mode,
-            ];
-        }
-
-        if ($tab === 'for_you' && $viewerMemberId) {
+            $source = 'newest';
+        } elseif ($tab === 'for_you' && $viewerMemberId) {
             $catIds = (new BrowseHistoryService())->recentCategoryIds($viewerMemberId, 5);
             if ($catIds) {
-                $rows = Db::name('products')
-                    ->where('status', 1)
-                    ->whereIn('category_id', $catIds)
-                    ->orderRaw('(sold_count + COALESCE(sold_boost, 0)) DESC')
-                    ->order('id', 'desc')
-                    ->limit($limit)
-                    ->select()
-                    ->toArray();
-                if ($rows) {
-                    return [
-                        'tab' => $tab,
-                        'source' => 'browse_categories',
-                        'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
-                        'sold_display_mode' => $mode,
-                    ];
-                }
+                $categoryIds = $catIds;
+                $source = 'browse_categories';
+            } else {
+                $source = 'hot_fallback';
             }
-            $source = 'hot_fallback';
         } elseif ($tab === 'for_you') {
             $source = 'hot_fallback';
         }
 
-        $rows = Db::name('products')
-            ->where('status', 1)
-            ->orderRaw('(sold_count + COALESCE(sold_boost, 0)) DESC')
-            ->order('id', 'desc')
-            ->limit($limit)
-            ->select()
-            ->toArray();
+        $countQ = Db::name('products')->where('status', 1);
+        if ($categoryIds) {
+            $countQ->whereIn('category_id', $categoryIds);
+        }
+        $total = (int) $countQ->count();
+        if ($total === 0) {
+            return [
+                'tab'               => $tab === 'for_you' ? 'for_you' : ($tab === 'new' ? 'new' : 'hot'),
+                'source'            => $source,
+                'items'             => [],
+                'sold_display_mode' => $mode,
+                'total'             => 0,
+                'offset'            => $offset,
+                'next_offset'       => $offset,
+                'limit'             => $limit,
+                'wrapped'           => false,
+            ];
+        }
+
+        $wrapped = false;
+        $fetchOffset = $offset;
+        if ($fetchOffset >= $total) {
+            $fetchOffset = $fetchOffset % $total;
+            $wrapped = true;
+        }
+
+        $listQ = Db::name('products')->where('status', 1);
+        if ($categoryIds) {
+            $listQ->whereIn('category_id', $categoryIds);
+        }
+        if ($tab === 'new') {
+            $listQ->order('id', 'desc');
+        } else {
+            $listQ->orderRaw('(sold_count + COALESCE(sold_boost, 0)) DESC')->order('id', 'desc');
+        }
+        // ThinkPHP: limit(offset, length)
+        $rows = $listQ->limit($fetchOffset, $limit)->select()->toArray();
+
+        // 頁內打亂：集合仍屬該有序切片，順序每次不同
+        if (count($rows) > 1) {
+            shuffle($rows);
+        }
 
         return [
-            'tab' => $tab === 'for_you' ? 'for_you' : 'hot',
-            'source' => $source === 'hot_fallback' ? 'hot_fallback' : 'sales',
-            'items' => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
+            'tab'               => $tab === 'for_you' ? 'for_you' : ($tab === 'new' ? 'new' : 'hot'),
+            'source'            => $source,
+            'items'             => array_map(fn ($r) => $this->presentCard($r, $mode), $rows),
             'sold_display_mode' => $mode,
+            'total'             => $total,
+            'offset'            => $offset,
+            'next_offset'       => $offset + count($rows),
+            'limit'             => $limit,
+            'wrapped'           => $wrapped,
         ];
     }
 

@@ -33,14 +33,22 @@ const { text } = useLocaleText()
 const router = useRouter()
 
 const feedTabs: HomeRecTab[] = ['new', 'hot', 'for_you']
+const FEED_PAGE = 16
 const feedTab = ref(0)
 const feedItems = ref<Card[]>([])
 const feedBusy = ref(false)
+/** van-list 加載態 */
+const feedLoading = ref(false)
+const feedError = ref(false)
+const feedOffset = ref(0)
+const feedTotal = ref(0)
 /** 下拉刷新中（van-pull-refresh v-model） */
 const pulling = ref(false)
 /** 上次真正打接口刷新的時間戳；30s 內再拉只提示、不請求 */
 const REFRESH_COOLDOWN_MS = 30_000
 let lastRefreshAt = 0
+/** 防止 tab 切換與 list 觸底並發打亂 offset */
+let feedSeq = 0
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
@@ -97,23 +105,58 @@ async function loadSubscribeStatus() {
   }
 }
 
-async function loadFeed() {
+/**
+ * 加載一頁推薦。reset=true 時從 offset 0 重拉並替換列表。
+ * 服務端：有序切片後頁內 shuffle；offset 越界後取模往復。
+ */
+async function loadFeed(reset = false) {
   const tab = feedTabs[feedTab.value] || 'new'
+  const seq = ++feedSeq
+  if (reset) {
+    feedOffset.value = 0
+    feedError.value = false
+  }
+  const offset = reset ? 0 : feedOffset.value
   feedBusy.value = true
+  feedLoading.value = true
+  feedError.value = false
   try {
-    const data = await fetchHomeRecommendations(tab, 20)
-    feedItems.value = data.items || []
+    const data = await fetchHomeRecommendations(tab, FEED_PAGE, offset)
+    if (seq !== feedSeq) return
+    const items = data.items || []
+    feedTotal.value = Number(data.total || 0)
+    feedOffset.value = Number(data.next_offset ?? offset + items.length)
+    feedItems.value = reset ? items : feedItems.value.concat(items)
   } catch {
-    // 回退：本地 catalog 緩衝
-    if (tab === 'new') {
-      feedItems.value = [...products.value].reverse().slice(0, 20)
-    } else {
-      feedItems.value = products.value.slice(0, 20)
+    if (seq !== feedSeq) return
+    feedError.value = true
+    if (reset || !feedItems.value.length) {
+      // 首屏回退：本地 catalog 緩衝
+      const local =
+        tab === 'new'
+          ? [...products.value].reverse().slice(0, FEED_PAGE)
+          : products.value.slice(0, FEED_PAGE)
+      feedItems.value = local
+      feedOffset.value = local.length
+      feedTotal.value = local.length
     }
   } finally {
-    feedBusy.value = false
+    if (seq === feedSeq) {
+      feedBusy.value = false
+      feedLoading.value = false
+    }
   }
 }
+
+async function onFeedLoad() {
+  // van-list：觸底追加；往復由服務端 offset 取模完成，故有貨時 finished 恒 false
+  if (feedBusy.value) return
+  await loadFeed(false)
+}
+
+const feedFinished = computed(
+  () => feedTotal.value === 0 && !feedBusy.value && feedItems.value.length === 0,
+)
 
 async function loadBanners() {
   try {
@@ -154,7 +197,7 @@ async function onPullRefresh() {
   }
   try {
     const results = await Promise.allSettled([
-      refresh().then(() => loadFeed()),
+      refresh().then(() => loadFeed(true)),
       loadSeckillHome().then(() => startFlashTimer()),
       loadBanners(),
       loadOps(),
@@ -196,9 +239,9 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.23')
+  console.log('新包 v1.24')
   homeBooted = true
-  void refresh().then(() => loadFeed())
+  void refresh().then(() => loadFeed(true))
   void loadSubscribeStatus()
   void loadSeckillHome().then(() => startFlashTimer())
   void loadBanners()
@@ -231,7 +274,10 @@ onActivated(() => {
 })
 
 watch(feedTab, () => {
-  void loadFeed()
+  feedItems.value = []
+  feedOffset.value = 0
+  feedTotal.value = 0
+  void loadFeed(true)
 })
 
 function onLink(linkType: string, linkValue: string) {
@@ -495,10 +541,24 @@ const tabLabel = (tab: HomeRecTab) => {
             {{ tabLabel(tab) }}
           </button>
         </div>
-        <div class="grid">
-          <ProductCard v-for="p in feedItems" :key="p.id" :product="p" />
-        </div>
-        <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
+        <van-list
+          v-model:loading="feedLoading"
+          v-model:error="feedError"
+          :finished="feedFinished"
+          :loading-text="t('home.feedLoading')"
+          :error-text="t('home.feedLoadFail')"
+          :immediate-check="false"
+          @load="onFeedLoad"
+        >
+          <div class="grid">
+            <ProductCard
+              v-for="(p, idx) in feedItems"
+              :key="`${p.id}-${idx}`"
+              :product="p"
+            />
+          </div>
+          <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
+        </van-list>
       </section>
 
       <section v-if="showSubscribe" class="subscribe">
