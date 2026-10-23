@@ -48,7 +48,7 @@ const MOCK_IMAGES = [
   '/mock/product-2-detail-1.jpg',
   '/mock/product-3.jpg',
   '/mock/product-4.jpg',
-  '/api/v1/files/product/1/20261022/d243e6b9be7eea6b.jpg',
+  '/storage/product/1/20261022/d243e6b9be7eea6b.jpg',
 ]
 
 const NAMES = [
@@ -88,7 +88,14 @@ async function main() {
   const cats = await req('/api/v1/admin/categories', { token })
   const catList = Array.isArray(cats) ? cats : cats.items || []
   if (!catList.length) throw new Error('無分類，無法灌數')
-  const catIds = catList.map((c) => c.id)
+  const catIds = []
+  const walk = (nodes) => {
+    for (const n of nodes || []) {
+      if (n?.id) catIds.push(n.id)
+      if (n?.children?.length) walk(n.children)
+    }
+  }
+  walk(catList)
 
   let created = 0
   let updated = 0
@@ -160,34 +167,27 @@ async function main() {
     }
 
     try {
-      // try create; if taken, find id and update
-      try {
-        await req('/api/v1/admin/products', { method: 'POST', token, body })
-        created++
-      } catch (e) {
-        const msg = String(e.message || e)
-        if (!/已存在|代碼|taken|exist|422/i.test(msg) && !existing.has(code)) {
-          // probe product by public/admin read
-          let dbId = existing.get(code)
-          if (!dbId) {
-            try {
-              const one = await req(`/api/v1/admin/products/${encodeURIComponent(code)}`, { token })
-              dbId = one.db_id
-            } catch {
-              throw e
-            }
-          }
-          await req(`/api/v1/admin/products/${dbId}`, { method: 'PUT', token, body })
-          updated++
-        } else {
-          let dbId = existing.get(code)
-          if (!dbId) {
-            const one = await req(`/api/v1/admin/products/${encodeURIComponent(code)}`, { token })
-            dbId = one.db_id
-          }
-          await req(`/api/v1/admin/products/${dbId}`, { method: 'PUT', token, body })
-          updated++
+      let dbId = existing.get(code)
+      if (!dbId) {
+        try {
+          const one = await req(`/api/v1/admin/products/${encodeURIComponent(code)}`, { token })
+          dbId = one.db_id
+          if (dbId) existing.set(code, dbId)
+        } catch {
+          /* create path */
         }
+      }
+      if (dbId) {
+        const saved = await req(`/api/v1/admin/products/${dbId}`, { method: 'PUT', token, body })
+        updated++
+        if (i <= 3 || i === COUNT) {
+          console.log(`put ${code} id=${dbId} image=${saved.image}`)
+        }
+      } else {
+        const saved = await req('/api/v1/admin/products', { method: 'POST', token, body })
+        created++
+        if (saved.db_id) existing.set(code, saved.db_id)
+        if (i <= 3) console.log(`post ${code} image=${saved.image}`)
       }
       if (i % 20 === 0) console.log(`… ${i}/${COUNT} (created=${created} updated=${updated})`)
     } catch (e) {
