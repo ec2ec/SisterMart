@@ -282,4 +282,7 @@ Route::group('api/v1/admin', function () {
     Route::get('newsletter-subscribers', 'admin.Newsletter/index');
     Route::post('newsletter-subscribers/:id/status', 'admin.Newsletter/status');
     Route::delete('newsletter-subscribers/:id', 'admin.Newsletter/delete');
+
+    /** 系統消息發送流水（郵件／短信／WhatsApp） */
+    Route::get('notify-outbox', 'admin.NotifyOutbox/index');
 })->middleware([AdminAuth::class, AdminAclGate::class]);

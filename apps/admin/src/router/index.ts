@@ -24,6 +24,7 @@ import MembersView from '../views/MembersView.vue'
 import LevelsView from '../views/LevelsView.vue'
 import AdminsView from '../views/AdminsView.vue'
 import MessagesView from '../views/MessagesView.vue'
+import NotifyOutboxView from '../views/NotifyOutboxView.vue'
 import NewsletterView from '../views/NewsletterView.vue'
 import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
@@ -58,6 +59,7 @@ export const router = createRouter({
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         { path: '/cms/home', component: HomeBannersView, meta: { title: '首頁運營' } },
         { path: '/cms/messages', component: MessagesView, meta: { title: '系統消息' } },
+        { path: '/cms/notify-outbox', component: NotifyOutboxView, meta: { title: '發送流水' } },
         { path: '/cms/newsletter', component: NewsletterView, meta: { title: '訂閱名單' } },
         { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
         { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },

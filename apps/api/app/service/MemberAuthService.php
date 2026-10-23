@@ -332,20 +332,54 @@ class MemberAuthService
 
     private function sendWhatsapp(string $purpose, string $target): array
     {
-        $this->phone($target);
+        $phone = $this->phone($target);
+        $outbox = new NotifyOutboxService();
         if ($purpose === 'register') {
+            $outbox->record([
+                'channel' => 'whatsapp',
+                'purpose' => 'otp_register',
+                'to_target' => $phone,
+                'subject' => 'WhatsApp 驗證碼',
+                'body_preview' => '註冊驗證碼（WhatsApp 暫不可用）',
+                'status' => 'skipped',
+                'provider' => 'whatsapp_stub',
+                'error_message' => 'WhatsApp unavailable; use email',
+            ]);
             throw new ApiException('WHATSAPP_UNAVAILABLE', 'WhatsApp 暫時無法發送，請改用郵箱收取驗證碼');
         }
         if (!in_array($purpose, ['login', 'reset'], true)) {
             throw new ApiException('INVALID', '用途不正確');
         }
-        $member = Db::name('members')->where('phone', $this->phone($target))->find();
+        $member = Db::name('members')->where('phone', $phone)->find();
         if (!$member) {
             throw new ApiException('ACCOUNT_NOT_FOUND', '找不到這個帳號');
         }
         if (!$member['email']) {
+            $outbox->record([
+                'channel' => 'whatsapp',
+                'purpose' => 'otp_' . $purpose,
+                'to_target' => $phone,
+                'subject' => 'WhatsApp 驗證碼',
+                'body_preview' => '驗證碼（無綁定郵箱，無法改發）',
+                'status' => 'failed',
+                'provider' => 'whatsapp_stub',
+                'member_id' => (int) $member['id'],
+                'error_message' => 'No bound email for fallback',
+            ]);
             throw new ApiException('NO_BOUND_EMAIL', '這個手機沒有綁定郵箱，無法改發驗證碼');
         }
+
+        $outbox->record([
+            'channel' => 'whatsapp',
+            'purpose' => 'otp_' . $purpose,
+            'to_target' => $phone,
+            'subject' => 'WhatsApp 驗證碼',
+            'body_preview' => '驗證碼改發至綁定郵箱',
+            'status' => 'skipped',
+            'provider' => 'whatsapp_stub',
+            'member_id' => (int) $member['id'],
+            'error_message' => 'WhatsApp stub; fallback to email',
+        ]);
 
         return $this->issueEmailCode((string) $member['email'], $purpose, (int) $member['id'], true);
     }
@@ -380,6 +414,18 @@ class MemberAuthService
             'created_at' => $now,
         ]);
         Log::info('sistermart verify code ' . $purpose . ' ' . $email . ' ' . $code);
+
+        // 經 MailService 出站並寫入 notify_outbox；預覽會含驗證碼，管理員可見發送結果
+        (new MailService())->enqueue(
+            $email,
+            'SisterMart 驗證碼',
+            '<p>您的驗證碼是 <strong>' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8')
+                . '</strong>，10 分鐘內有效。'
+                . ($fallback ? '（由 WhatsApp 改發）' : '')
+                . '</p>',
+            'otp_' . $purpose,
+            $memberId !== null ? (string) $memberId : null,
+        );
 
         $payload = [
             'via'          => 'email',

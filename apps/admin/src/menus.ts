@@ -46,6 +46,7 @@ export const adminMenus: AdminMenu[] = [
       { label: '文章', key: '/cms/articles', path: '/cms/articles' },
       { label: '首頁運營', key: '/cms/home', path: '/cms/home' },
       { label: '系統消息', key: '/cms/messages', path: '/cms/messages' },
+      { label: '發送流水', key: '/cms/notify-outbox', path: '/cms/notify-outbox' },
       { label: '訂閱名單', key: '/cms/newsletter', path: '/cms/newsletter' },
     ],
   },
