@@ -231,7 +231,8 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
 .sk-item .sk-line {
   width: 60%;
 }
-.sk-item .ph {
-  background: none;
+.sk-item .ph.sk-pulse {
+  background: linear-gradient(90deg, var(--sm-bg-soft) 0%, #ebe6de 45%, var(--sm-bg-soft) 90%);
+  background-size: 200% 100%;
 }
 </style>
