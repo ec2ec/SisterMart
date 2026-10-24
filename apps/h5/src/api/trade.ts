@@ -195,6 +195,25 @@ export function fetchOrder(id: string | number) {
   return api<Order>(`/api/v1/orders/${id}`, {}, 'member')
 }
 
+export type OrderMessage = {
+  id: number
+  sender: 'seller' | 'buyer'
+  body: string
+  created_at: string
+}
+
+export function fetchOrderMessages(orderId: string | number) {
+  return api<{ items: OrderMessage[] }>(`/api/v1/orders/${orderId}/messages`, {}, 'member')
+}
+
+export function postOrderMessage(orderId: string | number, body: string) {
+  return api<OrderMessage>(
+    `/api/v1/orders/${orderId}/messages`,
+    { method: 'POST', body: JSON.stringify({ body }) },
+    'member',
+  )
+}
+
 export function cancelOrder(id: number) {
   return api<Order>(`/api/v1/orders/${id}/cancel`, { method: 'POST', body: '{}' }, 'member')
 }

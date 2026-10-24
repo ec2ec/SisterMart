@@ -5,6 +5,8 @@ import { NButton, NCard, NDescriptions, NDescriptionsItem, NInput, NSpace, useMe
 import { api } from '../api'
 import { orderStatusLabel } from '../utils/orderStatus'
 
+type OrderMsg = { id: number; sender: 'seller' | 'buyer'; body: string; created_at: string }
+
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
@@ -17,6 +19,16 @@ const buyerNote = ref('')
 const noteBusy = ref(false)
 const loadError = ref('')
 const loading = ref(true)
+const chat = ref<OrderMsg[]>([])
+
+async function loadChat() {
+  try {
+    const data = await api<{ items: OrderMsg[] }>(`/api/v1/admin/orders/${route.params.id}/messages`, {}, true)
+    chat.value = data.items || []
+  } catch {
+    chat.value = []
+  }
+}
 
 async function load() {
   loading.value = true
@@ -34,6 +46,7 @@ async function load() {
   } catch {
     shipment.value = null
   }
+  await loadChat()
   loading.value = false
 }
 
@@ -64,6 +77,10 @@ async function sendBuyerNote() {
     message.warning('請填寫留言')
     return
   }
+  if (body.length > 256) {
+    message.warning('留言最多 256 字')
+    return
+  }
   noteBusy.value = true
   try {
     await api(
@@ -73,6 +90,7 @@ async function sendBuyerNote() {
     )
     buyerNote.value = ''
     message.success('已發送給買家')
+    await loadChat()
   } finally {
     noteBusy.value = false
   }
@@ -143,16 +161,29 @@ function itemSpec(item: any) {
       </n-space>
     </n-card>
 
-    <n-card size="small" title="給買家留言" style="margin-top: 1rem">
-      <p style="color: #888; font-size: 0.8125rem; margin: 0 0 0.5rem">
-        留言會出現在買家的「訂單消息」中，並標明本訂單號。
-      </p>
+    <n-card size="small" title="留言信息" style="margin-top: 1rem">
+      <p class="chat-hint">左側為賣家留言，右側為買家留言。發送後會同步通知買家「訂單消息」。</p>
+      <div v-if="!chat.length" class="chat-empty">暫無留言</div>
+      <div v-else class="chat-list">
+        <div
+          v-for="m in chat"
+          :key="m.id"
+          class="bubble"
+          :class="m.sender === 'buyer' ? 'is-buyer' : 'is-seller'"
+        >
+          <div class="who">{{ m.sender === 'buyer' ? '買家' : '賣家' }}</div>
+          <div class="txt">{{ m.body }}</div>
+          <div class="when">{{ m.created_at }}</div>
+        </div>
+      </div>
       <n-input
         v-model:value="buyerNote"
         type="textarea"
-        placeholder="留言內容"
+        placeholder="輸入留言（最多 256 字）"
         :rows="3"
-        style="margin-bottom: 0.5rem"
+        maxlength="256"
+        show-count
+        style="margin: 0.75rem 0 0.5rem"
       />
       <n-button type="primary" :loading="noteBusy" @click="sendBuyerNote">發送留言</n-button>
     </n-card>
@@ -177,5 +208,64 @@ function itemSpec(item: any) {
 ul {
   padding-left: 1.25rem;
   margin: 0.5rem 0;
+}
+.chat-hint {
+  color: #888;
+  font-size: 0.8125rem;
+  margin: 0 0 0.75rem;
+}
+.chat-empty {
+  color: #aaa;
+  font-size: 0.8125rem;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.25rem 0.15rem;
+  background: #fafafa;
+  border-radius: 0.5rem;
+}
+.bubble {
+  max-width: 78%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.bubble.is-seller {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+.bubble.is-buyer {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.bubble .who {
+  font-size: 0.75rem;
+  color: #999;
+}
+.bubble .txt {
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.55rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bubble.is-seller .txt {
+  background: #e8eeff;
+  color: #24315c;
+}
+.bubble.is-buyer .txt {
+  background: #ffe8f1;
+  color: #5a2340;
+}
+.bubble .when {
+  font-size: 0.6875rem;
+  color: #bbb;
 }
 </style>
