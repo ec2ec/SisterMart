@@ -39,20 +39,12 @@ class MailService
         ]);
 
         $outbox = new NotifyOutboxService();
-        $preview = NotifyOutboxService::previewHtml($bodyHtml);
-        // OTP 預覽遮罩明文驗證碼（仍以郵件正文發送）
-        if ($refType !== null && str_starts_with($refType, 'otp_')) {
-            $preview = preg_replace('/\b\d{6}\b/', '******', $preview) ?? $preview;
-            if ($preview === '' || $preview === '******') {
-                $preview = '會員驗證碼（6 位，10 分鐘有效）';
-            }
-        }
         $notifyId = $outbox->record([
             'channel' => 'email',
             'purpose' => $refType ?: 'mail',
             'to_target' => $to,
             'subject' => $subject,
-            'body_preview' => $preview,
+            'body_preview' => NotifyOutboxService::previewHtml($bodyHtml),
             'status' => 'queued',
             'provider' => 'php_mail',
             'ref_type' => $refType,
