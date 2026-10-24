@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showDialog } from 'vant'
@@ -19,6 +19,20 @@ const system = ref<Msg[]>([])
 function plainPreview(html: string) {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
+
+function unreadCount(list: Msg[]) {
+  return list.reduce((n, m) => n + (m.read ? 0 : 1), 0)
+}
+
+/** van-tab badge：0 不顯示 */
+const orderBadge = computed(() => {
+  const n = unreadCount(order.value)
+  return n > 0 ? n : undefined
+})
+const systemBadge = computed(() => {
+  const n = unreadCount(system.value)
+  return n > 0 ? n : undefined
+})
 
 onMounted(async () => {
   if (!isLoggedIn()) {
@@ -67,8 +81,8 @@ async function open(msg: Msg) {
   <div class="page">
     <SubPageNav :title="t('pages.messages')" />
     <van-tabs v-model:active="tab">
-      <van-tab :title="t('m7.orderMsg')" name="order" />
-      <van-tab :title="t('m7.systemMsg')" name="system" />
+      <van-tab :title="t('m7.orderMsg')" name="order" :badge="orderBadge" />
+      <van-tab :title="t('m7.systemMsg')" name="system" :badge="systemBadge" />
     </van-tabs>
     <van-cell-group inset>
       <van-cell

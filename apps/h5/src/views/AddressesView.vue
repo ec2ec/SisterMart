@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import {
   formatHkAddressLine,
@@ -11,6 +11,7 @@ import {
   type HkDistrictOption,
   type HkLocale,
 } from '../data/hkDistricts'
+import { ApiError } from '../api/client'
 import { deleteAddress, fetchAddresses, saveAddress, type Address } from '../api/trade'
 
 const { t, locale } = useI18n()
@@ -58,7 +59,7 @@ function reset() {
     region: '',
     district: '',
     detail: '',
-    is_default: true,
+    is_default: items.value.length === 0,
   })
 }
 
@@ -72,6 +73,11 @@ async function submit() {
   if (!form.region || !form.district) {
     showToast(t('checkout.pickDistrict'))
     return
+  }
+  // 編輯目標已被刪除：改為新增，避免 PUT 已不存在的 id
+  const editingId = form.id
+  if (editingId && !items.value.some((a) => a.id === editingId)) {
+    form.id = 0
   }
   try {
     await saveAddress(
@@ -91,13 +97,29 @@ async function submit() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     if (redirect) router.replace(redirect)
   } catch (error) {
-    showToast(error instanceof Error ? error.message : t('checkout.fail'))
+    showToast(error instanceof ApiError && error.message ? error.message : error instanceof Error ? error.message : t('checkout.fail'))
   }
 }
 
 async function remove(id: number) {
-  await deleteAddress(id)
-  await load()
+  try {
+    await showConfirmDialog({
+      title: t('checkout.deleteAddrConfirm'),
+      confirmButtonText: t('cart.delete'),
+      confirmButtonColor: '#c45c26',
+    })
+  } catch {
+    return
+  }
+  try {
+    const wasEditing = form.id === id
+    await deleteAddress(id)
+    await load()
+    if (wasEditing) reset()
+    showToast(t('checkout.deleted'))
+  } catch (error) {
+    showToast(error instanceof ApiError && error.message ? error.message : t('checkout.fail'))
+  }
 }
 </script>
 
@@ -108,11 +130,17 @@ async function remove(id: number) {
       <van-cell
         v-for="row in items"
         :key="row.id"
-        :title="`${row.receiver} ${row.phone}`"
         :label="addressLabel(row)"
         is-link
+        :class="{ editing: form.id === row.id }"
         @click="edit(row)"
       >
+        <template #title>
+          <div class="addr-title">
+            <span class="who">{{ row.receiver }} {{ row.phone }}</span>
+            <span v-if="row.is_default" class="default-tag">{{ t('checkout.defaultTag') }}</span>
+          </div>
+        </template>
         <template #value>
           <button type="button" class="del" @click.stop="remove(row.id)">{{ t('cart.delete') }}</button>
         </template>
@@ -183,6 +211,33 @@ async function remove(id: number) {
 </template>
 
 <style scoped>
+.addr-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+.who {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.default-tag {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff;
+  background: var(--sm-primary);
+}
+.editing {
+  background: color-mix(in srgb, var(--sm-primary) 6%, #fff);
+}
 .form {
   margin: 1rem 0.75rem 2rem;
   padding: 0.75rem;
