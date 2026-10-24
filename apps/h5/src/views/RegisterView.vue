@@ -149,9 +149,11 @@ async function submit() {
 </script>
 
 <template>
-  <AuthLayout :title="t('auth.registerTitle')">
-    <template v-if="statusLoaded && !registrationOpen">
-      <p class="note">{{ t('auth.registerClosed') }}</p>
+  <AuthLayout :title="registrationOpen ? t('auth.registerTitle') : t('auth.register')">
+    <!-- 狀態未載入前不渲染註冊表單，避免閃爍 -->
+    <template v-if="!statusLoaded" />
+    <template v-else-if="!registrationOpen">
+      <p class="closed-msg">{{ t('auth.registerClosed') }}</p>
       <button class="submit" type="button" @click="router.replace({ name: 'login' })">{{ t('auth.backLogin') }}</button>
     </template>
     <template v-else>
@@ -206,3 +208,16 @@ async function submit() {
     </template>
   </AuthLayout>
 </template>
+
+<style scoped>
+.closed-msg {
+  margin: 0.5rem 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(180, 60, 60, 0.08);
+  color: #8b2e2e;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-align: center;
+}
+</style>

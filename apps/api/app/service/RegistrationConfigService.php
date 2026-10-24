@@ -40,7 +40,7 @@ class RegistrationConfigService
     public function assertRegistrationOpen(): void
     {
         if (!(bool) $this->get()['registration_enabled']) {
-            throw new ApiException('REGISTRATION_CLOSED', '暫時不開放註冊', 403, 40310);
+            throw new ApiException('REGISTRATION_CLOSED', '當前已關閉註冊通道，請稍後再試', 403, 40310);
         }
     }
 
