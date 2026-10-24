@@ -12,4 +12,4 @@ function normalizeVersion(raw?: string): string {
 }
 
 export const APP_VERSION =
-  normalizeVersion(import.meta.env.VITE_APP_VERSION as string | undefined) || 'v1.30.8'
+  normalizeVersion(import.meta.env.VITE_APP_VERSION as string | undefined) || 'v1.30.9'

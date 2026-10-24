@@ -198,7 +198,8 @@ async function remove(id: number) {
 }
 .picker-body {
   overflow: auto;
-  padding: 0.5rem 0 1.25rem;
+  /* 底部多留空間，避免最後一項（18 離島區）被遮擋／滑不到 */
+  padding: 0.5rem 0 calc(3.5rem + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }
 .group-title {
