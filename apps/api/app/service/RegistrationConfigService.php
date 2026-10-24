@@ -100,6 +100,10 @@ class RegistrationConfigService
         $welcomeEn = array_key_exists('welcome_html', $body) && is_array($body['welcome_html'])
             ? (string) ($body['welcome_html']['en'] ?? $current['welcome_html']['en'])
             : (string) ($body['welcome_html_en'] ?? $current['welcome_html']['en']);
+        // Soft length guard (column is MEDIUMTEXT; keep admin payloads sane)
+        if (strlen($welcomeZh) > 200000 || strlen($welcomeEn) > 200000) {
+            throw new ApiException('INVALID', '歡迎文案過長', 422, 42201);
+        }
 
         $payload = [
             'registration_enabled' => $registrationEnabled,
@@ -114,7 +118,11 @@ class RegistrationConfigService
                 'en' => $welcomeEn,
             ],
         ];
-        TradeSettings::set(self::SETTING_KEY, json_encode($payload, JSON_UNESCAPED_UNICODE));
+        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            throw new ApiException('INVALID', '配置無法序列化', 422, 42201);
+        }
+        TradeSettings::set(self::SETTING_KEY, $encoded);
 
         return $this->get();
     }
