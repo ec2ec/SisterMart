@@ -224,7 +224,7 @@ async function onConfirm() {
 }
 .line {
   display: grid;
-  grid-template-columns: 4rem 1fr;
+  grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
