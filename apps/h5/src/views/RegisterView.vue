@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -32,7 +32,20 @@ const showPassword = ref(false)
 const agreed = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
+const registrationOpen = ref(true)
+const statusLoaded = ref(false)
 const { left, start } = useCooldown()
+
+onMounted(async () => {
+  try {
+    const data = await api<{ registration_enabled?: boolean }>('/api/v1/shop/status')
+    registrationOpen.value = data.registration_enabled !== false
+  } catch {
+    registrationOpen.value = true
+  } finally {
+    statusLoaded.value = true
+  }
+})
 
 function switchMode(next: 'email' | 'phone') {
   mode.value = next
@@ -137,53 +150,59 @@ async function submit() {
 
 <template>
   <AuthLayout :title="t('auth.registerTitle')">
-    <div class="seg">
-      <button type="button" :class="{ on: mode === 'email' }" @click="switchMode('email')">
-        {{ t('auth.emailTab') }}
-      </button>
-      <button type="button" :class="{ on: mode === 'phone' }" @click="switchMode('phone')">
-        {{ t('auth.phoneTab') }}
-      </button>
-    </div>
-
-    <template v-if="mode === 'phone'">
-      <label class="lab">{{ t('auth.phone') }} *</label>
-      <input v-model="phone" class="field" type="tel" autocomplete="tel" :placeholder="t('auth.phonePh')" />
+    <template v-if="statusLoaded && !registrationOpen">
+      <p class="note">{{ t('auth.registerClosed') }}</p>
+      <button class="submit" type="button" @click="router.replace({ name: 'login' })">{{ t('auth.backLogin') }}</button>
     </template>
-    <template v-if="mode === 'email' || whatsappFallback">
-      <label class="lab">{{ mode === 'phone' ? t('auth.fallbackEmail') : t('auth.email') }} *</label>
-      <input v-model="email" class="field" type="email" autocomplete="email" :placeholder="t('auth.emailPh')" />
+    <template v-else>
+      <div class="seg">
+        <button type="button" :class="{ on: mode === 'email' }" @click="switchMode('email')">
+          {{ t('auth.emailTab') }}
+        </button>
+        <button type="button" :class="{ on: mode === 'phone' }" @click="switchMode('phone')">
+          {{ t('auth.phoneTab') }}
+        </button>
+      </div>
+
+      <template v-if="mode === 'phone'">
+        <label class="lab">{{ t('auth.phone') }} *</label>
+        <input v-model="phone" class="field" type="tel" autocomplete="tel" :placeholder="t('auth.phonePh')" />
+      </template>
+      <template v-if="mode === 'email' || whatsappFallback">
+        <label class="lab">{{ mode === 'phone' ? t('auth.fallbackEmail') : t('auth.email') }} *</label>
+        <input v-model="email" class="field" type="email" autocomplete="email" :placeholder="t('auth.emailPh')" />
+      </template>
+
+      <label class="lab">{{ t('auth.code') }} *</label>
+      <div class="field">
+        <input v-model="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" :placeholder="t('auth.codePh')" />
+        <button class="send" type="button" :disabled="left > 0" @click="sendCode">
+          {{ left > 0 ? t('auth.resend', { n: left }) : t('auth.send') }}
+        </button>
+      </div>
+      <label class="lab">{{ t('auth.password') }} *</label>
+      <div class="field">
+        <input
+          v-model="password"
+          :type="showPassword ? 'text' : 'password'"
+          autocomplete="new-password"
+          :placeholder="t('auth.passwordPh')"
+        />
+        <button class="eye" type="button" @click="showPassword = !showPassword">
+          <van-icon :name="showPassword ? 'eye-o' : 'closed-eye'" size="1.125rem" />
+        </button>
+      </div>
+
+      <label class="check">
+        <input v-model="agreed" type="checkbox" />
+        <span>
+          {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openArticle('terms')">{{ t('auth.terms') }}</button
+          >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openArticle('privacy')">{{ t('auth.privacy') }}</button
+          >{{ t('auth.agreeAfter') }}
+        </span>
+      </label>
+      <button class="submit" type="button" @click="submit">{{ t('auth.register') }}</button>
+      <p class="note">{{ t('auth.registerPhoneNote') }}</p>
     </template>
-
-    <label class="lab">{{ t('auth.code') }} *</label>
-    <div class="field">
-      <input v-model="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" :placeholder="t('auth.codePh')" />
-      <button class="send" type="button" :disabled="left > 0" @click="sendCode">
-        {{ left > 0 ? t('auth.resend', { n: left }) : t('auth.send') }}
-      </button>
-    </div>
-    <label class="lab">{{ t('auth.password') }} *</label>
-    <div class="field">
-      <input
-        v-model="password"
-        :type="showPassword ? 'text' : 'password'"
-        autocomplete="new-password"
-        :placeholder="t('auth.passwordPh')"
-      />
-      <button class="eye" type="button" @click="showPassword = !showPassword">
-        <van-icon :name="showPassword ? 'eye-o' : 'closed-eye'" size="1.125rem" />
-      </button>
-    </div>
-
-    <label class="check">
-      <input v-model="agreed" type="checkbox" />
-      <span>
-        {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openArticle('terms')">{{ t('auth.terms') }}</button
-        >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openArticle('privacy')">{{ t('auth.privacy') }}</button
-        >{{ t('auth.agreeAfter') }}
-      </span>
-    </label>
-    <button class="submit" type="button" @click="submit">{{ t('auth.register') }}</button>
-    <p class="note">{{ t('auth.registerPhoneNote') }}</p>
   </AuthLayout>
 </template>

@@ -17,6 +17,7 @@ const authCodes: Record<string, string> = {
   DISABLED: 'auth.disabled',
   WHATSAPP_UNAVAILABLE: 'auth.whatsappFailedNeedEmail',
   USE_PASSWORD: 'auth.usePassword',
+  REGISTRATION_CLOSED: 'auth.registerClosed',
 }
 
 export function authError(t: (key: string) => string, error: unknown) {

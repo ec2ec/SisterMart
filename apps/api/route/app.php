@@ -205,6 +205,8 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/shop', 'admin.ShopSettings/updateShop');
     Route::get('settings/maintenance', 'admin.ShopSettings/maintenance');
     Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
+    Route::get('settings/registration', 'admin.ShopSettings/registration');
+    Route::put('settings/registration', 'admin.ShopSettings/updateRegistration');
 
     /** 窄版發佈通道（僅超管；需 RELEASE_ENABLED + RELEASE_HMAC_SECRET） */
     Route::get('releases/state', 'admin.Releases/state');

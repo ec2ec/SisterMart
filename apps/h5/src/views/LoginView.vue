@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -31,7 +31,17 @@ const showPassword = ref(false)
 const agreed = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
+const registrationOpen = ref(true)
 const { left, start } = useCooldown()
+
+onMounted(async () => {
+  try {
+    const data = await api<{ registration_enabled?: boolean }>('/api/v1/shop/status')
+    registrationOpen.value = data.registration_enabled !== false
+  } catch {
+    registrationOpen.value = true
+  }
+})
 
 const hint = computed(() => (mode.value === 'email' ? t('auth.loginEmailHint') : t('auth.loginPhoneHint')))
 
@@ -172,7 +182,7 @@ async function submit() {
       </span>
     </label>
     <button class="submit" type="button" @click="submit">{{ t('auth.login') }}</button>
-    <p class="center">
+    <p v-if="registrationOpen" class="center">
       {{ t('auth.newUser') }}
       <button type="button" @click="go('register')">{{ t('auth.createAccount') }}</button>
     </p>
