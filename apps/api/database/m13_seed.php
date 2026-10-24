@@ -112,7 +112,7 @@ if ($demo) {
             'updated_at' => $now,
         ]);
         Db::name('members')->where('id', $cid)->update([
-            'promo_code' => 'SM' . str_pad((string) $cid, 4, '0', STR_PAD_LEFT),
+            'promo_code' => \app\service\PromoCodeService::fromMemberId((int) $cid),
         ]);
         // 複製 demo 默認地址便於下單
         $addr = Db::name('addresses')->where('member_id', $demo['id'])->order('id', 'asc')->find();

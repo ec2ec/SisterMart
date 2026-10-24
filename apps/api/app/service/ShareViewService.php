@@ -21,7 +21,11 @@ class ShareViewService
             throw new ApiException('INVALID', '缺少 ref 或商品', 422, 42284);
         }
 
-        $owner = Db::name('members')->where('promo_code', $ref)->find();
+        $parsed = PromoCodeService::parse($ref);
+        if (!$parsed['ok']) {
+            return ['mock' => false, 'credited' => false, 'reason' => 'unknown_ref'];
+        }
+        $owner = Db::name('members')->where('promo_code', $parsed['code'])->find();
         if (!$owner || (int) ($owner['status'] ?? 0) !== 1) {
             return ['mock' => false, 'credited' => false, 'reason' => 'unknown_ref'];
         }

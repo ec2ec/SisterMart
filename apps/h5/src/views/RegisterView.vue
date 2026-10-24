@@ -35,7 +35,8 @@ const whatsappFallback = ref(false)
 const registrationOpen = ref(true)
 const statusLoaded = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
-const { left, start } = useCooldown()
+const refCode = ref(authQuery(route.query).ref || '')
+const { left, start } = useCountdown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
 
@@ -49,6 +50,18 @@ onMounted(async () => {
     statusLoaded.value = true
   }
 })
+
+/** 選填：有填則先校驗格式與服務端 HMAC／存在性，通過才允許提交 */
+async function assertRefOk(): Promise<string> {
+  const raw = refCode.value.trim().toUpperCase()
+  refCode.value = raw
+  if (!raw) return ''
+  if (!/^SM\d+[A-Z]$/.test(raw)) {
+    throw new ApiError('BAD_REF', t('auth.badRef'), 422, 42200)
+  }
+  await api<{ valid: boolean }>(`/api/v1/promo-codes/verify?code=${encodeURIComponent(raw)}`)
+  return raw
+}
 
 function switchMode(next: 'email' | 'phone') {
   mode.value = next
@@ -134,9 +147,9 @@ async function submit() {
     showToast(t('auth.passwordRule'))
     return
   }
-  const refCode = authQuery(route.query).ref
   await runSubmit(async () => {
     try {
+      const ref = await assertRefOk()
       const data = await api<{ token: string; member: Member; bound?: boolean }>('/api/v1/members', {
         method: 'POST',
         body: JSON.stringify({
@@ -146,13 +159,13 @@ async function submit() {
           password: password.value,
           code: code.value.trim(),
           agreed: true,
-          ref: refCode || '',
+          ref,
           locale: i18n.global.locale.value,
         }),
       })
       setSession(data.token, data.member)
       if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
-      showToast(data.bound && refCode ? t('auth.registerOkRef', { ref: refCode }) : t('auth.registerOk'))
+      showToast(data.bound && ref ? t('auth.registerOkRef', { ref }) : t('auth.registerOk'))
       markJustRegistered()
       // 註冊完成固定進首頁，展示歡迎內容
       router.replace({ path: '/' })
@@ -255,6 +268,18 @@ async function submit() {
         </button>
       </div>
 
+      <label class="lab">{{ t('auth.refLabel') }}（{{ t('auth.refOptional') }}）</label>
+      <input
+        v-model="refCode"
+        class="field"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        :placeholder="t('auth.refPh')"
+        @blur="refCode = refCode.trim().toUpperCase()"
+      />
+      <p class="ref-hint">{{ t('auth.refHint') }}</p>
+
       <label ref="agreeRow" class="check">
         <input v-model="agreed" type="checkbox" />
         <span>
@@ -298,5 +323,11 @@ async function submit() {
   font-size: 0.9375rem;
   line-height: 1.5;
   text-align: center;
+}
+.ref-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #6a6570;
 }
 </style>

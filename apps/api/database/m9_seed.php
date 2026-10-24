@@ -30,7 +30,7 @@ if (!$row) {
         'updated_at' => $now,
     ]);
     Db::name('members')->where('id', $id)->update([
-        'promo_code' => 'SM' . str_pad((string) $id, 4, '0', STR_PAD_LEFT),
+        'promo_code' => \app\service\PromoCodeService::fromMemberId((int) $id),
     ]);
     $welcome = Db::name('coupons')->where('code', 'WELCOME20')->find();
     if ($welcome) {

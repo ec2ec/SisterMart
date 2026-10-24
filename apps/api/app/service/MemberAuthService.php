@@ -87,7 +87,7 @@ class MemberAuthService
                 'updated_at'      => $now,
             ]);
             Db::name('members')->where('id', $memberId)->update([
-                'promo_code' => 'SM' . str_pad((string) $memberId, 4, '0', STR_PAD_LEFT),
+                'promo_code' => PromoCodeService::fromMemberId($memberId),
             ]);
             // 新用戶默認無餘額／積分／券；僅在後台「新用戶配置」開啟時贈送
             $regConfig->applyWelcomeGifts($memberId, $now);
@@ -474,12 +474,15 @@ class MemberAuthService
 
     private function parentId(string $ref): ?int
     {
+        $ref = trim($ref);
         if ($ref === '') {
             return null;
         }
-        $parent = Db::name('members')->where('promo_code', $ref)->find();
+        // 選填：有填則必須通過 HMAC 校驗且存在，否則直接報錯（不靜默忽略）
+        $code = PromoCodeService::assertValidChecksum($ref);
+        $parent = Db::name('members')->where('promo_code', $code)->find();
         if (!$parent || (int) $parent['status'] !== 1) {
-            return null;
+            throw new ApiException('BAD_REF', '推薦人編號不正確');
         }
 
         return (int) $parent['id'];

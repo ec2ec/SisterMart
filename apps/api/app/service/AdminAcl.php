@@ -79,6 +79,7 @@ class AdminAcl
         $map = [
             '/api/v1/admin/admins' => self::PERM_ADMINS,
             '/api/v1/admin/releases' => self::PERM_RELEASES,
+            '/api/v1/admin/promo-codes' => self::PERM_RELEASES,
             '/api/v1/admin/settings' => self::PERM_SETTINGS,
             '/api/v1/admin/tabbar' => self::PERM_SETTINGS,
             '/api/v1/admin/categories' => self::PERM_CATALOG,
