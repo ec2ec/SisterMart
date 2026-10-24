@@ -14,7 +14,7 @@ use think\file\UploadedFile;
  *
  * 預設 preset（可被顯式參數覆蓋）：
  * - avatar    上傳≤5MB，最長邊 512，目標 ≤512KB，質量 85（落庫再裁正方）
- * - review    上傳≤5MB，最長邊 1200，目標 ≤500KB，質量 85
+ * - review    上傳≤5MB，最長邊 1000，目標 ≤300KB，質量 85
  * - aftersale 上傳≤5MB，最長邊 1200，目標 ≤500KB，質量 85
  * - banner    上傳≤5MB，最長邊 1920，目標 ≤800KB，質量 85
  * - product   上傳≤5MB，最長邊 1600，目標 ≤700KB，質量 85
@@ -33,8 +33,8 @@ class ImageUploadService
         ],
         'review' => [
             'max_upload_bytes' => 5 * 1024 * 1024,
-            'max_edge' => 1200,
-            'max_bytes' => 512000,
+            'max_edge' => 1000,
+            'max_bytes' => 300 * 1024,
             'quality' => 85,
             'min_quality' => 40,
         ],

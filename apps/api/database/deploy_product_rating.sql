@@ -1,5 +1,5 @@
 -- 商品聚合評分（由已通過、未隱藏評價重算）
--- mysql … < apps/api/database/deploy_product_rating.sql
+-- 可重跑：欄位已存在時跳過 ADD
 
 SET @db := DATABASE();
 
@@ -7,25 +7,28 @@ SET @has_avg := (
   SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'products' AND COLUMN_NAME = 'rating_avg'
 );
-SET @sql := IF(
+SET @sql_avg := IF(
   @has_avg = 0,
   'ALTER TABLE `products` ADD COLUMN `rating_avg` DECIMAL(3,2) NOT NULL DEFAULT 0.00',
-  'SELECT 1'
+  'SELECT ''rating_avg exists'' AS info'
 );
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+PREPARE stmt_avg FROM @sql_avg;
+EXECUTE stmt_avg;
+DEALLOCATE PREPARE stmt_avg;
 
 SET @has_cnt := (
   SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'products' AND COLUMN_NAME = 'rating_count'
 );
-SET @sql := IF(
+SET @sql_cnt := IF(
   @has_cnt = 0,
-  'ALTER TABLE `products` ADD COLUMN `rating_count` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `rating_avg`',
-  'SELECT 1'
+  'ALTER TABLE `products` ADD COLUMN `rating_count` INT UNSIGNED NOT NULL DEFAULT 0',
+  'SELECT ''rating_count exists'' AS info'
 );
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+PREPARE stmt_cnt FROM @sql_cnt;
+EXECUTE stmt_cnt;
+DEALLOCATE PREPARE stmt_cnt;
 
--- 用現有已通過評價回填
 UPDATE products p
 LEFT JOIN (
   SELECT product_id,
