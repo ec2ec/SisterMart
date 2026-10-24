@@ -27,13 +27,14 @@ class RegistrationConfigService
         return $this->normalize($decoded);
     }
 
-    /** 前台公開：是否開放註冊 */
+    /** 前台公開：是否開放註冊 + 註冊歡迎文案 */
     public function publicStatus(): array
     {
         $cfg = $this->get();
 
         return [
             'registration_enabled' => (bool) $cfg['registration_enabled'],
+            'welcome_html' => $cfg['welcome_html'],
         ];
     }
 
@@ -93,6 +94,13 @@ class RegistrationConfigService
             $giftPointsAmount = 0;
         }
 
+        $welcomeZh = array_key_exists('welcome_html', $body) && is_array($body['welcome_html'])
+            ? (string) ($body['welcome_html']['zh-HK'] ?? $body['welcome_html']['zh'] ?? $current['welcome_html']['zh-HK'])
+            : (string) ($body['welcome_html_zh'] ?? $current['welcome_html']['zh-HK']);
+        $welcomeEn = array_key_exists('welcome_html', $body) && is_array($body['welcome_html'])
+            ? (string) ($body['welcome_html']['en'] ?? $current['welcome_html']['en'])
+            : (string) ($body['welcome_html_en'] ?? $current['welcome_html']['en']);
+
         $payload = [
             'registration_enabled' => $registrationEnabled,
             'auto_claim_coupons' => $autoClaim,
@@ -101,6 +109,10 @@ class RegistrationConfigService
             'gift_balance_amount' => $giftBalanceAmount,
             'gift_points' => $giftPoints,
             'gift_points_amount' => $giftPointsAmount,
+            'welcome_html' => [
+                'zh-HK' => $welcomeZh,
+                'en' => $welcomeEn,
+            ],
         ];
         TradeSettings::set(self::SETTING_KEY, json_encode($payload, JSON_UNESCAPED_UNICODE));
 
@@ -210,13 +222,15 @@ class RegistrationConfigService
      *   gift_balance: bool,
      *   gift_balance_amount: float,
      *   gift_points: bool,
-     *   gift_points_amount: int
+     *   gift_points_amount: int,
+     *   welcome_html: array{zh-HK: string, en: string}
      * }
      */
     private function normalize(array $raw): array
     {
         $defaults = $this->defaults();
         $couponIds = $this->normalizeCouponIds($raw['coupon_ids'] ?? $defaults['coupon_ids']);
+        $welcome = is_array($raw['welcome_html'] ?? null) ? $raw['welcome_html'] : [];
 
         return [
             'registration_enabled' => array_key_exists('registration_enabled', $raw)
@@ -229,6 +243,10 @@ class RegistrationConfigService
             'gift_balance_amount' => max(0, round((float) ($raw['gift_balance_amount'] ?? 0), 2)),
             'gift_points' => in_array($raw['gift_points'] ?? false, [true, 1, '1', 'true'], true),
             'gift_points_amount' => max(0, (int) ($raw['gift_points_amount'] ?? 0)),
+            'welcome_html' => [
+                'zh-HK' => (string) ($welcome['zh-HK'] ?? $defaults['welcome_html']['zh-HK']),
+                'en' => (string) ($welcome['en'] ?? $defaults['welcome_html']['en']),
+            ],
         ];
     }
 
@@ -243,6 +261,10 @@ class RegistrationConfigService
             'gift_balance_amount' => 0.0,
             'gift_points' => false,
             'gift_points_amount' => 0,
+            'welcome_html' => [
+                'zh-HK' => '<p><strong>歡迎加入 SisterMart！</strong></p><p>探索精選好物，開啟你的美好購物體驗。</p>',
+                'en' => '<p><strong>Welcome to SisterMart!</strong></p><p>Explore curated picks and enjoy shopping with us.</p>',
+            ],
         ];
     }
 

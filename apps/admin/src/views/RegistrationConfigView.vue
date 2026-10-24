@@ -8,9 +8,12 @@ import {
   NSelect,
   NSpace,
   NSwitch,
+  NTabPane,
+  NTabs,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 
 type CouponOpt = {
   id: number
@@ -28,11 +31,13 @@ type RegConfig = {
   gift_balance_amount: number
   gift_points: boolean
   gift_points_amount: number
+  welcome_html: { 'zh-HK': string; en: string }
 }
 
 const message = useMessage()
 const loading = ref(false)
 const couponOptions = ref<{ label: string; value: number }[]>([])
+const welcomeTab = ref<'zh-HK' | 'en'>('zh-HK')
 const form = reactive({
   registration_enabled: true,
   auto_claim_coupons: false,
@@ -41,6 +46,8 @@ const form = reactive({
   gift_balance_amount: 0,
   gift_points: false,
   gift_points_amount: 0,
+  welcome_html_zh: '',
+  welcome_html_en: '',
 })
 
 const couponHint = computed(() =>
@@ -64,6 +71,8 @@ async function load() {
   form.gift_balance_amount = data.gift_balance_amount
   form.gift_points = data.gift_points
   form.gift_points_amount = data.gift_points_amount
+  form.welcome_html_zh = data.welcome_html?.['zh-HK'] || ''
+  form.welcome_html_en = data.welcome_html?.en || ''
 }
 
 async function save() {
@@ -81,6 +90,10 @@ async function save() {
           gift_balance_amount: form.gift_balance ? form.gift_balance_amount : 0,
           gift_points: form.gift_points,
           gift_points_amount: form.gift_points ? form.gift_points_amount : 0,
+          welcome_html: {
+            'zh-HK': form.welcome_html_zh,
+            en: form.welcome_html_en,
+          },
         }),
       },
       true,
@@ -107,12 +120,12 @@ onMounted(async () => {
   <n-space vertical :size="16">
     <n-card title="新用戶配置">
       <p class="hint">
-        控制前台是否開放註冊，以及新用戶註冊成功後是否自動領券、贈送餘額與積分。未開啟贈送時，新用戶餘額、積分與優惠券均為空。
+        控制前台是否開放註冊，以及新用戶註冊成功後是否自動領券、贈送餘額與積分。未開啟贈送時，新用戶餘額、積分與優惠券均為空。關閉註冊時入口仍可見，進入註冊頁會提示通道關閉。
       </p>
 
       <n-form-item label="開放註冊">
         <n-switch v-model:value="form.registration_enabled" />
-        <span class="sw">{{ form.registration_enabled ? '已開放 — 前台可註冊' : '已關閉 — 前台無法註冊' }}</span>
+        <span class="sw">{{ form.registration_enabled ? '已開放 — 前台可註冊' : '已關閉 — 註冊頁提示稍後再試' }}</span>
       </n-form-item>
 
       <n-form-item label="註冊後自動領取優惠券">
@@ -158,9 +171,21 @@ onMounted(async () => {
           style="width: 12rem"
         />
       </n-form-item>
-
-      <n-button type="primary" :loading="loading" @click="save">保存</n-button>
     </n-card>
+
+    <n-card title="註冊歡迎內容">
+      <p class="hint">新用戶註冊成功並進入首頁後彈出展示。支援富文本（圖文、列表、連結）。</p>
+      <n-tabs v-model:value="welcomeTab" type="line" animated>
+        <n-tab-pane name="zh-HK" tab="繁體中文">
+          <WangSimpleEditor v-model="form.welcome_html_zh" placeholder="歡迎文案（繁中）…" :height="260" preset="admin" />
+        </n-tab-pane>
+        <n-tab-pane name="en" tab="English">
+          <WangSimpleEditor v-model="form.welcome_html_en" placeholder="Welcome copy (EN)…" :height="260" preset="admin" />
+        </n-tab-pane>
+      </n-tabs>
+    </n-card>
+
+    <n-button type="primary" :loading="loading" @click="save">保存</n-button>
   </n-space>
 </template>
 

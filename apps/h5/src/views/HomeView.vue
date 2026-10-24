@@ -6,6 +6,7 @@ import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
+import WelcomeRegisterPopup from '../components/WelcomeRegisterPopup.vue'
 import { banners as mockBanners } from '../mock/data'
 import {
   fetchHomeBanners,
@@ -711,6 +712,8 @@ const tabLabel = (tab: HomeRecTab) => {
         <van-icon name="back-top" />
       </button>
     </Teleport>
+
+    <WelcomeRegisterPopup />
   </div>
 </template>
 

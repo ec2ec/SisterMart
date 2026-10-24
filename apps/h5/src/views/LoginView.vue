@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -15,6 +15,7 @@ import {
   isPhone,
   useCooldown,
 } from '../composables/useAuth'
+import { shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { setSession, type Member } from '../composables/useSession'
 import { setLocale } from '../i18n'
 
@@ -31,17 +32,10 @@ const showPassword = ref(false)
 const agreed = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
-const registrationOpen = ref(true)
+const agreeRow = ref<HTMLElement | null>(null)
 const { left, start } = useCooldown()
-
-onMounted(async () => {
-  try {
-    const data = await api<{ registration_enabled?: boolean }>('/api/v1/shop/status')
-    registrationOpen.value = data.registration_enabled !== false
-  } catch {
-    registrationOpen.value = true
-  }
-})
+const { busy: sending, run: runSend } = useRequestBusy()
+const { busy: submitting, run: runSubmit } = useRequestBusy()
 
 const hint = computed(() => (mode.value === 'email' ? t('auth.loginEmailHint') : t('auth.loginPhoneHint')))
 
@@ -60,30 +54,38 @@ function go(name: 'register' | 'forgot' | 'article', id?: string) {
   router.push({ name, query: authQuery(route.query) })
 }
 
+function remindAgree() {
+  showToast(t('auth.needAgree'))
+  shakeAgreeRow(agreeRow)
+}
+
 async function sendCode() {
-  if (left.value > 0) return
-  if (!isPhone(phone.value)) {
-    showToast(t('auth.phoneInvalid'))
-    return
-  }
-  try {
-    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
-      method: 'POST',
-      body: JSON.stringify({ channel: 'whatsapp', purpose: 'login', target: phone.value.trim() }),
-    })
-    whatsappFallback.value = Boolean(data.fallback)
-    codeSent.value = true
-    start()
-    fillDevOtpCode(code, data) // TEMP: 未接通正式發碼渠道
-    showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.whatsappFailedBound'))
-  } catch (error) {
-    showToast(authError(t, error))
-  }
+  if (left.value > 0 || sending.value) return
+  await runSend(async () => {
+    if (!isPhone(phone.value)) {
+      showToast(t('auth.phoneInvalid'))
+      return
+    }
+    try {
+      const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
+        method: 'POST',
+        body: JSON.stringify({ channel: 'whatsapp', purpose: 'login', target: phone.value.trim() }),
+      })
+      whatsappFallback.value = Boolean(data.fallback)
+      codeSent.value = true
+      start()
+      fillDevOtpCode(code, data)
+      showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.whatsappFailedBound'))
+    } catch (error) {
+      showToast(authError(t, error))
+    }
+  })
 }
 
 async function submit() {
+  if (submitting.value) return
   if (!agreed.value) {
-    showToast(t('auth.needAgree'))
+    remindAgree()
     return
   }
   if (mode.value === 'email') {
@@ -109,25 +111,27 @@ async function submit() {
       return
     }
   }
-  try {
-    const data = await api<{ token: string; member: Member }>('/api/v1/member-sessions', {
-      method: 'POST',
-      body: JSON.stringify({
-        channel: mode.value,
-        email: email.value.trim(),
-        phone: phone.value.trim(),
-        password: password.value,
-        code: code.value.trim(),
-        agreed: true,
-      }),
-    })
-    setSession(data.token, data.member)
-    if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
-    showToast(t('auth.loginOk'))
-    router.replace(afterAuthPath(route.query))
-  } catch (error) {
-    showToast(authError(t, error))
-  }
+  await runSubmit(async () => {
+    try {
+      const data = await api<{ token: string; member: Member }>('/api/v1/member-sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          channel: mode.value,
+          email: email.value.trim(),
+          phone: phone.value.trim(),
+          password: password.value,
+          code: code.value.trim(),
+          agreed: true,
+        }),
+      })
+      setSession(data.token, data.member)
+      if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
+      showToast(t('auth.loginOk'))
+      router.replace(afterAuthPath(route.query))
+    } catch (error) {
+      showToast(authError(t, error))
+    }
+  })
 }
 </script>
 
@@ -166,14 +170,21 @@ async function submit() {
       <label class="lab">{{ t('auth.code') }} *</label>
       <div class="field">
         <input v-model="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" :placeholder="t('auth.codePh')" />
-        <button class="send" type="button" :disabled="left > 0" @click="sendCode">
+        <button
+          class="send"
+          type="button"
+          :class="{ 'is-busy': sending }"
+          :disabled="left > 0 || sending"
+          @click="sendCode"
+        >
+          <span v-if="sending" class="btn-spin" aria-hidden="true" />
           {{ left > 0 ? t('auth.resend', { n: left }) : t('auth.send') }}
         </button>
       </div>
       <p v-if="whatsappFallback" class="note">{{ t('auth.sentBoundEmail') }}</p>
     </template>
 
-    <label class="check">
+    <label ref="agreeRow" class="check">
       <input v-model="agreed" type="checkbox" />
       <span>
         {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="go('article', 'terms')">{{ t('auth.terms') }}</button
@@ -181,8 +192,17 @@ async function submit() {
         >{{ t('auth.agreeAfter') }}
       </span>
     </label>
-    <button class="submit" type="button" @click="submit">{{ t('auth.login') }}</button>
-    <p v-if="registrationOpen" class="center">
+    <button
+      class="submit"
+      type="button"
+      :class="{ 'is-busy': submitting }"
+      :disabled="submitting"
+      @click="submit"
+    >
+      <span v-if="submitting" class="btn-spin" aria-hidden="true" />
+      {{ t('auth.login') }}
+    </button>
+    <p class="center">
       {{ t('auth.newUser') }}
       <button type="button" @click="go('register')">{{ t('auth.createAccount') }}</button>
     </p>
