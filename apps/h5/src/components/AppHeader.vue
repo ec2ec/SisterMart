@@ -91,7 +91,7 @@ function onBack() {
     />
     <div class="actions">
       <van-badge
-        :content="favoriteCount > 0 ? (favoriteCount > 99 ? '99+' : favoriteCount) : ''"
+        :content="loggedIn && favoriteCount > 0 ? (favoriteCount > 99 ? '99+' : favoriteCount) : ''"
         :show-zero="false"
       >
         <button
@@ -103,7 +103,10 @@ function onBack() {
           <van-icon name="like-o" size="1.125rem" color="var(--sm-primary)" />
         </button>
       </van-badge>
-      <van-badge :content="unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''" :show-zero="false">
+      <van-badge
+        :content="loggedIn && unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''"
+        :show-zero="false"
+      >
         <button class="action-btn" type="button" :aria-label="t('pages.messages')" @click="goMessages">
           <van-icon name="envelop-o" size="1.125rem" color="var(--sm-primary)" />
         </button>

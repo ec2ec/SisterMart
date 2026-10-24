@@ -33,7 +33,11 @@ import './styles/theme.css'
 import App from './App.vue'
 import { router } from './router'
 import { i18n } from './i18n'
-import { hydrateFavorites } from './composables/useFavorites'
+import { clearFavorites, hydrateFavorites } from './composables/useFavorites'
+import { clearCartBadge } from './composables/useCartBadge'
+import { clearOrderCounts } from './composables/useOrderCounts'
+import { clearOrdersListCache } from './composables/useOrdersList'
+import { clearUnread } from './composables/useUnread'
 import { isLoggedIn } from './composables/useSession'
 
 const app = createApp(App)
@@ -71,5 +75,14 @@ const app = createApp(App)
 app.use(router)
 app.use(i18n)
 document.documentElement.lang = String(i18n.global.locale.value)
-if (isLoggedIn()) void hydrateFavorites()
+if (isLoggedIn()) {
+  void hydrateFavorites()
+} else {
+  // 訪客：不讀取／展示上一帳號的會員緩存角標
+  clearFavorites()
+  clearCartBadge()
+  clearUnread()
+  clearOrderCounts()
+  clearOrdersListCache()
+}
 app.mount('#app')

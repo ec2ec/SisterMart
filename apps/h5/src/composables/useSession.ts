@@ -1,9 +1,9 @@
 import { computed, ref } from 'vue'
-import { cartBadgeCount } from './useCartBadge'
+import { clearCartBadge } from './useCartBadge'
 import { clearFavorites, markLoggedIn } from './useFavorites'
 import { clearOrderCounts } from './useOrderCounts'
 import { clearOrdersListCache } from './useOrdersList'
-import { unreadCount } from './useUnread'
+import { clearUnread } from './useUnread'
 
 export type Member = {
   id: number
@@ -93,8 +93,8 @@ export function clearSession() {
   memberState.value = null
   // 會員相關內存／本地緩存一併清掉，避免串號
   clearFavorites()
-  cartBadgeCount.value = 0
-  unreadCount.value = 0
+  clearCartBadge()
+  clearUnread()
   clearOrderCounts()
   clearOrdersListCache()
 }

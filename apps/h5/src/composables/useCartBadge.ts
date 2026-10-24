@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { fetchCart } from '../api/trade'
 import { isLoggedIn, syncSessionFromStorage } from './useSession'
 
-/** 底欄購物車角標：商品件數合計；空車為 0 不顯示 */
+/** 底欄購物車角標：商品件數合計；空車／未登錄為 0 不顯示 */
 export const cartBadgeCount = ref(0)
 
 export async function refreshCartBadge() {
@@ -23,5 +23,14 @@ export async function refreshCartBadge() {
 }
 
 export function setCartBadgeCount(n: number) {
+  if (!isLoggedIn()) {
+    cartBadgeCount.value = 0
+    return
+  }
   cartBadgeCount.value = Math.max(0, Math.floor(n))
+}
+
+/** 未登錄強制清零（訪客不展示上一帳號購物車角標） */
+export function clearCartBadge() {
+  cartBadgeCount.value = 0
 }
