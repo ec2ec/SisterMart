@@ -311,7 +311,7 @@ async function share() {
       <div class="price-line">
         <strong>{{ money(price) }}</strong>
         <span class="sold-line">
-          <em class="rating">⭐{{ ratingText }}</em>
+          <em class="rating"><span class="rating-star" aria-hidden="true">★</span>{{ ratingText }}</em>
           <span>{{ t('home.sold', { n: product.sold }) }}</span>
         </span>
       </div>
@@ -529,10 +529,14 @@ h1 {
   font-style: normal;
 }
 .price-line .rating {
-  color: #e6a23c;
+  color: #f5a623;
   font-weight: 600;
   font-style: normal;
   font-variant-numeric: tabular-nums;
+}
+.price-line .rating-star {
+  margin-right: 0.1rem;
+  color: #f5a623;
 }
 .sub {
   display: flex;
@@ -649,7 +653,7 @@ h2 {
   margin-right: auto;
 }
 .rev-stars {
-  color: #e6a23c;
+  color: #f5a623;
   letter-spacing: 0.05em;
 }
 .rev-mod {

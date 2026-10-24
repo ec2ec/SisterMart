@@ -79,7 +79,7 @@ function onWish() {
           <span class="price">HK$ {{ product.price }}</span>
         </span>
         <span class="meta-right">
-          <span class="rating">⭐{{ ratingText }}</span>
+          <span class="rating"><span class="rating-star" aria-hidden="true">★</span>{{ ratingText }}</span>
           <span class="sold">{{ t('home.sold', { n: product.sold }) }}</span>
         </span>
       </div>
@@ -205,9 +205,13 @@ function onWish() {
 }
 .rating {
   font-size: 0.6875rem;
-  color: #e6a23c;
+  color: #f5a623;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+.rating-star {
+  margin-right: 0.1rem;
+  color: #f5a623;
 }
 .sold {
   font-size: 0.6875rem;

@@ -265,7 +265,7 @@ async function submit() {
   cursor: pointer;
 }
 .rate-star.on {
-  color: #ee0a24;
+  color: #f5a623;
 }
 .rate-desc {
   flex-shrink: 0;
