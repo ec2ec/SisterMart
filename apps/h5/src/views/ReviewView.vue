@@ -134,16 +134,20 @@ async function submit() {
       <template v-if="!isFollow">
         <div class="rate-row">
           <span class="rate-lab">{{ t('review.overall') }}</span>
-          <van-rate
-            v-model="stars"
-            :size="22"
-            color="#ee0a24"
-            void-color="#c8c9cc"
-            void-icon="star-o"
-            icon="star"
-            :count="5"
-            :allow-half="false"
-          />
+          <div class="rate-stars" role="radiogroup" :aria-label="t('review.overall')">
+            <button
+              v-for="n in 5"
+              :key="n"
+              type="button"
+              class="rate-star"
+              :class="{ on: n <= stars }"
+              role="radio"
+              :aria-checked="n === stars"
+              @click="stars = n"
+            >
+              ★
+            </button>
+          </div>
           <span class="rate-desc">{{ starLabel }}</span>
         </div>
         <van-field
@@ -243,14 +247,30 @@ async function submit() {
   font-size: 0.875rem;
   color: #666;
 }
+.rate-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+.rate-star {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #c8c9cc;
+  cursor: pointer;
+}
+.rate-star.on {
+  color: #ee0a24;
+}
 .rate-desc {
   flex-shrink: 0;
   min-width: 3.5rem;
   font-size: 0.875rem;
   color: #666;
-}
-.rate-row :deep(.van-rate) {
-  flex: 1;
-  justify-content: flex-start;
 }
 </style>
