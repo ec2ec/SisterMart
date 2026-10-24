@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client'
 import { cartBadgeCount, refreshCartBadge } from '../composables/useCartBadge'
-import { loggedIn } from '../composables/useSession'
 import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 
 type Slot = 'home' | 'category' | 'cart' | 'account'
