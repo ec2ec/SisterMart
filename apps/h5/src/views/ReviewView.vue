@@ -14,6 +14,11 @@ import {
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
+import { compressImageFile } from '../utils/imageCompress'
+
+const MAX_REVIEW_IMAGES = 5
+const MAX_REVIEW_UPLOAD_BYTES = 5 * 1024 * 1024
+const REVIEW_COMPRESS = { maxEdge: 1000, maxBytes: 300 * 1024, quality: 0.85, minQuality: 0.4 }
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -58,14 +63,19 @@ async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListIte
   for (const entry of list) {
     const file = entry.file
     if (!file) continue
-    if (file.size > 1024 * 1024) {
+    if (file.size > MAX_REVIEW_UPLOAD_BYTES) {
       showToast(t('review.imageSize'))
       fileList.value = fileList.value.filter((f) => f !== entry)
       continue
     }
     entry.status = 'uploading'
     try {
-      const data = await uploadReviewImage(file)
+      // 上傳前按比例壓到 ≤1000×1000、約 300KB；服務端會再校驗壓縮
+      const compressed = await compressImageFile(file, REVIEW_COMPRESS)
+      const uploadFile = new File([compressed], (file.name || 'review').replace(/\.\w+$/, '') + '.jpg', {
+        type: 'image/jpeg',
+      })
+      const data = await uploadReviewImage(uploadFile)
       entry.url = assetUrl(data.url)
       entry.status = 'done'
       ;(entry as UploaderFileListItem & { remoteUrl?: string }).remoteUrl = data.url
@@ -160,7 +170,14 @@ async function submit() {
         />
         <p class="lab">{{ t('review.images') }}</p>
         <p class="hint">{{ t('review.imageHint') }}</p>
-        <van-uploader v-model="fileList" :max-count="3" :after-read="afterRead" />
+        <van-uploader
+          v-model="fileList"
+          :max-count="MAX_REVIEW_IMAGES"
+          :max-size="MAX_REVIEW_UPLOAD_BYTES"
+          accept="image/*"
+          :after-read="afterRead"
+          @oversize="showToast(t('review.imageSize'))"
+        />
       </template>
       <template v-else>
         <van-field

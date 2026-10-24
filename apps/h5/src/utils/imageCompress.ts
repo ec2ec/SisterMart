@@ -1,11 +1,19 @@
-/** 客戶端壓縮：縮放到 maxEdge 內並輸出 JPEG Blob。 */
+/** 客戶端壓縮：按比例縮放到 maxEdge 內，並盡量壓到 maxBytes（JPEG）。 */
 export async function compressImageFile(
   file: File | Blob,
-  opts: { maxEdge?: number; quality?: number; mime?: string } = {},
+  opts: {
+    maxEdge?: number
+    quality?: number
+    minQuality?: number
+    maxBytes?: number
+    mime?: string
+  } = {},
 ): Promise<Blob> {
   const maxEdge = opts.maxEdge ?? 800
-  const quality = opts.quality ?? 0.82
   const mime = opts.mime ?? 'image/jpeg'
+  const minQuality = opts.minQuality ?? 0.4
+  const maxBytes = opts.maxBytes ?? 0
+  let quality = opts.quality ?? 0.85
   const bitmap = await createImageBitmap(file)
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
   const w = Math.max(1, Math.round(bitmap.width * scale))
@@ -20,9 +28,19 @@ export async function compressImageFile(
   }
   ctx.drawImage(bitmap, 0, 0, w, h)
   bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), mime, quality)
-  })
+
+  const toBlob = (q: number) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), mime, q)
+    })
+
+  let blob = await toBlob(quality)
+  if (maxBytes > 0) {
+    while (blob.size > maxBytes && quality > minQuality + 0.01) {
+      quality = Math.max(minQuality, quality - 0.08)
+      blob = await toBlob(quality)
+    }
+  }
   return blob
 }
 

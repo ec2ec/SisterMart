@@ -256,8 +256,8 @@ class ReviewService
         if (mb_strlen($text) > 1000) {
             throw new ApiException('INVALID', '評價內容過長', 422, 42294);
         }
-        if (count($images) > 3) {
-            throw new ApiException('INVALID', '最多上傳 3 張圖片', 422, 42295);
+        if (count($images) > 5) {
+            throw new ApiException('INVALID', '最多上傳 5 張圖片', 422, 42295);
         }
         $images = $this->normalizeImages($memberId, $images);
 
