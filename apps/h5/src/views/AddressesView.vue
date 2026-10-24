@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -11,6 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const items = ref<Address[]>([])
 const regions = ref<string[]>([])
+const districtsByRegion = ref<Record<string, string[]>>({})
 const form = reactive({
   id: 0,
   receiver: '',
@@ -21,10 +22,34 @@ const form = reactive({
   is_default: true,
 })
 
+const districtOptions = computed(() => {
+  const list = districtsByRegion.value[form.region] || []
+  // 編輯舊數據：若當前分區不在清單內，暫列一項以免空白
+  if (form.district && !list.includes(form.district)) {
+    return [form.district, ...list]
+  }
+  return list
+})
+
+watch(
+  () => form.region,
+  (region, prev) => {
+    if (prev === undefined || region === prev) return
+    const list = districtsByRegion.value[region] || []
+    if (!list.includes(form.district)) {
+      form.district = ''
+    }
+  },
+)
+
 async function load() {
   const data = await fetchAddresses()
   items.value = data.items
-  regions.value = data.regions
+  regions.value = data.regions?.length ? data.regions : ['香港島', '九龍', '新界']
+  districtsByRegion.value = data.districts_by_region || {}
+  if (!form.district && districtOptions.value.length) {
+    // keep empty until user picks
+  }
 }
 
 onMounted(load)
@@ -46,6 +71,10 @@ function reset() {
 }
 
 async function submit() {
+  if (!form.district) {
+    showToast(t('checkout.pickDistrict'))
+    return
+  }
   try {
     await saveAddress(
       {
@@ -98,12 +127,28 @@ async function remove(id: number) {
       <van-field v-model="form.phone" :label="t('checkout.phone')" />
       <van-field :label="t('checkout.region')">
         <template #input>
-          <select v-model="form.region">
-            <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
+          <div class="region-chips">
+            <button
+              v-for="r in regions"
+              :key="r"
+              type="button"
+              class="chip"
+              :class="{ on: form.region === r }"
+              @click="form.region = r"
+            >
+              {{ r }}
+            </button>
+          </div>
+        </template>
+      </van-field>
+      <van-field :label="t('checkout.district')">
+        <template #input>
+          <select v-model="form.district">
+            <option value="" disabled>{{ t('checkout.pickDistrict') }}</option>
+            <option v-for="d in districtOptions" :key="d" :value="d">{{ d }}</option>
           </select>
         </template>
       </van-field>
-      <van-field v-model="form.district" :label="t('checkout.district')" />
       <van-field v-model="form.detail" :label="t('checkout.detail')" type="textarea" />
       <van-cell :title="t('checkout.defaultAddr')">
         <template #right-icon><van-switch v-model="form.is_default" size="1.125rem" /></template>
@@ -136,5 +181,28 @@ select {
   border: 0;
   width: 100%;
   background: transparent;
+  font: inherit;
+  color: inherit;
+}
+.region-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+}
+.chip {
+  border: 1px solid #e5e5e5;
+  background: #f7f7f7;
+  color: #333;
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+.chip.on {
+  border-color: var(--sm-primary);
+  background: color-mix(in srgb, var(--sm-primary) 12%, #fff);
+  color: var(--sm-primary);
+  font-weight: 600;
 }
 </style>

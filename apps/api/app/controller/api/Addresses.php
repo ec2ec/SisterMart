@@ -17,7 +17,11 @@ class Addresses extends ApiController
 
     public function index(): Response
     {
-        return $this->run(fn () => ['items' => (new AddressService())->list($this->memberId()), 'regions' => AddressService::REGIONS]);
+        return $this->run(fn () => [
+            'items' => (new AddressService())->list($this->memberId()),
+            'regions' => AddressService::REGIONS,
+            'districts_by_region' => AddressService::DISTRICTS_BY_REGION,
+        ]);
     }
 
     public function store(): Response
