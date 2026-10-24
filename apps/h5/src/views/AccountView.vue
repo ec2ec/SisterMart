@@ -18,6 +18,7 @@ import {
   token,
   type Member,
 } from '../composables/useSession'
+import { APP_VERSION } from '../config/appVersion'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -340,6 +341,10 @@ function goOrders(tab?: string) {
       <button type="button" :title="t('account.switchLang')" @click="toggleLocale">
         <span class="flag" aria-hidden="true">{{ nextLocaleFlag }}</span>
         <span>{{ t('account.switchLang') }}</span>
+      </button>
+      <button type="button" :title="t('account.versionTip')" @click="showToast(t('account.versionToast', { v: APP_VERSION }))">
+        <van-icon name="info-o" size="1.375rem" />
+        <span>{{ APP_VERSION }}</span>
       </button>
     </section>
 
