@@ -18,6 +18,7 @@ const authCodes: Record<string, string> = {
   WHATSAPP_UNAVAILABLE: 'auth.whatsappFailedNeedEmail',
   USE_PASSWORD: 'auth.usePassword',
   REGISTRATION_CLOSED: 'auth.registerClosed',
+  BAD_REF: 'auth.badRef',
 }
 
 export function authError(t: (key: string) => string, error: unknown) {

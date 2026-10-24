@@ -22,6 +22,8 @@ Route::post('api/v1/verification-codes', 'api.VerificationCodes/store');
 Route::post('api/v1/member-bindings/code', 'api.Members/bindCode')->middleware(MemberAuth::class);
 Route::post('api/v1/member-bindings', 'api.Members/bind')->middleware(MemberAuth::class);
 Route::post('api/v1/members', 'api.Members/store');
+Route::get('api/v1/promo-codes/verify', 'api.PromoCodes/verify');
+Route::post('api/v1/promo-codes/verify', 'api.PromoCodes/verify');
 Route::patch('api/v1/member-passwords', 'api.MemberPasswords/update');
 Route::post('api/v1/member-sessions', 'api.MemberSessions/store');
 Route::get('api/v1/tabbar', 'api.Tabbar/index');
@@ -207,6 +209,9 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
     Route::get('settings/registration', 'admin.ShopSettings/registration');
     Route::put('settings/registration', 'admin.ShopSettings/updateRegistration');
+
+    /** 推廣編號補校驗位（僅超管） */
+    Route::post('promo-codes/rehash', 'admin.PromoCodes/rehash');
 
     /** 窄版發佈通道（僅超管；需 RELEASE_ENABLED + RELEASE_HMAC_SECRET） */
     Route::get('releases/state', 'admin.Releases/state');
