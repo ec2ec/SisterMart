@@ -30,6 +30,11 @@ const submitting = ref(false)
 const itemId = computed(() => Number(route.query.item || 0) || null)
 const item = computed(() => (order.value?.items || []).find((i) => i.id === itemId.value) || null)
 const isFollow = computed(() => Boolean(item.value?.reviewed && item.value?.can_follow))
+/** 1–5 星對應評級描述（與電商常見綜合評分文案一致） */
+const starLabel = computed(() => {
+  const n = Math.min(5, Math.max(1, Math.round(stars.value) || 5))
+  return t(`review.starLabel${n}`)
+})
 
 async function load() {
   order.value = await fetchOrder(String(route.params.id))
@@ -127,18 +132,23 @@ async function submit() {
       </div>
 
       <template v-if="!isFollow">
-        <p class="lab">{{ t('review.stars') }}</p>
-        <div class="stars">
-          <button
-            v-for="n in 5"
-            :key="n"
-            type="button"
-            class="star"
-            :class="{ on: n <= stars }"
-            @click="stars = n"
-          >
-            ★
-          </button>
+        <div class="rate-row">
+          <span class="rate-lab">{{ t('review.overall') }}</span>
+          <div class="rate-stars" role="radiogroup" :aria-label="t('review.overall')">
+            <button
+              v-for="n in 5"
+              :key="n"
+              type="button"
+              class="rate-star"
+              :class="{ on: n <= stars }"
+              role="radio"
+              :aria-checked="n === stars"
+              @click="stars = n"
+            >
+              ★
+            </button>
+          </div>
+          <span class="rate-desc">{{ starLabel }}</span>
         </div>
         <van-field
           v-model="body"
@@ -224,20 +234,43 @@ async function submit() {
   color: #999;
   font-size: 0.75rem;
 }
-.stars {
+.rate-row {
   display: flex;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0.25rem 0 0.875rem;
+  padding: 0.65rem 0;
+  border-bottom: 0.0625rem solid #f0f0f0;
 }
-.star {
+.rate-lab {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  color: #666;
+}
+.rate-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+.rate-star {
   border: 0;
   background: transparent;
-  font-size: 1.5rem;
-  color: #ddd;
   padding: 0;
+  margin: 0;
+  font-size: 1.35rem;
   line-height: 1;
+  color: #c8c9cc;
+  cursor: pointer;
 }
-.star.on {
-  color: #e6a23c;
+.rate-star.on {
+  color: #f5a623;
+}
+.rate-desc {
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  font-size: 0.875rem;
+  color: #666;
 }
 </style>
