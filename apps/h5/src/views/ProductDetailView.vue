@@ -109,11 +109,12 @@ const price = computed(() =>
     ? seckill.value.price
     : (quote.value?.price ?? product.value?.price ?? 0),
 )
+/** 前端默認展示 5.0；有真實評價時用聚合分 */
 const ratingText = computed(() => {
   const count = Number(product.value?.rating_count ?? 0)
   const rating = Number(product.value?.rating ?? 0)
-  if (count <= 0 || rating <= 0) return ''
-  return rating.toFixed(1)
+  if (count > 0 && rating > 0) return rating.toFixed(1)
+  return '5.0'
 })
 const compareAt = computed(() =>
   seckill.value.active && seckill.value.origin != null
@@ -310,7 +311,7 @@ async function share() {
       <div class="price-line">
         <strong>{{ money(price) }}</strong>
         <span class="sold-line">
-          <em v-if="ratingText" class="rating">⭐{{ ratingText }}</em>
+          <em class="rating">⭐{{ ratingText }}</em>
           <span>{{ t('home.sold', { n: product.sold }) }}</span>
         </span>
       </div>

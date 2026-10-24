@@ -30,11 +30,12 @@ const showOrigin = computed(() => {
   const origin = Number(props.product.compare_at ?? 0)
   return origin > 0 && origin > Number(props.product.price)
 })
+/** 前端默認展示 5.0；有真實評價時用聚合分 */
 const ratingText = computed(() => {
   const count = Number(props.product.rating_count ?? 0)
   const rating = Number(props.product.rating ?? 0)
-  if (count <= 0 || rating <= 0) return ''
-  return rating.toFixed(1)
+  if (count > 0 && rating > 0) return rating.toFixed(1)
+  return '5.0'
 })
 
 function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } }) {
@@ -78,7 +79,7 @@ function onWish() {
           <span class="price">HK$ {{ product.price }}</span>
         </span>
         <span class="meta-right">
-          <span v-if="ratingText" class="rating">⭐{{ ratingText }}</span>
+          <span class="rating">⭐{{ ratingText }}</span>
           <span class="sold">{{ t('home.sold', { n: product.sold }) }}</span>
         </span>
       </div>
