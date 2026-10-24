@@ -1,55 +1,39 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
+import {
+  formatHkDistrictLabel,
+  HK_DISTRICT_GROUPS,
+  type HkDistrictOption,
+} from '../data/hkDistricts'
 import { deleteAddress, fetchAddresses, saveAddress, type Address } from '../api/trade'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const items = ref<Address[]>([])
-const regions = ref<string[]>([])
-const districtsByRegion = ref<Record<string, string[]>>({})
+const showAreaPicker = ref(false)
 const form = reactive({
   id: 0,
   receiver: '',
   phone: '',
-  region: '九龍',
+  region: '',
   district: '',
   detail: '',
   is_default: true,
 })
 
-const districtOptions = computed(() => {
-  const list = districtsByRegion.value[form.region] || []
-  // 編輯舊數據：若當前分區不在清單內，暫列一項以免空白
-  if (form.district && !list.includes(form.district)) {
-    return [form.district, ...list]
-  }
-  return list
+const areaDisplay = computed(() => {
+  if (!form.district) return ''
+  return formatHkDistrictLabel(form.district, form.region)
 })
-
-watch(
-  () => form.region,
-  (region, prev) => {
-    if (prev === undefined || region === prev) return
-    const list = districtsByRegion.value[region] || []
-    if (!list.includes(form.district)) {
-      form.district = ''
-    }
-  },
-)
 
 async function load() {
   const data = await fetchAddresses()
   items.value = data.items
-  regions.value = data.regions?.length ? data.regions : ['香港島', '九龍', '新界']
-  districtsByRegion.value = data.districts_by_region || {}
-  if (!form.district && districtOptions.value.length) {
-    // keep empty until user picks
-  }
 }
 
 onMounted(load)
@@ -63,15 +47,21 @@ function reset() {
     id: 0,
     receiver: '',
     phone: '',
-    region: '九龍',
+    region: '',
     district: '',
     detail: '',
     is_default: true,
   })
 }
 
+function pickArea(opt: HkDistrictOption) {
+  form.region = opt.region
+  form.district = opt.district
+  showAreaPicker.value = false
+}
+
 async function submit() {
-  if (!form.district) {
+  if (!form.region || !form.district) {
     showToast(t('checkout.pickDistrict'))
     return
   }
@@ -111,7 +101,7 @@ async function remove(id: number) {
         v-for="row in items"
         :key="row.id"
         :title="`${row.receiver} ${row.phone}`"
-        :label="`${row.region} ${row.district} ${row.detail}`"
+        :label="`${formatHkDistrictLabel(row.district, row.region)} ${row.detail}`"
         is-link
         @click="edit(row)"
       >
@@ -125,30 +115,14 @@ async function remove(id: number) {
       <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
       <van-field v-model="form.receiver" :label="t('checkout.receiver')" />
       <van-field v-model="form.phone" :label="t('checkout.phone')" />
-      <van-field :label="t('checkout.region')">
-        <template #input>
-          <div class="region-chips">
-            <button
-              v-for="r in regions"
-              :key="r"
-              type="button"
-              class="chip"
-              :class="{ on: form.region === r }"
-              @click="form.region = r"
-            >
-              {{ r }}
-            </button>
-          </div>
-        </template>
-      </van-field>
-      <van-field :label="t('checkout.district')">
-        <template #input>
-          <select v-model="form.district">
-            <option value="" disabled>{{ t('checkout.pickDistrict') }}</option>
-            <option v-for="d in districtOptions" :key="d" :value="d">{{ d }}</option>
-          </select>
-        </template>
-      </van-field>
+      <van-field
+        is-link
+        readonly
+        :label="t('checkout.area')"
+        :model-value="areaDisplay"
+        :placeholder="t('checkout.pickDistrict')"
+        @click="showAreaPicker = true"
+      />
       <van-field v-model="form.detail" :label="t('checkout.detail')" type="textarea" />
       <van-cell :title="t('checkout.defaultAddr')">
         <template #right-icon><van-switch v-model="form.is_default" size="1.125rem" /></template>
@@ -157,6 +131,31 @@ async function remove(id: number) {
         {{ t('checkout.saveAddress') }}
       </van-button>
     </div>
+
+    <van-popup v-model:show="showAreaPicker" position="bottom" round :style="{ maxHeight: '75%' }">
+      <div class="picker">
+        <div class="picker-hd">
+          <span>{{ t('checkout.pickDistrict') }}</span>
+          <button type="button" class="picker-close" @click="showAreaPicker = false">{{ t('checkout.closePicker') }}</button>
+        </div>
+        <div class="picker-body">
+          <section v-for="group in HK_DISTRICT_GROUPS" :key="group.region" class="group">
+            <h3 class="group-title">{{ group.region }} {{ group.regionEn }}</h3>
+            <button
+              v-for="opt in group.items"
+              :key="opt.district"
+              type="button"
+              class="opt"
+              :class="{ on: form.district === opt.district }"
+              @click="pickArea(opt)"
+            >
+              <span class="no">{{ opt.no }}.</span>
+              <span class="name">{{ opt.district }} {{ opt.districtEn }}</span>
+            </button>
+          </section>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -177,32 +176,64 @@ async function remove(id: number) {
   color: #c45c26;
   font-size: 0.75rem;
 }
-select {
-  border: 0;
-  width: 100%;
-  background: transparent;
-  font: inherit;
-  color: inherit;
-}
-.region-chips {
+.picker {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  max-height: 75vh;
+}
+.picker-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-bottom: 1px solid #eee;
+}
+.picker-close {
+  border: 0;
+  background: transparent;
+  color: #666;
+  font-size: 0.875rem;
+}
+.picker-body {
+  overflow: auto;
+  padding: 0.5rem 0 1.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+.group-title {
+  margin: 0.75rem 1rem 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #111;
+}
+.opt {
+  display: flex;
+  align-items: flex-start;
   gap: 0.5rem;
   width: 100%;
-}
-.chip {
-  border: 1px solid #e5e5e5;
-  background: #f7f7f7;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
   color: #333;
-  border-radius: 0.375rem;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8125rem;
-  line-height: 1.2;
 }
-.chip.on {
-  border-color: var(--sm-primary);
-  background: color-mix(in srgb, var(--sm-primary) 12%, #fff);
+.opt .no {
+  flex: 0 0 1.75rem;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+.opt .name {
+  flex: 1;
+}
+.opt.on {
+  background: color-mix(in srgb, var(--sm-primary) 10%, #fff);
   color: var(--sm-primary);
   font-weight: 600;
+}
+.opt.on .no {
+  color: var(--sm-primary);
 }
 </style>
