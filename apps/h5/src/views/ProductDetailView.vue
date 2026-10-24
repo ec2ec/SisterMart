@@ -109,6 +109,12 @@ const price = computed(() =>
     ? seckill.value.price
     : (quote.value?.price ?? product.value?.price ?? 0),
 )
+const ratingText = computed(() => {
+  const count = Number(product.value?.rating_count ?? 0)
+  const rating = Number(product.value?.rating ?? 0)
+  if (count <= 0 || rating <= 0) return ''
+  return rating.toFixed(1)
+})
 const compareAt = computed(() =>
   seckill.value.active && seckill.value.origin != null
     ? seckill.value.origin
@@ -303,7 +309,10 @@ async function share() {
       <p v-if="seckill.active" class="seckill-tag">{{ t('m7.live') }}</p>
       <div class="price-line">
         <strong>{{ money(price) }}</strong>
-        <span>{{ t('home.sold', { n: product.sold }) }}</span>
+        <span class="sold-line">
+          <em v-if="ratingText" class="rating">⭐{{ ratingText }}</em>
+          <span>{{ t('home.sold', { n: product.sold }) }}</span>
+        </span>
       </div>
       <p class="sub">
         <s>{{ money(compareAt) }}</s>
@@ -507,10 +516,22 @@ h1 {
   color: var(--sm-text);
   font-size: 1.25rem;
 }
-.price-line span,
+.price-line .sold-line,
 .sub {
   color: var(--sm-text-muted);
   font-size: 0.75rem;
+}
+.price-line .sold-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-style: normal;
+}
+.price-line .rating {
+  color: #e6a23c;
+  font-weight: 600;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
 }
 .sub {
   display: flex;

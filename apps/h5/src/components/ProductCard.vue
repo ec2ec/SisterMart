@@ -30,6 +30,12 @@ const showOrigin = computed(() => {
   const origin = Number(props.product.compare_at ?? 0)
   return origin > 0 && origin > Number(props.product.price)
 })
+const ratingText = computed(() => {
+  const count = Number(props.product.rating_count ?? 0)
+  const rating = Number(props.product.rating ?? 0)
+  if (count <= 0 || rating <= 0) return ''
+  return rating.toFixed(1)
+})
 
 function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } }) {
   const fromApi = text(item.name)
@@ -71,7 +77,10 @@ function onWish() {
           <s v-if="showOrigin" class="origin">HK$ {{ product.compare_at }}</s>
           <span class="price">HK$ {{ product.price }}</span>
         </span>
-        <span class="sold">{{ t('home.sold', { n: product.sold }) }}</span>
+        <span class="meta-right">
+          <span v-if="ratingText" class="rating">⭐{{ ratingText }}</span>
+          <span class="sold">{{ t('home.sold', { n: product.sold }) }}</span>
+        </span>
       </div>
     </div>
   </article>
@@ -184,9 +193,23 @@ function onWish() {
   text-decoration: line-through;
 }
 
+.meta-right {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  max-width: 55%;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.rating {
+  font-size: 0.6875rem;
+  color: #e6a23c;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .sold {
   font-size: 0.6875rem;
   color: var(--sm-text-muted);
-  flex-shrink: 0;
 }
 </style>

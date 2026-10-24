@@ -676,6 +676,8 @@ class CatalogService
             'sold'     => SoldDisplay::labelFromProduct($row, $mode),
             'sold_count' => (int) ($row['sold_count'] ?? 0),
             'sold_boost' => (int) ($row['sold_boost'] ?? 0),
+            'rating'   => round((float) ($row['rating_avg'] ?? 0), 1),
+            'rating_count' => (int) ($row['rating_count'] ?? 0),
             'stock'    => $stock,
             'image'    => $image,
             'category' => $cat['code'] ?? '',

@@ -128,17 +128,19 @@ async function submit() {
 
       <template v-if="!isFollow">
         <p class="lab">{{ t('review.stars') }}</p>
+        <p class="stars-hint">{{ t('review.starsHint') }}</p>
         <div class="stars">
-          <button
-            v-for="n in 5"
-            :key="n"
-            type="button"
-            class="star"
-            :class="{ on: n <= stars }"
-            @click="stars = n"
-          >
-            ★
-          </button>
+          <van-rate
+            v-model="stars"
+            :size="28"
+            color="#f5a623"
+            void-color="#ddd"
+            void-icon="star"
+            icon="star"
+            :count="5"
+            :allow-half="false"
+          />
+          <span class="stars-val">{{ stars }}/5</span>
         </div>
         <van-field
           v-model="body"
@@ -224,20 +226,21 @@ async function submit() {
   color: #999;
   font-size: 0.75rem;
 }
+.stars-hint {
+  margin: 0 0 0.5rem;
+  color: #999;
+  font-size: 0.75rem;
+}
 .stars {
   display: flex;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.65rem;
   margin-bottom: 0.75rem;
 }
-.star {
-  border: 0;
-  background: transparent;
-  font-size: 1.5rem;
-  color: #ddd;
-  padding: 0;
-  line-height: 1;
-}
-.star.on {
-  color: #e6a23c;
+.stars-val {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f5a623;
+  font-variant-numeric: tabular-nums;
 }
 </style>

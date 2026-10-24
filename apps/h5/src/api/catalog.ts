@@ -34,6 +34,9 @@ export type ProductCard = {
   /** 原價（秒殺等場景劃線展示）；有值且大於 price 時顯示 */
   compare_at?: number
   sold: string
+  /** 聚合評分 1.0–5.0；無評價時為 0 */
+  rating?: number
+  rating_count?: number
   image: string
   category: string
   category_id: number

@@ -102,6 +102,7 @@ class ReviewService
             'is_hidden' => $hidden,
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
+        self::refreshProductRating((int) $row['product_id']);
 
         return $this->adminRead($id);
     }
@@ -148,8 +149,30 @@ class ReviewService
             'moderation_status' => $status,
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
+        self::refreshProductRating((int) $row['product_id']);
 
         return $this->adminRead($id);
+    }
+
+    /** 依已通過且未隱藏評價重算商品評分 */
+    public static function refreshProductRating(int $productId): void
+    {
+        if ($productId < 1) {
+            return;
+        }
+        $agg = Db::name('product_reviews')
+            ->where('product_id', $productId)
+            ->where('moderation_status', self::STATUS_APPROVED)
+            ->where('is_hidden', 0)
+            ->fieldRaw('ROUND(AVG(stars), 1) AS avg_stars, COUNT(*) AS cnt')
+            ->find();
+        $avg = $agg && $agg['avg_stars'] !== null ? round((float) $agg['avg_stars'], 1) : 0.0;
+        $cnt = $agg ? (int) $agg['cnt'] : 0;
+        Db::name('products')->where('id', $productId)->update([
+            'rating_avg' => $avg,
+            'rating_count' => $cnt,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
     }
 
     /**
