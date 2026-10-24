@@ -59,6 +59,10 @@ const avatarSrc = computed(() => {
   return assetUrl(url)
 })
 
+function showAppVersion() {
+  showToast(t('account.versionToast', { v: APP_VERSION }))
+}
+
 function openAccount() {
   syncSessionFromStorage()
   if (loggedIn.value) return
@@ -342,7 +346,7 @@ function goOrders(tab?: string) {
         <span class="flag" aria-hidden="true">{{ nextLocaleFlag }}</span>
         <span>{{ t('account.switchLang') }}</span>
       </button>
-      <button type="button" :title="t('account.versionTip')" @click="showToast(t('account.versionToast', { v: APP_VERSION }))">
+      <button type="button" class="ver-btn" :title="t('account.versionTip')" @click="showAppVersion">
         <van-icon name="info-o" size="1.375rem" />
         <span>{{ APP_VERSION }}</span>
       </button>
@@ -543,6 +547,11 @@ function goOrders(tab?: string) {
   height: 1.375rem;
   font-size: 1.125rem;
   line-height: 1;
+}
+
+.ver-btn span {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .lang {
