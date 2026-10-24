@@ -90,6 +90,8 @@ Route::group('api/v1', function () {
     Route::post('orders/:id/confirm-receipt', 'api.Receipts/confirm');
     Route::post('orders/:id/cancel', 'api.Orders/cancel');
     Route::post('orders/:id/payments', 'api.Orders/pay');
+    Route::get('orders/:id/messages', 'api.Orders/messages');
+    Route::post('orders/:id/messages', 'api.Orders/postMessage');
     Route::get('orders/:id', 'api.Orders/read');
     Route::get('orders', 'api.Orders/index');
     Route::post('orders', 'api.Orders/store');
@@ -231,7 +233,8 @@ Route::group('api/v1/admin', function () {
     Route::post('orders/:orderId/shipment-nodes', 'admin.Shipments/addNode');
     Route::get('orders/:orderId/shipment', 'admin.Shipments/read');
     Route::post('orders/:orderId/shipments', 'admin.Shipments/ship');
-    /** M31 給買家留言 */
+    /** 訂單留言對話 + 給買家留言（寫入對話並通知） */
+    Route::get('orders/:id/messages', 'admin.Orders/messages');
     Route::post('orders/:id/buyer-messages', 'admin.Orders/buyerMessage');
     Route::get('orders/:id', 'admin.Orders/read');
     Route::get('orders', 'admin.Orders/index');
