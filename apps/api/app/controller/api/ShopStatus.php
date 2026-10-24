@@ -7,6 +7,7 @@ namespace app\controller\api;
 use app\controller\ApiController;
 use app\service\MaintenanceService;
 use app\service\RegistrationConfigService;
+use app\service\TradeSettings;
 use think\Response;
 
 class ShopStatus extends ApiController
@@ -17,7 +18,10 @@ class ShopStatus extends ApiController
             $maintenance = (new MaintenanceService())->publicStatus();
             $registration = (new RegistrationConfigService())->publicStatus();
 
-            return array_merge($maintenance, $registration);
+            return array_merge($maintenance, $registration, [
+                'cs_whatsapp' => TradeSettings::csWhatsapp(),
+                'cs_email' => TradeSettings::csEmail(),
+            ]);
         });
     }
 }

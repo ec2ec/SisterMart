@@ -66,6 +66,7 @@ function openArticle(code: string) {
 .col {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
 }
 
@@ -76,7 +77,7 @@ function openArticle(code: string) {
   padding: 0.375rem 0;
   border: 0;
   background: transparent;
-  text-align: left;
+  text-align: center;
   font: inherit;
   font-size: 0.8125rem;
   color: #666;

@@ -75,6 +75,18 @@ class TradeSettings
         return trim(self::get('cs.whatsapp', ''));
     }
 
+    /** 客服郵箱（公開聯繫用） */
+    public static function csEmail(): string
+    {
+        $v = trim(self::get('cs.email', ''));
+        if ($v !== '') {
+            return $v;
+        }
+        $from = trim((string) env('MAIL_FROM', ''));
+
+        return $from !== '' ? $from : 'hello@sistermart.hk';
+    }
+
     public static function set(string $key, string $value): void
     {
         $now = date('Y-m-d H:i:s');
