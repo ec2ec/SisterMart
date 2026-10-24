@@ -35,12 +35,15 @@ onMounted(async () => {
   }
 })
 
-function viewOrder() {
-  if (!order.value?.id) {
-    router.push({ name: 'orders' })
-    return
+async function viewOrder() {
+  const id = order.value?.id
+  // 先 replace 到首頁再 push 訂單，訂單頁返回不會回到支付成功頁
+  await router.replace({ name: 'home' })
+  if (id) {
+    await router.push({ name: 'order-detail', params: { id } })
+  } else {
+    await router.push({ name: 'orders' })
   }
-  router.push({ name: 'order-detail', params: { id: order.value.id } })
 }
 
 function backHome() {
