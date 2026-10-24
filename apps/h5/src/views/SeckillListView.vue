@@ -145,6 +145,7 @@ function openProduct(s: SeckillSession, p: SeckillSession['products'][number]) {
   overflow: hidden;
   font-size: 0.8125rem;
   line-height: 1.35;
+  min-height: calc(1.35em * 2);
   margin-top: 0.35rem;
   white-space: normal;
   overflow-wrap: anywhere;

@@ -92,6 +92,7 @@ onMounted(() => {
   margin-top: 0.35rem;
   font-size: 0.8125rem;
   line-height: 1.35;
+  min-height: calc(1.35em * 2);
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
