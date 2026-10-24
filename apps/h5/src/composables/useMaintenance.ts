@@ -7,6 +7,8 @@ export type MaintenanceStatus = {
   message: { 'zh-HK': string; en: string }
   starts_at: string | null
   ends_at: string | null
+  /** 是否開放註冊；缺省視為開放 */
+  registration_enabled?: boolean
 }
 
 const status = ref<MaintenanceStatus | null>(null)

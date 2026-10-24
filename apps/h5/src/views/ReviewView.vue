@@ -188,9 +188,12 @@ async function submit() {
 }
 .line {
   display: grid;
-  grid-template-columns: 4rem 1fr;
+  grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+.line > div {
+  min-width: 0;
 }
 .line img {
   width: 4rem;
@@ -201,6 +204,10 @@ async function submit() {
 .line h3 {
   margin: 0 0 0.25rem;
   font-size: 0.95rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .line p {
   margin: 0;

@@ -31,8 +31,11 @@ class MemberAuthService
             throw new ApiException('USE_PASSWORD', '郵箱請使用密碼登錄');
         }
         $member = Db::name('members')->where('email', $email)->find();
-        if ($purpose === 'register' && $member) {
-            throw new ApiException('EMAIL_TAKEN', '這個郵箱已經註冊');
+        if ($purpose === 'register') {
+            (new RegistrationConfigService())->assertRegistrationOpen();
+            if ($member) {
+                throw new ApiException('EMAIL_TAKEN', '這個郵箱已經註冊');
+            }
         }
         if ($purpose === 'reset' && !$member) {
             throw new ApiException('ACCOUNT_NOT_FOUND', '找不到這個帳號');
@@ -43,6 +46,8 @@ class MemberAuthService
 
     public function register(array $body): array
     {
+        $regConfig = new RegistrationConfigService();
+        $regConfig->assertRegistrationOpen();
         $this->assertAgreed($body);
         $password = (string) ($body['password'] ?? '');
         $this->assertPassword($password);
@@ -66,7 +71,7 @@ class MemberAuthService
         $locale = $this->locale((string) ($body['locale'] ?? 'en'));
         $now = date('Y-m-d H:i:s');
 
-        $id = (int) Db::transaction(function () use ($email, $phone, $password, $locale, $parentId, $now) {
+        $id = (int) Db::transaction(function () use ($email, $phone, $password, $locale, $parentId, $now, $regConfig) {
             $memberId = (int) Db::name('members')->insertGetId([
                 'email'           => $email,
                 'phone'           => $phone,
@@ -75,8 +80,8 @@ class MemberAuthService
                 'promo_code'      => 'TMP' . bin2hex(random_bytes(4)),
                 'parent_id'       => $parentId,
                 'status'          => 1,
-                'balance'         => 50,
-                'points'          => 5000,
+                'balance'         => 0,
+                'points'          => 0,
                 'agreed_terms_at' => $now,
                 'created_at'      => $now,
                 'updated_at'      => $now,
@@ -84,19 +89,8 @@ class MemberAuthService
             Db::name('members')->where('id', $memberId)->update([
                 'promo_code' => 'SM' . str_pad((string) $memberId, 4, '0', STR_PAD_LEFT),
             ]);
-            $welcome = Db::name('coupons')->where('code', 'WELCOME20')->find();
-            if ($welcome) {
-                Db::name('coupon_grants')->insert([
-                    'coupon_id' => (int) $welcome['id'],
-                    'member_id' => $memberId,
-                    'status' => 'unused',
-                    'order_id' => null,
-                    'expires_at' => $welcome['ends_at'] ?? null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-                Db::name('coupons')->where('id', $welcome['id'])->inc('claimed', 1)->update([]);
-            }
+            // 新用戶默認無餘額／積分／券；僅在後台「新用戶配置」開啟時贈送
+            $regConfig->applyWelcomeGifts($memberId, $now);
 
             return $memberId;
         });
@@ -335,6 +329,7 @@ class MemberAuthService
         $phone = $this->phone($target);
         $outbox = new NotifyOutboxService();
         if ($purpose === 'register') {
+            (new RegistrationConfigService())->assertRegistrationOpen();
             $outbox->record([
                 'channel' => 'whatsapp',
                 'purpose' => 'otp_register',

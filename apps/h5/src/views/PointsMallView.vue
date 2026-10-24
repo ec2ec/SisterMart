@@ -67,11 +67,12 @@ onMounted(() => {
 }
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0.75rem 1rem;
 }
 .grid button {
+  min-width: 0;
   border: 0;
   background: #fff;
   text-align: left;
@@ -84,9 +85,17 @@ onMounted(() => {
   border-radius: 0.5rem;
 }
 .grid strong {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   margin-top: 0.35rem;
   font-size: 0.8125rem;
+  line-height: 1.35;
+  min-height: calc(1.35em * 2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .grid span {
   color: var(--sm-primary);

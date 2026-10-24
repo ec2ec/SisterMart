@@ -6,6 +6,7 @@ import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import HomeFooter from '../components/HomeFooter.vue'
+import WelcomeRegisterPopup from '../components/WelcomeRegisterPopup.vue'
 import { banners as mockBanners } from '../mock/data'
 import {
   fetchHomeBanners,
@@ -711,6 +712,8 @@ const tabLabel = (tab: HomeRecTab) => {
         <van-icon name="back-top" />
       </button>
     </Teleport>
+
+    <WelcomeRegisterPopup />
   </div>
 </template>
 
@@ -834,6 +837,7 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .flash-row :deep(.card) {
   flex: 0 0 calc((100% - 0.75rem) / 2);
+  min-width: 0;
   scroll-snap-align: start;
   background: rgba(255, 255, 255, 0.88);
   border-radius: 0.5rem;
@@ -898,7 +902,7 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0.25rem 0.875rem 1rem;
 }

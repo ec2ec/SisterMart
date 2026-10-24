@@ -7,6 +7,7 @@ namespace app\controller\admin;
 use app\controller\ApiController;
 use app\service\CatalogService;
 use app\service\MaintenanceService;
+use app\service\RegistrationConfigService;
 use app\service\ShopSettingsService;
 use think\Response;
 
@@ -42,5 +43,15 @@ class ShopSettings extends ApiController
     public function updateMaintenance(): Response
     {
         return $this->run(fn () => (new MaintenanceService())->save($this->payload()));
+    }
+
+    public function registration(): Response
+    {
+        return $this->run(fn () => (new RegistrationConfigService())->get());
+    }
+
+    public function updateRegistration(): Response
+    {
+        return $this->run(fn () => (new RegistrationConfigService())->save($this->payload()));
     }
 }

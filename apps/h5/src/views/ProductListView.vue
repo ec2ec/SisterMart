@@ -92,7 +92,7 @@ watch(() => [route.query.category, route.query.section, locale.value], load)
 <style scoped>
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0.5rem 0.75rem 1.5rem;
 }

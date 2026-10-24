@@ -15,6 +15,7 @@ import {
   isStrongPassword,
   useCooldown,
 } from '../composables/useAuth'
+import { useRequestBusy } from '../composables/useAuthUi'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -28,32 +29,37 @@ const showPassword = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
 const { left, start } = useCooldown()
+const { busy: sending, run: runSend } = useRequestBusy()
+const { busy: submitting, run: runSubmit } = useRequestBusy()
 
 async function sendCode() {
-  if (left.value > 0) return
-  const value = identity.value.trim()
-  if (!isEmail(value) && !isPhone(value)) {
-    showToast(t('auth.identityInvalid'))
-    return
-  }
-  const channel = isEmail(value) ? 'email' : 'whatsapp'
-  try {
-    const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
-      method: 'POST',
-      body: JSON.stringify({ channel, purpose: 'reset', target: value }),
-    })
-    whatsappFallback.value = Boolean(data.fallback)
-    codeSent.value = true
-    start()
-    fillDevOtpCode(code, data) // TEMP: 未接通正式發碼渠道
-    if (data.debug_code) showToast(t('auth.debugCode', { code: data.debug_code }))
-    else showToast(data.fallback ? t('auth.whatsappFailedBound') : t('auth.sentEmail'))
-  } catch (error) {
-    showToast(authError(t, error))
-  }
+  if (left.value > 0 || sending.value) return
+  await runSend(async () => {
+    const value = identity.value.trim()
+    if (!isEmail(value) && !isPhone(value)) {
+      showToast(t('auth.identityInvalid'))
+      return
+    }
+    const channel = isEmail(value) ? 'email' : 'whatsapp'
+    try {
+      const data = await api<{ fallback?: boolean; debug_code?: string }>('/api/v1/verification-codes', {
+        method: 'POST',
+        body: JSON.stringify({ channel, purpose: 'reset', target: value }),
+      })
+      whatsappFallback.value = Boolean(data.fallback)
+      codeSent.value = true
+      start()
+      fillDevOtpCode(code, data)
+      if (data.debug_code) showToast(t('auth.debugCode', { code: data.debug_code }))
+      else showToast(data.fallback ? t('auth.whatsappFailedBound') : t('auth.sentEmail'))
+    } catch (error) {
+      showToast(authError(t, error))
+    }
+  })
 }
 
 async function submit() {
+  if (submitting.value) return
   const value = identity.value.trim()
   if (!isEmail(value) && !isPhone(value)) {
     showToast(t('auth.identityInvalid'))
@@ -75,16 +81,18 @@ async function submit() {
     showToast(t('auth.passwordMismatch'))
     return
   }
-  try {
-    await api('/api/v1/member-passwords', {
-      method: 'PATCH',
-      body: JSON.stringify({ identity: value, code: code.value.trim(), password: password.value }),
-    })
-    showToast(t('auth.resetOk'))
-    router.replace({ name: 'login', query: authQuery(route.query) })
-  } catch (error) {
-    showToast(authError(t, error))
-  }
+  await runSubmit(async () => {
+    try {
+      await api('/api/v1/member-passwords', {
+        method: 'PATCH',
+        body: JSON.stringify({ identity: value, code: code.value.trim(), password: password.value }),
+      })
+      showToast(t('auth.resetOk'))
+      router.replace({ name: 'login', query: authQuery(route.query) })
+    } catch (error) {
+      showToast(authError(t, error))
+    }
+  })
 }
 </script>
 
@@ -95,7 +103,14 @@ async function submit() {
     <label class="lab">{{ t('auth.code') }} *</label>
     <div class="field">
       <input v-model="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" :placeholder="t('auth.codePh')" />
-      <button class="send" type="button" :disabled="left > 0" @click="sendCode">
+      <button
+        class="send"
+        type="button"
+        :class="{ 'is-busy': sending }"
+        :disabled="left > 0 || sending"
+        @click="sendCode"
+      >
+        <span v-if="sending" class="btn-spin" aria-hidden="true" />
         {{ left > 0 ? t('auth.resend', { n: left }) : t('auth.send') }}
       </button>
     </div>
@@ -114,7 +129,16 @@ async function submit() {
     </div>
     <label class="lab">{{ t('auth.confirmPassword') }} *</label>
     <input v-model="confirm" class="field" type="password" autocomplete="new-password" :placeholder="t('auth.confirmPh')" />
-    <button class="submit" type="button" @click="submit">{{ t('auth.reset') }}</button>
+    <button
+      class="submit"
+      type="button"
+      :class="{ 'is-busy': submitting }"
+      :disabled="submitting"
+      @click="submit"
+    >
+      <span v-if="submitting" class="btn-spin" aria-hidden="true" />
+      {{ t('auth.reset') }}
+    </button>
     <p class="center">
       <button type="button" @click="router.push({ name: 'login', query: authQuery(route.query) })">
         {{ t('auth.backLogin') }}

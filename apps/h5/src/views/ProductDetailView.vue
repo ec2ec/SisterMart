@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, type SwipeInstance } from 'vant'
+import { showDialog, showToast, type SwipeInstance } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
@@ -209,7 +209,19 @@ async function addToCart() {
   try {
     await addCartItem(quote.value.id, 1)
     void refreshCartBadge()
-    showToast(t('pdp.added'))
+    try {
+      await showDialog({
+        message: t('pdp.added'),
+        showCancelButton: true,
+        cancelButtonText: t('pdp.continueShop'),
+        confirmButtonText: t('pdp.goCart'),
+        confirmButtonColor: 'var(--sm-primary)',
+      })
+      // 勿先 closeOverlay()（router.back）：與 push 競態會停在上一 Tab（常為首頁）
+      await router.push({ name: 'cart' })
+    } catch {
+      /* 繼續購物：關閉對話框即可 */
+    }
   } catch (error) {
     showToast(error instanceof ApiError ? error.message : t('pdp.outOfStock'))
   }
@@ -665,7 +677,7 @@ h2 {
 }
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0 0.75rem 1rem;
 }

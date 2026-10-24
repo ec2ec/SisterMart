@@ -224,7 +224,7 @@ async function onConfirm() {
 }
 .line {
   display: grid;
-  grid-template-columns: 4rem 1fr;
+  grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -240,10 +240,17 @@ async function onConfirm() {
 .item-actions {
   margin-top: 0.35rem;
 }
+.meta {
+  min-width: 0;
+}
 .meta h3 {
   margin: 0 0 0.25rem;
   font-size: 0.95rem;
   font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .meta p {
   margin: 0;

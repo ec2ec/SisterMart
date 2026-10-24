@@ -9,7 +9,7 @@ APP_VERSION="${VITE_APP_VERSION:-}"
 if [[ -z "$APP_VERSION" && -n "${RELEASE_VERSION:-}" ]]; then
   APP_VERSION="$(printf '%s' "$RELEASE_VERSION" | sed -E 's/^(v?[0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
 fi
-APP_VERSION="${APP_VERSION:-v1.30.10}"
+APP_VERSION="${APP_VERSION:-v1.30.17}"
 
 echo "==> H5 build (VITE_API_BASE=$API_BASE VITE_APP_VERSION=$APP_VERSION)"
 cd "$ROOT/apps/h5"

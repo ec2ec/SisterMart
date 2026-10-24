@@ -240,6 +240,31 @@ h1 {
 
 .auth :deep(.send:disabled) {
   color: #999;
+  opacity: 0.65;
+}
+
+.auth :deep(.send.is-busy),
+.auth :deep(.submit.is-busy) {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.auth :deep(.btn-spin) {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: 0.35rem;
+  border: 0.125rem solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1rem;
+  animation: sm-btn-spin 0.65s linear infinite;
+}
+
+@keyframes sm-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .auth :deep(.forgot) {
@@ -262,6 +287,23 @@ h1 {
   font-size: 0.75rem;
   line-height: 1.45;
   color: #3a3540;
+}
+
+.auth :deep(.check.shake) {
+  animation: sm-agree-shake 0.42s ease-in-out 0s 2;
+}
+
+@keyframes sm-agree-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-0.4rem);
+  }
+  75% {
+    transform: translateX(0.4rem);
+  }
 }
 
 .auth :deep(.check input) {
@@ -299,6 +341,10 @@ h1 {
 .auth :deep(.submit:active) {
   opacity: 0.92;
   transform: translateY(0.0625rem);
+}
+
+.auth :deep(.submit:disabled) {
+  opacity: 0.7;
 }
 
 .auth :deep(.center) {

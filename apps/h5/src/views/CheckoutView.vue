@@ -250,7 +250,7 @@ async function submit() {
 }
 .line {
   display: grid;
-  grid-template-columns: 4rem 1fr;
+  grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
@@ -260,9 +260,16 @@ async function submit() {
   object-fit: cover;
   border-radius: 0.5rem;
 }
+.line > div {
+  min-width: 0;
+}
 .line h3 {
   margin: 0;
   font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .row {
   display: flex;
