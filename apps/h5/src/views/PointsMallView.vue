@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { api } from '../api/client'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchPointsMall } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
+import { isLoggedIn, memberState, setSession, token, type Member } from '../composables/useSession'
 import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
@@ -14,11 +16,26 @@ const items = ref<Awaited<ReturnType<typeof fetchPointsMall>>['items']>([])
 const loading = ref(true)
 const loadError = ref('')
 
+const myPoints = computed(() => {
+  if (!isLoggedIn()) return 0
+  return Math.max(0, Math.floor(Number(memberState.value?.points ?? 0)))
+})
+
+async function refreshPoints() {
+  if (!isLoggedIn()) return
+  try {
+    const data = await api<Member>('/api/v1/members/me', {}, 'member')
+    setSession(token(), data)
+  } catch {
+    /* keep cached points */
+  }
+}
+
 async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    const data = await fetchPointsMall()
+    const [, data] = await Promise.all([refreshPoints(), fetchPointsMall()])
     items.value = data.items || []
   } catch (e) {
     items.value = []
@@ -35,7 +52,11 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <SubPageNav :title="t('account.pointsMall')" />
+    <SubPageNav :title="t('account.pointsMall')">
+      <template #right>
+        <span class="my-pts">{{ t('m7.myPoints', { n: myPoints }) }}</span>
+      </template>
+    </SubPageNav>
     <p v-if="loading" class="hint">{{ t('m7.loading') }}</p>
     <p v-else-if="loadError" class="hint err">{{ loadError }}</p>
     <p v-else-if="!items.length" class="hint">{{ t('m7.pointsEmpty') }}</p>
@@ -56,6 +77,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.my-pts {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sm-primary, #e85d8e);
+  white-space: nowrap;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .hint {
   margin: 1.5rem 1rem;
   text-align: center;

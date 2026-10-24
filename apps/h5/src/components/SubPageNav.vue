@@ -14,7 +14,11 @@ const router = useRouter()
     placeholder
     :border="false"
     @click-left="router.back()"
-  />
+  >
+    <template v-if="$slots.right" #right>
+      <slot name="right" />
+    </template>
+  </van-nav-bar>
 </template>
 
 <style scoped>
