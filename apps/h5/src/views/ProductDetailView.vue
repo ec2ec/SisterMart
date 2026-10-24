@@ -665,7 +665,7 @@ h2 {
 }
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0 0.75rem 1rem;
 }

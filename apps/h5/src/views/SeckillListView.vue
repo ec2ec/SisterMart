@@ -123,6 +123,7 @@ function openProduct(s: SeckillSession, p: SeckillSession['products'][number]) {
 }
 .card {
   flex: 0 0 8.5rem;
+  min-width: 0;
   border: 0;
   background: rgba(255, 255, 255, 0.92);
   text-align: left;
@@ -138,12 +139,16 @@ function openProduct(s: SeckillSession, p: SeckillSession['products'][number]) {
   background: #f3f0ea;
 }
 .card strong {
-  display: block;
-  font-size: 0.8125rem;
-  margin-top: 0.35rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  margin-top: 0.35rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .price {
   font-size: 0.75rem;

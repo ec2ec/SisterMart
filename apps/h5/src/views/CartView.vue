@@ -219,11 +219,14 @@ function reasonText(item: CartItem) {
 }
 .row {
   display: grid;
-  grid-template-columns: auto 5rem 1fr;
+  grid-template-columns: auto 5rem minmax(0, 1fr);
   gap: 0.625rem;
   align-items: center;
   padding: 0.75rem 0;
   border-bottom: 0.0625rem solid #f0f0f0;
+}
+.info {
+  min-width: 0;
 }
 .row.bad {
   opacity: 0.7;
@@ -238,6 +241,10 @@ function reasonText(item: CartItem) {
 .info h3 {
   margin: 0;
   font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .info p {
   margin: 0.25rem 0;

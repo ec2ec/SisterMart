@@ -79,6 +79,7 @@ function onWish() {
 
 <style scoped>
 .card {
+  min-width: 0;
   background: #fff;
   cursor: pointer;
 }
@@ -133,6 +134,7 @@ function onWish() {
 }
 
 .meta {
+  min-width: 0;
   padding: 0.5rem 0.125rem 0.25rem;
 }
 
@@ -141,9 +143,14 @@ function onWish() {
   font-size: 0.8125rem;
   font-weight: 600;
   color: #222;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .row {

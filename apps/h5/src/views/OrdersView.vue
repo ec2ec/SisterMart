@@ -192,9 +192,14 @@ watch(
   margin: 0.25rem 0;
   font-size: 0.8125rem;
   color: #666;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .bottom {
   display: flex;

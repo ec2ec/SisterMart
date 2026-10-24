@@ -201,6 +201,10 @@ async function submit() {
 .line h3 {
   margin: 0 0 0.25rem;
   font-size: 0.95rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .line p {
   margin: 0;
