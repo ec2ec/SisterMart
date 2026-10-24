@@ -6,9 +6,11 @@ import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { cancelOrder, confirmReceipt, fetchOrder, type Order } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
+import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { text } = useLocaleText()
+const uiLocale = computed(() => (locale.value === 'en' ? 'en' : 'zh-HK') as HkLocale)
 const route = useRoute()
 const router = useRouter()
 const order = ref<Order | null>(null)
@@ -68,7 +70,14 @@ async function onConfirm() {
       <h2>{{ t(statusMap[order.status] || order.status) }}</h2>
       <p v-if="order.address">
         {{ (order.address as any).receiver }} {{ (order.address as any).phone }}<br />
-        {{ (order.address as any).region }} {{ (order.address as any).district }} {{ (order.address as any).detail }}
+        {{
+          formatHkAddressLine(
+            String((order.address as any).region || ''),
+            String((order.address as any).district || ''),
+            String((order.address as any).detail || ''),
+            uiLocale,
+          )
+        }}
       </p>
     </section>
     <section v-if="order.remark" class="card remark">

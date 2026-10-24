@@ -5,13 +5,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import {
+  formatHkAddressLine,
   formatHkDistrictLabel,
   HK_DISTRICT_GROUPS,
   type HkDistrictOption,
+  type HkLocale,
 } from '../data/hkDistricts'
 import { deleteAddress, fetchAddresses, saveAddress, type Address } from '../api/trade'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const items = ref<Address[]>([])
@@ -26,10 +28,16 @@ const form = reactive({
   is_default: true,
 })
 
+const uiLocale = computed(() => (locale.value === 'en' ? 'en' : 'zh-HK') as HkLocale)
+
 const areaDisplay = computed(() => {
   if (!form.district) return ''
-  return formatHkDistrictLabel(form.district, form.region)
+  return formatHkDistrictLabel(form.district, form.region, uiLocale.value)
 })
+
+function addressLabel(row: Address) {
+  return formatHkAddressLine(row.region, row.district, row.detail, uiLocale.value)
+}
 
 async function load() {
   const data = await fetchAddresses()
@@ -101,7 +109,7 @@ async function remove(id: number) {
         v-for="row in items"
         :key="row.id"
         :title="`${row.receiver} ${row.phone}`"
-        :label="`${formatHkDistrictLabel(row.district, row.region)} ${row.detail}`"
+        :label="addressLabel(row)"
         is-link
         @click="edit(row)"
       >
@@ -113,8 +121,16 @@ async function remove(id: number) {
 
     <div class="form">
       <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
-      <van-field v-model="form.receiver" :label="t('checkout.receiver')" />
-      <van-field v-model="form.phone" :label="t('checkout.phone')" />
+      <van-field
+        v-model="form.receiver"
+        :label="t('checkout.receiver')"
+        :placeholder="t('checkout.receiverPh')"
+      />
+      <van-field
+        v-model="form.phone"
+        :label="t('checkout.phone')"
+        :placeholder="t('checkout.phonePh')"
+      />
       <van-field
         is-link
         readonly
@@ -123,7 +139,12 @@ async function remove(id: number) {
         :placeholder="t('checkout.pickDistrict')"
         @click="showAreaPicker = true"
       />
-      <van-field v-model="form.detail" :label="t('checkout.detail')" type="textarea" />
+      <van-field
+        v-model="form.detail"
+        :label="t('checkout.detail')"
+        :placeholder="t('checkout.detailPh')"
+        type="textarea"
+      />
       <van-cell :title="t('checkout.defaultAddr')">
         <template #right-icon><van-switch v-model="form.is_default" size="1.125rem" /></template>
       </van-cell>
@@ -140,7 +161,9 @@ async function remove(id: number) {
         </div>
         <div class="picker-body">
           <section v-for="group in HK_DISTRICT_GROUPS" :key="group.region" class="group">
-            <h3 class="group-title">{{ group.region }} {{ group.regionEn }}</h3>
+            <h3 class="group-title">
+              {{ uiLocale === 'en' ? group.regionEn : group.region }}
+            </h3>
             <button
               v-for="opt in group.items"
               :key="opt.district"
@@ -150,7 +173,7 @@ async function remove(id: number) {
               @click="pickArea(opt)"
             >
               <span class="no">{{ opt.no }}.</span>
-              <span class="name">{{ opt.district }} {{ opt.districtEn }}</span>
+              <span class="name">{{ uiLocale === 'en' ? opt.districtEn : opt.district }}</span>
             </button>
           </section>
         </div>

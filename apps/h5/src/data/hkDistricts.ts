@@ -1,4 +1,6 @@
-/** 香港十八區（單選彈框用；落庫仍拆 region + district） */
+/** 香港十八區（單選彈框用；落庫仍用中文 region + district） */
+export type HkLocale = 'zh-HK' | 'en'
+
 export type HkDistrictOption = {
   no: number
   region: '香港島' | '九龍' | '新界'
@@ -59,9 +61,30 @@ export function findHkDistrict(district: string): HkDistrictOption | undefined {
   return undefined
 }
 
-export function formatHkDistrictLabel(district: string, region?: string): string {
+export function formatHkRegionLabel(region: string, locale: HkLocale = 'zh-HK'): string {
+  const g = HK_DISTRICT_GROUPS.find((x) => x.region === region)
+  if (!g) return region
+  return locale === 'en' ? g.regionEn : g.region
+}
+
+/** 依介面語言只顯示中文或英文，不混排 */
+export function formatHkDistrictLabel(
+  district: string,
+  region?: string,
+  locale: HkLocale = 'zh-HK',
+): string {
   const hit = findHkDistrict(district)
-  if (hit) return `${hit.district} ${hit.districtEn}`
-  if (region && district) return `${region} ${district}`
+  if (hit) return locale === 'en' ? hit.districtEn : hit.district
+  if (region && district) return `${formatHkRegionLabel(region, locale)} ${district}`
   return district || ''
+}
+
+export function formatHkAddressLine(
+  region: string,
+  district: string,
+  detail: string,
+  locale: HkLocale = 'zh-HK',
+): string {
+  const area = formatHkDistrictLabel(district, region, locale)
+  return [area, detail].filter(Boolean).join(' ')
 }

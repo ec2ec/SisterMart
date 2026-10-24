@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
@@ -8,9 +8,12 @@ import { createOrder, fetchAddresses, quoteCheckout, type Address, type Quote } 
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn } from '../composables/useSession'
+import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { text } = useLocaleText()
+const uiLocale = computed(() => (locale.value === 'en' ? 'en' : 'zh-HK') as HkLocale)
+const selectedAddress = computed(() => addresses.value.find((a) => a.id === addressId.value) || null)
 const route = useRoute()
 const router = useRouter()
 
@@ -139,12 +142,17 @@ async function submit() {
   <div class="page checkout">
     <SubPageNav :title="t('checkout.title')" />
     <section class="card" @click="router.push({ name: 'addresses', query: { redirect: route.fullPath } })">
-      <template v-if="addresses.find((a) => a.id === addressId)">
-        <strong>{{ addresses.find((a) => a.id === addressId)?.receiver }} {{ addresses.find((a) => a.id === addressId)?.phone }}</strong>
+      <template v-if="selectedAddress">
+        <strong>{{ selectedAddress.receiver }} {{ selectedAddress.phone }}</strong>
         <p>
-          {{ addresses.find((a) => a.id === addressId)?.region }}
-          {{ addresses.find((a) => a.id === addressId)?.district }}
-          {{ addresses.find((a) => a.id === addressId)?.detail }}
+          {{
+            formatHkAddressLine(
+              selectedAddress.region,
+              selectedAddress.district,
+              selectedAddress.detail,
+              uiLocale,
+            )
+          }}
         </p>
       </template>
       <p v-else>{{ t('checkout.needAddress') }}</p>
