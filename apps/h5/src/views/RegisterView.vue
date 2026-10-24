@@ -36,7 +36,7 @@ const registrationOpen = ref(true)
 const statusLoaded = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
 const refCode = ref(authQuery(route.query).ref || '')
-const { left, start } = useCountdown()
+const { left, start } = useCooldown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
 
