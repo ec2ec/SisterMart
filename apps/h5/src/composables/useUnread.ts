@@ -19,3 +19,8 @@ export async function refreshUnread() {
     return 0
   }
 }
+
+/** 未登錄強制清零（訪客不展示上一帳號未讀） */
+export function clearUnread() {
+  unreadCount.value = 0
+}

@@ -1,30 +1,47 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
+import {
+  formatHkAddressLine,
+  formatHkDistrictLabel,
+  HK_DISTRICT_GROUPS,
+  type HkDistrictOption,
+  type HkLocale,
+} from '../data/hkDistricts'
 import { deleteAddress, fetchAddresses, saveAddress, type Address } from '../api/trade'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const items = ref<Address[]>([])
-const regions = ref<string[]>([])
+const showAreaPicker = ref(false)
 const form = reactive({
   id: 0,
   receiver: '',
   phone: '',
-  region: '九龍',
+  region: '',
   district: '',
   detail: '',
   is_default: true,
 })
 
+const uiLocale = computed(() => (locale.value === 'en' ? 'en' : 'zh-HK') as HkLocale)
+
+const areaDisplay = computed(() => {
+  if (!form.district) return ''
+  return formatHkDistrictLabel(form.district, form.region, uiLocale.value)
+})
+
+function addressLabel(row: Address) {
+  return formatHkAddressLine(row.region, row.district, row.detail, uiLocale.value)
+}
+
 async function load() {
   const data = await fetchAddresses()
   items.value = data.items
-  regions.value = data.regions
 }
 
 onMounted(load)
@@ -38,14 +55,24 @@ function reset() {
     id: 0,
     receiver: '',
     phone: '',
-    region: '九龍',
+    region: '',
     district: '',
     detail: '',
     is_default: true,
   })
 }
 
+function pickArea(opt: HkDistrictOption) {
+  form.region = opt.region
+  form.district = opt.district
+  showAreaPicker.value = false
+}
+
 async function submit() {
+  if (!form.region || !form.district) {
+    showToast(t('checkout.pickDistrict'))
+    return
+  }
   try {
     await saveAddress(
       {
@@ -82,7 +109,7 @@ async function remove(id: number) {
         v-for="row in items"
         :key="row.id"
         :title="`${row.receiver} ${row.phone}`"
-        :label="`${row.region} ${row.district} ${row.detail}`"
+        :label="addressLabel(row)"
         is-link
         @click="edit(row)"
       >
@@ -94,17 +121,30 @@ async function remove(id: number) {
 
     <div class="form">
       <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
-      <van-field v-model="form.receiver" :label="t('checkout.receiver')" />
-      <van-field v-model="form.phone" :label="t('checkout.phone')" />
-      <van-field :label="t('checkout.region')">
-        <template #input>
-          <select v-model="form.region">
-            <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </template>
-      </van-field>
-      <van-field v-model="form.district" :label="t('checkout.district')" />
-      <van-field v-model="form.detail" :label="t('checkout.detail')" type="textarea" />
+      <van-field
+        v-model="form.receiver"
+        :label="t('checkout.receiver')"
+        :placeholder="t('checkout.receiverPh')"
+      />
+      <van-field
+        v-model="form.phone"
+        :label="t('checkout.phone')"
+        :placeholder="t('checkout.phonePh')"
+      />
+      <van-field
+        is-link
+        readonly
+        :label="t('checkout.area')"
+        :model-value="areaDisplay"
+        :placeholder="t('checkout.pickDistrict')"
+        @click="showAreaPicker = true"
+      />
+      <van-field
+        v-model="form.detail"
+        :label="t('checkout.detail')"
+        :placeholder="t('checkout.detailPh')"
+        type="textarea"
+      />
       <van-cell :title="t('checkout.defaultAddr')">
         <template #right-icon><van-switch v-model="form.is_default" size="1.125rem" /></template>
       </van-cell>
@@ -112,6 +152,33 @@ async function remove(id: number) {
         {{ t('checkout.saveAddress') }}
       </van-button>
     </div>
+
+    <van-popup v-model:show="showAreaPicker" position="bottom" round :style="{ maxHeight: '75%' }">
+      <div class="picker">
+        <div class="picker-hd">
+          <span>{{ t('checkout.pickDistrict') }}</span>
+          <button type="button" class="picker-close" @click="showAreaPicker = false">{{ t('checkout.closePicker') }}</button>
+        </div>
+        <div class="picker-body">
+          <section v-for="group in HK_DISTRICT_GROUPS" :key="group.region" class="group">
+            <h3 class="group-title">
+              {{ uiLocale === 'en' ? group.regionEn : group.region }}
+            </h3>
+            <button
+              v-for="opt in group.items"
+              :key="opt.district"
+              type="button"
+              class="opt"
+              :class="{ on: form.district === opt.district }"
+              @click="pickArea(opt)"
+            >
+              <span class="no">{{ opt.no }}.</span>
+              <span class="name">{{ uiLocale === 'en' ? opt.districtEn : opt.district }}</span>
+            </button>
+          </section>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -132,9 +199,65 @@ async function remove(id: number) {
   color: #c45c26;
   font-size: 0.75rem;
 }
-select {
+.picker {
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+}
+.picker-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-bottom: 1px solid #eee;
+}
+.picker-close {
   border: 0;
-  width: 100%;
   background: transparent;
+  color: #666;
+  font-size: 0.875rem;
+}
+.picker-body {
+  overflow: auto;
+  /* 底部多留空間，避免最後一項（18 離島區）被遮擋／滑不到 */
+  padding: 0.5rem 0 calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+.group-title {
+  margin: 0.75rem 1rem 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #111;
+}
+.opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: #333;
+}
+.opt .no {
+  flex: 0 0 1.75rem;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+.opt .name {
+  flex: 1;
+}
+.opt.on {
+  background: color-mix(in srgb, var(--sm-primary) 10%, #fff);
+  color: var(--sm-primary);
+  font-weight: 600;
+}
+.opt.on .no {
+  color: var(--sm-primary);
 }
 </style>

@@ -3,7 +3,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
-import { favoriteCount, hydrateFavorites } from '../composables/useFavorites'
+import { clearFavorites, favoriteCount, hydrateFavorites } from '../composables/useFavorites'
 import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { refreshUnread, unreadCount } from '../composables/useUnread'
 
@@ -30,6 +30,7 @@ onMounted(() => {
 watch(loggedIn, (v) => {
   refreshUnread()
   if (v) void hydrateFavorites()
+  else clearFavorites()
 })
 
 function goSearch() {
@@ -90,7 +91,7 @@ function onBack() {
     />
     <div class="actions">
       <van-badge
-        :content="favoriteCount > 0 ? (favoriteCount > 99 ? '99+' : favoriteCount) : ''"
+        :content="loggedIn && favoriteCount > 0 ? (favoriteCount > 99 ? '99+' : favoriteCount) : ''"
         :show-zero="false"
       >
         <button
@@ -102,7 +103,10 @@ function onBack() {
           <van-icon name="like-o" size="1.125rem" color="var(--sm-primary)" />
         </button>
       </van-badge>
-      <van-badge :content="unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''" :show-zero="false">
+      <van-badge
+        :content="loggedIn && unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''"
+        :show-zero="false"
+      >
         <button class="action-btn" type="button" :aria-label="t('pages.messages')" @click="goMessages">
           <van-icon name="envelop-o" size="1.125rem" color="var(--sm-primary)" />
         </button>
@@ -152,7 +156,7 @@ function onBack() {
 
 .logo {
   flex: 0 0 auto;
-  font-size: 0.9375rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -162,11 +166,11 @@ function onBack() {
 }
 
 .logo-sister {
-  color: #111;
+  color: var(--sm-brand-sister);
 }
 
 .overlay .logo-sister {
-  color: #111;
+  color: var(--sm-brand-sister);
 }
 
 .logo-mart {

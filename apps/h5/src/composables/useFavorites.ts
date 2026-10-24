@@ -6,6 +6,10 @@ import { i18n } from '../i18n'
 const PENDING = 'sm_pending_fav'
 const STORE = 'sm_favorites'
 
+function hasToken() {
+  return Boolean(localStorage.getItem('sm_token'))
+}
+
 function readStore(): Record<string, boolean> {
   try {
     return JSON.parse(localStorage.getItem(STORE) || '{}') as Record<string, boolean>
@@ -14,27 +18,48 @@ function readStore(): Record<string, boolean> {
   }
 }
 
-const liked = reactive<Record<string, boolean>>(readStore())
+/** 未登錄不讀本地心願緩存（避免訪客角標串到上一帳號） */
+function initialLiked(): Record<string, boolean> {
+  if (!hasToken()) {
+    try {
+      localStorage.removeItem(STORE)
+    } catch {
+      /* private mode */
+    }
+    return {}
+  }
+  return readStore()
+}
+
+const liked = reactive<Record<string, boolean>>(initialLiked())
 let hydrating: Promise<void> | null = null
 
-/** 頂欄心願清單角標 */
-export const favoriteCount = computed(() => Object.keys(liked).filter((k) => liked[k]).length)
+/** 頂欄心願清單角標：未登錄恒為 0 */
+export const favoriteCount = computed(() => {
+  if (!hasToken()) return 0
+  return Object.keys(liked).filter((k) => liked[k]).length
+})
 
 function persist() {
+  if (!hasToken()) return
   localStorage.setItem(STORE, JSON.stringify(liked))
 }
 
 export function isLoggedIn() {
-  return Boolean(localStorage.getItem('sm_token'))
+  return hasToken()
 }
 
 export function isFavorite(id: string) {
+  if (!hasToken()) return false
   return Boolean(liked[id])
 }
 
 /** 登錄後從服務端同步收藏碼；並處理登錄前掛起的收藏。 */
 export async function hydrateFavorites() {
-  if (!isLoggedIn()) return
+  if (!hasToken()) {
+    clearFavorites()
+    return
+  }
   if (hydrating) return hydrating
   hydrating = (async () => {
     try {
@@ -50,7 +75,7 @@ export async function hydrateFavorites() {
         await setFavoriteRemote(pending, true)
       }
     } catch {
-      /* 保持本地緩存 */
+      /* 保持本地緩存（僅已登錄） */
     } finally {
       hydrating = null
     }
@@ -60,6 +85,18 @@ export async function hydrateFavorites() {
 
 export function markLoggedIn() {
   void hydrateFavorites()
+}
+
+/** 退出登錄：清空內存與本地收藏緩存（避免下一帳號看到上一帳號心願） */
+export function clearFavorites() {
+  for (const k of Object.keys(liked)) delete liked[k]
+  try {
+    localStorage.removeItem(STORE)
+    sessionStorage.removeItem(PENDING)
+  } catch {
+    /* private mode */
+  }
+  hydrating = null
 }
 
 async function setFavoriteRemote(id: string, want: boolean) {
@@ -88,7 +125,7 @@ export async function requestFavorite(
   redirect: string,
   push: (to: { name: string; query: Record<string, string> }) => void,
 ) {
-  if (!isLoggedIn()) {
+  if (!hasToken()) {
     sessionStorage.setItem(PENDING, id)
     push({ name: 'login', query: { redirect } })
     return

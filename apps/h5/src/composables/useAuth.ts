@@ -1,4 +1,4 @@
-import { onUnmounted, ref } from 'vue'
+import { onUnmounted, ref, type Ref } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { ApiError } from '../api/client'
 
@@ -59,6 +59,15 @@ export function isStrongPassword(value: string) {
 
 export function isCode(value: string) {
   return /^\d{6}$/.test(value.trim())
+}
+
+/**
+ * TEMP: 未接通真實郵件／短信時，後端會在 mock／調試下回傳 debug_code。
+ * 正式渠道接入後刪除此回填（連同 API 的 debug_code 暴露邏輯）。
+ */
+export function fillDevOtpCode(codeRef: Ref<string>, data?: { debug_code?: string } | null) {
+  const raw = data?.debug_code?.trim()
+  if (raw && isCode(raw)) codeRef.value = raw
 }
 
 function internalPath(value: unknown) {

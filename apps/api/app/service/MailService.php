@@ -38,7 +38,26 @@ class MailService
             'sent_at' => null,
         ]);
 
-        return $this->dispatch($id);
+        $outbox = new NotifyOutboxService();
+        $notifyId = $outbox->record([
+            'channel' => 'email',
+            'purpose' => $refType ?: 'mail',
+            'to_target' => $to,
+            'subject' => $subject,
+            'body_preview' => NotifyOutboxService::previewHtml($bodyHtml),
+            'status' => 'queued',
+            'provider' => 'php_mail',
+            'ref_type' => $refType,
+            'ref_id' => $refId,
+            'member_id' => ($refType !== null && str_starts_with($refType, 'otp_') && $refId !== null && ctype_digit($refId))
+                ? (int) $refId
+                : null,
+        ]);
+
+        $result = $this->dispatch($id);
+        $outbox->syncMailRow($id, $notifyId);
+
+        return $result;
     }
 
     /**

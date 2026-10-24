@@ -16,6 +16,7 @@ import { refreshCartBadge } from '../composables/useCartBadge'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
+import { assetUrl } from '../utils/assetUrl'
 import { useTabShell } from '../composables/useTabShell'
 
 const { t } = useI18n()
@@ -82,18 +83,19 @@ const name = computed(() => (product.value ? text(product.value.name) : ''))
 const gallery = computed(() => {
   const images = (product.value?.media || [])
     .filter((m) => m.media_type === 'image')
-    .map((m) => m.url)
-  return images.length ? images : product.value?.gallery || []
+    .map((m) => assetUrl(m.url))
+    .filter(Boolean)
+  if (images.length) return images
+  return (product.value?.gallery || []).map((u) => assetUrl(u)).filter(Boolean)
 })
 const zoomImages = computed(() => gallery.value)
 
 const detailRaw = computed(() => (product.value ? text(product.value.detail) : ''))
 const detailIsHtml = computed(() => /<\/?[a-z][\s\S]*>/i.test(detailRaw.value))
-const detailHtml = computed(() => detailRaw.value)
-/** 詳情富文本未覆蓋的輪播剩餘圖，避免重複 */
-const detailExtraImages = computed(() => {
-  const html = detailRaw.value
-  return gallery.value.slice(1).filter((src) => !html.includes(src))
+const detailHtml = computed(() => {
+  const raw = detailRaw.value
+  if (!detailIsHtml.value) return raw
+  return raw.replace(/(src=["'])(\/[^"']+)(["'])/gi, (_, a, path, b) => `${a}${assetUrl(path)}${b}`)
 })
 
 const quote = computed(() => {
@@ -141,9 +143,9 @@ const selectedImage = computed(() => {
   if (!product.value) return ''
   for (const group of product.value.spec_groups) {
     const option = group.options.find((item) => item.id === selected.value[group.id])
-    if (option?.image) return option.image
+    if (option?.image) return assetUrl(option.image)
   }
-  return quote.value?.image || ''
+  return assetUrl(quote.value?.image || '')
 })
 
 watch(selectedImage, (src) => {
@@ -260,7 +262,8 @@ async function share() {
 </script>
 
 <template>
-  <div v-if="product" class="page pdp">
+  <!-- 勿用全局 .page：其 padding-bottom 為 Tabbar 預留，疊層商詳會在購買欄下留白 -->
+  <div v-if="product" class="pdp">
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
     <div class="pdp-scroll">
@@ -328,13 +331,6 @@ async function share() {
       <h2>{{ t('pdp.detail') }}</h2>
       <div v-if="detailIsHtml" class="copy rich" v-html="detailHtml" />
       <p v-else class="copy">{{ text(product.detail) }}</p>
-      <img
-        v-for="src in detailExtraImages"
-        :key="src"
-        class="detail-img"
-        :src="src"
-        alt=""
-      />
 
       <h2>{{ t('pdp.reviews') }}</h2>
       <p v-if="!(product.reviews || []).length" class="copy muted">{{ t('pdp.reviewsEmpty') }}</p>
@@ -352,7 +348,7 @@ async function share() {
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
-            <img v-for="(img, i) in r.images" :key="i" :src="img" alt="" />
+            <img v-for="(img, i) in r.images" :key="i" :src="assetUrl(img)" alt="" />
           </div>
           <p v-if="r.follow" class="follow">
             <em>{{ t('pdp.follow') }}</em>
@@ -381,22 +377,34 @@ async function share() {
     </div>
 
     <div class="buybar">
-      <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
-        <van-icon :name="liked ? 'like' : 'like-o'" size="1.25rem" />
-      </button>
-      <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
-        <van-icon name="guide-o" size="1.25rem" />
-      </button>
-      <button
-        v-if="!seckill.active"
-        type="button"
-        class="ghost"
-        :disabled="stock <= 0"
-        @click="addToCart"
-      >
-        {{ t('pages.addToCart') }}
-      </button>
-      <button type="button" class="buy" :disabled="stock <= 0" @click="buyNow">{{ t('pages.buyNow') }}</button>
+      <div class="buybar-icons">
+        <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
+          <van-icon :name="liked ? 'like' : 'like-o'" size="1.25rem" />
+        </button>
+        <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
+          <van-icon name="guide-o" size="1.25rem" />
+        </button>
+      </div>
+      <div class="buybar-actions" :class="{ seckill: seckill.active }">
+        <button
+          v-if="!seckill.active"
+          type="button"
+          class="ghost"
+          :disabled="stock <= 0"
+          @click="addToCart"
+        >
+          {{ t('pages.addToCart') }}
+        </button>
+        <button
+          type="button"
+          class="buy"
+          :class="{ seckill: seckill.active }"
+          :disabled="stock <= 0"
+          @click="buyNow"
+        >
+          {{ t('pages.buyNow') }}
+        </button>
+      </div>
     </div>
 
     <ProductZoom
@@ -415,10 +423,10 @@ async function share() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  /* 覆蓋全局 .page：疊層無 Tabbar，勿留底欄空白；勿用 100vh（易高出 fixed 疊層） */
+  /* 無全局 .page：勿用 100vh（易高出 fixed 疊層）；底部不預留 Tabbar */
   min-height: 0;
   max-height: 100%;
-  padding-bottom: 0;
+  padding-bottom: 0 !important;
   background: #fff;
   box-sizing: border-box;
 }
@@ -443,18 +451,11 @@ async function share() {
   padding: 0;
   background: #f6f6f6;
 }
-.shot img,
-.detail-img {
+.shot img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
-}
-.detail-img {
-  height: auto;
-  margin-top: 0.75rem;
-  border-radius: 0.5rem;
-  background: #f6f6f6;
 }
 .dots {
   display: flex;
@@ -670,20 +671,46 @@ h2 {
 }
 .buybar {
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: auto auto 1fr 1fr;
-  gap: 0.5rem;
+  display: flex;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0rem));
+  gap: 0.5rem;
+  /* 與首頁 tabbar 同垂直內邊距（--sm-tabbar-pad-y）；safe-area 疊加在底邊 */
+  padding-top: var(--sm-tabbar-pad-y, 0.5rem);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
   background: #fff;
   border-top: 0.0625rem solid var(--sm-border);
   z-index: 210;
+  box-sizing: content-box;
+}
+.buybar-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+.buybar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.buybar-actions.seckill {
+  flex: 0 0 auto;
 }
 .ico {
   border: 0;
   background: transparent;
   color: var(--sm-text);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 .ghost,
 .buy {
@@ -691,6 +718,13 @@ h2 {
   border-radius: 0.375rem;
   height: 2.25rem;
   font-size: 0.8125rem;
+  min-width: 6.5rem;
+  padding: 0 0.875rem;
+}
+.buybar-actions:not(.seckill) .ghost,
+.buybar-actions:not(.seckill) .buy {
+  flex: 1;
+  max-width: 9rem;
 }
 .ghost {
   background: #efeae3;
@@ -699,6 +733,10 @@ h2 {
 .buy {
   background: var(--sm-primary);
   color: #fff;
+}
+.buy.seckill {
+  background: #f75656;
+  min-width: 8.5rem;
 }
 .ghost:disabled,
 .buy:disabled {

@@ -149,7 +149,11 @@ export function checkAllCart(checked: boolean) {
 }
 
 export function fetchAddresses() {
-  return api<{ items: Address[]; regions: string[] }>('/api/v1/addresses', {}, 'member')
+  return api<{
+    items: Address[]
+    regions: string[]
+    districts_by_region: Record<string, string[]>
+  }>('/api/v1/addresses', {}, 'member')
 }
 
 export function saveAddress(body: Partial<Address> & { receiver: string; phone: string; region: string; district: string; detail: string }, id?: number) {

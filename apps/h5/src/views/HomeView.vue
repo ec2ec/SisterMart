@@ -32,10 +32,28 @@ const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 
-const feedTabs: HomeRecTab[] = ['hot', 'new', 'for_you']
+const feedTabs: HomeRecTab[] = ['new', 'hot', 'for_you']
+const FEED_PAGE = 16
 const feedTab = ref(0)
 const feedItems = ref<Card[]>([])
 const feedBusy = ref(false)
+/** van-list 加載態 */
+const feedLoading = ref(false)
+const feedError = ref(false)
+const feedOffset = ref(0)
+const feedTotal = ref(0)
+/** 首屏／切 tab 尚未有貨時顯示骨架 */
+const feedInitial = ref(true)
+const catsInitial = ref(true)
+const sectionsInitial = ref(true)
+const flashInitial = ref(true)
+/** 下拉刷新中（van-pull-refresh v-model） */
+const pulling = ref(false)
+/** 上次真正打接口刷新的時間戳；30s 內再拉只提示、不請求 */
+const REFRESH_COOLDOWN_MS = 30_000
+let lastRefreshAt = 0
+/** 防止 tab 切換與 list 觸底並發打亂 offset */
+let feedSeq = 0
 const email = ref('')
 const subscribed = ref(false)
 const subscribeBusy = ref(false)
@@ -92,21 +110,118 @@ async function loadSubscribeStatus() {
   }
 }
 
-async function loadFeed() {
-  const tab = feedTabs[feedTab.value] || 'hot'
+/**
+ * 加載一頁推薦。reset=true 時從 offset 0 重拉並替換列表。
+ * 服務端：有序切片後頁內 shuffle；offset 越界後取模往復。
+ */
+async function loadFeed(reset = false) {
+  const tab = feedTabs[feedTab.value] || 'new'
+  const seq = ++feedSeq
+  if (reset) {
+    feedOffset.value = 0
+    feedError.value = false
+  }
+  const offset = reset ? 0 : feedOffset.value
   feedBusy.value = true
+  feedLoading.value = true
+  feedError.value = false
   try {
-    const data = await fetchHomeRecommendations(tab, 20)
-    feedItems.value = data.items || []
+    const data = await fetchHomeRecommendations(tab, FEED_PAGE, offset)
+    if (seq !== feedSeq) return
+    const items = data.items || []
+    feedTotal.value = Number(data.total || 0)
+    feedOffset.value = Number(data.next_offset ?? offset + items.length)
+    feedItems.value = reset ? items : feedItems.value.concat(items)
   } catch {
-    // 回退：本地 catalog 緩衝
-    if (tab === 'new') {
-      feedItems.value = [...products.value].reverse().slice(0, 20)
-    } else {
-      feedItems.value = products.value.slice(0, 20)
+    if (seq !== feedSeq) return
+    feedError.value = true
+    if (reset || !feedItems.value.length) {
+      // 首屏回退：本地 catalog 緩衝
+      const local =
+        tab === 'new'
+          ? [...products.value].reverse().slice(0, FEED_PAGE)
+          : products.value.slice(0, FEED_PAGE)
+      feedItems.value = local
+      feedOffset.value = local.length
+      feedTotal.value = local.length
     }
   } finally {
-    feedBusy.value = false
+    if (seq === feedSeq) {
+      feedBusy.value = false
+      feedLoading.value = false
+      feedInitial.value = false
+    }
+  }
+}
+
+async function onFeedLoad() {
+  // van-list：觸底追加；往復由服務端 offset 取模完成，故有貨時 finished 恒 false
+  if (feedBusy.value) return
+  await loadFeed(false)
+}
+
+const feedFinished = computed(
+  () => feedTotal.value === 0 && !feedBusy.value && feedItems.value.length === 0,
+)
+
+async function loadBanners() {
+  try {
+    const items = await fetchHomeBanners()
+    if (items.length) banners.value = items
+  } catch {
+    /* 保留現有 */
+  }
+}
+
+async function loadOps() {
+  try {
+    const ops = await fetchHomeOps()
+    marquee.value = ops.marquee
+    footerSlogan.value = ops.footer_slogan
+  } catch {
+    /* 保留現有 */
+  } finally {
+    opsLoaded.value = true
+  }
+}
+
+async function loadSections() {
+  try {
+    sections.value = await fetchHomeSections()
+  } catch {
+    /* 保留現有 */
+  } finally {
+    sectionsInitial.value = false
+  }
+}
+
+/** 下拉刷新：只重拉當前首頁可見狀態（當前 feed tab）；30s 內拒刷 */
+async function onPullRefresh() {
+  const now = Date.now()
+  if (lastRefreshAt > 0 && now - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+    showToast(t('home.refreshFresh'))
+    pulling.value = false
+    return
+  }
+  try {
+    const results = await Promise.allSettled([
+      refresh().then(() => loadFeed(true)),
+      loadSeckillHome().then(() => startFlashTimer()),
+      loadBanners(),
+      loadOps(),
+      loadSections(),
+    ])
+    if (results.some((r) => r.status === 'fulfilled')) {
+      lastRefreshAt = Date.now()
+      showToast(t('home.refreshDone'))
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } else {
+      showToast(t('home.refreshFail'))
+    }
+  } catch {
+    showToast(t('home.refreshFail'))
+  } finally {
+    pulling.value = false
   }
 }
 
@@ -132,42 +247,38 @@ let homeBooted = false
 
 onMounted(() => {
   // keep-alive 下 onMounted 只跑一次：首屏拉數
-  console.log('新包 v1.06')
+  console.log('新包 v1.29')
   homeBooted = true
-  void refresh().then(() => loadFeed())
+  feedInitial.value = true
+  catsInitial.value = true
+  void refresh()
+    .catch(() => {})
+    .finally(() => {
+      catsInitial.value = false
+    })
+    .then(() => loadFeed(true))
   void loadSubscribeStatus()
   void loadSeckillHome().then(() => startFlashTimer())
-  void fetchHomeBanners()
-    .then((items) => {
-      if (items.length) banners.value = items
-    })
-    .catch(() => undefined)
-  void fetchHomeOps()
-    .then((ops) => {
-      marquee.value = ops.marquee
-      footerSlogan.value = ops.footer_slogan
-      opsLoaded.value = true
-    })
-    .catch(() => {
-      opsLoaded.value = true
-    })
-  void fetchHomeSections()
-    .then((items) => {
-      sections.value = items
-    })
-    .catch(() => undefined)
+  void loadBanners()
+  void loadOps()
+  void loadSections()
 })
 
 onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
   stopFlashTimer()
+  unbindBackTopScroll()
 })
 
-onUnmounted(() => stopFlashTimer())
+onUnmounted(() => {
+  stopFlashTimer()
+  unbindBackTopScroll()
+})
 
 let homeFirstActivate = true
 onActivated(() => {
   startFlashTimer()
+  bindBackTopScroll()
   // 首次 mounted+activated 同幀，無需還原
   if (homeFirstActivate) {
     homeFirstActivate = false
@@ -183,7 +294,21 @@ onActivated(() => {
 })
 
 watch(feedTab, () => {
-  void loadFeed()
+  feedItems.value = []
+  feedOffset.value = 0
+  feedTotal.value = 0
+  feedInitial.value = true
+  feedError.value = false
+  void loadFeed(true)
+})
+
+/** 退出後勿沿用上一帳號訂閱態 */
+watch(loggedIn, (v) => {
+  if (!v) {
+    subscribed.value = false
+    return
+  }
+  void loadSubscribeStatus()
 })
 
 function onLink(linkType: string, linkValue: string) {
@@ -274,6 +399,19 @@ function stopFlashTimer() {
   }
 }
 
+const showCatsSkeleton = computed(
+  () => !homeCategories.value.length && catsInitial.value,
+)
+const showFeedSkeleton = computed(
+  () => !feedItems.value.length && (feedBusy.value || feedInitial.value) && !feedError.value,
+)
+const showFlashSkeleton = computed(
+  () => flashInitial.value && !flashSession.value && !flashVisible.value.length,
+)
+const showSectionsSkeleton = computed(
+  () => sectionsInitial.value && !sections.value.length,
+)
+
 async function loadSeckillHome() {
   try {
     const data = await fetchSeckillSessions()
@@ -285,6 +423,8 @@ async function loadSeckillHome() {
   } catch {
     flashSession.value = null
     flashRemain.value = 0
+  } finally {
+    flashInitial.value = false
   }
 }
 
@@ -333,6 +473,39 @@ function goList(categoryId?: string) {
   router.push({ name: 'product-list', query: categoryId ? { category: categoryId } : {} })
 }
 
+/** 分類區標題 /「更多」→ 底欄分類頁 */
+function goCategory() {
+  router.push({ name: 'category' })
+}
+
+/** 回頂：直接聽 window（避開 van-back-top 在部分 WebView 找不到滾動父級） */
+const BACK_TOP_OFFSET = 280
+const showBackTop = ref(false)
+let backTopBound = false
+
+function onWindowScrollForBackTop() {
+  const y = window.scrollY || document.documentElement.scrollTop || 0
+  showBackTop.value = y >= BACK_TOP_OFFSET
+}
+
+function bindBackTopScroll() {
+  if (backTopBound || typeof window === 'undefined') return
+  window.addEventListener('scroll', onWindowScrollForBackTop, { passive: true })
+  backTopBound = true
+  onWindowScrollForBackTop()
+}
+
+function unbindBackTopScroll() {
+  if (!backTopBound || typeof window === 'undefined') return
+  window.removeEventListener('scroll', onWindowScrollForBackTop)
+  backTopBound = false
+  showBackTop.value = false
+}
+
+function scrollHomeTop(smooth = true) {
+  window.scrollTo({ top: 0, left: 0, behavior: smooth ? 'smooth' : 'auto' })
+}
+
 const flashClock = computed(() => {
   const t = Math.max(0, flashRemain.value)
   const h = Math.floor(t / 3600e3)
@@ -353,111 +526,202 @@ const tabLabel = (tab: HomeRecTab) => {
 
 <template>
   <div class="page home">
-    <section class="hero-wrap">
-      <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
-        <van-swipe-item v-for="b in banners" :key="b.id">
-          <button type="button" class="hero-item" @click="onBannerClick(b)">
-            <img :src="b.image_url" :alt="text(b.title) || ''" />
-          </button>
-        </van-swipe-item>
-      </van-swipe>
-      <AppHeader show-logo variant="overlay" />
-    </section>
-
-    <button
-      v-if="!opsLoaded || marquee?.enabled"
-      type="button"
-      class="promo"
-      :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
-      @click="onPromoClick"
+    <AppHeader show-logo />
+    <!-- Header / Tabbar 外：僅內容區下拉；滾到頂才觸發（van 內建） -->
+    <van-pull-refresh
+      v-model="pulling"
+      class="home-pull"
+      :pulling-text="t('home.refreshPulling')"
+      :loosing-text="t('home.refreshLoose')"
+      :loading-text="t('home.refreshLoading')"
+      @refresh="onPullRefresh"
     >
-      {{ promoText }}
-    </button>
+      <section class="hero-wrap">
+        <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
+          <van-swipe-item v-for="b in banners" :key="b.id">
+            <button type="button" class="hero-item" @click="onBannerClick(b)">
+              <img :src="b.image_url" :alt="text(b.title) || ''" />
+            </button>
+          </van-swipe-item>
+        </van-swipe>
+      </section>
 
-    <section v-if="homeCategories.length" class="cats">
-      <div class="section-title">
-        <h2>{{ t('home.categories') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'category' })">
-          {{ t('account.more') }}
-        </button>
-      </div>
-      <div class="cats-row">
-        <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
-          <img
-            v-if="c.icon"
-            :src="c.icon"
-            :alt="text(c.name)"
-            @error="onCatImgError($event)"
-          />
-          <span v-else class="ph" />
-          <span class="cat-name">{{ text(c.name) }}</span>
-        </button>
-      </div>
-    </section>
+      <button
+        v-if="!opsLoaded || marquee?.enabled"
+        type="button"
+        class="promo"
+        :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
+        @click="onPromoClick"
+      >
+        {{ promoText }}
+      </button>
 
-    <section v-if="flashSession || flashVisible.length" class="flash">
-      <div class="section-title">
-        <h2>{{ t('home.flashSale') }}</h2>
-        <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
-        <div class="count" :title="flashClock">
-          <span class="clock">{{ flashClock }}</span>
+      <section v-if="showCatsSkeleton || homeCategories.length" class="cats">
+        <div class="section-title">
+          <button type="button" class="section-title-btn" @click="goCategory">
+            <h2>{{ t('home.categories') }}</h2>
+          </button>
+          <button type="button" class="more" @click="goCategory">
+            {{ t('account.more') }}
+          </button>
         </div>
-      </div>
-      <p class="flash-hint">{{ flashHint }}</p>
-      <div class="flash-row">
-        <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
-      </div>
-    </section>
+        <div v-if="showCatsSkeleton" class="cats-row" aria-hidden="true">
+          <div v-for="n in 4" :key="`sk-cat-${n}`" class="sk-cat">
+            <span class="sk-circle sk-pulse" />
+            <span class="sk-line sk-pulse" />
+          </div>
+        </div>
+        <div v-else class="cats-row">
+          <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+            <img
+              v-if="c.icon"
+              :src="c.icon"
+              :alt="text(c.name)"
+              @error="onCatImgError($event)"
+            />
+            <span v-else class="ph" />
+            <span class="cat-name">{{ text(c.name) }}</span>
+          </button>
+        </div>
+      </section>
 
-    <section v-for="sec in sections" :key="sec.id" class="showcase">
-      <div class="section-title">
-        <h2>{{ text(sec.title) }}</h2>
-        <button
-          v-if="sec.view_all_type !== 'none'"
-          type="button"
-          class="more"
-          @click="onSectionViewAll(sec)"
+      <section v-if="showFlashSkeleton" class="flash flash--sk" aria-hidden="true">
+        <div class="section-title">
+          <span class="sk-line sk-pulse sk-title" />
+          <span class="sk-line sk-pulse sk-more" />
+        </div>
+        <div class="flash-row">
+          <div v-for="n in 2" :key="`sk-flash-${n}`" class="sk-card">
+            <div class="sk-media sk-pulse" />
+            <div class="sk-meta">
+              <span class="sk-line sk-pulse" />
+              <span class="sk-line sk-pulse sk-short" />
+            </div>
+          </div>
+        </div>
+      </section>
+      <section v-else-if="flashSession || flashVisible.length" class="flash">
+        <div class="section-title">
+          <h2>{{ t('home.flashSale') }}</h2>
+          <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
+          <div class="count" :title="flashClock">
+            <span class="clock">{{ flashClock }}</span>
+          </div>
+        </div>
+        <p class="flash-hint">{{ flashHint }}</p>
+        <div class="flash-row">
+          <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
+        </div>
+      </section>
+
+      <section v-if="showSectionsSkeleton" class="showcase" aria-hidden="true">
+        <div class="section-title">
+          <span class="sk-line sk-pulse sk-title" />
+          <span class="sk-line sk-pulse sk-more" />
+        </div>
+        <div class="grid">
+          <div v-for="m in 4" :key="`sk-sec-card-${m}`" class="sk-card">
+            <div class="sk-media sk-pulse" />
+            <div class="sk-meta">
+              <span class="sk-line sk-pulse" />
+              <span class="sk-line sk-pulse sk-short" />
+            </div>
+          </div>
+        </div>
+      </section>
+      <template v-else>
+        <section v-for="sec in sections" :key="sec.id" class="showcase">
+          <div class="section-title">
+            <h2>{{ text(sec.title) }}</h2>
+            <button
+              v-if="sec.view_all_type !== 'none'"
+              type="button"
+              class="more"
+              @click="onSectionViewAll(sec)"
+            >
+              {{ t('home.viewAll') }}
+            </button>
+          </div>
+          <div class="grid">
+            <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
+          </div>
+        </section>
+      </template>
+
+      <section class="feed">
+        <div class="tabs">
+          <button
+            v-for="(tab, i) in feedTabs"
+            :key="tab"
+            type="button"
+            :class="{ on: feedTab === i }"
+            @click="feedTab = i"
+          >
+            {{ tabLabel(tab) }}
+          </button>
+        </div>
+        <div v-if="showFeedSkeleton" class="grid" aria-hidden="true">
+          <div v-for="n in 6" :key="`sk-feed-${n}`" class="sk-card">
+            <div class="sk-media sk-pulse" />
+            <div class="sk-meta">
+              <span class="sk-line sk-pulse" />
+              <span class="sk-line sk-pulse sk-short" />
+            </div>
+          </div>
+        </div>
+        <van-list
+          v-else
+          v-model:loading="feedLoading"
+          v-model:error="feedError"
+          :finished="feedFinished"
+          :loading-text="t('home.feedLoading')"
+          :error-text="t('home.feedLoadFail')"
+          :immediate-check="false"
+          @load="onFeedLoad"
         >
-          {{ t('home.viewAll') }}
-        </button>
-      </div>
-      <div class="grid">
-        <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
-      </div>
-    </section>
+          <div class="grid">
+            <ProductCard
+              v-for="(p, idx) in feedItems"
+              :key="`${p.id}-${idx}`"
+              :product="p"
+            />
+          </div>
+          <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
+        </van-list>
+      </section>
 
-    <section class="feed">
-      <div class="tabs">
-        <button
-          v-for="(tab, i) in feedTabs"
-          :key="tab"
-          type="button"
-          :class="{ on: feedTab === i }"
-          @click="feedTab = i"
-        >
-          {{ tabLabel(tab) }}
-        </button>
-      </div>
-      <div class="grid">
-        <ProductCard v-for="p in feedItems" :key="p.id" :product="p" />
-      </div>
-      <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
-    </section>
+      <section v-if="showSubscribe" class="subscribe">
+        <h2>{{ t('home.subscribeTitle') }}</h2>
+        <div class="row">
+          <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
+          <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
+        </div>
+      </section>
+      <HomeFooter :slogan="footerSlogan" />
+    </van-pull-refresh>
 
-    <section v-if="showSubscribe" class="subscribe">
-      <h2>{{ t('home.subscribeTitle') }}</h2>
-      <div class="row">
-        <input v-model="email" type="email" :placeholder="t('home.emailPlaceholder')" />
-        <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
-      </div>
-    </section>
-    <HomeFooter :slogan="footerSlogan" />
+    <Teleport to="body">
+      <button
+        v-show="showBackTop"
+        type="button"
+        class="sm-back-top"
+        :aria-label="t('home.backTop')"
+        @click="scrollHomeTop(true)"
+      >
+        <van-icon name="back-top" />
+      </button>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .home {
+  padding-top: var(--sm-header-h);
   padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+}
+.home-pull {
+  min-height: calc(100vh - var(--sm-header-h) - var(--sm-tabbar-h));
+  overflow: visible;
 }
 .hero-wrap {
   position: relative;
@@ -504,6 +768,24 @@ const tabLabel = (tab: HomeRecTab) => {
 .section-title h2 {
   margin: 0;
   font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.section-title-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.section-title-btn h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 .section-title .more {
   margin-left: auto;
@@ -606,7 +888,9 @@ const tabLabel = (tab: HomeRecTab) => {
   border: 0;
   background: transparent;
   color: var(--sm-text-muted);
-  font-size: 0.875rem;
+  /* 與「商品分類」section-title h2 同字號 */
+  font-size: 1rem;
+  line-height: 1.25;
 }
 .tabs button.on {
   color: var(--sm-primary);
@@ -647,5 +931,81 @@ const tabLabel = (tab: HomeRecTab) => {
   background: var(--sm-primary);
   color: #fff;
   padding: 0 0.875rem;
+}
+
+/* —— 加載骨架 —— */
+.sk-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--sm-bg-soft) 0%,
+    #ebe6de 45%,
+    var(--sm-bg-soft) 90%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.sk-cat {
+  flex: 0 0 calc((100% - 1.5rem) / 4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.sk-circle {
+  width: 100%;
+  max-width: 4.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: block;
+}
+.sk-line {
+  display: block;
+  height: 0.625rem;
+  width: 70%;
+  border-radius: 0.25rem;
+}
+.sk-line.sk-title {
+  width: 5.5rem;
+  height: 0.875rem;
+}
+.sk-line.sk-more {
+  width: 2.5rem;
+  height: 0.625rem;
+  margin-left: auto;
+}
+.sk-line.sk-short {
+  width: 45%;
+}
+.sk-card {
+  min-width: 0;
+}
+.sk-media {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+}
+.sk-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem 0.125rem 0;
+}
+.sk-meta .sk-line {
+  width: 85%;
+}
+.flash--sk .flash-row .sk-card {
+  flex: 0 0 calc((100% - 0.75rem) / 2);
+}
+.flash--sk .section-title {
+  gap: 0.75rem;
 }
 </style>

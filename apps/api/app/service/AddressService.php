@@ -11,6 +11,23 @@ class AddressService
 {
     public const REGIONS = ['香港島', '九龍', '新界'];
 
+    /** @var array<string, list<string>> 大區 → 香港十八區 */
+    public const DISTRICTS_BY_REGION = [
+        '香港島' => ['中西區', '灣仔區', '東區', '南區'],
+        '九龍' => ['油尖旺區', '深水埗區', '九龍城區', '黃大仙區', '觀塘區'],
+        // 順序與官方常用羅列一致：荃灣→…→葵青→離島
+        '新界' => [
+            '荃灣區', '屯門區', '元朗區', '北區', '大埔區',
+            '沙田區', '西貢區', '葵青區', '離島區',
+        ],
+    ];
+
+    /** @return list<string> */
+    public static function districtsFor(string $region): array
+    {
+        return self::DISTRICTS_BY_REGION[$region] ?? [];
+    }
+
     public function list(int $memberId): array
     {
         $rows = Db::name('addresses')->where('member_id', $memberId)
@@ -31,6 +48,10 @@ class AddressService
         }
         if (!in_array($region, self::REGIONS, true)) {
             throw new ApiException('INVALID_REGION', '只支持香港地址（香港島 / 九龍 / 新界）', 422, 42210);
+        }
+        $allowed = self::districtsFor($region);
+        if ($allowed && !in_array($district, $allowed, true)) {
+            throw new ApiException('INVALID_DISTRICT', '請選擇對應大區下的分區', 422, 42211);
         }
         $isDefault = !empty($body['is_default']) ? 1 : 0;
         $now = date('Y-m-d H:i:s');

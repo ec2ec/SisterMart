@@ -1,5 +1,9 @@
 import { computed, ref } from 'vue'
-import { markLoggedIn } from './useFavorites'
+import { clearCartBadge } from './useCartBadge'
+import { clearFavorites, markLoggedIn } from './useFavorites'
+import { clearOrderCounts } from './useOrderCounts'
+import { clearOrdersListCache } from './useOrdersList'
+import { clearUnread } from './useUnread'
 
 export type Member = {
   id: number
@@ -87,4 +91,10 @@ export function clearSession() {
   localStorage.removeItem('sm_session')
   authToken.value = ''
   memberState.value = null
+  // 會員相關內存／本地緩存一併清掉，避免串號
+  clearFavorites()
+  clearCartBadge()
+  clearUnread()
+  clearOrderCounts()
+  clearOrdersListCache()
 }

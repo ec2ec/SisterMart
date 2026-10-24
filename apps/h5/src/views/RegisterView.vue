@@ -9,6 +9,7 @@ import {
   afterAuthPath,
   authError,
   authQuery,
+  fillDevOtpCode,
   isCode,
   isEmail,
   isPhone,
@@ -77,6 +78,7 @@ async function sendCode() {
     })
     codeSent.value = true
     start()
+    fillDevOtpCode(code, data) // TEMP: 未接通正式發碼渠道
     showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.sentEmail'))
   } catch (error) {
     showToast(authError(t, error))

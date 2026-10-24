@@ -111,8 +111,9 @@ const active = computed(() => {
 })
 const items = computed(() => [...config.value.items].sort((a, b) => a.sort - b.sort))
 
-/** 空車不顯示角標；有貨顯示件數（>99 顯示 99+） */
+/** 空車／未登錄不顯示角標；有貨顯示件數（>99 顯示 99+） */
 const cartBadge = computed(() => {
+  if (!loggedIn.value) return ''
   const n = cartBadgeCount.value
   if (n <= 0) return ''
   return n > 99 ? '99+' : String(n)
@@ -173,6 +174,13 @@ watch(loggedIn, () => {
 function onChange(name: string | number) {
   router.push({ name: String(name) })
 }
+
+/** 已在首頁時再點首頁圖標：快速回頂（Vant 同 tab 不觸發 change，靠 click） */
+function onItemClick(item: TabItem) {
+  if (item.slot === 'home' && active.value === 'home') {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+  }
+}
 </script>
 
 <template>
@@ -180,6 +188,7 @@ function onChange(name: string | number) {
     :model-value="active"
     active-color="#16162b"
     inactive-color="#8a8378"
+    :safe-area-inset-bottom="false"
     :style="{ background: config.bar_bg, '--van-tabbar-background': config.bar_bg }"
     @change="onChange"
   >
@@ -188,6 +197,7 @@ function onChange(name: string | number) {
       :key="item.slot"
       :name="item.slot"
       :badge="item.slot === 'cart' ? cartBadge : ''"
+      @click="onItemClick(item)"
     >
       <span
         class="label"
@@ -214,6 +224,16 @@ function onChange(name: string | number) {
 </template>
 
 <style scoped>
+/* 根節點即 .van-tabbar：勿用 :deep 後代選擇器（會選不到自身）
+ * content-box：上下 padding 疊在 height 外；safe-area 併入 padding-bottom（已關 Vant 默認） */
+:deep(.van-tabbar),
+.van-tabbar {
+  height: var(--van-tabbar-height);
+  padding-top: var(--sm-tabbar-pad-y, 0.5rem);
+  padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
+  box-sizing: content-box;
+}
+
 .bubble {
   width: 1.75rem;
   height: 1.75rem;

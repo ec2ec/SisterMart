@@ -1,16 +1,31 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { NButton, NCard, NForm, NFormItem, NInputNumber, NTabPane, NTabs, useMessage } from 'naive-ui'
 import { api } from '../api'
 import PointsMallAdminView from './PointsMallAdminView.vue'
 
+const route = useRoute()
+const router = useRouter()
 const message = useMessage()
-const tab = ref('settings')
+const tab = ref(route.query.tab === 'mall' ? 'mall' : 'settings')
 const form = reactive({
   per_hkd: 100,
   max_percent: 50,
   order_earn_per_hkd: 1,
 })
+
+watch(tab, (v) => {
+  const next = v === 'mall' ? { tab: 'mall' } : {}
+  router.replace({ path: '/marketing/points', query: next })
+})
+
+watch(
+  () => route.query.tab,
+  (v) => {
+    tab.value = v === 'mall' ? 'mall' : 'settings'
+  },
+)
 
 onMounted(async () => {
   const data = await api<typeof form>('/api/v1/admin/points/settings', {}, true)

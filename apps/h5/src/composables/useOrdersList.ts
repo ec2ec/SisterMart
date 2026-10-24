@@ -89,8 +89,7 @@ export function useOrdersList() {
   }
 
   function invalidateAll() {
-    cache.value = {}
-    booted.value = false
+    clearOrdersListCache()
   }
 
   return {
@@ -104,4 +103,12 @@ export function useOrdersList() {
     invalidateAll,
     tabStatus: TAB_STATUS,
   }
+}
+
+/** 退出登錄時清空訂單列表緩存 */
+export function clearOrdersListCache() {
+  cache.value = {}
+  booted.value = false
+  inflight.clear()
+  loading.value = false
 }

@@ -144,14 +144,29 @@ export async function fetchHomeOps() {
 
 export type HomeRecTab = 'hot' | 'new' | 'for_you'
 
-export async function fetchHomeRecommendations(tab: HomeRecTab, limit = 20) {
-  const qs = new URLSearchParams({ tab, limit: String(limit) })
-  return api<{
-    tab: string
-    source: string
-    items: ProductCard[]
-    sold_display_mode: string
-  }>(`/api/v1/home/recommendations?${qs}`, {}, 'member')
+export type HomeRecommendationsPage = {
+  tab: string
+  source: string
+  items: ProductCard[]
+  sold_display_mode: string
+  total: number
+  offset: number
+  next_offset: number
+  limit: number
+  wrapped: boolean
+}
+
+export async function fetchHomeRecommendations(
+  tab: HomeRecTab,
+  limit = 16,
+  offset = 0,
+) {
+  const qs = new URLSearchParams({
+    tab,
+    limit: String(limit),
+    offset: String(Math.max(0, offset)),
+  })
+  return api<HomeRecommendationsPage>(`/api/v1/home/recommendations?${qs}`, {}, 'member')
 }
 
 export type HomeSection = {

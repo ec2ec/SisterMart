@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { ProductCard } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
+import { assetUrl } from '../utils/assetUrl'
 
 const props = defineProps<{
   product: ProductCard
@@ -50,7 +51,7 @@ function onWish() {
 <template>
   <article class="card" role="link" tabindex="0" @click="openDetail" @keydown.enter="openDetail">
     <div class="media">
-      <img :src="product.image" :alt="name" />
+      <img :src="assetUrl(product.image)" :alt="name" />
       <span v-if="badgeItems.length" class="badges">
         <span
           v-for="badge in badgeItems"

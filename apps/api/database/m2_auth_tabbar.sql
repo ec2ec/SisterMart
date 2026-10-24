@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS members (
   email VARCHAR(191) NULL,
   phone VARCHAR(32) NULL,
   password_hash VARCHAR(255) NOT NULL,
-  locale VARCHAR(8) NOT NULL DEFAULT 'zh-HK',
+  locale VARCHAR(8) NOT NULL DEFAULT 'en',
   promo_code VARCHAR(16) NOT NULL,
   parent_id BIGINT UNSIGNED NULL,
   status TINYINT NOT NULL DEFAULT 1,
