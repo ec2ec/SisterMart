@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
-import HomeFooter from '../components/HomeFooter.vue'
 import WelcomeRegisterPopup from '../components/WelcomeRegisterPopup.vue'
 import { banners as mockBanners } from '../mock/data'
 import {
@@ -76,7 +75,6 @@ const banners = ref<HomeBanner[]>(
   })),
 )
 const marquee = ref<HomeMarquee>(null)
-const footerSlogan = ref<{ 'zh-HK': string; en: string } | null>(null)
 const opsLoaded = ref(false)
 const sections = ref<HomeSection[]>([])
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
@@ -178,7 +176,6 @@ async function loadOps() {
   try {
     const ops = await fetchHomeOps()
     marquee.value = ops.marquee
-    footerSlogan.value = ops.footer_slogan
   } catch {
     /* 保留現有 */
   } finally {
@@ -698,7 +695,6 @@ const tabLabel = (tab: HomeRecTab) => {
           <button type="button" :disabled="subscribeBusy" @click="onSubscribe">{{ t('home.subscribe') }}</button>
         </div>
       </section>
-      <HomeFooter :slogan="footerSlogan" />
     </van-pull-refresh>
 
     <Teleport to="body">

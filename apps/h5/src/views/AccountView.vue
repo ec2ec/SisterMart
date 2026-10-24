@@ -7,8 +7,11 @@ import { api, ApiError } from '../api/client'
 import { fetchCheckinCalendar } from '../api/m7'
 import { uploadAvatar } from '../api/trade'
 import AvatarCropDialog from '../components/AvatarCropDialog.vue'
+import HomeFooter from '../components/HomeFooter.vue'
+import SupportContactPopup from '../components/SupportContactPopup.vue'
 import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
+import { fetchHomeOps } from '../api/catalog'
 import {
   clearSession,
   loggedIn,
@@ -35,6 +38,8 @@ const { orderCounts, refreshOrderCounts } = useOrderCounts()
 const checkinStreak = ref(0)
 const checkinSignedToday = ref(false)
 const guestDash = '-'
+const showSupport = ref(false)
+const footerSlogan = ref<{ 'zh-HK': string; en: string } | null>(null)
 
 const checkinStreakDisplay = computed(() => (loggedIn.value ? checkinStreak.value : guestDash))
 
@@ -127,6 +132,7 @@ async function refreshAccount() {
 
 onMounted(() => {
   void refreshAccount()
+  void loadFooterSlogan()
 })
 onDeactivated(() => saveRouteScroll(SCROLL_KEY))
 let accountFirstActivate = true
@@ -179,7 +185,8 @@ const services = [
   { key: 'dailyCheckin', icon: 'calendar-o', route: 'checkin' },
   { key: 'flashSale', icon: 'clock-o', route: 'seckill' },
   { key: 'affiliate', icon: 'friends-o', route: 'distribution' },
-  { key: 'support', icon: 'chat-o', route: 'messages' },
+  { key: 'support', icon: 'service-o', action: 'support' as const },
+  { key: 'messageCenter', icon: 'chat-o', route: 'messages' },
 ] as const
 
 const spentDisplay = computed(() => {
@@ -234,6 +241,23 @@ function goService(route: string) {
   const needAuth = !['home', 'seckill', 'points-mall', 'coupon-center'].includes(route)
   if (needAuth && !requireAuth(path)) return
   router.push({ name: route })
+}
+
+function onServiceClick(s: (typeof services)[number]) {
+  if ('action' in s && s.action === 'support') {
+    showSupport.value = true
+    return
+  }
+  if ('route' in s) goService(s.route)
+}
+
+async function loadFooterSlogan() {
+  try {
+    const ops = await fetchHomeOps()
+    footerSlogan.value = ops.footer_slogan
+  } catch {
+    /* 用 i18n 預設標語 */
+  }
 }
 
 function goLevel() {
@@ -338,7 +362,7 @@ function goOrders(tab?: string) {
     </section>
 
     <section class="card services">
-      <button v-for="s in services" :key="s.key" type="button" @click="goService(s.route)">
+      <button v-for="s in services" :key="s.key" type="button" @click="onServiceClick(s)">
         <van-icon :name="s.icon" size="1.375rem" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>
@@ -352,8 +376,11 @@ function goOrders(tab?: string) {
       </button>
     </section>
 
+    <HomeFooter :slogan="footerSlogan" />
+
     <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
 
+    <SupportContactPopup v-model:show="showSupport" />
     <AvatarCropDialog
       v-model:show="showAvatarCrop"
       :current-src="avatarSrc"
@@ -557,12 +584,19 @@ function goOrders(tab?: string) {
 .lang {
   display: block;
   width: calc(100% - 1.5rem);
-  margin: 0 0.75rem 1.25rem;
+  margin: 0.25rem 0.75rem 1.25rem;
   border: 0.0625rem solid #eee;
   border-radius: 0.625rem;
   background: #fff;
   padding: 0.75rem;
   color: #666;
   font-size: 0.8125rem;
+}
+
+:deep(.footer) {
+  margin: 0.25rem 0.75rem 0;
+  padding: 1rem 0.75rem 0.75rem;
+  border-radius: 0.875rem;
+  background: #fff;
 }
 </style>
