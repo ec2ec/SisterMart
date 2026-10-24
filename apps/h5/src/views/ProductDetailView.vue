@@ -217,8 +217,8 @@ async function addToCart() {
         confirmButtonText: t('pdp.goCart'),
         confirmButtonColor: 'var(--sm-primary)',
       })
-      closeOverlay()
-      router.push({ name: 'cart' })
+      // 勿先 closeOverlay()（router.back）：與 push 競態會停在上一 Tab（常為首頁）
+      await router.push({ name: 'cart' })
     } catch {
       /* 繼續購物：關閉對話框即可 */
     }
