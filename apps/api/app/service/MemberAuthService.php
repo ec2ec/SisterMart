@@ -416,7 +416,7 @@ class MemberAuthService
         Log::info('sistermart verify code ' . $purpose . ' ' . $email . ' ' . $code);
 
         // 經 MailService 出站並寫入 notify_outbox；預覽會含驗證碼，管理員可見發送結果
-        (new MailService())->enqueue(
+        $mailResult = (new MailService())->enqueue(
             $email,
             'SisterMart 驗證碼',
             '<p>您的驗證碼是 <strong>' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8')
@@ -432,7 +432,11 @@ class MemberAuthService
             'fallback'     => $fallback,
             'masked_email' => $this->maskEmail($email),
         ];
-        if (env('APP_DEBUG')) {
+        // TEMP: 未接通真實郵件渠道（mock）時回傳明文碼供 H5 回填；正式 SMTP／短信接通後刪除此段
+        $exposeDevCode = (bool) env('APP_DEBUG')
+            || filter_var(env('OTP_DEV_EXPOSE_CODE', false), FILTER_VALIDATE_BOOLEAN)
+            || ($mailResult['status'] ?? '') === 'mock';
+        if ($exposeDevCode) {
             $payload['debug_code'] = $code;
         }
 

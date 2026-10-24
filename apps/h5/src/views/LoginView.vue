@@ -5,7 +5,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api } from '../api/client'
 import AuthLayout from '../components/AuthLayout.vue'
-import { afterAuthPath, authError, authQuery, isCode, isEmail, isPhone, useCooldown } from '../composables/useAuth'
+import {
+  afterAuthPath,
+  authError,
+  authQuery,
+  fillDevOtpCode,
+  isCode,
+  isEmail,
+  isPhone,
+  useCooldown,
+} from '../composables/useAuth'
 import { setSession, type Member } from '../composables/useSession'
 import { setLocale } from '../i18n'
 
@@ -55,6 +64,7 @@ async function sendCode() {
     whatsappFallback.value = Boolean(data.fallback)
     codeSent.value = true
     start()
+    fillDevOtpCode(code, data) // TEMP: 未接通正式發碼渠道
     showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('auth.whatsappFailedBound'))
   } catch (error) {
     showToast(authError(t, error))

@@ -64,11 +64,12 @@ async function sendBind(channel: 'email' | 'phone') {
       { method: 'POST', body: JSON.stringify({ channel, target }) },
       'member',
     )
+    // TEMP: 未接通正式發碼渠道時回填
     if (data.debug_code) {
       if (channel === 'email') emailCode.value = data.debug_code
       else phoneCode.value = data.debug_code
     }
-    showToast(t('account.codeSent'))
+    showToast(data.debug_code ? t('auth.debugCode', { code: data.debug_code }) : t('account.codeSent'))
   } catch (e) {
     showToast(e instanceof ApiError && e.message ? e.message : t('account.profileFail'))
   } finally {
