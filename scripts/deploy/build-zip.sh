@@ -81,7 +81,7 @@ build_frontends() {
   if [[ -z "$app_version" && -n "${RELEASE_VERSION:-}" ]]; then
     app_version="$(printf '%s' "$RELEASE_VERSION" | sed -E 's/^(v?[0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
   fi
-  app_version="${app_version:-v1.30.16}"
+  app_version="${app_version:-v1.30.17}"
   echo "==> H5 build (VITE_API_BASE=$API_BASE VITE_APP_VERSION=$app_version)"
   cd "$ROOT/apps/h5"
   printf 'VITE_API_BASE=%s\nVITE_APP_LOCALE=zh-HK\nVITE_APP_VERSION=%s\n' "$API_BASE" "$app_version" > .env.production
