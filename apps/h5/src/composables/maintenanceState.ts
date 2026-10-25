@@ -47,9 +47,14 @@ function asLocalized(raw: unknown, fallback = ''): { 'zh-HK': string; en: string
 export function applyMaintenanceFromDetails(details: unknown) {
   const d = (details && typeof details === 'object' ? details : {}) as Record<string, unknown>
   const prev = maintenanceStatus.value || emptyStatus()
+  // 白名單會員已 bypass：勿被偶發 503（例如競態未帶令牌）蓋回維護頁
+  if (prev.member_bypass && localStorage.getItem('sm_token')) {
+    return
+  }
+  const bypassFromDetails = d.member_bypass === true || d.member_bypass === 1 || d.member_bypass === '1'
   maintenanceStatus.value = {
     enabled: true,
-    member_bypass: false,
+    member_bypass: bypassFromDetails,
     title: asLocalized(d.title, prev.title['zh-HK'] || prev.title.en),
     message: asLocalized(d.message, prev.message['zh-HK'] || prev.message.en),
     starts_at:

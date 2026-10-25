@@ -16,12 +16,14 @@ import {
   useCooldown,
 } from '../composables/useAuth'
 import { shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
+import { useMaintenance } from '../composables/useMaintenance'
 import { setSession, type Member } from '../composables/useSession'
 import { setLocale } from '../i18n'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { refresh: refreshMaintenance } = useMaintenance()
 
 const mode = ref<'email' | 'phone'>('email')
 const email = ref('')
@@ -126,6 +128,8 @@ async function submit() {
       })
       setSession(data.token, data.member)
       if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
+      // 先刷新維護狀態（member_bypass），避免進首頁被公開接口 503 蓋回維護頁
+      await refreshMaintenance()
       showToast(t('auth.loginOk'))
       router.replace(afterAuthPath(route.query))
     } catch (error) {
