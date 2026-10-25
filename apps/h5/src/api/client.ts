@@ -33,11 +33,10 @@ export async function api<T>(path: string, init: RequestInit = {}, auth: 'member
   if (init.body && !isForm && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  // 有令牌一律帶上（含 auth=none 的公開接口）：維護用戶白名單依賴 Bearer
-  void auth
+  // 有令牌一律帶上（含原先 auth=none 的公開接口）：維護用戶白名單依賴 Bearer
   const token = localStorage.getItem('sm_token')
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
+  if (token || auth === 'member') {
+    if (token) headers.set('Authorization', `Bearer ${token}`)
   }
   let res: Response
   try {
