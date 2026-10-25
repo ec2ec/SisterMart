@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NCard, NDescriptions, NDescriptionsItem, NInput, NSpace, useMessage } from 'naive-ui'
+import { NButton, NCard, NDescriptions, NDescriptionsItem, NInput, NSpace, NTag, useMessage } from 'naive-ui'
 import { api } from '../api'
 import { orderStatusLabel } from '../utils/orderStatus'
+import { assetUrl } from '../utils/assetUrl'
 
 type OrderMsg = { id: number; sender: 'seller' | 'buyer'; body: string; created_at: string }
 
@@ -107,6 +108,27 @@ function itemSpec(item: any) {
   if (s && typeof s === 'object') return s['zh-HK'] || s.en || ''
   return String(s || '')
 }
+
+function aftersaleTypeLabel(t: string) {
+  return t === 'return_refund' ? '退貨退款' : '僅退款'
+}
+
+function aftersaleStatusLabel(s: string) {
+  return (
+    {
+      pending_review: '待審核',
+      awaiting_return: '待退貨',
+      pending_refund: '待退款',
+      completed: '已完成',
+      rejected: '已駁回',
+      cancelled: '已撤銷',
+    } as Record<string, string>
+  )[s] || s
+}
+
+function openAftersale(id: number) {
+  router.push({ path: '/sales/aftersales', query: { open: String(id) } })
+}
 </script>
 
 <template>
@@ -156,6 +178,42 @@ function itemSpec(item: any) {
         <div v-else-if="item.reviewed" class="rev-extra">已評價</div>
       </div>
     </div>
+
+    <n-card
+      v-if="(order.aftersales || []).length"
+      size="small"
+      title="售後記錄"
+      style="margin-top: 1rem"
+    >
+      <button
+        v-for="as in order.aftersales"
+        :key="as.id"
+        type="button"
+        class="as-row"
+        @click="openAftersale(as.id)"
+      >
+        <div class="as-main">
+          <strong>{{ as.aftersale_no }}</strong>
+          <span class="as-meta">
+            {{ aftersaleTypeLabel(as.type) }} · HK$ {{ Number(as.amount).toFixed(2) }}
+          </span>
+          <span v-if="as.item" class="as-item">{{ itemName(as.item) }}</span>
+          <span v-if="as.description" class="as-item">{{ as.description }}</span>
+          <span v-if="as.admin_note" class="as-note">審核備註：{{ as.admin_note }}</span>
+          <div v-if="as.evidence?.length" class="as-ev">
+            <img
+              v-for="(u, i) in as.evidence.slice(0, 3)"
+              :key="i"
+              :src="assetUrl(u)"
+              alt=""
+            />
+          </div>
+        </div>
+        <n-tag size="small" :type="as.status === 'rejected' ? 'error' : as.status === 'completed' ? 'success' : 'warning'">
+          {{ aftersaleStatusLabel(as.status) }}
+        </n-tag>
+      </button>
+    </n-card>
 
     <n-card v-if="order.status === 'pending_shipment'" size="small" title="發貨" style="margin-top: 1rem">
       <n-space>
@@ -319,5 +377,58 @@ ul {
 .bubble .when {
   font-size: 0.6875rem;
   color: #bbb;
+}
+.as-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid #f0ebe4;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.as-row:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.as-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.as-main strong {
+  font-size: 0.875rem;
+}
+.as-meta,
+.as-item {
+  font-size: 0.75rem;
+  color: #888;
+}
+.as-note {
+  font-size: 0.75rem;
+  color: #b45309;
+}
+.as-ev {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.as-ev img {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: #f3f0ea;
+  pointer-events: none;
 }
 </style>
