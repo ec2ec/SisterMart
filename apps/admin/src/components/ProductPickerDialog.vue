@@ -286,12 +286,12 @@ function skuLabel(s: ProductSku) {
               </tr>
             </tbody>
           </table>
-          <n-empty
-            v-if="searched && !loading && !rows.length"
-            description="沒有匹配商品"
-            style="padding: 1.5rem 0"
-          />
         </div>
+        <n-empty
+          v-if="searched && !loading && !rows.length"
+          description="沒有匹配商品"
+          style="padding: 1.5rem 0"
+        />
       </n-spin>
     </template>
 

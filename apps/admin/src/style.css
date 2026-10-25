@@ -25,3 +25,15 @@ body,
 .sm-table-row.is-selected > th {
   background: #fff8d6;
 }
+
+/* 通用表格：最小寬度 1000px，超出橫向滾動 */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-wrap > .table,
+.table-wrap > .tbl {
+  width: 100%;
+  min-width: 1000px;
+}

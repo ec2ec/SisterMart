@@ -48,6 +48,7 @@ async function save(row: Level) {
 <template>
   <n-card title="會員等級閾值">
     <p style="color: #666; margin-bottom: 1rem">按累計實付（不含運費）分檔；改閾值後會重算全體會員等級。</p>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -70,6 +71,7 @@ async function save(row: Level) {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

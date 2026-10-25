@@ -337,6 +337,7 @@ onMounted(async () => {
     </n-card>
 
     <n-card title="秒殺活動列表">
+      <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
@@ -361,6 +362,7 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+      </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

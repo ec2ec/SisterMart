@@ -91,6 +91,7 @@ async function toggle(row: Coupon) {
 <template>
   <n-space vertical :size="16">
     <n-card title="優惠券列表">
+      <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
@@ -123,6 +124,7 @@ async function toggle(row: Coupon) {
           </tr>
         </tbody>
       </table>
+      </div>
       <div class="pager">
         <n-pagination
           v-model:page="page"
