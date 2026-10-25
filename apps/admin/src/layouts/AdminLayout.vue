@@ -248,8 +248,8 @@ onUnmounted(() => {
 }
 
 .content-inner.narrow {
-  /* 窄屏去邊距；底部留白避免最後一塊被裁切 */
-  margin-bottom: 4.5rem;
+  /* 窄屏去邊距；底部留白避免最後一塊被裁切（含移動瀏覽器底欄） */
+  margin-bottom: 9rem;
 }
 
 .drawer-panel {
