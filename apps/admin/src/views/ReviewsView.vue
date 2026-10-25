@@ -4,9 +4,8 @@ import { useRoute } from 'vue-router'
 import {
   NButton,
   NCard,
-  NDrawer,
-  NDrawerContent,
   NInput,
+  NModal,
   NSelect,
   NSpace,
   NTag,
@@ -223,65 +222,70 @@ async function saveReply() {
     </div>
   </n-card>
 
-  <n-drawer v-model:show="show" :width="480" placement="right">
-    <n-drawer-content v-if="current" title="評價詳情" closable>
-      <n-space vertical size="large">
-        <div class="meta">
-          <div>{{ current.product_code }} · {{ current.author }} · {{ current.stars }}★</div>
-          <div>{{ current.created_at }}</div>
-          <n-space>
-            <n-tag size="small" :type="modTagType(modStatus)">{{ modLabel(modStatus) }}</n-tag>
-            <n-tag size="small" :type="isHidden ? 'warning' : 'success'">
-              {{ isHidden ? '已隱藏' : '顯示中' }}
-            </n-tag>
-          </n-space>
-        </div>
-        <div>
-          <strong>主評</strong>
-          <p class="body">{{ current.body }}</p>
-          <div v-if="current.images?.length" class="imgs">
-            <a v-for="(u, i) in current.images" :key="i" :href="assetUrl(u)" target="_blank" rel="noreferrer">
-              <img :src="assetUrl(u)" alt="" />
-            </a>
-          </div>
-        </div>
-        <div v-if="current.follow">
-          <strong>追評</strong>
-          <p class="body">{{ current.follow }}</p>
-        </div>
-        <div>
-          <strong>商家回覆</strong>
-          <n-input
-            v-model:value="replyText"
-            type="textarea"
-            :rows="3"
-            placeholder="回覆將顯示在商品詳情評價區（審核通過後）"
-            style="margin-top: 0.5rem"
-          />
-        </div>
+  <n-modal
+    v-model:show="show"
+    preset="card"
+    title="評價審核"
+    style="width: min(36rem, 96vw)"
+    :mask-closable="!busy"
+    :closable="!busy"
+  >
+    <n-space v-if="current" vertical size="large">
+      <div class="meta">
+        <div>{{ current.product_code }} · {{ current.author }} · {{ current.stars }}★</div>
+        <div>{{ current.created_at }}</div>
         <n-space>
-          <n-button
-            v-if="modStatus !== 'approved'"
-            type="primary"
-            :loading="busy"
-            @click="setModeration('approved')"
-          >
-            通過審核
-          </n-button>
-          <n-button
-            v-if="modStatus !== 'rejected'"
-            type="warning"
-            :loading="busy"
-            @click="setModeration('rejected')"
-          >
-            拒絕
-          </n-button>
-          <n-button type="primary" secondary :loading="busy" @click="saveReply">保存回覆</n-button>
-          <n-button :loading="busy" @click="toggleHidden">{{ isHidden ? '恢復顯示' : '隱藏評價' }}</n-button>
+          <n-tag size="small" :type="modTagType(modStatus)">{{ modLabel(modStatus) }}</n-tag>
+          <n-tag size="small" :type="isHidden ? 'warning' : 'success'">
+            {{ isHidden ? '已隱藏' : '顯示中' }}
+          </n-tag>
         </n-space>
+      </div>
+      <div>
+        <strong>主評</strong>
+        <p class="body">{{ current.body }}</p>
+        <div v-if="current.images?.length" class="imgs">
+          <a v-for="(u, i) in current.images" :key="i" :href="assetUrl(u)" target="_blank" rel="noreferrer">
+            <img :src="assetUrl(u)" alt="" />
+          </a>
+        </div>
+      </div>
+      <div v-if="current.follow">
+        <strong>追評</strong>
+        <p class="body">{{ current.follow }}</p>
+      </div>
+      <div>
+        <strong>商家回覆</strong>
+        <n-input
+          v-model:value="replyText"
+          type="textarea"
+          :rows="3"
+          placeholder="回覆將顯示在商品詳情評價區（審核通過後）"
+          style="margin-top: 0.5rem"
+        />
+      </div>
+      <n-space>
+        <n-button
+          v-if="modStatus !== 'approved'"
+          type="primary"
+          :loading="busy"
+          @click="setModeration('approved')"
+        >
+          通過審核
+        </n-button>
+        <n-button
+          v-if="modStatus !== 'rejected'"
+          type="warning"
+          :loading="busy"
+          @click="setModeration('rejected')"
+        >
+          拒絕
+        </n-button>
+        <n-button type="primary" secondary :loading="busy" @click="saveReply">保存回覆</n-button>
+        <n-button :loading="busy" @click="toggleHidden">{{ isHidden ? '恢復顯示' : '隱藏評價' }}</n-button>
       </n-space>
-    </n-drawer-content>
-  </n-drawer>
+    </n-space>
+  </n-modal>
 </template>
 
 <style scoped>
