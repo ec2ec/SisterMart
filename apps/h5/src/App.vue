@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, type Component } from 'vue'
+import { computed, onMounted, onUnmounted, type Component } from 'vue'
 import AppTabbar from './components/AppTabbar.vue'
 import HomeView from './views/HomeView.vue'
 import CategoryView from './views/CategoryView.vue'
@@ -28,8 +28,19 @@ const backgroundComponent = computed(() => {
   return name ? TAB_COMPONENTS[name] : null
 })
 
+function onVisibility() {
+  if (document.visibilityState === 'visible') {
+    void refreshMaintenance()
+  }
+}
+
 onMounted(() => {
   void refreshMaintenance()
+  document.addEventListener('visibilitychange', onVisibility)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibility)
 })
 </script>
 
