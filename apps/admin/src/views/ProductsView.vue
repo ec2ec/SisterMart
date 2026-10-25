@@ -224,6 +224,17 @@ td {
   border: 1px dashed #d5cfc4;
   box-sizing: border-box;
 }
+.col-name {
+  max-width: 25%;
+  width: 25%;
+  overflow: hidden;
+}
+.col-name .name-zh,
+.col-name .name-en {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .col-name .name-zh {
   font-weight: 600;
   color: #1f1f1f;
