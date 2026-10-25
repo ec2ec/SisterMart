@@ -33,6 +33,11 @@ const active = computed(() => {
 })
 const title = computed(() => String(route.meta.title || 'SisterMart'))
 const menus = computed(() => menuOptions(admin?.value?.role))
+const contentStyle = computed(() =>
+  isNarrow.value
+    ? 'padding: 0; min-height: 100%'
+    : 'padding: 1.25rem; min-height: 100%',
+)
 
 function readAdmin(): AdminUser | null {
   const raw = localStorage.getItem('sm_admin')
@@ -120,10 +125,13 @@ onUnmounted(() => {
       </n-layout-header>
       <n-layout-content
         class="content"
+        :class="{ narrow: isNarrow }"
         :native-scrollbar="false"
-        content-style="padding: 1.25rem; min-height: 100%"
+        :content-style="contentStyle"
       >
-        <router-view />
+        <div class="content-inner" :class="{ narrow: isNarrow }">
+          <router-view />
+        </div>
       </n-layout-content>
     </n-layout>
   </n-layout>
@@ -237,6 +245,11 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-height: 0;
   background: #f6f3ee;
+}
+
+.content-inner.narrow {
+  /* 窄屏去邊距；底部留白避免最後一塊被裁切 */
+  margin-bottom: 4.5rem;
 }
 
 .drawer-panel {
