@@ -216,23 +216,42 @@ async function remove(id: number) {
           </div>
         </template>
         <template #value>
-          <button type="button" class="del" @click.stop="remove(row.id)">{{ t('cart.delete') }}</button>
+          <van-button
+            size="mini"
+            plain
+            hairline
+            round
+            color="#c45c26"
+            class="del-btn"
+            @click.stop="remove(row.id)"
+          >
+            {{ t('cart.delete') }}
+          </van-button>
         </template>
       </van-cell>
     </van-cell-group>
 
     <div v-if="loaded && items.length && !showForm" class="add-wrap">
-      <van-button block type="primary" color="var(--sm-primary)" round @click="startAdd">
-        {{ t('checkout.addShippingAddress') }}
+      <van-button block type="primary" color="var(--sm-primary)" round class="add-btn" @click="startAdd">
+        +
       </van-button>
     </div>
 
     <div v-if="showForm" class="form">
       <div class="form-hd">
         <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
-        <button v-if="items.length" type="button" class="cancel" @click="cancelForm">
+        <van-button
+          v-if="items.length"
+          size="small"
+          plain
+          hairline
+          round
+          color="#888"
+          class="cancel-btn"
+          @click="cancelForm"
+        >
           {{ t('checkout.cancelForm') }}
-        </button>
+        </van-button>
       </div>
       <van-field
         v-model="form.receiver"
@@ -369,18 +388,19 @@ async function remove(id: number) {
   margin: 0;
   font-size: 0.9375rem;
 }
-.cancel {
-  border: 0;
-  background: transparent;
-  color: #666;
-  font-size: 0.875rem;
-  padding: 0.25rem 0;
+.add-btn {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
 }
-.del {
-  border: 0;
-  background: transparent;
-  color: #c45c26;
-  font-size: 0.75rem;
+.cancel-btn {
+  flex: 0 0 auto;
+  min-width: 4rem;
+}
+.del-btn {
+  flex: 0 0 auto;
+  vertical-align: middle;
 }
 .picker {
   display: flex;
