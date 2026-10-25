@@ -227,22 +227,19 @@ td {
 .col-name {
   max-width: 25%;
   width: 25%;
-  overflow: hidden;
-}
-.col-name .name-zh,
-.col-name .name-en {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .col-name .name-zh {
   font-weight: 600;
   color: #1f1f1f;
+  white-space: normal;
 }
 .col-name .name-en {
   margin-top: 0.15rem;
   font-size: 0.75rem;
   color: #8a8378;
+  white-space: normal;
 }
 .muted {
   color: #bbb;
