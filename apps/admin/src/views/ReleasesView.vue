@@ -297,77 +297,81 @@ onMounted(load)
     </n-card>
 
     <n-card title="待發佈 / 歷史">
-      <table class="tbl" v-if="items.length">
-        <thead>
-          <tr>
-            <th>版本</th>
-            <th>狀態</th>
-            <th>說明</th>
-            <th>大小</th>
-            <th>SQL</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in items" :key="row.id" v-bind="rowAttrs(row.id)">
-            <td>
-              <div class="ver">{{ row.version || row.id }}</div>
-              <div class="sub">{{ row.id }}</div>
-            </td>
-            <td><n-tag size="small" :type="statusType(row.status)">{{ row.status }}</n-tag></td>
-            <td>
-              <div>{{ row.title || '—' }}</div>
-              <div class="sub">{{ row.description }}</div>
-              <div v-if="row.error" class="err">{{ row.error }}</div>
-            </td>
-            <td>{{ fmtBytes(row.total_bytes) }}</td>
-            <td>{{ row.has_migrate ? '有' : '—' }}</td>
-            <td class="acts">
-              <n-button size="tiny" quaternary @click="openDetail(row)">日誌</n-button>
-              <n-button
-                v-if="row.status === 'ready'"
-                size="tiny"
-                type="primary"
-                :disabled="!!state?.lock"
-                @click="publish(row)"
-              >
-                發佈
-              </n-button>
-              <n-button
-                v-if="row.status !== 'publishing'"
-                size="tiny"
-                quaternary
-                type="error"
-                @click="remove(row)"
-              >
-                刪除
-              </n-button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="items.length" class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>版本</th>
+              <th>狀態</th>
+              <th>說明</th>
+              <th>大小</th>
+              <th>SQL</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in items" :key="row.id" v-bind="rowAttrs(row.id)">
+              <td>
+                <div class="ver">{{ row.version || row.id }}</div>
+                <div class="sub">{{ row.id }}</div>
+              </td>
+              <td><n-tag size="small" :type="statusType(row.status)">{{ row.status }}</n-tag></td>
+              <td>
+                <div>{{ row.title || '—' }}</div>
+                <div class="sub">{{ row.description }}</div>
+                <div v-if="row.error" class="err">{{ row.error }}</div>
+              </td>
+              <td>{{ fmtBytes(row.total_bytes) }}</td>
+              <td>{{ row.has_migrate ? '有' : '—' }}</td>
+              <td class="acts">
+                <n-button size="tiny" quaternary @click="openDetail(row)">日誌</n-button>
+                <n-button
+                  v-if="row.status === 'ready'"
+                  size="tiny"
+                  type="primary"
+                  :disabled="!!state?.lock"
+                  @click="publish(row)"
+                >
+                  發佈
+                </n-button>
+                <n-button
+                  v-if="row.status !== 'publishing'"
+                  size="tiny"
+                  quaternary
+                  type="error"
+                  @click="remove(row)"
+                >
+                  刪除
+                </n-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <n-text v-else depth="3">暫無發佈包</n-text>
     </n-card>
 
     <n-card title="操作審計">
-      <table class="tbl" v-if="audit.length">
-        <thead>
-          <tr>
-            <th>時間</th>
-            <th>動作</th>
-            <th>管理員</th>
-            <th>目標</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(a, i) in audit" :key="i" v-bind="auditRowAttrs(i)">
-            <td>{{ a.at }}</td>
-            <td>{{ a.action }}</td>
-            <td>{{ a.admin_id }}</td>
-            <td>{{ a.target }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="audit.length" class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>動作</th>
+              <th>管理員</th>
+              <th>目標</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(a, i) in audit" :key="i" v-bind="auditRowAttrs(i)">
+              <td>{{ a.at }}</td>
+              <td>{{ a.action }}</td>
+              <td>{{ a.admin_id }}</td>
+              <td>{{ a.target }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <n-text v-else depth="3">暫無記錄</n-text>
     </n-card>
 

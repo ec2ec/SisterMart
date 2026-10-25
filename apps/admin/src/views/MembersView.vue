@@ -75,6 +75,7 @@ async function submitAdjust() {
       <n-input v-model:value="q" placeholder="郵箱 / 手機 / 推廣碼" style="width: 16rem" @keyup.enter="load" />
       <n-button @click="load">搜索</n-button>
     </n-space>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -101,6 +102,7 @@ async function submitAdjust() {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

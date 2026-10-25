@@ -140,6 +140,7 @@ onMounted(() => {
   <n-space vertical :size="16">
     <n-card title="商品參數">
       <p class="hint">參數名稱與取值均支援中英文；商品可多選取值，未選則 H5 不顯示該參數。</p>
+      <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
@@ -173,6 +174,7 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
+      </div>
       <div class="pager">
         <n-pagination
           v-model:page="page"

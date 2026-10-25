@@ -94,6 +94,7 @@ onMounted(load)
   <n-space vertical :size="16">
     <n-card title="角標">
       <p class="hint">商品列表與 H5 角標顏色/文案由此維護；停用後商品上不再展示該角標。</p>
+      <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
@@ -123,6 +124,7 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
+      </div>
       <div class="pager">
         <n-pagination
           v-model:page="page"

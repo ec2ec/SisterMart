@@ -203,6 +203,7 @@ async function forceBalance() {
       <n-select v-model:value="hasEvidence" :options="evidenceOptions" style="width: 9rem" @update:value="load" />
       <n-button @click="load">刷新</n-button>
     </n-space>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -247,6 +248,7 @@ async function forceBalance() {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"
