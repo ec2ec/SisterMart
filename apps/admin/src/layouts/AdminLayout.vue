@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NLayout, NLayoutContent, NLayoutHeader, NLayoutSider, NMenu, NText } from 'naive-ui'
+import {
+  NButton,
+  NDrawer,
+  NDrawerContent,
+  NLayout,
+  NLayoutContent,
+  NLayoutHeader,
+  NLayoutSider,
+  NMenu,
+  NText,
+} from 'naive-ui'
 import { api, type AdminUser } from '../api'
 import { menuOptions } from '../menus'
+
+const NARROW_MQ = '(max-width: 880px)'
 
 const route = useRoute()
 const router = useRouter()
 const admin = ref<AdminUser | null>(readAdmin())
+const isNarrow = ref(false)
+const menuOpen = ref(false)
 
 /** 詳情頁仍高亮列表菜單 */
 const active = computed(() => {
@@ -18,6 +32,7 @@ const active = computed(() => {
   return p === '/' ? '/' : p
 })
 const title = computed(() => String(route.meta.title || 'SisterMart'))
+const menus = computed(() => menuOptions(admin?.value?.role))
 
 function readAdmin(): AdminUser | null {
   const raw = localStorage.getItem('sm_admin')
@@ -30,7 +45,10 @@ function readAdmin(): AdminUser | null {
 }
 
 function go(key: string) {
-  if (key.startsWith('/')) router.push(key)
+  if (key.startsWith('/')) {
+    router.push(key)
+    menuOpen.value = false
+  }
 }
 
 async function logout() {
@@ -41,13 +59,34 @@ async function logout() {
   }
   localStorage.removeItem('sm_admin_token')
   localStorage.removeItem('sm_admin')
+  menuOpen.value = false
   router.replace({ name: 'login' })
 }
+
+let narrowMq: MediaQueryList | null = null
+
+function syncNarrow() {
+  if (!narrowMq) return
+  isNarrow.value = narrowMq.matches
+  if (!narrowMq.matches) menuOpen.value = false
+}
+
+onMounted(() => {
+  narrowMq = window.matchMedia(NARROW_MQ)
+  syncNarrow()
+  narrowMq.addEventListener('change', syncNarrow)
+})
+
+onUnmounted(() => {
+  narrowMq?.removeEventListener('change', syncNarrow)
+  narrowMq = null
+})
 </script>
 
 <template>
-  <n-layout has-sider class="frame" position="absolute">
+  <n-layout :has-sider="!isNarrow" class="frame" position="absolute">
     <n-layout-sider
+      v-if="!isNarrow"
       inverted
       bordered
       collapse-mode="width"
@@ -57,16 +96,27 @@ async function logout() {
     >
       <div class="brand">Sister<span>Mart</span></div>
       <div class="sider-menu">
-        <n-menu :value="active" :options="menuOptions(admin?.role)" inverted @update:value="go" />
+        <n-menu :value="active" :options="menus" inverted @update:value="go" />
       </div>
     </n-layout-sider>
+
     <n-layout class="main">
-      <n-layout-header bordered class="header">
-        <strong>{{ title }}</strong>
-        <div class="who">
-          <n-text depth="3">{{ admin?.email }}</n-text>
-          <n-button quaternary size="small" @click="logout">退出</n-button>
-        </div>
+      <n-layout-header bordered class="header" :class="{ narrow: isNarrow }">
+        <template v-if="isNarrow">
+          <div class="brand brand-bar">Sister<span>Mart</span></div>
+          <n-button quaternary class="menu-btn" aria-label="打開菜單" @click="menuOpen = true">
+            <span class="burger" aria-hidden="true">
+              <i /><i /><i />
+            </span>
+          </n-button>
+        </template>
+        <template v-else>
+          <strong>{{ title }}</strong>
+          <div class="who">
+            <n-text depth="3">{{ admin?.email }}</n-text>
+            <n-button quaternary size="small" @click="logout">退出</n-button>
+          </div>
+        </template>
       </n-layout-header>
       <n-layout-content
         class="content"
@@ -77,6 +127,29 @@ async function logout() {
       </n-layout-content>
     </n-layout>
   </n-layout>
+
+  <n-drawer
+    v-model:show="menuOpen"
+    placement="left"
+    :width="280"
+    :trap-focus="false"
+    display-directive="show"
+  >
+    <n-drawer-content :native-scrollbar="false" body-content-style="padding: 0" class="drawer-body">
+      <div class="drawer-panel">
+        <div class="brand drawer-brand">Sister<span>Mart</span></div>
+        <div class="drawer-meta">
+          <n-text depth="3">{{ admin?.email }}</n-text>
+        </div>
+        <div class="sider-menu drawer-menu">
+          <n-menu :value="active" :options="menus" @update:value="go" />
+        </div>
+        <div class="drawer-foot">
+          <n-button block secondary @click="logout">退出登錄</n-button>
+        </div>
+      </div>
+    </n-drawer-content>
+  </n-drawer>
 </template>
 
 <style scoped>
@@ -101,6 +174,12 @@ async function logout() {
   color: #c45c4a;
 }
 
+.brand-bar {
+  padding: 0;
+  color: #1c1c1c;
+  font-size: 1.125rem;
+}
+
 .sider-menu {
   flex: 1 1 auto;
   overflow: auto;
@@ -123,15 +202,70 @@ async function logout() {
   background: #fff;
 }
 
+.header.narrow {
+  padding: 0 0.75rem 0 1rem;
+}
+
 .who {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
+.menu-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+.burger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.28rem;
+  width: 1.125rem;
+}
+
+.burger i {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: #1c1c1c;
+}
+
 .content {
   flex: 1 1 auto;
   min-height: 0;
   background: #f6f3ee;
+}
+
+.drawer-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  background: #fff;
+}
+
+.drawer-brand {
+  color: #1c1c1c;
+  padding-bottom: 0.35rem;
+}
+
+.drawer-meta {
+  padding: 0 1.25rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.drawer-menu {
+  border-top: 1px solid #f0ebe4;
+  padding: 0.5rem 0;
+}
+
+.drawer-foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid #f0ebe4;
 }
 </style>
