@@ -96,6 +96,7 @@ class MemberAuthService
         });
 
         $member = Db::name('members')->where('id', $id)->find();
+        MemberActivityService::touchNow($id);
 
         return [
             'token'  => TokenService::issue('member_tokens', 'member_id', $id),
@@ -127,6 +128,8 @@ class MemberAuthService
         if ((int) $member['status'] !== 1) {
             throw new ApiException('DISABLED', '這個帳號已停用', 403);
         }
+
+        MemberActivityService::touchNow((int) $member['id']);
 
         return [
             'token'  => TokenService::issue('member_tokens', 'member_id', (int) $member['id']),
