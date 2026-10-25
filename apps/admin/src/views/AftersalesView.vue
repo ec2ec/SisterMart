@@ -4,9 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
-  NDrawer,
-  NDrawerContent,
   NInput,
+  NModal,
   NSelect,
   NSpace,
   NTag,
@@ -259,74 +258,79 @@ async function forceBalance() {
     </div>
   </n-card>
 
-  <n-drawer v-model:show="show" :width="520" placement="right">
-    <n-drawer-content v-if="current" :title="`售後 ${current.aftersale_no}`" closable>
-      <n-space vertical size="large">
-        <div class="meta">
-          <div>類型：{{ typeLabel(current.type) }} · 金額 {{ current.amount }} · {{ current.refund_to }}</div>
-          <div>狀態：{{ statusLabel(current.status) }}</div>
-          <div v-if="current.item">商品：{{ current.item.name['zh-HK'] }}</div>
-          <div>
-            訂單：
-            <n-button text type="primary" @click="router.push(`/sales/orders/${current.order_id}`)">
-              #{{ current.order_id }} {{ current.order_no || '' }}
-            </n-button>
-          </div>
-        </div>
-
+  <n-modal
+    v-model:show="show"
+    preset="card"
+    :title="current ? `售後審核 ${current.aftersale_no}` : '售後審核'"
+    style="width: min(40rem, 96vw)"
+    :mask-closable="!busy"
+    :closable="!busy"
+  >
+    <n-space v-if="current" vertical size="large">
+      <div class="meta">
+        <div>類型：{{ typeLabel(current.type) }} · 金額 {{ current.amount }} · {{ current.refund_to }}</div>
+        <div>狀態：{{ statusLabel(current.status) }}</div>
+        <div v-if="current.item">商品：{{ current.item.name['zh-HK'] }}</div>
         <div>
-          <strong>問題描述</strong>
-          <p class="desc">{{ current.description || '—' }}</p>
-        </div>
-
-        <div>
-          <strong>證據（{{ current.evidence?.length || 0 }}）</strong>
-          <div v-if="current.evidence?.length" class="ev-large">
-            <button
-              v-for="(u, i) in current.evidence"
-              :key="i"
-              type="button"
-              class="thumb"
-              @click="preview = assetUrl(u)"
-            >
-              <img :src="assetUrl(u)" alt="" />
-            </button>
-          </div>
-          <p v-else class="warn">會員未上傳證據。退貨退款不可直接通過。</p>
-          <div v-if="preview" class="preview">
-            <a :href="preview" target="_blank" rel="noreferrer">
-              <img :src="preview" alt="evidence preview" />
-            </a>
-          </div>
-        </div>
-
-        <div v-if="current.admin_note">
-          <strong>既有備註</strong>
-          <p class="desc">{{ current.admin_note }}</p>
-        </div>
-
-        <div v-if="canReview || canForceBalance">
-          <strong>審核備註</strong>
-          <n-input
-            v-model:value="note"
-            type="textarea"
-            :rows="3"
-            placeholder="駁回必填；通過可選"
-            style="margin-top: 0.5rem"
-          />
-        </div>
-
-        <n-space>
-          <n-button v-if="canReview" type="primary" :loading="busy" @click="approve">通過</n-button>
-          <n-button v-if="canReview" type="error" :loading="busy" @click="reject">駁回</n-button>
-          <n-button v-if="canMarkReturned" type="primary" :loading="busy" @click="markReturned">
-            確認退貨並退款
+          訂單：
+          <n-button text type="primary" @click="router.push(`/sales/orders/${current.order_id}`)">
+            #{{ current.order_id }} {{ current.order_no || '' }}
           </n-button>
-          <n-button v-if="canForceBalance" :loading="busy" @click="forceBalance">強制退至餘額</n-button>
-        </n-space>
+        </div>
+      </div>
+
+      <div>
+        <strong>問題描述</strong>
+        <p class="desc">{{ current.description || '—' }}</p>
+      </div>
+
+      <div>
+        <strong>證據（{{ current.evidence?.length || 0 }}）</strong>
+        <div v-if="current.evidence?.length" class="ev-large">
+          <button
+            v-for="(u, i) in current.evidence"
+            :key="i"
+            type="button"
+            class="thumb"
+            @click="preview = assetUrl(u)"
+          >
+            <img :src="assetUrl(u)" alt="" />
+          </button>
+        </div>
+        <p v-else class="warn">會員未上傳證據。退貨退款不可直接通過。</p>
+        <div v-if="preview" class="preview">
+          <a :href="preview" target="_blank" rel="noreferrer">
+            <img :src="preview" alt="evidence preview" />
+          </a>
+        </div>
+      </div>
+
+      <div v-if="current.admin_note">
+        <strong>既有備註</strong>
+        <p class="desc">{{ current.admin_note }}</p>
+      </div>
+
+      <div v-if="canReview || canForceBalance">
+        <strong>審核備註</strong>
+        <n-input
+          v-model:value="note"
+          type="textarea"
+          :rows="3"
+          placeholder="駁回必填；通過可選"
+          style="margin-top: 0.5rem"
+        />
+      </div>
+
+      <n-space>
+        <n-button v-if="canReview" type="primary" :loading="busy" @click="approve">通過</n-button>
+        <n-button v-if="canReview" type="error" :loading="busy" @click="reject">駁回</n-button>
+        <n-button v-if="canMarkReturned" type="primary" :loading="busy" @click="markReturned">
+          確認退貨並退款
+        </n-button>
+        <n-button v-if="canForceBalance" :loading="busy" @click="forceBalance">強制退至餘額</n-button>
       </n-space>
-    </n-drawer-content>
-  </n-drawer>
+    </n-space>
+  </n-modal>
 </template>
 
 <style scoped>
