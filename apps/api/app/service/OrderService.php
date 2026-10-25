@@ -841,6 +841,8 @@ class OrderService
         $items = Db::name('order_items')->where('order_id', $row['id'])->select()->toArray();
         $addr = json_decode((string) $row['address_snapshot'], true) ?: [];
         $reviewFlags = (new ReviewService())->flagsForOrderItems((string) $row['status'], $items);
+        $aftersaleSvc = new AftersaleService();
+        $elig = $aftersaleSvc->eligibilityForOrder($row);
         $presentedItems = [];
         $promoDiscount = 0.0;
         $needsReview = false;
@@ -865,6 +867,12 @@ class OrderService
             if ($flags['can_review']) {
                 $needsReview = true;
             }
+            $remainQty = (int) $i['qty'] - (int) ($i['refunded_qty'] ?? 0);
+            $hasOpenAftersale = $aftersaleSvc->hasOpenForItem((int) $i['id']);
+            $canAftersale = $elig['aftersale_eligible']
+                && !$elig['aftersale_expired']
+                && $remainQty > 0
+                && !$hasOpenAftersale;
             $presentedItems[] = [
                 'id' => (int) $i['id'],
                 'product_code' => $i['product_code'],
@@ -882,7 +890,17 @@ class OrderService
                 'can_review' => $flags['can_review'],
                 'can_follow' => $flags['can_follow'],
                 'reviewed' => $flags['reviewed'],
+                'can_aftersale' => $canAftersale,
+                'has_open_aftersale' => $hasOpenAftersale,
             ];
+        }
+        $aftersales = $aftersaleSvc->listForOrder((int) $row['id']);
+        $hasRejected = false;
+        foreach ($aftersales as $as) {
+            if (($as['status'] ?? '') === 'rejected') {
+                $hasRejected = true;
+                break;
+            }
         }
 
         return [
@@ -905,6 +923,9 @@ class OrderService
             'shipped_at' => $row['shipped_at'] ?? null,
             'completed_at' => $row['completed_at'] ?? null,
             'aftersale_touched' => (int) ($row['aftersale_touched'] ?? 0) === 1,
+            'aftersales' => $aftersales,
+            'can_apply_aftersale' => $aftersaleSvc->canApplyForOrder($row),
+            'has_rejected_aftersale' => $hasRejected,
             'needs_review' => $needsReview,
             'points_awarded' => (int) ($row['points_awarded'] ?? 0),
             'seckill_item_id' => array_key_exists('seckill_item_id', $row) && $row['seckill_item_id'] !== null
@@ -917,6 +938,6 @@ class OrderService
             'cancel_reason' => $row['cancel_reason'],
             'created_at' => $row['created_at'],
             'items' => $presentedItems,
-        ] + (new AftersaleService())->eligibilityForOrder($row);
+        ] + $elig;
     }
 }
