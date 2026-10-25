@@ -15,6 +15,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Row = {
   id: number
@@ -37,6 +38,7 @@ const route = useRoute()
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const hiddenFilter = ref<string>(
   typeof route.query.is_hidden === 'string' ? route.query.is_hidden : '',
 )
@@ -190,7 +192,7 @@ async function saveReply() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.product_code }}</td>
           <td>{{ row.author }}</td>
           <td>{{ row.stars }}★</td>

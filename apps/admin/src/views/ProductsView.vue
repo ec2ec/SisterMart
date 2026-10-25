@@ -5,6 +5,7 @@ import { NButton, NCard, NInput, NPagination, NSelect, NSpace, NTag } from 'naiv
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type CatNode = {
   id: number
@@ -39,13 +40,9 @@ const keyword = ref('')
 const categoryId = ref<number | null>(null)
 const categoryOptions = ref<Array<{ label: string; value: number }>>([])
 const loading = ref(false)
-const selectedId = ref<number | null>(null)
 
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
-
-function selectRow(row: Row) {
-  selectedId.value = row.db_id
-}
+const { rowAttrs } = useTableRowSelect()
 
 function flattenCats(nodes: CatNode[], depth = 0): Array<{ label: string; value: number }> {
   const out: Array<{ label: string; value: number }> = []
@@ -147,9 +144,8 @@ onMounted(async () => {
           <tr
             v-for="row in paged"
             :key="row.code"
-            class="row"
-            :class="{ off: row.status !== 1, selected: selectedId === row.db_id }"
-            @click="selectRow(row)"
+            v-bind="rowAttrs(row.db_id)"
+            :class="{ off: row.status !== 1 }"
           >
             <td class="col-thumb">
               <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
@@ -254,12 +250,6 @@ td {
 }
 .muted {
   color: #bbb;
-}
-.row {
-  cursor: pointer;
-}
-.row.selected td {
-  background: #fff8d6;
 }
 tr.off td {
   color: #b0aaa0;

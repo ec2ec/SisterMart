@@ -17,6 +17,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 import RichEditor from '../components/RichEditor.vue'
 
 type Batch = {
@@ -36,6 +37,7 @@ type MemberOpt = { label: string; value: number }
 const message = useMessage()
 const rows = ref<Batch[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const memberOptions = ref<MemberOpt[]>([])
 const memberLoading = ref(false)
 const form = reactive({
@@ -176,7 +178,7 @@ async function create() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.batch_id">
+        <tr v-for="row in paged" :key="row.batch_id" v-bind="rowAttrs(row.batch_id)">
           <td>{{ row.created_at }}</td>
           <td>{{ row.title['zh-HK'] }}</td>
           <td class="snip">{{ stripPreview(row.body['zh-HK'] || '') }}</td>

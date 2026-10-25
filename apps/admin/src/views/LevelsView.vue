@@ -9,6 +9,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Level = {
   id: number
@@ -21,6 +22,7 @@ type Level = {
 const message = useMessage()
 const rows = ref<Level[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 
 async function load() {
   const data = await api<{ items: Level[] }>('/api/v1/admin/member-levels', {}, true)
@@ -57,7 +59,7 @@ async function save(row: Level) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ '★'.repeat(row.stars) }}</td>
           <td>{{ row.name['zh-HK'] }}</td>
           <td><n-input-number v-model:value="row.min_spent" :min="0" :step="1" /></td>

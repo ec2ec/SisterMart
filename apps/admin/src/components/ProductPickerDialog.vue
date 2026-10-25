@@ -13,6 +13,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 export type ProductSku = {
   id: number
@@ -83,6 +84,8 @@ const visible = computed({
 })
 
 const skuOptions = computed(() => selected.value?.skus || [])
+
+const { rowAttrs } = useTableRowSelect()
 
 function resetState() {
   keyword.value = ''
@@ -259,7 +262,7 @@ function skuLabel(s: ProductSku) {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in rows" :key="row.code" :class="{ off: row.status !== 1 }">
+              <tr v-for="row in rows" :key="row.code" v-bind="rowAttrs(row.code)" :class="{ off: row.status !== 1 }">
                 <td class="col-thumb">
                   <img
                     v-if="row.image"
