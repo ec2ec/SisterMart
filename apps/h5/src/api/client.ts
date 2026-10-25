@@ -1,3 +1,5 @@
+import { applyMaintenanceFromDetails } from '../composables/maintenanceState'
+
 const base = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 type Envelope<T> = {
@@ -6,7 +8,7 @@ type Envelope<T> = {
   data: T
   error?: {
     name?: string
-    details?: Record<string, unknown>
+    details?: Record<string, unknown> | object
   }
 }
 
@@ -44,7 +46,11 @@ export async function api<T>(path: string, init: RequestInit = {}, auth: 'member
   }
   const body = (await res.json().catch(() => ({}))) as Envelope<T & { debug_code?: string }>
   if (!res.ok || body.code !== 0) {
-    const details = body.error?.details || {}
+    const details = (body.error?.details || {}) as Record<string, unknown>
+    // 維護模式：攔截後寫入全局狀態，App 會蓋維護頁
+    if (body.error?.name === 'MAINTENANCE') {
+      applyMaintenanceFromDetails(details)
+    }
     const debug =
       typeof details.debug_code === 'string'
         ? details.debug_code
