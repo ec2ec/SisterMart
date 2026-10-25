@@ -82,6 +82,7 @@ async function toggle(row: Row) {
       <n-form-item label="角色"><n-select v-model:value="form.role" :options="roleOptions" /></n-form-item>
       <n-button type="primary" @click="create">新建</n-button>
     </n-form>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -108,6 +109,7 @@ async function toggle(row: Row) {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

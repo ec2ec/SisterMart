@@ -131,6 +131,7 @@ onMounted(load)
       />
       <n-button :loading="loading" @click="load">刷新</n-button>
     </n-space>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -164,6 +165,7 @@ onMounted(load)
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

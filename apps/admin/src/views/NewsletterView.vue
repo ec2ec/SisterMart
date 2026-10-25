@@ -87,6 +87,7 @@ async function remove(row: Row) {
       <n-input v-model:value="q" placeholder="郵箱關鍵字" style="width: 14rem" @keyup.enter="load" />
       <n-button @click="load">刷新</n-button>
     </n-space>
+    <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
@@ -132,6 +133,7 @@ async function remove(row: Row) {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"

@@ -376,7 +376,9 @@ class ReviewService
             'order_item_id' => (int) $row['order_item_id'],
             'product_code' => (string) $row['product_code'],
             'stars' => (int) $row['stars'],
-            'author' => $this->authorName($member, (int) $row['member_id']),
+            'author' => $admin
+                ? $this->authorNameRaw($member, (int) $row['member_id'])
+                : $this->authorName($member, (int) $row['member_id']),
             'body' => (string) $row['body'],
             'images' => $images,
             'follow' => $follow,
@@ -399,6 +401,7 @@ class ReviewService
         return $data;
     }
 
+    /** 前台展示：脫敏作者名 */
     private function authorName(?array $member, int $memberId): string
     {
         if (!$member) {
@@ -418,6 +421,28 @@ class ReviewService
             $len = strlen($phone);
 
             return $len > 4 ? ('***' . substr($phone, -4)) : ('***' . $phone);
+        }
+
+        return 'M' . $memberId;
+    }
+
+    /** 後台管理：完整郵箱／手機／暱稱，不脫敏 */
+    private function authorNameRaw(?array $member, int $memberId): string
+    {
+        if (!$member) {
+            return 'M' . $memberId;
+        }
+        $email = trim((string) ($member['email'] ?? ''));
+        if ($email !== '') {
+            return $email;
+        }
+        $phone = trim((string) ($member['phone'] ?? ''));
+        if ($phone !== '') {
+            return $phone;
+        }
+        $nick = trim((string) ($member['nickname'] ?? ''));
+        if ($nick !== '') {
+            return $nick;
         }
 
         return 'M' . $memberId;
