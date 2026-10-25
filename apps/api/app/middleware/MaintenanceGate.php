@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace app\middleware;
 
 use app\service\MaintenanceService;
+use app\service\TokenService;
 use app\support\ApiResponse;
 use Closure;
 use think\Request;
 use think\Response;
 
 /**
- * 維護模式：H5 業務接口統一回 MAINTENANCE；後台與白名單路徑放行。
+ * 維護模式：H5 業務接口統一回 MAINTENANCE；後台、路徑白名單、用戶白名單放行。
  */
 class MaintenanceGate
 {
@@ -31,6 +32,11 @@ class MaintenanceGate
             return $next($request);
         }
 
+        $memberId = TokenService::ownerId('member_tokens', 'member_id', TokenService::bearer($request));
+        if ($memberId !== null && $svc->isMemberAllowed($memberId)) {
+            return $next($request);
+        }
+
         $public = $svc->publicStatus();
 
         return ApiResponse::fail(
@@ -40,6 +46,7 @@ class MaintenanceGate
             50301,
             [
                 'enabled' => true,
+                'member_bypass' => false,
                 'title' => $public['title'],
                 'message' => $public['message'],
                 'starts_at' => $public['starts_at'],

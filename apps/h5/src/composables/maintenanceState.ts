@@ -2,6 +2,8 @@ import { computed, ref } from 'vue'
 
 export type MaintenanceStatus = {
   enabled: boolean
+  /** 當前登錄會員在用戶白名單內，不蓋維護頁 */
+  member_bypass?: boolean
   title: { 'zh-HK': string; en: string }
   message: { 'zh-HK': string; en: string }
   starts_at: string | null
@@ -12,6 +14,7 @@ export type MaintenanceStatus = {
 
 const emptyStatus = (): MaintenanceStatus => ({
   enabled: false,
+  member_bypass: false,
   title: { 'zh-HK': '', en: '' },
   message: { 'zh-HK': '', en: '' },
   starts_at: null,
@@ -22,7 +25,9 @@ const emptyStatus = (): MaintenanceStatus => ({
 export const maintenanceStatus = ref<MaintenanceStatus | null>(null)
 export const maintenanceLoaded = ref(false)
 
-export const maintenanceEnabled = computed(() => Boolean(maintenanceStatus.value?.enabled))
+export const maintenanceEnabled = computed(
+  () => Boolean(maintenanceStatus.value?.enabled) && !maintenanceStatus.value?.member_bypass,
+)
 
 function asLocalized(raw: unknown, fallback = ''): { 'zh-HK': string; en: string } {
   if (raw && typeof raw === 'object') {
@@ -44,6 +49,7 @@ export function applyMaintenanceFromDetails(details: unknown) {
   const prev = maintenanceStatus.value || emptyStatus()
   maintenanceStatus.value = {
     enabled: true,
+    member_bypass: false,
     title: asLocalized(d.title, prev.title['zh-HK'] || prev.title.en),
     message: asLocalized(d.message, prev.message['zh-HK'] || prev.message.en),
     starts_at:

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   NButton,
   NCard,
@@ -7,9 +7,20 @@ import {
   NInput,
   NSpace,
   NSwitch,
+  NTag,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import MemberPickerDialog, { type MemberPickResult } from '../components/MemberPickerDialog.vue'
+
+type MaintMember = {
+  id: number
+  email: string | null
+  phone: string | null
+  nickname: string | null
+  promo_code: string
+  status: number
+}
 
 type Maint = {
   enabled: boolean
@@ -18,12 +29,16 @@ type Maint = {
   title: { 'zh-HK': string; en: string }
   message: { 'zh-HK': string; en: string }
   whitelist?: string[]
+  member_ids?: number[]
+  members?: MaintMember[]
   builtin_allow?: string[]
 }
 
 const message = useMessage()
 const loading = ref(false)
+const pickerOpen = ref(false)
 const builtinAllow = ref<string[]>([])
+const members = ref<MaintMember[]>([])
 const form = reactive({
   enabled: false,
   starts_at: '2026-12-12T12:35',
@@ -34,6 +49,8 @@ const form = reactive({
   message_en: 'We are temporarily unavailable. Thank you for your support — we will be back soon.',
   whitelist_text: '',
 })
+
+const excludeIds = computed(() => members.value.map((m) => m.id))
 
 function toInput(dt: string | null) {
   if (!dt) return ''
@@ -52,6 +69,32 @@ function parseWhitelist(text: string): string[] {
     .filter((l) => l && !l.startsWith('#'))
 }
 
+function memberLabel(m: MaintMember) {
+  return m.email || m.phone || m.nickname || m.promo_code || `#${m.id}`
+}
+
+function addMember(m: MemberPickResult) {
+  if (members.value.some((x) => x.id === m.id)) {
+    message.info('該會員已在白名單')
+    return
+  }
+  members.value = [
+    ...members.value,
+    {
+      id: m.id,
+      email: m.email,
+      phone: m.phone,
+      nickname: m.nickname,
+      promo_code: m.promo_code || '',
+      status: m.status,
+    },
+  ]
+}
+
+function removeMember(id: number) {
+  members.value = members.value.filter((m) => m.id !== id)
+}
+
 async function load() {
   const data = await api<Maint>('/api/v1/admin/settings/maintenance', {}, true)
   form.enabled = data.enabled
@@ -63,6 +106,7 @@ async function load() {
   form.message_en = data.message.en
   form.whitelist_text = (data.whitelist || []).join('\n')
   builtinAllow.value = data.builtin_allow || []
+  members.value = data.members || []
 }
 
 async function save() {
@@ -79,6 +123,7 @@ async function save() {
           title: { 'zh-HK': form.title_zh, en: form.title_en },
           message: { 'zh-HK': form.message_zh, en: form.message_en },
           whitelist: parseWhitelist(form.whitelist_text),
+          member_ids: members.value.map((m) => m.id),
         }),
       },
       true,
@@ -105,7 +150,8 @@ onMounted(async () => {
   <n-space vertical :size="16">
     <n-card title="店鋪維護">
       <p class="hint">
-        開啟後，H5 業務接口統一返回維護狀態，前台攔截後顯示維護頁（後台不受影響）。可設定預計維護時間、中英文文案，以及額外放行的 API 白名單。
+        開啟後，H5 業務接口統一返回維護狀態，前台攔截後顯示維護頁（後台不受影響）。可設定預計維護時間、中英文文案、API
+        白名單，以及可正常使用前台的用戶白名單。
       </p>
       <n-form-item label="開啟維護模式">
         <n-switch v-model:value="form.enabled" />
@@ -140,6 +186,30 @@ onMounted(async () => {
         />
       </n-form-item>
 
+      <n-form-item label="用戶白名單">
+        <div class="mw">
+          <n-space align="center" style="margin-bottom: 0.5rem">
+            <n-button type="primary" secondary @click="pickerOpen = true">搜索加入用戶</n-button>
+            <span class="mw-count">已選 {{ members.length }} 人</span>
+          </n-space>
+          <p class="wl-hint">白名單用戶在維護期間仍可正常使用 H5（需已登錄）。最多 200 人。</p>
+          <div v-if="members.length" class="mw-list">
+            <n-tag
+              v-for="m in members"
+              :key="m.id"
+              closable
+              type="info"
+              :bordered="false"
+              style="margin: 0 0.35rem 0.35rem 0"
+              @close="removeMember(m.id)"
+            >
+              #{{ m.id }} {{ memberLabel(m) }}
+            </n-tag>
+          </div>
+          <p v-else class="mw-empty">尚未加入用戶</p>
+        </div>
+      </n-form-item>
+
       <n-form-item label="API 白名單（可選）">
         <div class="wl">
           <n-input
@@ -163,6 +233,13 @@ onMounted(async () => {
 
       <n-button type="primary" :loading="loading" @click="save">保存</n-button>
     </n-card>
+
+    <MemberPickerDialog
+      v-model:show="pickerOpen"
+      title="搜索加入白名單用戶"
+      :exclude-ids="excludeIds"
+      @select="addMember"
+    />
   </n-space>
 </template>
 
@@ -199,7 +276,8 @@ onMounted(async () => {
   gap: 0.5rem 1rem;
   max-width: 44rem;
 }
-.wl {
+.wl,
+.mw {
   width: 100%;
   max-width: 44rem;
 }
@@ -214,6 +292,18 @@ onMounted(async () => {
   background: #f5f2ec;
   padding: 0.05rem 0.25rem;
   border-radius: 0.2rem;
+}
+.mw-count {
+  font-size: 0.8125rem;
+  color: #666;
+}
+.mw-list {
+  margin-top: 0.5rem;
+}
+.mw-empty {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: #aaa;
 }
 .builtin {
   margin-top: 0.75rem;
