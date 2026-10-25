@@ -207,7 +207,7 @@ async function saveReply() {
             </n-tag>
           </td>
           <td>{{ row.reply || row.admin_reply ? '有' : '—' }}</td>
-          <td><n-button size="tiny" type="primary" @click="openDetail(row)">管理</n-button></td>
+          <td><n-button size="tiny" type="primary" @click="openDetail(row)">審核</n-button></td>
         </tr>
       </tbody>
     </table>
@@ -225,10 +225,11 @@ async function saveReply() {
   <n-modal
     v-model:show="show"
     preset="card"
-    title="評價審核"
+    title="評價管理"
     style="width: min(36rem, 96vw)"
     :mask-closable="!busy"
     :closable="!busy"
+    :auto-focus="false"
   >
     <n-space v-if="current" vertical size="large">
       <div class="meta">
