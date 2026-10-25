@@ -14,6 +14,11 @@ import {
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
+import {
+  H5_IMAGE_MAX_UPLOAD_BYTES,
+  H5ImageTooLargeError,
+  prepareH5UploadImage,
+} from '../utils/h5ImageUpload'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -53,20 +58,22 @@ async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListIte
   for (const entry of list) {
     const file = entry.file
     if (!file) continue
-    if (file.size > 1024 * 1024) {
-      showToast(t('review.imageSize'))
-      fileList.value = fileList.value.filter((f) => f !== entry)
-      continue
-    }
     entry.status = 'uploading'
     try {
-      const data = await uploadReviewImage(file)
+      const prepared = await prepareH5UploadImage(file)
+      const data = await uploadReviewImage(prepared)
       entry.url = assetUrl(data.url)
       entry.status = 'done'
       ;(entry as UploaderFileListItem & { remoteUrl?: string }).remoteUrl = data.url
     } catch (error) {
       entry.status = 'failed'
-      showToast(error instanceof Error ? error.message : t('review.imageFail'))
+      showToast(
+        error instanceof H5ImageTooLargeError
+          ? t('review.imageSize')
+          : error instanceof Error
+            ? error.message
+            : t('review.imageFail'),
+      )
       fileList.value = fileList.value.filter((f) => f !== entry)
     }
   }
@@ -150,7 +157,14 @@ async function submit() {
         />
         <p class="lab">{{ t('review.images') }}</p>
         <p class="hint">{{ t('review.imageHint') }}</p>
-        <van-uploader v-model="fileList" :max-count="3" :after-read="afterRead" />
+        <van-uploader
+          v-model="fileList"
+          :max-count="3"
+          :max-size="H5_IMAGE_MAX_UPLOAD_BYTES"
+          accept="image/jpeg,image/png,image/webp"
+          :after-read="afterRead"
+          @oversize="showToast(t('review.imageSize'))"
+        />
       </template>
       <template v-else>
         <van-field

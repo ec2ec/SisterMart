@@ -1,28 +1,64 @@
-/** 客戶端壓縮：縮放到 maxEdge 內並輸出 JPEG Blob。 */
+/** 客戶端壓縮：縮放到 maxEdge 內並輸出 JPEG；可選壓到 maxBytes 以內。 */
 export async function compressImageFile(
   file: File | Blob,
-  opts: { maxEdge?: number; quality?: number; mime?: string } = {},
+  opts: { maxEdge?: number; quality?: number; maxBytes?: number; mime?: string } = {},
 ): Promise<Blob> {
-  const maxEdge = opts.maxEdge ?? 800
-  const quality = opts.quality ?? 0.82
+  const maxEdge = opts.maxEdge ?? 1000
+  const maxBytes = opts.maxBytes ?? 0
+  let quality = opts.quality ?? 0.85
   const mime = opts.mime ?? 'image/jpeg'
   const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
-  const w = Math.max(1, Math.round(bitmap.width * scale))
-  const h = Math.max(1, Math.round(bitmap.height * scale))
+  let edge = maxEdge
+  const long0 = Math.max(bitmap.width, bitmap.height)
+  let scale = Math.min(1, edge / long0)
+  let w = Math.max(1, Math.round(bitmap.width * scale))
+  let h = Math.max(1, Math.round(bitmap.height * scale))
+
   const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     bitmap.close()
     throw new Error('canvas')
   }
-  ctx.drawImage(bitmap, 0, 0, w, h)
+
+  const draw = () => {
+    canvas.width = w
+    canvas.height = h
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, w, h)
+    ctx.drawImage(bitmap, 0, 0, w, h)
+  }
+
+  const toBlob = (q: number) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), mime, q)
+    })
+
+  draw()
+  let blob = await toBlob(quality)
+
+  if (maxBytes > 0) {
+    while (blob.size > maxBytes && quality > 0.4) {
+      quality = Math.max(0.4, quality - 0.08)
+      blob = await toBlob(quality)
+    }
+    // 仍超體積：縮小最長邊再壓
+    while (blob.size > maxBytes && edge > 600) {
+      edge = Math.max(600, Math.floor(edge * 0.75))
+      scale = Math.min(1, edge / long0)
+      w = Math.max(1, Math.round(bitmap.width * scale))
+      h = Math.max(1, Math.round(bitmap.height * scale))
+      quality = opts.quality ?? 0.85
+      draw()
+      blob = await toBlob(quality)
+      while (blob.size > maxBytes && quality > 0.4) {
+        quality = Math.max(0.4, quality - 0.08)
+        blob = await toBlob(quality)
+      }
+    }
+  }
+
   bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), mime, quality)
-  })
   return blob
 }
 
