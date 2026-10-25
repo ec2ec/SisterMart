@@ -47,8 +47,13 @@ const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const { rowAttrs } = useTableRowSelect()
+const openId = typeof route.query.open === 'string' ? Number(route.query.open) : 0
 const status = ref(
-  typeof route.query.status === 'string' ? route.query.status : 'pending_review',
+  typeof route.query.status === 'string'
+    ? route.query.status
+    : openId > 0
+      ? ''
+      : 'pending_review',
 )
 const hasEvidence = ref<string>(
   typeof route.query.has_evidence === 'string' ? route.query.has_evidence : '',
@@ -92,14 +97,26 @@ async function load() {
   rows.value = data.items
 }
 
-onMounted(load)
-
-async function openDetail(row: Row) {
+async function openDetail(row: Row | { id: number }) {
   const data = await api<Row>(`/api/v1/admin/aftersales/${row.id}`, {}, true)
   current.value = data
   note.value = ''
   show.value = true
 }
+
+onMounted(async () => {
+  await load()
+  if (openId > 0) {
+    try {
+      await openDetail({ id: openId })
+    } catch (e: any) {
+      message.error(e?.message || '售後單加載失敗')
+    }
+    const nextQuery = { ...route.query }
+    delete nextQuery.open
+    router.replace({ query: nextQuery })
+  }
+})
 
 const canReview = computed(() => current.value?.status === 'pending_review')
 const canMarkReturned = computed(() => current.value?.status === 'awaiting_return')
