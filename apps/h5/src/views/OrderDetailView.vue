@@ -65,6 +65,19 @@ const statusMap: Record<string, string> = {
   refunded: 'orders.refunded',
 }
 
+const aftersaleStatusKey: Record<string, string> = {
+  pending_review: 'fulfill.stReview',
+  awaiting_return: 'fulfill.stReturn',
+  pending_refund: 'fulfill.stRefund',
+  completed: 'fulfill.stDone',
+  rejected: 'fulfill.stRejected',
+  cancelled: 'fulfill.stCancelled',
+}
+
+const aftersaleApplyLabel = computed(() =>
+  order.value?.has_rejected_aftersale ? t('fulfill.reapply') : t('fulfill.apply'),
+)
+
 const promoDiscount = computed(() => {
   if (!order.value) return 0
   if (typeof order.value.promo_discount === 'number') return order.value.promo_discount
@@ -222,6 +235,30 @@ async function sendChat() {
         </div>
       </div>
     </section>
+    <section v-if="(order.aftersales || []).length" class="card aftersales">
+      <h3>{{ t('fulfill.records') }}</h3>
+      <button
+        v-for="as in order.aftersales"
+        :key="as.id"
+        type="button"
+        class="as-row"
+        @click="router.push({ name: 'aftersale-detail', params: { id: as.id } })"
+      >
+        <div class="as-main">
+          <strong>{{ as.aftersale_no }}</strong>
+          <span class="as-meta">
+            {{ as.type === 'return_refund' ? t('fulfill.returnRefund') : t('fulfill.refundOnly') }}
+            · HK$ {{ Number(as.amount).toFixed(2) }}
+          </span>
+          <span v-if="as.item" class="as-item">{{ text(as.item.name) }}</span>
+          <span v-if="as.status === 'rejected' && as.admin_note" class="as-note">
+            {{ t('fulfill.adminNote') }}：{{ as.admin_note }}
+          </span>
+        </div>
+        <span class="as-status" :class="as.status">{{ t(aftersaleStatusKey[as.status] || as.status) }}</span>
+      </button>
+    </section>
+
     <section class="card sum">
       <p>
         <span>{{ t('checkout.goods') }}</span>
@@ -300,12 +337,12 @@ async function sendChat() {
         {{ t('fulfill.confirm') }}
       </van-button>
       <van-button
-        v-if="order.status === 'pending_shipment' || order.status === 'pending_receipt' || order.status === 'completed'"
+        v-if="order.can_apply_aftersale"
         plain
         round
         @click="router.push({ name: 'aftersale-apply', params: { id: order.id } })"
       >
-        {{ t('fulfill.apply') }}
+        {{ aftersaleApplyLabel }}
       </van-button>
       <van-button
         v-if="order.needs_review"
@@ -620,5 +657,65 @@ async function sendChat() {
 }
 .actions .van-button {
   flex: 1 1 calc(50% - 0.5rem);
+}
+.aftersales h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.as-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid #f0ebe4;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.as-row:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.as-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.as-main strong {
+  font-size: 0.875rem;
+}
+.as-meta,
+.as-item,
+.as-note {
+  font-size: 0.75rem;
+  color: #888;
+}
+.as-note {
+  color: #b45309;
+}
+.as-status {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+}
+.as-status.pending_review,
+.as-status.awaiting_return,
+.as-status.pending_refund {
+  color: #c2410c;
+}
+.as-status.completed {
+  color: #15803d;
+}
+.as-status.rejected {
+  color: #b91c1c;
 }
 </style>

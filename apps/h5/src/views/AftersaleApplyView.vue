@@ -40,7 +40,9 @@ async function load() {
   fileList.value = []
   refundTo.value = 'balance'
   order.value = await fetchOrder(String(route.params.id))
-  const first = (order.value.items || []).find((i) => (i.refunded_qty || 0) < i.qty)
+  const first =
+    (order.value.items || []).find((i) => i.can_aftersale) ||
+    (order.value.items || []).find((i) => (i.refunded_qty || 0) < i.qty)
   itemId.value = first?.id ?? null
   if (order.value.status === 'pending_shipment') type.value = 'refund_only'
   if (order.value.status === 'completed') type.value = 'return_refund'
@@ -141,16 +143,20 @@ async function submit() {
     <template v-else>
       <section class="card">
         <p>{{ order.order_no }}</p>
-        <div v-for="item in order.items" :key="item.id" class="line">
+        <div v-for="item in order.items" :key="item.id" class="line" :class="{ disabled: !item.can_aftersale }">
           <label>
             <input
               v-model="itemId"
               type="radio"
               :value="item.id"
-              :disabled="(item.refunded_qty || 0) >= item.qty"
+              :disabled="!item.can_aftersale"
             />
             <img :src="item.image" alt="" />
-            <span>{{ text(item.name) }} × {{ item.qty }}</span>
+            <span>
+              {{ text(item.name) }} × {{ item.qty }}
+              <small v-if="item.has_open_aftersale">（{{ t('fulfill.itemBusy') }}）</small>
+              <small v-else-if="(item.refunded_qty || 0) >= item.qty">（{{ t('fulfill.stDone') }}）</small>
+            </span>
           </label>
         </div>
       </section>
@@ -236,6 +242,13 @@ async function submit() {
   gap: 0.5rem;
   margin: 0.5rem 0;
   font-size: 0.8125rem;
+}
+.line.disabled {
+  opacity: 0.55;
+}
+.line small {
+  color: #999;
+  margin-left: 0.25rem;
 }
 .line img {
   width: 2.5rem;
