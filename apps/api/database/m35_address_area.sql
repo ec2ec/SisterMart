@@ -1,4 +1,4 @@
--- M35：收貨地址增加社區／地點欄位 area（十八區之下一級）。可重複執行。
+-- M35 addresses.area locality under district (idempotent)
 
 SET @col := (
   SELECT COUNT(*) FROM information_schema.COLUMNS
