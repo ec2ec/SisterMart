@@ -199,7 +199,24 @@ class ReviewService
 
     /**
      * @param list<array<string,mixed>> $orderItems
-     * @return array<int, array{review_id: ?int, can_review: bool, can_follow: bool, reviewed: bool}>
+     * @return array<int, array{
+     *   review_id: ?int,
+     *   can_review: bool,
+     *   can_follow: bool,
+     *   reviewed: bool,
+     *   review: ?array{
+     *     id: int,
+     *     stars: int,
+     *     body: string,
+     *     images: list<string>,
+     *     follow: ?string,
+     *     follow_at: mixed,
+     *     reply: ?string,
+     *     replied_at: mixed,
+     *     created_at: mixed,
+     *     moderation_status: string
+     *   }
+     * }>
      */
     public function flagsForOrderItems(string $orderStatus, array $orderItems): array
     {
@@ -229,10 +246,56 @@ class ReviewService
                 'can_review' => $canReview,
                 'can_follow' => $canFollow,
                 'reviewed' => $review !== null,
+                'review' => $review ? $this->summaryForOrderItem($review) : null,
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * 訂單詳情用的評價摘要（買家自見，含審核中／未通過）。
+     *
+     * @param array<string, mixed> $row
+     * @return array{
+     *   id: int,
+     *   stars: int,
+     *   body: string,
+     *   images: list<string>,
+     *   follow: ?string,
+     *   follow_at: mixed,
+     *   reply: ?string,
+     *   replied_at: mixed,
+     *   created_at: mixed,
+     *   moderation_status: string
+     * }
+     */
+    private function summaryForOrderItem(array $row): array
+    {
+        $images = [];
+        if (!empty($row['images_json'])) {
+            $decoded = json_decode((string) $row['images_json'], true);
+            if (is_array($decoded)) {
+                $images = array_values(array_filter(array_map('strval', $decoded)));
+            }
+        }
+        $follow = $row['follow_body'] !== null && $row['follow_body'] !== ''
+            ? (string) $row['follow_body']
+            : null;
+        $reply = !empty($row['admin_reply']) ? (string) $row['admin_reply'] : null;
+
+        return [
+            'id' => (int) $row['id'],
+            'stars' => (int) $row['stars'],
+            'body' => (string) $row['body'],
+            'images' => $images,
+            'follow' => $follow,
+            'follow_at' => $row['follow_at'] ?? null,
+            'reply' => $reply,
+            'replied_at' => $row['replied_at'] ?? null,
+            'created_at' => $row['created_at'] ?? null,
+            'moderation_status' => (string) ($row['moderation_status'] ?? self::STATUS_APPROVED),
+        ];
     }
 
     public function create(int $memberId, array $body): array

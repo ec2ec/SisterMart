@@ -861,6 +861,7 @@ class OrderService
                 'can_review' => false,
                 'can_follow' => false,
                 'reviewed' => false,
+                'review' => null,
             ];
             if ($flags['can_review']) {
                 $needsReview = true;
@@ -882,6 +883,7 @@ class OrderService
                 'can_review' => $flags['can_review'],
                 'can_follow' => $flags['can_follow'],
                 'reviewed' => $flags['reviewed'],
+                'review' => $flags['review'] ?? null,
             ];
         }
 

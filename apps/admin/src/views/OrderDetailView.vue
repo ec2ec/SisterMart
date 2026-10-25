@@ -139,6 +139,21 @@ function itemSpec(item: any) {
       <div>
         <div>{{ itemName(item) }} / {{ itemSpec(item) }}</div>
         <div>HK$ {{ item.unit_price }} × {{ item.qty }}（已退 {{ item.refunded_qty || 0 }}）= {{ item.line_amount }}</div>
+        <div v-if="item.review" class="item-review">
+          <div class="rev-stars">
+            評價 {{ '★'.repeat(item.review.stars || 0) }}{{ '☆'.repeat(Math.max(0, 5 - (item.review.stars || 0))) }}
+            <span v-if="item.review.moderation_status && item.review.moderation_status !== 'approved'" class="rev-mod">
+              {{ item.review.moderation_status === 'rejected' ? '未通過' : '審核中' }}
+            </span>
+          </div>
+          <div v-if="item.review.body" class="rev-body">{{ item.review.body }}</div>
+          <div v-if="item.review.images?.length" class="rev-imgs">
+            <img v-for="(img, i) in item.review.images" :key="i" :src="img" alt="" />
+          </div>
+          <div v-if="item.review.follow" class="rev-extra">追評：{{ item.review.follow }}</div>
+          <div v-if="item.review.reply" class="rev-extra">商家回覆：{{ item.review.reply }}</div>
+        </div>
+        <div v-else-if="item.reviewed" class="rev-extra">已評價</div>
       </div>
     </div>
 
@@ -193,6 +208,43 @@ function itemSpec(item: any) {
 </template>
 
 <style scoped>
+.item-review {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed #e8e8e8;
+  font-size: 0.8125rem;
+  color: #444;
+}
+.rev-stars {
+  color: #f59a23;
+  letter-spacing: 0.04em;
+}
+.rev-mod {
+  margin-left: 0.35rem;
+  color: #b45309;
+  font-size: 0.75rem;
+}
+.rev-body {
+  margin-top: 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rev-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.rev-imgs img {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+.rev-extra {
+  margin-top: 0.25rem;
+  color: #666;
+}
 .line {
   display: flex;
   gap: 0.75rem;

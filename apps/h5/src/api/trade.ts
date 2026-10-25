@@ -107,6 +107,18 @@ export type Order = {
     can_review?: boolean
     can_follow?: boolean
     reviewed?: boolean
+    review?: {
+      id: number
+      stars: number
+      body: string
+      images: string[]
+      follow?: string | null
+      follow_at?: string | null
+      reply?: string | null
+      replied_at?: string | null
+      created_at?: string | null
+      moderation_status?: string
+    } | null
   }>
 }
 
