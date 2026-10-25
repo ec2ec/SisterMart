@@ -71,7 +71,7 @@ class Uploads extends ApiController
             throw new ApiException('INVALID', '請選擇圖片（上傳可能被主機禁用，請換 JPG 再試）', 422, 42201);
         }
 
-        // 上傳上限 5MB；落庫經 ImageUploadService avatar preset 壓縮（512px / ≤512KB）
+        // 上傳上限 5MB；落庫經 avatar preset（最長邊≤1000、≤500KB），再裁正方 512
         $uploader = new ImageUploadService();
         $stored = $uploader->store($file, [
             'preset' => 'avatar',

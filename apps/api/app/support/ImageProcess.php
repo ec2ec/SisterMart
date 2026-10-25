@@ -8,8 +8,8 @@ namespace app\support;
  * 通用圖片壓縮：等比縮放（最長邊 ≤ max_edge），輸出 JPEG，可配質量與目標體積。
  *
  * 選項（均可選）：
- * - max_edge      int  最長邊像素，默認 1200
- * - max_bytes     int  目標最大字節，默認 512000（500KB）；0=不限體積只壓質量一次
+ * - max_edge      int  最長邊像素，默認 1000
+ * - max_bytes     int  目標最大字節，默認 500KB；0=不限體積只壓質量一次
  * - quality       int  初始 JPEG 質量 1–100，默認 85
  * - min_quality   int  質量下限，默認 40
  * - quality_step  int  每次下降步長，默認 8
@@ -28,8 +28,8 @@ final class ImageProcess
      */
     public static function compress(string $sourcePath, string $destPath, array $options = []): array
     {
-        $maxEdge = max(1, (int) ($options['max_edge'] ?? 1200));
-        $maxBytes = (int) ($options['max_bytes'] ?? 512000);
+        $maxEdge = max(1, (int) ($options['max_edge'] ?? 1000));
+        $maxBytes = (int) ($options['max_bytes'] ?? 500 * 1024);
         $quality = self::clampQuality((int) ($options['quality'] ?? 85));
         $minQuality = self::clampQuality((int) ($options['min_quality'] ?? 40));
         $qualityStep = max(1, (int) ($options['quality_step'] ?? 8));
@@ -131,15 +131,15 @@ final class ImageProcess
     }
 
     /**
-     * 兼容舊調用：評價圖默認 1200 / 500KB。
+     * 兼容舊調用：評價圖默認 1000 / 500KB。
      *
      * @return array{path: string, width: int, height: int, bytes: int, quality: int, max_edge: int}
      */
     public static function toJpegMax(
         string $sourcePath,
         string $destPath,
-        int $maxEdge = 1200,
-        int $maxBytes = 512000,
+        int $maxEdge = 1000,
+        int $maxBytes = 500 * 1024,
         int $quality = 85,
     ): array {
         return self::compress($sourcePath, $destPath, [
