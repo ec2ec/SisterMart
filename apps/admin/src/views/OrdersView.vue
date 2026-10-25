@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { NButton, NCard, NPagination, NSelect, NSpace, NTag } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 import { ORDER_STATUS_FILTER_OPTIONS, orderStatusLabel } from '../utils/orderStatus'
 
 type Row = {
@@ -22,6 +23,7 @@ const rows = ref<Row[]>([])
 const status = ref(typeof route.query.status === 'string' ? route.query.status : '')
 const options = ORDER_STATUS_FILTER_OPTIONS
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const loadError = ref('')
 
 async function load() {
@@ -59,7 +61,7 @@ onMounted(load)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.order_no }}</td>
           <td>#{{ row.member_id }}</td>
           <td>{{ row.title }}</td>

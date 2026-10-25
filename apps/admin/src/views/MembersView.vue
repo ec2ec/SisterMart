@@ -16,6 +16,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Member = {
   id: number
@@ -34,6 +35,7 @@ const message = useMessage()
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const rows = ref<Member[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const show = ref(false)
 const current = ref<Member | null>(null)
 const adjust = reactive({ points_delta: 0, balance_delta: 0, reason: '' })
@@ -86,7 +88,7 @@ async function submitAdjust() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.id }}</td>
           <td>{{ row.email || row.phone }}<br /><small>{{ row.promo_code }}</small></td>
           <td>

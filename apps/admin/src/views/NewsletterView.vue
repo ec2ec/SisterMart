@@ -12,6 +12,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Row = {
   id: number
@@ -25,6 +26,7 @@ type Row = {
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const statusFilter = ref<string>('')
 const q = ref('')
 const busy = ref(false)
@@ -96,7 +98,7 @@ async function remove(row: Row) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.email }}</td>
           <td>{{ row.member_id ?? '—' }}</td>
           <td>

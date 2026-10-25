@@ -5,6 +5,7 @@ import { NButton, NCard, NInput, NPagination, NSpace } from 'naive-ui'
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Row = {
   db_id: number
@@ -21,6 +22,7 @@ const rows = ref<Row[]>([])
 const keyword = ref('')
 const loading = ref(false)
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 
 async function load() {
   loading.value = true
@@ -71,7 +73,7 @@ onMounted(load)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.db_id" :class="{ off: row.status !== 1 }">
+        <tr v-for="row in paged" :key="row.db_id" v-bind="rowAttrs(row.db_id)" :class="{ off: row.status !== 1 }">
           <td class="col-thumb">
             <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
             <span v-else class="thumb placeholder" />

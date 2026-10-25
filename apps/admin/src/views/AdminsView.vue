@@ -14,6 +14,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Row = {
   id: number
@@ -28,6 +29,7 @@ type Row = {
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const roleOptions = ref<{ label: string; value: string }[]>([])
 const form = reactive({
   email: '',
@@ -92,7 +94,7 @@ async function toggle(row: Row) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.id }}</td>
           <td>{{ row.email }}</td>
           <td>{{ row.name }}</td>
