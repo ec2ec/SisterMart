@@ -10,6 +10,7 @@ export const messages = {
       windowStart: '預計開始時間 {start}',
       windowEnd: '預計結束時間 {end}',
       retry: '刷新試試',
+      login: '白名單用戶登錄',
     },
     searchPlaceholder: '在這裏搜索商品',
     tab: {
@@ -554,6 +555,7 @@ export const messages = {
       windowStart: 'Starts {start}',
       windowEnd: 'Ends {end}',
       retry: 'Try again',
+      login: 'Whitelist login',
     },
     searchPlaceholder: 'Search jewelry',
     tab: {

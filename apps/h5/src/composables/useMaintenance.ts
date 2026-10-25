@@ -11,15 +11,22 @@ import {
 export type { MaintenanceStatus }
 
 let inflight: Promise<void> | null = null
+let inflightHasToken = false
 
 export function useMaintenance() {
   async function refresh() {
-    if (inflight) return inflight
+    const hasToken = Boolean(localStorage.getItem('sm_token'))
+    // 登錄前後令牌狀態不同時不可复用進行中的 guest refresh
+    if (inflight && inflightHasToken === hasToken) return inflight
+    inflightHasToken = hasToken
     inflight = (async () => {
       try {
-        const data = await api<MaintenanceStatus>('/api/v1/shop/status')
+        // 帶會員令牌時後端可回 member_bypass（用戶白名單）
+        const auth = hasToken ? 'member' : 'none'
+        const data = await api<MaintenanceStatus>('/api/v1/shop/status', {}, auth)
         setMaintenanceStatus({
           enabled: Boolean(data.enabled),
+          member_bypass: Boolean(data.member_bypass),
           title: data.title || { 'zh-HK': '', en: '' },
           message: data.message || { 'zh-HK': '', en: '' },
           starts_at: data.starts_at ?? null,

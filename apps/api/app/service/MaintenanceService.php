@@ -15,7 +15,7 @@ class MaintenanceService
 {
     public const SETTING_KEY = 'shop.maintenance';
 
-    /** 內建放行：狀態查詢、健康檢查、後台、靜態媒體代理、支付回調、定時任務 */
+    /** 內建放行：狀態查詢、健康檢查、後台、靜態媒體代理、支付回調、定時任務、白名單用戶登錄 */
     public const BUILTIN_ALLOW = [
         '/api/v1/shop/status',
         '/api/v1/health',
@@ -26,38 +26,69 @@ class MaintenanceService
         '/api/v1/files',
         '/api/v1/payment-callbacks',
         '/api/v1/jobs',
+        '/api/v1/member-sessions',
+        '/api/v1/verification-codes',
+        '/api/v1/member-passwords',
+        '/api/v1/articles',
     ];
 
     public const MAX_WHITELIST = 80;
 
+    public const MAX_MEMBER_WHITELIST = 200;
+
+    /** @var array<string, mixed>|null 實例內緩存（不含 members 詳情） */
+    private ?array $cfgCache = null;
+
     /** @return array<string, mixed> */
     public function get(): array
     {
+        $data = $this->config();
+        $data['members'] = $this->resolveMembers($data['member_ids']);
+
+        return $data;
+    }
+
+    /** @return array<string, mixed> */
+    private function config(): array
+    {
+        if ($this->cfgCache !== null) {
+            return $this->cfgCache;
+        }
         $raw = TradeSettings::get(self::SETTING_KEY, '');
         $decoded = $raw !== '' ? json_decode($raw, true) : null;
         if (!is_array($decoded)) {
             $decoded = [];
         }
+        $this->cfgCache = $this->normalize($decoded);
 
-        return $this->normalize($decoded);
+        return $this->cfgCache;
     }
 
     public function isEnabled(): bool
     {
-        return (bool) $this->get()['enabled'];
+        return (bool) $this->config()['enabled'];
     }
 
     /**
      * 前台狀態：僅在 enabled 時返回文案；否則 enabled=false。
+     * 白名單會員帶 member_bypass=true，H5 不蓋維護頁。
      *
-     * @return array{enabled: bool, title: array{zh-HK: string, en: string}, message: array{zh-HK: string, en: string}, starts_at: ?string, ends_at: ?string}
+     * @return array{
+     *   enabled: bool,
+     *   member_bypass: bool,
+     *   title: array{zh-HK: string, en: string},
+     *   message: array{zh-HK: string, en: string},
+     *   starts_at: ?string,
+     *   ends_at: ?string
+     * }
      */
-    public function publicStatus(): array
+    public function publicStatus(?int $memberId = null): array
     {
-        $cfg = $this->get();
+        $cfg = $this->config();
         if (!(bool) $cfg['enabled']) {
             return [
                 'enabled' => false,
+                'member_bypass' => false,
                 'title' => ['zh-HK' => '', 'en' => ''],
                 'message' => ['zh-HK' => '', 'en' => ''],
                 'starts_at' => null,
@@ -65,8 +96,11 @@ class MaintenanceService
             ];
         }
 
+        $bypass = $memberId !== null && $memberId > 0 && $this->isMemberAllowed($memberId);
+
         return [
             'enabled' => true,
+            'member_bypass' => $bypass,
             'title' => $cfg['title'],
             'message' => $cfg['message'],
             'starts_at' => $cfg['starts_at'],
@@ -81,7 +115,7 @@ class MaintenanceService
             return false;
         }
 
-        foreach (array_merge(self::BUILTIN_ALLOW, $this->get()['whitelist']) as $prefix) {
+        foreach (array_merge(self::BUILTIN_ALLOW, $this->config()['whitelist']) as $prefix) {
             $prefix = $this->normalizePath((string) $prefix);
             if ($prefix === '') {
                 continue;
@@ -92,6 +126,15 @@ class MaintenanceService
         }
 
         return false;
+    }
+
+    public function isMemberAllowed(int $memberId): bool
+    {
+        if ($memberId <= 0) {
+            return false;
+        }
+
+        return in_array($memberId, $this->config()['member_ids'], true);
     }
 
     /** @param array<string, mixed> $body */
@@ -126,6 +169,10 @@ class MaintenanceService
             ? $this->normalizeWhitelist($body['whitelist'])
             : $current['whitelist'];
 
+        $memberIds = array_key_exists('member_ids', $body)
+            ? $this->normalizeMemberIds($body['member_ids'])
+            : $current['member_ids'];
+
         $payload = [
             'enabled' => $enabled,
             'starts_at' => $starts,
@@ -139,8 +186,10 @@ class MaintenanceService
                 'en' => $msgEn,
             ],
             'whitelist' => $whitelist,
+            'member_ids' => $memberIds,
         ];
         TradeSettings::set(self::SETTING_KEY, json_encode($payload, JSON_UNESCAPED_UNICODE));
+        $this->cfgCache = null;
 
         return $this->get();
     }
@@ -154,6 +203,7 @@ class MaintenanceService
      *   title: array{zh-HK: string, en: string},
      *   message: array{zh-HK: string, en: string},
      *   whitelist: list<string>,
+     *   member_ids: list<int>,
      *   builtin_allow: list<string>
      * }
      */
@@ -176,11 +226,12 @@ class MaintenanceService
                 'en' => trim((string) ($message['en'] ?? $defaults['message']['en'])),
             ],
             'whitelist' => $this->normalizeWhitelist($raw['whitelist'] ?? []),
+            'member_ids' => $this->normalizeMemberIds($raw['member_ids'] ?? []),
             'builtin_allow' => self::BUILTIN_ALLOW,
         ];
     }
 
-    /** @return array{enabled: bool, starts_at: string, ends_at: string, title: array{zh-HK: string, en: string}, message: array{zh-HK: string, en: string}, whitelist: list<string>} */
+    /** @return array{enabled: bool, starts_at: string, ends_at: string, title: array{zh-HK: string, en: string}, message: array{zh-HK: string, en: string}, whitelist: list<string>, member_ids: list<int>} */
     private function defaults(): array
     {
         return [
@@ -196,7 +247,82 @@ class MaintenanceService
                 'en' => 'We are temporarily unavailable. Thank you for your support — we will be back soon.',
             ],
             'whitelist' => [],
+            'member_ids' => [],
         ];
+    }
+
+    /** @return list<int> */
+    private function normalizeMemberIds(mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $v) {
+            if (is_array($v)) {
+                $id = (int) ($v['id'] ?? $v['member_id'] ?? 0);
+            } else {
+                $id = (int) $v;
+            }
+            if ($id <= 0) {
+                continue;
+            }
+            $out[$id] = true;
+            if (count($out) > self::MAX_MEMBER_WHITELIST) {
+                throw new ApiException('INVALID', '用戶白名單最多 ' . self::MAX_MEMBER_WHITELIST . ' 人', 422, 42201);
+            }
+        }
+
+        return array_map('intval', array_keys($out));
+    }
+
+    /**
+     * @param list<int> $ids
+     * @return list<array{id: int, email: ?string, phone: ?string, nickname: ?string, promo_code: string, status: int}>
+     */
+    private function resolveMembers(array $ids): array
+    {
+        if (!$ids) {
+            return [];
+        }
+        try {
+            $rows = \think\facade\Db::name('members')
+                ->whereIn('id', $ids)
+                ->field(['id', 'email', 'phone', 'nickname', 'promo_code', 'status'])
+                ->select()
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+        $byId = [];
+        foreach ($rows as $r) {
+            $byId[(int) $r['id']] = [
+                'id' => (int) $r['id'],
+                'email' => $r['email'] !== null && $r['email'] !== '' ? (string) $r['email'] : null,
+                'phone' => $r['phone'] !== null && $r['phone'] !== '' ? (string) $r['phone'] : null,
+                'nickname' => $r['nickname'] !== null && $r['nickname'] !== '' ? (string) $r['nickname'] : null,
+                'promo_code' => (string) ($r['promo_code'] ?? ''),
+                'status' => (int) ($r['status'] ?? 0),
+            ];
+        }
+        // 保持與 member_ids 相同順序
+        $out = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) {
+                $out[] = $byId[$id];
+            } else {
+                $out[] = [
+                    'id' => $id,
+                    'email' => null,
+                    'phone' => null,
+                    'nickname' => null,
+                    'promo_code' => '',
+                    'status' => 0,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     /** @return list<string> */
