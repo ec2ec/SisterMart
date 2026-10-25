@@ -1,20 +1,31 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
-import { cancelAftersale, fetchAftersale, type Aftersale } from '../api/trade'
+import { cancelAftersale, fetchAftersale, fetchOrder, type Aftersale } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
+const router = useRouter()
 const row = ref<Aftersale | null>(null)
+const canReapply = ref(false)
 
 async function load() {
   row.value = await fetchAftersale(String(route.params.id))
+  canReapply.value = false
+  if (row.value && (row.value.status === 'rejected' || row.value.status === 'cancelled')) {
+    try {
+      const order = await fetchOrder(row.value.order_id)
+      canReapply.value = Boolean(order.can_apply_aftersale)
+    } catch {
+      canReapply.value = false
+    }
+  }
 }
 
 onMounted(load)
@@ -32,7 +43,7 @@ const statusKey: Record<string, string> = {
   pending_refund: 'fulfill.stRefund',
   completed: 'fulfill.stDone',
   rejected: 'fulfill.stRejected',
-  cancelled: 'orders.cancelled',
+  cancelled: 'fulfill.stCancelled',
 }
 </script>
 
@@ -44,7 +55,7 @@ const statusKey: Record<string, string> = {
       <h2>{{ t(statusKey[row.status] || row.status) }}</h2>
       <p v-if="row.item">{{ text(row.item.name) }} · HK$ {{ row.amount.toFixed(2) }}</p>
       <p>{{ t('fulfill.reason') }}：{{ row.description || row.reason }}</p>
-      <p v-if="row.admin_note">{{ row.admin_note }}</p>
+      <p v-if="row.admin_note">{{ t('fulfill.adminNote') }}：{{ row.admin_note }}</p>
       <div v-if="row.evidence?.length" class="evidence">
         <p class="label">{{ t('fulfill.evidence') }}</p>
         <div class="grid">
@@ -55,6 +66,17 @@ const statusKey: Record<string, string> = {
       </div>
       <van-button v-if="row.status === 'pending_review'" block plain round style="margin-top: 1rem" @click="onCancel">
         {{ t('fulfill.withdraw') }}
+      </van-button>
+      <van-button
+        v-if="canReapply"
+        block
+        type="primary"
+        color="var(--sm-primary)"
+        round
+        style="margin-top: 1rem"
+        @click="router.push({ name: 'aftersale-apply', params: { id: row.order_id } })"
+      >
+        {{ t('fulfill.reapply') }}
       </van-button>
     </section>
   </div>

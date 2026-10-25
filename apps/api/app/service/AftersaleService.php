@@ -9,11 +9,52 @@ use think\facade\Db;
 
 class AftersaleService
 {
+    /** 進行中（不可對同一商品再申請） */
+    public const OPEN_STATUSES = ['pending_review', 'awaiting_return', 'pending_refund'];
+
     public function listForMember(int $memberId): array
     {
         $rows = Db::name('aftersales')->where('member_id', $memberId)->order('id', 'desc')->select()->toArray();
 
         return ['items' => array_map([$this, 'present'], $rows)];
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function listForOrder(int $orderId): array
+    {
+        $rows = Db::name('aftersales')->where('order_id', $orderId)->order('id', 'desc')->select()->toArray();
+
+        return array_map(fn (array $row) => $this->present($row, true), $rows);
+    }
+
+    public function hasOpenForItem(int $orderItemId): bool
+    {
+        return (int) Db::name('aftersales')
+            ->where('order_item_id', $orderItemId)
+            ->whereIn('status', self::OPEN_STATUSES)
+            ->count() > 0;
+    }
+
+    /**
+     * 訂單是否還可發起售後（未過期、有可退數量、且該商品無進行中售後；駁回／撤銷後可再申請）。
+     *
+     * @param array<string, mixed> $order
+     */
+    public function canApplyForOrder(array $order): bool
+    {
+        $elig = $this->eligibilityForOrder($order);
+        if (!$elig['aftersale_eligible'] || $elig['aftersale_expired']) {
+            return false;
+        }
+        $items = Db::name('order_items')->where('order_id', (int) $order['id'])->select()->toArray();
+        foreach ($items as $item) {
+            $remain = (int) $item['qty'] - (int) ($item['refunded_qty'] ?? 0);
+            if ($remain > 0 && !$this->hasOpenForItem((int) $item['id'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -105,6 +146,9 @@ class AftersaleService
         $item = Db::name('order_items')->where(['id' => $itemId, 'order_id' => $orderId])->find();
         if (!$item) {
             throw new ApiException('NOT_FOUND', '訂單商品不存在', 404, 40461);
+        }
+        if ($this->hasOpenForItem($itemId)) {
+            throw new ApiException('INVALID', '該商品已有進行中的售後單，請待處理完成或撤銷後再申請', 422, 42291);
         }
         $remainQty = (int) $item['qty'] - (int) ($item['refunded_qty'] ?? 0);
         $qty = max(1, min($remainQty, (int) ($body['qty'] ?? $remainQty)));

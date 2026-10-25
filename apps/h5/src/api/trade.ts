@@ -58,6 +58,29 @@ export type Quote = {
   points_cost?: number
 }
 
+export type Aftersale = {
+  id: number
+  aftersale_no: string
+  order_id: number
+  order_item_id: number
+  type: string
+  reason: string
+  description?: string
+  evidence?: string[]
+  amount: number
+  qty: number
+  refund_to: string
+  status: string
+  admin_note: string
+  created_at: string
+  order_no?: string
+  item?: {
+    name: { 'zh-HK': string; en: string }
+    spec: { 'zh-HK': string; en: string }
+    image: string
+  }
+}
+
 export type Order = {
   id: number
   order_no: string
@@ -79,6 +102,11 @@ export type Order = {
   aftersale_expired?: boolean
   aftersale_window_days?: number
   aftersale_deadline_at?: string | null
+  /** 訂單下的售後單（詳情接口） */
+  aftersales?: Aftersale[]
+  /** 是否仍可發起售後（含駁回後重申請） */
+  can_apply_aftersale?: boolean
+  has_rejected_aftersale?: boolean
   cs_whatsapp?: string
   needs_review?: boolean
   points_awarded?: number
@@ -107,6 +135,8 @@ export type Order = {
     can_review?: boolean
     can_follow?: boolean
     reviewed?: boolean
+    can_aftersale?: boolean
+    has_open_aftersale?: boolean
   }>
 }
 
@@ -219,29 +249,6 @@ export type Shipment = {
   tracking_no: string
   shipped_at: string
   nodes: Array<{ id: number; occurred_at: string; note: string }>
-}
-
-export type Aftersale = {
-  id: number
-  aftersale_no: string
-  order_id: number
-  order_item_id: number
-  type: string
-  reason: string
-  description?: string
-  evidence?: string[]
-  amount: number
-  qty: number
-  refund_to: string
-  status: string
-  admin_note: string
-  created_at: string
-  order_no?: string
-  item?: {
-    name: { 'zh-HK': string; en: string }
-    spec: { 'zh-HK': string; en: string }
-    image: string
-  }
 }
 
 export function fetchShipment(orderId: number | string) {
