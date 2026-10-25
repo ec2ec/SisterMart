@@ -135,7 +135,6 @@ export type Order = {
     can_review?: boolean
     can_follow?: boolean
     reviewed?: boolean
-<<<<<<< HEAD
     review?: {
       id: number
       stars: number
@@ -148,10 +147,8 @@ export type Order = {
       created_at?: string | null
       moderation_status?: string
     } | null
-=======
     can_aftersale?: boolean
     has_open_aftersale?: boolean
->>>>>>> ecfa98a (feat(h5): show aftersale records on order and allow re-apply)
   }>
 }
 

@@ -891,12 +891,9 @@ class OrderService
                 'can_review' => $flags['can_review'],
                 'can_follow' => $flags['can_follow'],
                 'reviewed' => $flags['reviewed'],
-<<<<<<< HEAD
                 'review' => $flags['review'] ?? null,
-=======
                 'can_aftersale' => $canAftersale,
                 'has_open_aftersale' => $hasOpenAftersale,
->>>>>>> ecfa98a (feat(h5): show aftersale records on order and allow re-apply)
             ];
         }
         $aftersales = $aftersaleSvc->listForOrder((int) $row['id']);
