@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import {
+  BackTop,
   Badge,
   Button,
   Cell,
@@ -44,6 +45,7 @@ import { isLoggedIn } from './composables/useSession'
 const app = createApp(App)
 
 ;[
+  BackTop,
   Badge,
   Button,
   Cell,

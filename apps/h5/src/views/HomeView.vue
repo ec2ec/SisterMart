@@ -265,18 +265,15 @@ onMounted(() => {
 onDeactivated(() => {
   saveRouteScroll(SCROLL_KEY)
   stopFlashTimer()
-  unbindBackTopScroll()
 })
 
 onUnmounted(() => {
   stopFlashTimer()
-  unbindBackTopScroll()
 })
 
 let homeFirstActivate = true
 onActivated(() => {
   startFlashTimer()
-  bindBackTopScroll()
   // 首次 mounted+activated 同幀，無需還原
   if (homeFirstActivate) {
     homeFirstActivate = false
@@ -476,33 +473,9 @@ function goCategory() {
   router.push({ name: 'category' })
 }
 
-/** 回頂：直接聽 window（避開 van-back-top 在部分 WebView 找不到滾動父級） */
+/** 回頂：Vant BackTop（scale 動畫）；滾動目標固定為 window，避免 pull-refresh 誤判 */
 const BACK_TOP_OFFSET = 280
-const showBackTop = ref(false)
-let backTopBound = false
-
-function onWindowScrollForBackTop() {
-  const y = window.scrollY || document.documentElement.scrollTop || 0
-  showBackTop.value = y >= BACK_TOP_OFFSET
-}
-
-function bindBackTopScroll() {
-  if (backTopBound || typeof window === 'undefined') return
-  window.addEventListener('scroll', onWindowScrollForBackTop, { passive: true })
-  backTopBound = true
-  onWindowScrollForBackTop()
-}
-
-function unbindBackTopScroll() {
-  if (!backTopBound || typeof window === 'undefined') return
-  window.removeEventListener('scroll', onWindowScrollForBackTop)
-  backTopBound = false
-  showBackTop.value = false
-}
-
-function scrollHomeTop(smooth = true) {
-  window.scrollTo({ top: 0, left: 0, behavior: smooth ? 'smooth' : 'auto' })
-}
+const backTopTarget = typeof window !== 'undefined' ? window : undefined
 
 const flashClock = computed(() => {
   const t = Math.max(0, flashRemain.value)
@@ -697,17 +670,13 @@ const tabLabel = (tab: HomeRecTab) => {
       </section>
     </van-pull-refresh>
 
-    <Teleport to="body">
-      <button
-        v-show="showBackTop"
-        type="button"
-        class="sm-back-top"
-        :aria-label="t('home.backTop')"
-        @click="scrollHomeTop(true)"
-      >
-        <van-icon name="back-top" />
-      </button>
-    </Teleport>
+    <van-back-top
+      class="sm-back-top"
+      :target="backTopTarget as any"
+      :offset="BACK_TOP_OFFSET"
+      teleport="body"
+      :aria-label="t('home.backTop')"
+    />
 
     <WelcomeRegisterPopup />
   </div>
