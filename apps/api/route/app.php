@@ -3,6 +3,7 @@
 use app\middleware\AdminAclGate;
 use app\middleware\AdminAuth;
 use app\middleware\MemberAuth;
+use app\middleware\MemberTouch;
 use think\facade\Route;
 
 Route::get('think', function () {
@@ -38,30 +39,31 @@ Route::get('api/v1/media', 'api.Media/show');
 Route::get('api/v1/files/<path>', 'api.Media/show')->pattern(['path' => '.*']);
 Route::get('api/v1/files', 'api.Media/show');
 
-Route::get('api/v1/categories', 'api.Categories/index');
-Route::get('api/v1/products/:id', 'api.Products/read');
+/** 公開瀏覽：有 Bearer 則節流記活躍（不含 media / shop/status 輪詢） */
+Route::get('api/v1/categories', 'api.Categories/index')->middleware(MemberTouch::class);
+Route::get('api/v1/products/:id', 'api.Products/read')->middleware(MemberTouch::class);
 /** M28 首頁推薦（可選 Bearer：猜你喜歡） */
-Route::get('api/v1/home/recommendations', 'api.HomeRecommendations/index');
+Route::get('api/v1/home/recommendations', 'api.HomeRecommendations/index')->middleware(MemberTouch::class);
 /** M27 訂閱（可匿名；帶 Bearer 則綁定會員） */
 Route::post('api/v1/newsletter/subscribe', 'api.Newsletter/subscribe');
-Route::get('api/v1/products', 'api.Products/index');
-Route::get('api/v1/articles/:code', 'api.Articles/read');
-Route::get('api/v1/home/banners', 'api.HomeBanners/index');
-Route::get('api/v1/home/ops', 'api.HomeOps/index');
+Route::get('api/v1/products', 'api.Products/index')->middleware(MemberTouch::class);
+Route::get('api/v1/articles/:code', 'api.Articles/read')->middleware(MemberTouch::class);
+Route::get('api/v1/home/banners', 'api.HomeBanners/index')->middleware(MemberTouch::class);
+Route::get('api/v1/home/ops', 'api.HomeOps/index')->middleware(MemberTouch::class);
 /** M29 首頁商品展示區 */
-Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products');
-Route::get('api/v1/home/sections', 'api.HomeSections/index');
+Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products')->middleware(MemberTouch::class);
+Route::get('api/v1/home/sections', 'api.HomeSections/index')->middleware(MemberTouch::class);
 
 /** M6 公開：領券中心列表、等級檔位 */
-Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable');
-Route::get('api/v1/member-levels', 'api.Assets/levelsPublic');
+Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable')->middleware(MemberTouch::class);
+Route::get('api/v1/member-levels', 'api.Assets/levelsPublic')->middleware(MemberTouch::class);
 
 /** M11 秒殺 + M12 積分商城（真實）+ M16 分享瀏覽（真實） */
-Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read')->pattern(['id' => '[A-Za-z0-9_-]+']);
-Route::get('api/v1/seckill/sessions', 'api.Seckill/index');
-Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product')->pattern(['productId' => '[A-Za-z0-9_-]+']);
-Route::get('api/v1/points-mall/products/:id', 'api.PointsMall/read');
-Route::get('api/v1/points-mall/products', 'api.PointsMall/index');
+Route::get('api/v1/seckill/sessions/:id', 'api.Seckill/read')->pattern(['id' => '[A-Za-z0-9_-]+'])->middleware(MemberTouch::class);
+Route::get('api/v1/seckill/sessions', 'api.Seckill/index')->middleware(MemberTouch::class);
+Route::get('api/v1/seckill/products/:productId', 'api.Seckill/product')->pattern(['productId' => '[A-Za-z0-9_-]+'])->middleware(MemberTouch::class);
+Route::get('api/v1/points-mall/products/:id', 'api.PointsMall/read')->middleware(MemberTouch::class);
+Route::get('api/v1/points-mall/products', 'api.PointsMall/index')->middleware(MemberTouch::class);
 Route::post('api/v1/share-views', 'api.ShareViews/store');
 
 /** M10 公開：支付渠道異步回調（驗簽由渠道適配層負責） */
