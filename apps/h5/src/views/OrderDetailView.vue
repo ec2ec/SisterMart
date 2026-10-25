@@ -17,6 +17,7 @@ import { useLocaleText } from '../composables/useLocaleText'
 import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
+import { previewImages } from '../utils/imagePreview'
 
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
@@ -176,12 +177,15 @@ async function sendChat() {
             </div>
             <p v-if="item.review.body" class="rev-body">{{ item.review.body }}</p>
             <div v-if="item.review.images?.length" class="rev-imgs">
-              <img
+              <button
                 v-for="(img, i) in item.review.images"
                 :key="i"
-                :src="assetUrl(img)"
-                alt=""
-              />
+                type="button"
+                class="rev-img"
+                @click="previewImages(item.review.images, i)"
+              >
+                <img :src="assetUrl(img)" alt="" />
+              </button>
             </div>
             <p v-if="item.review.follow" class="rev-follow">
               <em>{{ t('review.followLabel') }}</em>{{ item.review.follow }}
@@ -435,7 +439,15 @@ async function sendChat() {
   gap: 0.35rem;
   margin-top: 0.4rem;
 }
-.rev-imgs img {
+.rev-img {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+.rev-img img {
   width: 3.25rem;
   height: 3.25rem;
   object-fit: cover;

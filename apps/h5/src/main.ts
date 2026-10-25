@@ -25,6 +25,7 @@ import {
   Tabs,
   Tabbar,
   TabbarItem,
+  ImagePreview,
   Toast,
   Uploader,
 } from 'vant'
@@ -68,6 +69,7 @@ const app = createApp(App)
   Tabs,
   Tabbar,
   TabbarItem,
+  ImagePreview,
   Toast,
   Uploader,
 ].forEach((c) => app.use(c))

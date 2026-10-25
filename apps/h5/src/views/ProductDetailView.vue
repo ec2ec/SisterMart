@@ -17,6 +17,7 @@ import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
 import { assetUrl } from '../utils/assetUrl'
+import { previewImages } from '../utils/imagePreview'
 import { useTabShell } from '../composables/useTabShell'
 
 const { t } = useI18n()
@@ -370,7 +371,15 @@ async function share() {
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
-            <img v-for="(img, i) in r.images" :key="i" :src="assetUrl(img)" alt="" />
+            <button
+              v-for="(img, i) in r.images"
+              :key="i"
+              type="button"
+              class="rev-img"
+              @click="previewImages(r.images, i)"
+            >
+              <img :src="assetUrl(img)" alt="" />
+            </button>
           </div>
           <p v-if="r.follow" class="follow">
             <em>{{ t('pdp.follow') }}</em>
@@ -669,7 +678,15 @@ h2 {
   margin-top: 0.5rem;
   flex-wrap: wrap;
 }
-.rev-imgs img {
+.rev-img {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+.rev-img img {
   width: 4rem;
   height: 4rem;
   object-fit: cover;
