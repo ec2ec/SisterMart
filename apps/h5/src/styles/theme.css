@@ -122,30 +122,14 @@ a {
   color: var(--sm-text-muted);
 }
 
-/* 首頁回頂：掛 body，避開 pull-refresh / keep-alive 滾動父級問題 */
-.sm-back-top {
-  position: fixed;
-  right: 1rem;
-  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem);
-  z-index: 120;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--sm-primary);
-  color: #fff;
+/* 首頁回頂：Vant BackTop，品牌色 + 避開底欄 */
+.sm-back-top.van-back-top {
+  --van-back-top-size: 2.5rem;
+  --van-back-top-icon-size: 1.25rem;
+  --van-back-top-right: 1rem;
+  --van-back-top-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem);
+  --van-back-top-z-index: 120;
+  --van-back-top-background: var(--sm-primary);
   box-shadow: 0 0.125rem 0.5rem rgba(22, 22, 43, 0.28);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-}
-.sm-back-top:active {
-  opacity: 0.85;
-}
-.sm-back-top .van-icon {
-  font-size: 1.25rem;
-  font-weight: 700;
 }
