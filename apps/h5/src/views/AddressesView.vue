@@ -6,6 +6,7 @@ import { showConfirmDialog, showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import {
   formatHkAddressLine,
+  formatHkAreaLabel,
   formatHkDistrictLabel,
   HK_DISTRICT_GROUPS,
   type HkDistrictOption,
@@ -18,13 +19,19 @@ const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const items = ref<Address[]>([])
+const loaded = ref(false)
+const showForm = ref(false)
 const showAreaPicker = ref(false)
+/** district = 選十八區；locality = 選社區地點 */
+const pickerStep = ref<'district' | 'locality'>('district')
+const pickerDistrict = ref<HkDistrictOption | null>(null)
 const form = reactive({
   id: 0,
   receiver: '',
   phone: '',
   region: '',
   district: '',
+  area: '',
   detail: '',
   is_default: true,
 })
@@ -33,22 +40,18 @@ const uiLocale = computed(() => (locale.value === 'en' ? 'en' : 'zh-HK') as HkLo
 
 const areaDisplay = computed(() => {
   if (!form.district) return ''
-  return formatHkDistrictLabel(form.district, form.region, uiLocale.value)
+  const districtLabel = formatHkDistrictLabel(form.district, form.region, uiLocale.value)
+  if (!form.area) return districtLabel
+  const areaLabel = formatHkAreaLabel(form.area, form.district, uiLocale.value)
+  return `${districtLabel} · ${areaLabel}`
 })
 
+const pickerTitle = computed(() =>
+  pickerStep.value === 'locality' ? t('checkout.pickLocalityTitle') : t('checkout.pickDistrictTitle'),
+)
+
 function addressLabel(row: Address) {
-  return formatHkAddressLine(row.region, row.district, row.detail, uiLocale.value)
-}
-
-async function load() {
-  const data = await fetchAddresses()
-  items.value = data.items
-}
-
-onMounted(load)
-
-function edit(row: Address) {
-  Object.assign(form, { ...row, id: row.id })
+  return formatHkAddressLine(row.region, row.district, row.detail, uiLocale.value, row.area || '')
 }
 
 function reset() {
@@ -58,15 +61,77 @@ function reset() {
     phone: '',
     region: '',
     district: '',
+    area: '',
     detail: '',
     is_default: items.value.length === 0,
   })
 }
 
-function pickArea(opt: HkDistrictOption) {
+async function load() {
+  const data = await fetchAddresses()
+  items.value = data.items
+  loaded.value = true
+  if (items.value.length === 0) {
+    reset()
+    showForm.value = true
+  }
+}
+
+onMounted(load)
+
+function startAdd() {
+  reset()
+  showForm.value = true
+}
+
+function edit(row: Address) {
+  Object.assign(form, {
+    id: row.id,
+    receiver: row.receiver,
+    phone: row.phone,
+    region: row.region,
+    district: row.district,
+    area: row.area || '',
+    detail: row.detail,
+    is_default: row.is_default,
+  })
+  showForm.value = true
+}
+
+function cancelForm() {
+  reset()
+  if (items.value.length === 0) {
+    showForm.value = true
+    return
+  }
+  showForm.value = false
+}
+
+function openAreaPicker() {
+  pickerStep.value = 'district'
+  pickerDistrict.value = null
+  showAreaPicker.value = true
+}
+
+function pickDistrict(opt: HkDistrictOption) {
+  pickerDistrict.value = opt
+  pickerStep.value = 'locality'
+}
+
+function pickLocality(area: string) {
+  const opt = pickerDistrict.value
+  if (!opt) return
   form.region = opt.region
   form.district = opt.district
+  form.area = area
   showAreaPicker.value = false
+  pickerStep.value = 'district'
+  pickerDistrict.value = null
+}
+
+function backToDistrictStep() {
+  pickerStep.value = 'district'
+  pickerDistrict.value = null
 }
 
 async function submit() {
@@ -74,7 +139,10 @@ async function submit() {
     showToast(t('checkout.pickDistrict'))
     return
   }
-  // 編輯目標已被刪除：改為新增，避免 PUT 已不存在的 id
+  if (!form.area) {
+    showToast(t('checkout.pickLocality'))
+    return
+  }
   const editingId = form.id
   if (editingId && !items.value.some((a) => a.id === editingId)) {
     form.id = 0
@@ -86,14 +154,16 @@ async function submit() {
         phone: form.phone,
         region: form.region,
         district: form.district,
+        area: form.area,
         detail: form.detail,
         is_default: form.is_default,
       },
       form.id || undefined,
     )
     showToast(t('checkout.saved'))
-    reset()
     await load()
+    reset()
+    showForm.value = items.value.length === 0
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     if (redirect) router.replace(redirect)
   } catch (error) {
@@ -115,7 +185,10 @@ async function remove(id: number) {
     const wasEditing = form.id === id
     await deleteAddress(id)
     await load()
-    if (wasEditing) reset()
+    if (wasEditing || items.value.length === 0) {
+      reset()
+      showForm.value = true
+    }
     showToast(t('checkout.deleted'))
   } catch (error) {
     showToast(error instanceof ApiError && error.message ? error.message : t('checkout.fail'))
@@ -126,13 +199,14 @@ async function remove(id: number) {
 <template>
   <div class="page">
     <SubPageNav :title="t('checkout.addresses')" />
-    <van-cell-group inset>
+
+    <van-cell-group v-if="items.length" inset>
       <van-cell
         v-for="row in items"
         :key="row.id"
         :label="addressLabel(row)"
         is-link
-        :class="{ editing: form.id === row.id }"
+        :class="{ editing: showForm && form.id === row.id }"
         @click="edit(row)"
       >
         <template #title>
@@ -147,8 +221,19 @@ async function remove(id: number) {
       </van-cell>
     </van-cell-group>
 
-    <div class="form">
-      <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
+    <div v-if="loaded && items.length && !showForm" class="add-wrap">
+      <van-button block type="primary" color="var(--sm-primary)" round @click="startAdd">
+        {{ t('checkout.addShippingAddress') }}
+      </van-button>
+    </div>
+
+    <div v-if="showForm" class="form">
+      <div class="form-hd">
+        <h2>{{ form.id ? t('checkout.editAddress') : t('checkout.newAddress') }}</h2>
+        <button v-if="items.length" type="button" class="cancel" @click="cancelForm">
+          {{ t('checkout.cancelForm') }}
+        </button>
+      </div>
       <van-field
         v-model="form.receiver"
         :label="t('checkout.receiver')"
@@ -165,7 +250,7 @@ async function remove(id: number) {
         :label="t('checkout.area')"
         :model-value="areaDisplay"
         :placeholder="t('checkout.pickDistrict')"
-        @click="showAreaPicker = true"
+        @click="openAreaPicker"
       />
       <van-field
         v-model="form.detail"
@@ -184,10 +269,21 @@ async function remove(id: number) {
     <van-popup v-model:show="showAreaPicker" position="bottom" round :style="{ maxHeight: '75%' }">
       <div class="picker">
         <div class="picker-hd">
-          <span>{{ t('checkout.pickDistrict') }}</span>
-          <button type="button" class="picker-close" @click="showAreaPicker = false">{{ t('checkout.closePicker') }}</button>
+          <button
+            v-if="pickerStep === 'locality'"
+            type="button"
+            class="picker-back"
+            @click="backToDistrictStep"
+          >
+            ‹ {{ t('checkout.backToDistrict') }}
+          </button>
+          <span v-else class="picker-spacer" />
+          <span class="picker-title">{{ pickerTitle }}</span>
+          <button type="button" class="picker-close" @click="showAreaPicker = false">
+            {{ t('checkout.closePicker') }}
+          </button>
         </div>
-        <div class="picker-body">
+        <div v-if="pickerStep === 'district'" class="picker-body">
           <section v-for="group in HK_DISTRICT_GROUPS" :key="group.region" class="group">
             <h3 class="group-title">
               {{ uiLocale === 'en' ? group.regionEn : group.region }}
@@ -198,12 +294,27 @@ async function remove(id: number) {
               type="button"
               class="opt"
               :class="{ on: form.district === opt.district }"
-              @click="pickArea(opt)"
+              @click="pickDistrict(opt)"
             >
               <span class="no">{{ opt.no }}.</span>
               <span class="name">{{ uiLocale === 'en' ? opt.districtEn : opt.district }}</span>
             </button>
           </section>
+        </div>
+        <div v-else-if="pickerDistrict" class="picker-body">
+          <h3 class="group-title">
+            {{ uiLocale === 'en' ? pickerDistrict.districtEn : pickerDistrict.district }}
+          </h3>
+          <button
+            v-for="loc in pickerDistrict.areas"
+            :key="loc.area"
+            type="button"
+            class="opt"
+            :class="{ on: form.district === pickerDistrict.district && form.area === loc.area }"
+            @click="pickLocality(loc.area)"
+          >
+            <span class="name">{{ uiLocale === 'en' ? loc.areaEn : loc.area }}</span>
+          </button>
         </div>
       </div>
     </van-popup>
@@ -238,15 +349,32 @@ async function remove(id: number) {
 .editing {
   background: color-mix(in srgb, var(--sm-primary) 6%, #fff);
 }
+.add-wrap {
+  margin: 1rem 0.75rem 2rem;
+}
 .form {
   margin: 1rem 0.75rem 2rem;
   padding: 0.75rem;
   background: #fff;
   border-radius: 0.75rem;
 }
+.form-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
 .form h2 {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.9375rem;
+}
+.cancel {
+  border: 0;
+  background: transparent;
+  color: #666;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
 }
 .del {
   border: 0;
@@ -260,23 +388,39 @@ async function remove(id: number) {
   max-height: 75vh;
 }
 .picker-hd {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.875rem 1rem;
   font-weight: 600;
   font-size: 0.9375rem;
   border-bottom: 1px solid #eee;
 }
+.picker-title {
+  text-align: center;
+}
+.picker-spacer {
+  width: 1px;
+}
+.picker-back,
 .picker-close {
   border: 0;
   background: transparent;
   color: #666;
   font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0;
+}
+.picker-back {
+  justify-self: start;
+  color: var(--sm-primary);
+}
+.picker-close {
+  justify-self: end;
 }
 .picker-body {
   overflow: auto;
-  /* 底部多留空間，避免最後一項（18 離島區）被遮擋／滑不到 */
   padding: 0.5rem 0 calc(3.5rem + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }

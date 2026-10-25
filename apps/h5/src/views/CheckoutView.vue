@@ -151,6 +151,7 @@ async function submit() {
               selectedAddress.district,
               selectedAddress.detail,
               uiLocale,
+              selectedAddress.area || '',
             )
           }}
         </p>

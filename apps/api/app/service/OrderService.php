@@ -97,6 +97,7 @@ class OrderService
                     'phone' => $address['phone'],
                     'region' => $address['region'],
                     'district' => $address['district'],
+                    'area' => (string) ($address['area'] ?? ''),
                     'detail' => $address['detail'],
                 ], JSON_UNESCAPED_UNICODE),
                 'remark' => trim((string) ($body['remark'] ?? '')),

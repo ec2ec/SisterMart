@@ -25,6 +25,8 @@ export type Address = {
   phone: string
   region: string
   district: string
+  /** 十八區下的社區地點；舊資料可能為空 */
+  area?: string
   detail: string
   is_default: boolean
 }
@@ -198,7 +200,17 @@ export function fetchAddresses() {
   }>('/api/v1/addresses', {}, 'member')
 }
 
-export function saveAddress(body: Partial<Address> & { receiver: string; phone: string; region: string; district: string; detail: string }, id?: number) {
+export function saveAddress(
+  body: Partial<Address> & {
+    receiver: string
+    phone: string
+    region: string
+    district: string
+    area: string
+    detail: string
+  },
+  id?: number,
+) {
   return id
     ? api<Address>(`/api/v1/addresses/${id}`, { method: 'PUT', body: JSON.stringify(body) }, 'member')
     : api<Address>('/api/v1/addresses', { method: 'POST', body: JSON.stringify(body) }, 'member')
