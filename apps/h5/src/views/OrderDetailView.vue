@@ -16,6 +16,7 @@ import {
 import { useLocaleText } from '../composables/useLocaleText'
 import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
 import { ApiError } from '../api/client'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
@@ -157,6 +158,37 @@ async function sendChat() {
           <div class="prices">
             <strong class="sale">HK$ {{ item.unit_price.toFixed(2) }}</strong>
             <s v-if="itemCompareAt(item)" class="origin">HK$ {{ itemCompareAt(item).toFixed(2) }}</s>
+          </div>
+          <div v-if="item.review" class="item-review">
+            <div class="rev-head">
+              <span class="rev-lab">{{ t('review.myReview') }}</span>
+              <span class="rev-stars" aria-hidden="true">
+                {{ '★'.repeat(item.review.stars) }}{{ '☆'.repeat(Math.max(0, 5 - item.review.stars)) }}
+              </span>
+              <span
+                v-if="item.review.moderation_status && item.review.moderation_status !== 'approved'"
+                class="rev-mod"
+              >
+                {{
+                  item.review.moderation_status === 'rejected' ? t('review.rejected') : t('review.pending')
+                }}
+              </span>
+            </div>
+            <p v-if="item.review.body" class="rev-body">{{ item.review.body }}</p>
+            <div v-if="item.review.images?.length" class="rev-imgs">
+              <img
+                v-for="(img, i) in item.review.images"
+                :key="i"
+                :src="assetUrl(img)"
+                alt=""
+              />
+            </div>
+            <p v-if="item.review.follow" class="rev-follow">
+              <em>{{ t('review.followLabel') }}</em>{{ item.review.follow }}
+            </p>
+            <p v-if="item.review.reply" class="rev-reply">
+              <em>{{ t('review.replyLabel') }}</em>{{ item.review.reply }}
+            </p>
           </div>
           <div v-if="item.can_review || item.can_follow" class="item-actions">
             <van-button
@@ -351,6 +383,64 @@ async function sendChat() {
 }
 .item-actions {
   margin-top: 0.35rem;
+}
+.item-review {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #efeae3;
+}
+.rev-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+.rev-lab {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+}
+.rev-stars {
+  color: #f59a23;
+  letter-spacing: 0.05em;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+.rev-mod {
+  font-size: 0.6875rem;
+  color: #b45309;
+  background: #fff7ed;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+}
+.rev-body,
+.rev-follow,
+.rev-reply {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #444;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rev-follow em,
+.rev-reply em {
+  font-style: normal;
+  color: #888;
+  margin-right: 0.15rem;
+}
+.rev-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+.rev-imgs img {
+  width: 3.25rem;
+  height: 3.25rem;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  background: #f5f2ec;
 }
 .meta {
   min-width: 0;
