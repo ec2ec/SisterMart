@@ -16,3 +16,12 @@ body,
   height: 100%;
   overflow: hidden;
 }
+
+/* 通用表格行單選高亮（useTableRowSelect） */
+.sm-table-row {
+  cursor: pointer;
+}
+.sm-table-row.is-selected > td,
+.sm-table-row.is-selected > th {
+  background: #fff8d6;
+}

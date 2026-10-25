@@ -15,6 +15,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Row = {
   id: number
@@ -43,6 +44,7 @@ const router = useRouter()
 const message = useMessage()
 const rows = ref<Row[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const status = ref(
   typeof route.query.status === 'string' ? route.query.status : 'pending_review',
 )
@@ -215,7 +217,7 @@ async function forceBalance() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in paged" :key="row.id">
+        <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
           <td>{{ row.aftersale_no }}</td>
           <td>
             <n-button text type="primary" @click="router.push(`/sales/orders/${row.order_id}`)">

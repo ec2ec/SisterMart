@@ -15,6 +15,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 import ProductPickerDialog, {
   type ProductPickResult,
   type ProductSku,
@@ -47,6 +48,7 @@ type Session = {
 const message = useMessage()
 const rows = ref<Session[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 const skuCache = ref<Record<string, Sku[]>>({})
 const labelCache = ref<Record<string, string>>({})
 const editingId = ref<number | null>(null)
@@ -347,7 +349,7 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in paged" :key="row.id">
+          <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
             <td>{{ row.code }}</td>
             <td>{{ row.name['zh-HK'] }}</td>
             <td>

@@ -13,6 +13,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api, ApiError } from '../api'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type ReleaseRow = {
   id: string
@@ -83,6 +84,9 @@ const statusType = (s: string) => {
 }
 
 const canRollback = computed(() => !!state.value?.previous_snapshot_id && !state.value?.lock)
+
+const { rowAttrs } = useTableRowSelect()
+const { rowAttrs: auditRowAttrs } = useTableRowSelect()
 
 async function load() {
   loading.value = true
@@ -305,7 +309,7 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in items" :key="row.id">
+          <tr v-for="row in items" :key="row.id" v-bind="rowAttrs(row.id)">
             <td>
               <div class="ver">{{ row.version || row.id }}</div>
               <div class="sub">{{ row.id }}</div>
@@ -356,7 +360,7 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(a, i) in audit" :key="i">
+          <tr v-for="(a, i) in audit" :key="i" v-bind="auditRowAttrs(i)">
             <td>{{ a.at }}</td>
             <td>{{ a.action }}</td>
             <td>{{ a.admin_id }}</td>

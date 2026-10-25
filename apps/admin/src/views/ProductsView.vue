@@ -5,6 +5,7 @@ import { NButton, NCard, NInput, NPagination, NSelect, NSpace, NTag } from 'naiv
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type CatNode = {
   id: number
@@ -41,6 +42,7 @@ const categoryOptions = ref<Array<{ label: string; value: number }>>([])
 const loading = ref(false)
 
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
+const { rowAttrs } = useTableRowSelect()
 
 function flattenCats(nodes: CatNode[], depth = 0): Array<{ label: string; value: number }> {
   const out: Array<{ label: string; value: number }> = []
@@ -121,57 +123,64 @@ onMounted(async () => {
         <n-button type="primary" @click="router.push('/catalog/products/new')">新增商品</n-button>
       </n-space>
     </div>
-    <table class="table">
-      <thead>
-        <tr>
-          <th class="col-thumb">圖</th>
-          <th>代碼</th>
-          <th>名稱</th>
-          <th>分類</th>
-          <th>售價起</th>
-          <th>銷售數量</th>
-          <th>疊加數量</th>
-          <th>庫存</th>
-          <th>角標</th>
-          <th>狀態</th>
-          <th />
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in paged" :key="row.code" :class="{ off: row.status !== 1 }">
-          <td class="col-thumb">
-            <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
-            <span v-else class="thumb placeholder" />
-          </td>
-          <td>{{ row.code }}</td>
-          <td class="col-name">
-            <div class="name-zh">{{ row.name['zh-HK'] }}</div>
-            <div class="name-en">{{ row.name.en }}</div>
-          </td>
-          <td>{{ categoryLabel(row) }}</td>
-          <td>{{ row.price }}</td>
-          <td>{{ row.sold_count ?? 0 }}</td>
-          <td>{{ row.sold_boost ?? 0 }}</td>
-          <td>{{ row.stock ?? 0 }}</td>
-          <td>
-            <n-tag
-              v-for="b in badgeItems(row)"
-              :key="b.code"
-              size="small"
-              :color="{ color: b.color, textColor: '#fff', borderColor: b.color }"
-              style="margin-right: 0.25rem"
-            >
-              {{ b.name['zh-HK'] }}
-            </n-tag>
-            <span v-if="!badgeItems(row).length" class="muted">—</span>
-          </td>
-          <td>{{ row.status === 1 ? '上架' : '下架' }}</td>
-          <td>
-            <n-button size="tiny" @click="router.push(`/catalog/products/${row.db_id}`)">編輯</n-button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="col-thumb">圖</th>
+            <th>代碼</th>
+            <th class="col-name">名稱</th>
+            <th>分類</th>
+            <th>售價起</th>
+            <th>銷售數量</th>
+            <th>疊加數量</th>
+            <th>庫存</th>
+            <th>角標</th>
+            <th>狀態</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in paged"
+            :key="row.code"
+            v-bind="rowAttrs(row.db_id)"
+            :class="{ off: row.status !== 1 }"
+          >
+            <td class="col-thumb">
+              <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
+              <span v-else class="thumb placeholder" />
+            </td>
+            <td>{{ row.code }}</td>
+            <td class="col-name">
+              <div class="name-zh">{{ row.name['zh-HK'] }}</div>
+              <div class="name-en">{{ row.name.en }}</div>
+            </td>
+            <td>{{ categoryLabel(row) }}</td>
+            <td>{{ row.price }}</td>
+            <td>{{ row.sold_count ?? 0 }}</td>
+            <td>{{ row.sold_boost ?? 0 }}</td>
+            <td>{{ row.stock ?? 0 }}</td>
+            <td>
+              <n-tag
+                v-for="b in badgeItems(row)"
+                :key="b.code"
+                size="small"
+                :color="{ color: b.color, textColor: '#fff', borderColor: b.color }"
+                style="margin-right: 0.25rem"
+              >
+                {{ b.name['zh-HK'] }}
+              </n-tag>
+              <span v-if="!badgeItems(row).length" class="muted">—</span>
+            </td>
+            <td>{{ row.status === 1 ? '上架' : '下架' }}</td>
+            <td>
+              <n-button size="tiny" @click.stop="router.push(`/catalog/products/${row.db_id}`)">編輯</n-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <div class="pager">
       <n-pagination
         v-model:page="page"
@@ -188,8 +197,14 @@ onMounted(async () => {
 .toolbar {
   margin-bottom: 1rem;
 }
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .table {
   width: 100%;
+  min-width: 1000px;
   border-collapse: collapse;
   background: #fff;
 }
@@ -216,14 +231,22 @@ td {
   border: 1px dashed #d5cfc4;
   box-sizing: border-box;
 }
+.col-name {
+  max-width: 25%;
+  width: 25%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .col-name .name-zh {
   font-weight: 600;
   color: #1f1f1f;
+  white-space: normal;
 }
 .col-name .name-en {
   margin-top: 0.15rem;
   font-size: 0.75rem;
   color: #8a8378;
+  white-space: normal;
 }
 .muted {
   color: #bbb;
