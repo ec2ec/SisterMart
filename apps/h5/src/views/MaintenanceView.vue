@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import type { MaintenanceStatus } from '../composables/useMaintenance'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -11,6 +12,7 @@ const props = defineProps<{
 const emit = defineEmits<{ retry: [] }>()
 
 const { t } = useI18n()
+const router = useRouter()
 const { text } = useLocaleText()
 
 const title = computed(() => {
@@ -55,6 +57,9 @@ const windowText = computed(() => {
       <p class="thanks">{{ t('maintenance.thanks') }}</p>
       <button type="button" class="retry" @click="emit('retry')">
         {{ t('maintenance.retry') }}
+      </button>
+      <button type="button" class="login" @click="router.push({ name: 'login' })">
+        {{ t('maintenance.login') }}
       </button>
     </div>
   </div>
@@ -154,5 +159,21 @@ h1 {
 }
 .retry:active {
   opacity: 0.9;
+}
+.login {
+  width: 100%;
+  margin-top: 0.625rem;
+  border: 0.0625rem solid rgba(28, 28, 28, 0.12);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  color: var(--sm-text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.login:active {
+  opacity: 0.85;
 }
 </style>

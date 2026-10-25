@@ -192,7 +192,9 @@ onMounted(async () => {
             <n-button type="primary" secondary @click="pickerOpen = true">搜索加入用戶</n-button>
             <span class="mw-count">已選 {{ members.length }} 人</span>
           </n-space>
-          <p class="wl-hint">白名單用戶在維護期間仍可正常使用 H5（需已登錄）。最多 200 人。</p>
+          <p class="wl-hint">
+            白名單用戶在維護期間仍可正常使用 H5；維護頁提供登錄入口。最多 200 人。
+          </p>
           <div v-if="members.length" class="mw-list">
             <n-tag
               v-for="m in members"

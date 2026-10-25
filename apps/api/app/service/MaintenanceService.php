@@ -15,7 +15,7 @@ class MaintenanceService
 {
     public const SETTING_KEY = 'shop.maintenance';
 
-    /** 內建放行：狀態查詢、健康檢查、後台、靜態媒體代理、支付回調、定時任務 */
+    /** 內建放行：狀態查詢、健康檢查、後台、靜態媒體代理、支付回調、定時任務、白名單用戶登錄 */
     public const BUILTIN_ALLOW = [
         '/api/v1/shop/status',
         '/api/v1/health',
@@ -26,6 +26,10 @@ class MaintenanceService
         '/api/v1/files',
         '/api/v1/payment-callbacks',
         '/api/v1/jobs',
+        '/api/v1/member-sessions',
+        '/api/v1/verification-codes',
+        '/api/v1/member-passwords',
+        '/api/v1/articles',
     ];
 
     public const MAX_WHITELIST = 80;

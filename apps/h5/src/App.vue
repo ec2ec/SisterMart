@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, type Component } from 'vue'
+import { computed, onMounted, onUnmounted, watch, type Component } from 'vue'
+import { useRoute } from 'vue-router'
 import AppTabbar from './components/AppTabbar.vue'
 import HomeView from './views/HomeView.vue'
 import CategoryView from './views/CategoryView.vue'
@@ -7,6 +8,7 @@ import CartView from './views/CartView.vue'
 import AccountView from './views/AccountView.vue'
 import MaintenanceView from './views/MaintenanceView.vue'
 import { useMaintenance } from './composables/useMaintenance'
+import { authToken } from './composables/useSession'
 import { useTabShell, routeIsTab } from './composables/useTabShell'
 
 /** 與各頁 defineOptions({ name }) 對齊 */
@@ -19,9 +21,22 @@ const TAB_COMPONENTS: Record<string, Component> = {
   account: AccountView,
 }
 
+const route = useRoute()
 const { backgroundTabName, showTabbar, isOverlay } = useTabShell()
 const { status, enabled: maintenanceOn, loaded: maintenanceLoaded, refresh: refreshMaintenance } =
   useMaintenance()
+
+/** 維護期間仍允許白名單用戶走登錄／找回／協議頁 */
+const maintenanceAuthEscape = computed(() => {
+  const n = route.name
+  return n === 'login' || n === 'forgot' || n === 'article'
+})
+
+const showMaintenance = computed(
+  () =>
+    Boolean(maintenanceLoaded.value && maintenanceOn.value && status.value) &&
+    !maintenanceAuthEscape.value,
+)
 
 const backgroundComponent = computed(() => {
   const name = backgroundTabName.value
@@ -33,6 +48,10 @@ function onVisibility() {
     void refreshMaintenance()
   }
 }
+
+watch(authToken, () => {
+  void refreshMaintenance()
+})
 
 onMounted(() => {
   void refreshMaintenance()
@@ -46,7 +65,7 @@ onUnmounted(() => {
 
 <template>
   <MaintenanceView
-    v-if="maintenanceLoaded && maintenanceOn && status"
+    v-if="showMaintenance && status"
     :status="status"
     @retry="refreshMaintenance"
   />
