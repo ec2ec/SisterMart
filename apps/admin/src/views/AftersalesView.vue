@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
+  NImage,
+  NImageGroup,
   NInput,
   NModal,
   NSelect,
@@ -15,6 +17,7 @@ import {
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
+import { assetUrl } from '../utils/assetUrl'
 
 type Row = {
   id: number
@@ -50,10 +53,6 @@ const status = ref(
 const hasEvidence = ref<string>(
   typeof route.query.has_evidence === 'string' ? route.query.has_evidence : '',
 )
-const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
-function assetUrl(u: string) {
-  return u.startsWith('http') ? u : `${apiBase}${u}`
-}
 
 const options = [
   { label: '待審核', value: 'pending_review' },
@@ -71,7 +70,6 @@ const evidenceOptions = [
 const show = ref(false)
 const current = ref<Row | null>(null)
 const note = ref('')
-const preview = ref<string | null>(null)
 const busy = ref(false)
 
 const typeLabel = (t: string) => (t === 'return_refund' ? '退貨退款' : '僅退款')
@@ -100,7 +98,6 @@ async function openDetail(row: Row) {
   const data = await api<Row>(`/api/v1/admin/aftersales/${row.id}`, {}, true)
   current.value = data
   note.value = ''
-  preview.value = data.evidence?.[0] ? assetUrl(data.evidence[0]) : null
   show.value = true
 }
 
@@ -227,18 +224,23 @@ async function forceBalance() {
           <td>{{ typeLabel(row.type) }}</td>
           <td>{{ row.amount }}</td>
           <td>
-            <div v-if="row.evidence?.length" class="ev">
+            <button
+              v-if="row.evidence?.length"
+              type="button"
+              class="ev"
+              title="進入審核"
+              @click="openDetail(row)"
+            >
               <img
                 v-for="(u, i) in row.evidence.slice(0, 3)"
                 :key="i"
                 :src="assetUrl(u)"
                 alt=""
-                @click="openDetail(row)"
               />
               <span v-if="(row.evidence_count || row.evidence.length) > 3" class="more">
                 +{{ (row.evidence_count || row.evidence.length) - 3 }}
               </span>
-            </div>
+            </button>
             <n-tag v-else size="small" type="warning">無圖</n-tag>
           </td>
           <td><n-tag size="small">{{ statusLabel(row.status) }}</n-tag></td>
@@ -288,23 +290,21 @@ async function forceBalance() {
 
       <div>
         <strong>證據（{{ current.evidence?.length || 0 }}）</strong>
-        <div v-if="current.evidence?.length" class="ev-large">
-          <button
-            v-for="(u, i) in current.evidence"
-            :key="i"
-            type="button"
-            class="thumb"
-            @click="preview = assetUrl(u)"
-          >
-            <img :src="assetUrl(u)" alt="" />
-          </button>
-        </div>
+        <n-image-group v-if="current.evidence?.length">
+          <div class="ev-large">
+            <n-image
+              v-for="(u, i) in current.evidence"
+              :key="i"
+              class="thumb"
+              :src="assetUrl(u)"
+              :width="72"
+              :height="72"
+              object-fit="cover"
+              :alt="`證據 ${i + 1}`"
+            />
+          </div>
+        </n-image-group>
         <p v-else class="warn">會員未上傳證據。退貨退款不可直接通過。</p>
-        <div v-if="preview" class="preview">
-          <a :href="preview" target="_blank" rel="noreferrer">
-            <img :src="preview" alt="evidence preview" />
-          </a>
-        </div>
       </div>
 
       <div v-if="current.admin_note">
@@ -351,14 +351,20 @@ td {
   display: flex;
   gap: 0.35rem;
   align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
-.ev img,
-.thumb img {
+.ev img {
   width: 2.5rem;
   height: 2.5rem;
   object-fit: cover;
   border-radius: 0.25rem;
-  cursor: pointer;
+  pointer-events: none;
 }
 .more {
   font-size: 0.75rem;
@@ -384,20 +390,13 @@ td {
   flex-wrap: wrap;
   margin-top: 0.5rem;
 }
-.thumb {
-  border: none;
-  padding: 0;
-  background: transparent;
-}
-.preview {
-  margin-top: 0.75rem;
-}
-.preview img {
-  max-width: 100%;
-  max-height: 20rem;
-  object-fit: contain;
-  border-radius: 0.35rem;
+.ev-large :deep(.n-image) {
+  border-radius: 0.25rem;
+  overflow: hidden;
   background: #f5f3ef;
+}
+.ev-large :deep(img) {
+  cursor: zoom-in;
 }
 
 .pager {

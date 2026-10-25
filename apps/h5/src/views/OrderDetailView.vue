@@ -254,6 +254,14 @@ async function sendChat() {
           <span v-if="as.status === 'rejected' && as.admin_note" class="as-note">
             {{ t('fulfill.adminNote') }}：{{ as.admin_note }}
           </span>
+          <div v-if="as.evidence?.length" class="as-ev">
+            <img
+              v-for="(u, i) in as.evidence.slice(0, 3)"
+              :key="i"
+              :src="assetUrl(u)"
+              alt=""
+            />
+          </div>
         </div>
         <span class="as-status" :class="as.status">{{ t(aftersaleStatusKey[as.status] || as.status) }}</span>
       </button>
@@ -700,6 +708,20 @@ async function sendChat() {
 }
 .as-note {
   color: #b45309;
+}
+.as-ev {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.as-ev img {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: #f3f0ea;
+  pointer-events: none;
 }
 .as-status {
   flex-shrink: 0;

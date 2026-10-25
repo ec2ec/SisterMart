@@ -7,6 +7,7 @@ import SubPageNav from '../components/SubPageNav.vue'
 import { cancelAftersale, fetchAftersale, fetchOrder, type Aftersale } from '../api/trade'
 import { useLocaleText } from '../composables/useLocaleText'
 import { assetUrl } from '../utils/assetUrl'
+import { previewImages } from '../utils/imagePreview'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -59,9 +60,15 @@ const statusKey: Record<string, string> = {
       <div v-if="row.evidence?.length" class="evidence">
         <p class="label">{{ t('fulfill.evidence') }}</p>
         <div class="grid">
-          <a v-for="(u, i) in row.evidence" :key="i" :href="assetUrl(u)" target="_blank" rel="noreferrer">
+          <button
+            v-for="(u, i) in row.evidence"
+            :key="i"
+            type="button"
+            class="ev-thumb"
+            @click="previewImages(row.evidence || [], i)"
+          >
             <img :src="assetUrl(u)" alt="" />
-          </a>
+          </button>
         </div>
       </div>
       <van-button v-if="row.status === 'pending_review'" block plain round style="margin-top: 1rem" @click="onCancel">
@@ -99,10 +106,20 @@ const statusKey: Record<string, string> = {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
-.grid img {
+.ev-thumb {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #f3f0ea;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.ev-thumb img {
+  display: block;
   width: 4.5rem;
   height: 4.5rem;
   object-fit: cover;
-  border-radius: 0.375rem;
 }
 </style>
