@@ -127,7 +127,7 @@ onMounted(async () => {
           <tr>
             <th class="col-thumb">圖</th>
             <th>代碼</th>
-            <th>名稱</th>
+            <th class="col-name">名稱</th>
             <th>分類</th>
             <th>售價起</th>
             <th>銷售數量</th>
