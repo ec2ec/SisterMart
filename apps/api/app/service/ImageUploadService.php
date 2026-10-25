@@ -13,9 +13,9 @@ use think\file\UploadedFile;
  * 通用圖片上傳 + 壓縮。
  *
  * 預設 preset（可被顯式參數覆蓋）：
- * - avatar    上傳≤5MB，最長邊 512，目標 ≤512KB，質量 85（落庫再裁正方）
- * - review    上傳≤5MB，最長邊 1000，目標 ≤300KB，質量 85
- * - aftersale 上傳≤5MB，最長邊 1200，目標 ≤500KB，質量 85
+ * - avatar    H5：上傳≤5MB，最長邊 1000，目標 ≤500KB（落庫再裁正方 512）
+ * - review    H5：上傳≤5MB，最長邊 1000，目標 ≤500KB，質量 85
+ * - aftersale H5：上傳≤5MB，最長邊 1000，目標 ≤500KB，質量 85
  * - banner    上傳≤5MB，最長邊 1920，目標 ≤800KB，質量 85
  * - product   上傳≤5MB，最長邊 1600，目標 ≤700KB，質量 85
  * - admin     上傳≤5MB，最長邊 1600，目標 ≤700KB，質量 85（後台通用）
@@ -26,22 +26,22 @@ class ImageUploadService
     public const PRESETS = [
         'avatar' => [
             'max_upload_bytes' => 5 * 1024 * 1024,
-            'max_edge' => 512,
-            'max_bytes' => 512 * 1024,
+            'max_edge' => 1000,
+            'max_bytes' => 500 * 1024,
             'quality' => 85,
             'min_quality' => 40,
         ],
         'review' => [
             'max_upload_bytes' => 5 * 1024 * 1024,
             'max_edge' => 1000,
-            'max_bytes' => 300 * 1024,
+            'max_bytes' => 500 * 1024,
             'quality' => 85,
             'min_quality' => 40,
         ],
         'aftersale' => [
             'max_upload_bytes' => 5 * 1024 * 1024,
-            'max_edge' => 1200,
-            'max_bytes' => 512000,
+            'max_edge' => 1000,
+            'max_bytes' => 500 * 1024,
             'quality' => 85,
             'min_quality' => 40,
         ],

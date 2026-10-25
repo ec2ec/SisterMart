@@ -3,9 +3,10 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { showToast } from 'vant'
 import { cropSquareCover } from '../utils/imageCompress'
+import { H5_IMAGE_MAX_UPLOAD_BYTES } from '../utils/h5ImageUpload'
 
-/** 選圖上限 5MB；落庫由服務端再壓縮 */
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+/** 選圖上限 5MB；落庫由服務端壓至 ≤500KB / 最長邊 ≤1000，再裁正方 */
+const MAX_AVATAR_BYTES = H5_IMAGE_MAX_UPLOAD_BYTES
 
 const props = defineProps<{
   show: boolean

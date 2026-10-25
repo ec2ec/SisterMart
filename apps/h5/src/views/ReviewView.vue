@@ -14,11 +14,13 @@ import {
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
-import { compressImageFile } from '../utils/imageCompress'
+import {
+  H5_IMAGE_MAX_UPLOAD_BYTES,
+  H5ImageTooLargeError,
+  prepareH5UploadImage,
+} from '../utils/h5ImageUpload'
 
 const MAX_REVIEW_IMAGES = 5
-const MAX_REVIEW_UPLOAD_BYTES = 5 * 1024 * 1024
-const REVIEW_COMPRESS = { maxEdge: 1000, maxBytes: 300 * 1024, quality: 0.85, minQuality: 0.4 }
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -63,25 +65,22 @@ async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListIte
   for (const entry of list) {
     const file = entry.file
     if (!file) continue
-    if (file.size > MAX_REVIEW_UPLOAD_BYTES) {
-      showToast(t('review.imageSize'))
-      fileList.value = fileList.value.filter((f) => f !== entry)
-      continue
-    }
     entry.status = 'uploading'
     try {
-      // 上傳前按比例壓到 ≤1000×1000、約 300KB；服務端會再校驗壓縮
-      const compressed = await compressImageFile(file, REVIEW_COMPRESS)
-      const uploadFile = new File([compressed], (file.name || 'review').replace(/\.\w+$/, '') + '.jpg', {
-        type: 'image/jpeg',
-      })
-      const data = await uploadReviewImage(uploadFile)
+      const prepared = await prepareH5UploadImage(file)
+      const data = await uploadReviewImage(prepared)
       entry.url = assetUrl(data.url)
       entry.status = 'done'
       ;(entry as UploaderFileListItem & { remoteUrl?: string }).remoteUrl = data.url
     } catch (error) {
       entry.status = 'failed'
-      showToast(error instanceof Error ? error.message : t('review.imageFail'))
+      showToast(
+        error instanceof H5ImageTooLargeError
+          ? t('review.imageSize')
+          : error instanceof Error
+            ? error.message
+            : t('review.imageFail'),
+      )
       fileList.value = fileList.value.filter((f) => f !== entry)
     }
   }
@@ -173,8 +172,8 @@ async function submit() {
         <van-uploader
           v-model="fileList"
           :max-count="MAX_REVIEW_IMAGES"
-          :max-size="MAX_REVIEW_UPLOAD_BYTES"
-          accept="image/*"
+          :max-size="H5_IMAGE_MAX_UPLOAD_BYTES"
+          accept="image/jpeg,image/png,image/webp"
           :after-read="afterRead"
           @oversize="showToast(t('review.imageSize'))"
         />

@@ -13,6 +13,11 @@ import {
 import { useLocaleText } from '../composables/useLocaleText'
 import { ApiError } from '../api/client'
 import { assetUrl } from '../utils/assetUrl'
+import {
+  H5_IMAGE_MAX_UPLOAD_BYTES,
+  H5ImageTooLargeError,
+  prepareH5UploadImage,
+} from '../utils/h5ImageUpload'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -59,20 +64,22 @@ async function afterRead(item: UploaderFileListItem | UploaderFileListItem[]) {
   for (const entry of list) {
     const file = entry.file
     if (!file) continue
-    if (file.size > 1024 * 1024) {
-      showToast(t('fulfill.evidenceSize'))
-      fileList.value = fileList.value.filter((f) => f !== entry)
-      continue
-    }
     entry.status = 'uploading'
     try {
-      const data = await uploadAftersaleEvidence(file)
+      const prepared = await prepareH5UploadImage(file)
+      const data = await uploadAftersaleEvidence(prepared)
       entry.url = assetUrl(data.url)
       entry.status = 'done'
       ;(entry as UploaderFileListItem & { remoteUrl?: string }).remoteUrl = data.url
     } catch (error) {
       entry.status = 'failed'
-      showToast(error instanceof Error ? error.message : t('fulfill.evidenceFail'))
+      showToast(
+        error instanceof H5ImageTooLargeError
+          ? t('fulfill.evidenceSize')
+          : error instanceof Error
+            ? error.message
+            : t('fulfill.evidenceFail'),
+      )
       fileList.value = fileList.value.filter((f) => f !== entry)
     }
   }
@@ -186,7 +193,7 @@ async function submit() {
         <van-uploader
           v-model="fileList"
           :max-count="3"
-          :max-size="1024 * 1024"
+          :max-size="H5_IMAGE_MAX_UPLOAD_BYTES"
           accept="image/jpeg,image/png,image/webp"
           :after-read="afterRead"
           @oversize="showToast(t('fulfill.evidenceSize'))"
