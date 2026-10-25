@@ -311,7 +311,16 @@ async function sendChat() {
           <time v-if="m.created_at">{{ m.created_at }}</time>
         </li>
       </ul>
-      <button type="button" class="chat-btn" @click="openChat">【{{ t('orders.chatAction') }}】</button>
+      <van-button
+        class="chat-btn"
+        block
+        round
+        plain
+        type="primary"
+        @click="openChat"
+      >
+        {{ t('orders.chatAction') }}
+      </van-button>
     </section>
 
     <div class="actions">
@@ -633,16 +642,7 @@ async function sendChat() {
   color: #bbb;
 }
 .chat-btn {
-  display: block;
-  width: 100%;
   margin-top: 0.85rem;
-  border: 0;
-  background: transparent;
-  color: var(--sm-primary);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  padding: 0.5rem;
-  text-align: center;
 }
 .popup-title {
   margin: 0 0 0.75rem;
