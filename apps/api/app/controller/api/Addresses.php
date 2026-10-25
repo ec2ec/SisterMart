@@ -21,6 +21,7 @@ class Addresses extends ApiController
             'items' => (new AddressService())->list($this->memberId()),
             'regions' => AddressService::REGIONS,
             'districts_by_region' => AddressService::DISTRICTS_BY_REGION,
+            'areas_by_district' => AddressService::AREAS_BY_DISTRICT,
         ]);
     }
 

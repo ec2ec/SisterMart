@@ -155,6 +155,7 @@ async function sendChat() {
             String((order.address as any).district || ''),
             String((order.address as any).detail || ''),
             uiLocale,
+            String((order.address as any).area || ''),
           )
         }}
       </p>
