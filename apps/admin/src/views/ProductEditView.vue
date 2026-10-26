@@ -217,12 +217,20 @@ async function save() {
     skus: prepared.skus,
   }
   if (isNew.value) {
-    await api('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(body) }, true)
-  } else {
-    await api(`/api/v1/admin/products/${route.params.id}`, { method: 'PUT', body: JSON.stringify(body) }, true)
+    const saved = await api<{ db_id: number }>(
+      '/api/v1/admin/products',
+      { method: 'POST', body: JSON.stringify(body) },
+      true,
+    )
+    message.success('商品已保存')
+    // 新建後留在編輯頁（切到真實 id）
+    if (saved?.db_id) {
+      await router.replace(`/catalog/products/${saved.db_id}`)
+    }
+    return
   }
+  await api(`/api/v1/admin/products/${route.params.id}`, { method: 'PUT', body: JSON.stringify(body) }, true)
   message.success('商品已保存')
-  router.push('/catalog/products')
 }
 </script>
 
@@ -309,7 +317,7 @@ async function save() {
 
     <n-space style="margin-top: 1rem">
       <n-button type="primary" @click="save">保存</n-button>
-      <n-button @click="router.push('/catalog/products')">返回</n-button>
+      <n-button @click="router.push('/catalog/products')">返回列表</n-button>
     </n-space>
   </n-card>
 </template>

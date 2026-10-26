@@ -8,6 +8,7 @@ import {
   NSelect,
   NSpace,
   NSwitch,
+  useDialog,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
@@ -42,6 +43,7 @@ const emit = defineEmits<{
 }>()
 
 const message = useMessage()
+const dialog = useDialog()
 const templates = ref<
   Array<{
     id: number
@@ -143,8 +145,18 @@ function addGroup() {
 }
 
 function removeGroup(idx: number) {
-  const next = groupModel.value.filter((_, i) => i !== idx)
-  groupModel.value = next.length ? next : [emptyGroup(1)]
+  const g = groupModel.value[idx]
+  const label = g?.name?.['zh-HK'] || g?.code || `#${idx + 1}`
+  dialog.warning({
+    title: '確認刪除規格組',
+    content: `確定刪除規格組「${label}」及其全部選項？刪後請重新生成 SKU。`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      const next = groupModel.value.filter((_, i) => i !== idx)
+      groupModel.value = next.length ? next : [emptyGroup(1)]
+    },
+  })
 }
 
 function addOption(gIdx: number) {
@@ -157,12 +169,22 @@ function addOption(gIdx: number) {
 }
 
 function removeOption(gIdx: number, oIdx: number) {
-  const groups = groupModel.value.map((x, i) => {
-    if (i !== gIdx) return x
-    const options = x.options.filter((_, j) => j !== oIdx)
-    return { ...x, options: options.length ? options : [emptyOption(1)] }
+  const o = groupModel.value[gIdx]?.options?.[oIdx]
+  const label = o?.name?.['zh-HK'] || o?.code || `#${oIdx + 1}`
+  dialog.warning({
+    title: '確認刪除選項',
+    content: `確定刪除選項「${label}」？刪後請重新生成 SKU。`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      const groups = groupModel.value.map((x, i) => {
+        if (i !== gIdx) return x
+        const options = x.options.filter((_, j) => j !== oIdx)
+        return { ...x, options: options.length ? options : [emptyOption(1)] }
+      })
+      groupModel.value = groups
+    },
   })
-  groupModel.value = groups
 }
 
 function normalizeGroups(): SpecGroupDraft[] | null {
@@ -321,7 +343,17 @@ function removeSku(idx: number) {
     message.warning('至少保留一個 SKU')
     return
   }
-  skuModel.value = skuModel.value.filter((_, i) => i !== idx)
+  const s = skuModel.value[idx]
+  const label = skuLabel(s) || s?.code || `#${idx + 1}`
+  dialog.warning({
+    title: '確認刪除 SKU',
+    content: `確定刪除 SKU「${label}」？`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      skuModel.value = skuModel.value.filter((_, i) => i !== idx)
+    },
+  })
 }
 
 function skuLabel(s: SkuDraft) {
