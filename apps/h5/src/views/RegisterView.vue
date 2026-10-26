@@ -77,6 +77,10 @@ function openArticle(id: string) {
   router.push({ name: 'article', params: { id } })
 }
 
+function backToLogin() {
+  void router.replace({ name: 'login', query: authQuery(route.query) })
+}
+
 function remindAgree() {
   showToast(t('auth.needAgree'))
   shakeAgreeRow(agreeRow)
@@ -182,7 +186,12 @@ async function submit() {
 </script>
 
 <template>
-  <AuthLayout :title="registrationOpen || !statusLoaded ? t('auth.registerTitle') : t('auth.register')">
+  <AuthLayout
+    :title="registrationOpen || !statusLoaded ? t('auth.registerTitle') : t('auth.register')"
+    show-back
+    show-locale
+    @back="backToLogin"
+  >
     <template v-if="!statusLoaded" />
     <template v-else-if="!registrationOpen">
       <div class="closed-illu" aria-hidden="true">

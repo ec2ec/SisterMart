@@ -16,7 +16,7 @@ import {
   markPostAuthBack,
   useCooldown,
 } from '../composables/useAuth'
-import { loggedInAuthBouncePath } from '../composables/useNavBack'
+import { loggedInAuthBouncePath, useNavBack } from '../composables/useNavBack'
 import { shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { useMaintenance } from '../composables/useMaintenance'
 import { setSession, type Member } from '../composables/useSession'
@@ -26,6 +26,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { refresh: refreshMaintenance } = useMaintenance()
+const { goBack } = useNavBack('/')
 
 const mode = ref<'email' | 'phone'>('email')
 const email = ref('')
@@ -144,7 +145,13 @@ async function submit() {
 </script>
 
 <template>
-  <AuthLayout :title="t('auth.loginTitle')" :hint="hint">
+  <AuthLayout
+    :title="t('auth.loginTitle')"
+    :hint="hint"
+    show-back
+    show-locale
+    @back="goBack"
+  >
     <div class="seg">
       <button type="button" :class="{ on: mode === 'email' }" @click="switchMode('email')">
         {{ t('auth.emailTab') }}
