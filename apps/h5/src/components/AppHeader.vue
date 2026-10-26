@@ -3,6 +3,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toggleLocale } from '../i18n'
+import { goLogin } from '../composables/useAuth'
 import { clearFavorites, favoriteCount, hydrateFavorites } from '../composables/useFavorites'
 import { loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { refreshUnread, unreadCount } from '../composables/useUnread'
@@ -40,7 +41,7 @@ function goSearch() {
 function goWishlist() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    router.push({ name: 'login', query: { redirect: '/wishlist' } })
+    void goLogin(router, '/wishlist')
     return
   }
   router.push({ name: 'wishlist' })
@@ -49,7 +50,7 @@ function goWishlist() {
 function goMessages() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    router.push({ name: 'login', query: { redirect: '/messages' } })
+    void goLogin(router, '/messages')
     return
   }
   router.push({ name: 'messages' })

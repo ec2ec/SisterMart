@@ -7,6 +7,7 @@ import SubPageNav from '../components/SubPageNav.vue'
 import { createOrder, fetchAddresses, quoteCheckout, type Address, type Quote } from '../api/trade'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { useLocaleText } from '../composables/useLocaleText'
+import { goLogin } from '../composables/useAuth'
 import { isLoggedIn } from '../composables/useSession'
 import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
 
@@ -73,7 +74,7 @@ async function refreshQuote() {
 
 onMounted(async () => {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: route.fullPath } })
+    void goLogin(router, route.fullPath, { replace: true })
     return
   }
   if (route.query.points_mall_item_id) {

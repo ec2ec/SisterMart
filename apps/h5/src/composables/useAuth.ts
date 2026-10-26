@@ -1,6 +1,15 @@
 import { onUnmounted, ref, type Ref } from 'vue'
-import type { LocationQuery } from 'vue-router'
+import type { LocationQuery, Router } from 'vue-router'
 import { ApiError } from '../api/client'
+
+/** 認證流程頁：不應作為業務頁「返回」落點 */
+export const AUTH_ROUTE_NAMES = new Set(['login', 'register', 'forgot'])
+
+const POST_AUTH_BACK_KEY = 'sm_post_auth_back'
+
+export function isAuthRouteName(name: unknown) {
+  return typeof name === 'string' && AUTH_ROUTE_NAMES.has(name)
+}
 
 const authCodes: Record<string, string> = {
   NEED_AGREE: 'auth.needAgree',
@@ -89,4 +98,50 @@ export function authQuery(query: LocationQuery) {
 
 export function afterAuthPath(query: LocationQuery) {
   return internalPath(query.redirect) ? String(query.redirect) : '/'
+}
+
+/**
+ * 未登錄跳轉登錄頁。
+ * - replace=true：當前頁本身需要登錄（wishlist 等），用 replace 避免棧裡多一層空頁
+ * - replace=false：從公開頁打斷（頂欄心願、帳戶入口），push 保留來源頁
+ */
+export function goLogin(
+  router: Router,
+  redirect: string,
+  opts: { replace?: boolean } = {},
+) {
+  const path = internalPath(redirect) ? redirect : '/'
+  const loc = { name: 'login' as const, query: { redirect: path } }
+  if (opts.replace) return router.replace(loc)
+  return router.push(loc)
+}
+
+/** 登錄／註冊成功後打標：目標頁第一次點返回應跳過認證頁，回到業務來源（默認首頁） */
+export function markPostAuthBack(fallback = '/') {
+  try {
+    const fb = internalPath(fallback) ? fallback : '/'
+    sessionStorage.setItem(POST_AUTH_BACK_KEY, fb)
+  } catch {
+    /* private mode */
+  }
+}
+
+/** SubPageNav 等：若剛從認證流進來，消費標記並返回 fallback；否則 null 表示走普通 back */
+export function consumePostAuthBack(): string | null {
+  try {
+    const v = sessionStorage.getItem(POST_AUTH_BACK_KEY)
+    if (!v) return null
+    sessionStorage.removeItem(POST_AUTH_BACK_KEY)
+    return internalPath(v) ? v : '/'
+  } catch {
+    return null
+  }
+}
+
+export function clearPostAuthBack() {
+  try {
+    sessionStorage.removeItem(POST_AUTH_BACK_KEY)
+  } catch {
+    /* private mode */
+  }
 }

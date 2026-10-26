@@ -42,8 +42,14 @@ import DistWithdrawView from '../views/DistWithdrawView.vue'
 import DistPosterView from '../views/DistPosterView.vue'
 import DistRankingView from '../views/DistRankingView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import { isAuthRouteName } from '../composables/useAuth'
+import { loggedInAuthBouncePath, rememberLastTabName } from '../composables/useNavBack'
 import { captureRefFromQuery } from '../composables/useReferral'
-import { rememberTabScrollBeforeOverlay, TAB_ROUTE_NAMES } from '../composables/useTabShell'
+import {
+  isTabRouteName,
+  rememberTabScrollBeforeOverlay,
+  TAB_ROUTE_NAMES,
+} from '../composables/useTabShell'
 
 export { TAB_ROUTE_NAMES }
 
@@ -120,4 +126,11 @@ export const router = createRouter({
 router.beforeEach((to, from) => {
   captureRefFromQuery(to.query.ref)
   rememberTabScrollBeforeOverlay(Boolean(to.meta.overlay), Boolean(from.meta.overlay), from.name)
+  if (isTabRouteName(from.name)) rememberLastTabName(from.name)
+  if (isTabRouteName(to.name)) rememberLastTabName(to.name)
+
+  // 已登錄不應停在登錄／註冊／找回（含業務頁返回鍵退回認證頁）
+  if (isAuthRouteName(to.name) && localStorage.getItem('sm_token')) {
+    return { path: loggedInAuthBouncePath(), replace: true }
+  }
 })

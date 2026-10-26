@@ -1,7 +1,9 @@
 import { computed, reactive } from 'vue'
+import type { Router } from 'vue-router'
 import { showToast } from 'vant'
 import { api } from '../api/client'
 import { i18n } from '../i18n'
+import { goLogin } from './useAuth'
 
 const PENDING = 'sm_pending_fav'
 const STORE = 'sm_favorites'
@@ -120,14 +122,10 @@ async function setFavoriteRemote(id: string, want: boolean) {
   return false
 }
 
-export async function requestFavorite(
-  id: string,
-  redirect: string,
-  push: (to: { name: string; query: Record<string, string> }) => void,
-) {
+export async function requestFavorite(id: string, redirect: string, router: Router) {
   if (!hasToken()) {
     sessionStorage.setItem(PENDING, id)
-    push({ name: 'login', query: { redirect } })
+    void goLogin(router, redirect)
     return
   }
   const next = !liked[id]

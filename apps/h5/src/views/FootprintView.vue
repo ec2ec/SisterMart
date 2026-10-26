@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -21,7 +22,7 @@ const loadError = ref('')
 async function load() {
   syncSessionFromStorage()
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: '/footprint' } })
+    void goLogin(router, '/footprint', { replace: true })
     return
   }
   loadError.value = ''

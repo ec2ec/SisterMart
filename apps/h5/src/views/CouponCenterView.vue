@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -42,7 +43,7 @@ onMounted(load)
 
 async function claim(row: Item) {
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/coupons' } })
+    void goLogin(router, '/coupons')
     return
   }
   try {
