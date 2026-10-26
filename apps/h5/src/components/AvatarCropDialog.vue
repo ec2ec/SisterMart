@@ -186,7 +186,13 @@ onBeforeUnmount(reset)
 </script>
 
 <template>
-  <van-popup :show="show" position="bottom" round @update:show="emit('update:show', $event)">
+  <van-popup
+    :show="show"
+    position="bottom"
+    round
+    teleport="body"
+    @update:show="emit('update:show', $event)"
+  >
     <div class="sheet">
       <h3>{{ t('account.avatarTitle') }}</h3>
       <input ref="inputRef" type="file" accept="image/*" hidden @change="onFile" />

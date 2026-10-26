@@ -411,40 +411,25 @@ function goOrders(tab?: string) {
   --ac-soft: #6b6574;
   --ac-card-shadow: 0 0.25rem 0.9rem rgba(160, 130, 210, 0.22);
   position: relative;
-  isolation: isolate;
-  overflow: hidden;
   color: var(--ac-ink);
-  background: linear-gradient(
-    165deg,
-    #f46ca9 10%,
-    #f0d8ee 28%,
-    #e4daf6 55%,
-    #7dbaf7 82%,
-    #407cfb 100%
-  );
-}
-
-.account-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+  /* 柔光併入背景，避免 ::before + filter 在部分 WebKit 上擋住點擊 */
   background:
-    radial-gradient(circle at 92% -4%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 182, 212, 0.35) 42%, transparent 68%),
-    radial-gradient(circle at -8% 32%, rgba(255, 255, 255, 0.85) 0%, rgba(210, 190, 255, 0.4) 45%, transparent 70%),
-    radial-gradient(circle at 108% 88%, rgba(255, 255, 255, 0.8) 0%, rgba(180, 220, 255, 0.45) 48%, transparent 72%);
-  filter: blur(0.5rem);
-  opacity: 0.9;
-}
-
-.account-page > * {
-  position: relative;
-  z-index: 1;
+    radial-gradient(circle at 92% -4%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 182, 212, 0.28) 42%, transparent 68%),
+    radial-gradient(circle at -8% 32%, rgba(255, 255, 255, 0.45) 0%, rgba(210, 190, 255, 0.28) 45%, transparent 70%),
+    radial-gradient(circle at 108% 88%, rgba(255, 255, 255, 0.4) 0%, rgba(180, 220, 255, 0.32) 48%, transparent 72%),
+    linear-gradient(
+      165deg,
+      #f46ca9 10%,
+      #f0d8ee 28%,
+      #e4daf6 55%,
+      #7dbaf7 82%,
+      #407cfb 100%
+    );
 }
 
 .hero {
   position: relative;
+  z-index: 1;
   padding: 1.25rem 1rem 0.875rem;
   background: transparent;
 }
@@ -456,6 +441,8 @@ function goOrders(tab?: string) {
 }
 
 .avatar {
+  position: relative;
+  z-index: 2;
   width: 3.625rem;
   height: 3.625rem;
   border: 0.0625rem solid rgba(120, 90, 160, 0.18);
@@ -470,6 +457,9 @@ function goOrders(tab?: string) {
   box-shadow: var(--ac-card-shadow);
   overflow: hidden;
   flex-shrink: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .avatar img {

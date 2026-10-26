@@ -51,7 +51,13 @@ function openEmail() {
 </script>
 
 <template>
-  <van-popup v-model:show="show" position="bottom" round :style="{ padding: '1.25rem 1rem 1.5rem' }">
+  <van-popup
+    v-model:show="show"
+    position="bottom"
+    round
+    teleport="body"
+    :style="{ padding: '1.25rem 1rem 1.5rem' }"
+  >
     <h2 class="title">{{ t('account.support') }}</h2>
     <p class="lead">{{ t('account.supportLead') }}</p>
 
