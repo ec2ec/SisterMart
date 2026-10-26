@@ -419,20 +419,82 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
     </div>
 
     <h4 class="sub">SKU 列表（{{ skuModel.length }}）</h4>
-    <div v-for="(s, sIdx) in skuModel" :key="sIdx" class="sku-row">
-      <span class="sku-lab" :title="s.option_refs.join(', ')">{{ skuLabel(s) }}</span>
-      <n-input v-model:value="s.code" placeholder="代碼" style="width: 7rem" />
-      <n-input-number v-model:value="s.price" placeholder="售價" style="width: 6.5rem" />
-      <n-input-number v-model:value="s.compare_at" placeholder="劃線" style="width: 6.5rem" />
-      <n-input-number v-model:value="s.agent_price" placeholder="代理" :min="0" style="width: 6.5rem" />
-      <n-input-number v-model:value="s.cost_price" placeholder="成本" :min="0" style="width: 6.5rem" />
-      <n-input-number v-model:value="s.stock" placeholder="庫存" :min="0" style="width: 5.5rem" />
-      <n-switch
-        :value="s.status !== 0"
-        size="small"
-        @update:value="(v) => (s.status = v ? 1 : 0)"
-      />
-      <n-button size="tiny" @click="removeSku(sIdx)">刪</n-button>
+    <p class="hint sku-hint">
+      每一行 = 一組規格選項的可賣組合；「規格組合」對應上方規格組選項，「規格引用」是保存用的組:選項代碼。
+    </p>
+    <div class="table-wrap">
+      <table class="sku-table">
+        <thead>
+          <tr>
+            <th class="col-combo">規格組合</th>
+            <th class="col-refs">規格引用</th>
+            <th>SKU 代碼</th>
+            <th>售價</th>
+            <th>劃線價</th>
+            <th>代理價</th>
+            <th>成本價</th>
+            <th>庫存</th>
+            <th>啟用</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(s, sIdx) in skuModel" :key="sIdx">
+            <td class="col-combo">
+              <strong>{{ skuLabel(s) }}</strong>
+            </td>
+            <td class="col-refs">
+              <code v-for="(ref, ri) in s.option_refs" :key="ri" class="ref-chip">{{ ref }}</code>
+            </td>
+            <td>
+              <n-input v-model:value="s.code" placeholder="代碼" size="small" style="width: 7.5rem" />
+            </td>
+            <td>
+              <n-input-number v-model:value="s.price" size="small" :show-button="false" style="width: 5.5rem" />
+            </td>
+            <td>
+              <n-input-number v-model:value="s.compare_at" size="small" :show-button="false" style="width: 5.5rem" />
+            </td>
+            <td>
+              <n-input-number
+                v-model:value="s.agent_price"
+                size="small"
+                :min="0"
+                :show-button="false"
+                style="width: 5.5rem"
+              />
+            </td>
+            <td>
+              <n-input-number
+                v-model:value="s.cost_price"
+                size="small"
+                :min="0"
+                :show-button="false"
+                style="width: 5.5rem"
+              />
+            </td>
+            <td>
+              <n-input-number
+                v-model:value="s.stock"
+                size="small"
+                :min="0"
+                :show-button="false"
+                style="width: 4.5rem"
+              />
+            </td>
+            <td>
+              <n-switch
+                :value="s.status !== 0"
+                size="small"
+                @update:value="(v) => (s.status = v ? 1 : 0)"
+              />
+            </td>
+            <td>
+              <n-button size="tiny" @click="removeSku(sIdx)">刪</n-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </n-card>
 </template>
@@ -442,6 +504,9 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   margin: 0 0 0.75rem;
   color: #6d675f;
   font-size: 0.8125rem;
+}
+.sku-hint {
+  margin-top: -0.25rem;
 }
 .group-block {
   border: 1px solid #eee;
@@ -456,21 +521,57 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   align-items: center;
   margin-bottom: 0.5rem;
 }
-.opt-row,
-.sku-row {
+.opt-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.4rem;
 }
-.sku-lab {
-  min-width: 6rem;
-  font-size: 0.8125rem;
-  color: #444;
-}
 .sub {
   margin: 0.5rem 0 0.75rem;
   font-size: 0.9375rem;
+}
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 0.25rem;
+}
+.sku-table {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+  background: #fff;
+}
+.sku-table th,
+.sku-table td {
+  border-bottom: 1px solid #eee;
+  padding: 0.45rem 0.4rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+}
+.sku-table th {
+  color: #6d675f;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #fafaf8;
+}
+.col-combo {
+  min-width: 6.5rem;
+  white-space: nowrap;
+}
+.col-refs {
+  min-width: 9rem;
+}
+.ref-chip {
+  display: inline-block;
+  margin: 0.1rem 0.25rem 0.1rem 0;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: #f3f0ea;
+  color: #5a554c;
+  font-size: 0.6875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 </style>
