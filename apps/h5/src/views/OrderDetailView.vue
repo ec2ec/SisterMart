@@ -586,14 +586,23 @@ async function sendChat() {
 }
 .chat-legend em {
   font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.chat-legend .seller::before,
+.chat-legend .buyer::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex: none;
 }
 .chat-legend .seller::before {
-  content: '· ';
-  color: #5b7cfa;
+  background: #5b7cfa;
 }
 .chat-legend .buyer::before {
-  content: '· ';
-  color: #e85d8e;
+  background: #e85d8e;
 }
 .chat-empty {
   margin: 0.5rem 0 0.75rem;
