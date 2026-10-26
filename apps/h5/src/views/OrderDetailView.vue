@@ -90,6 +90,10 @@ const promoDiscount = computed(() => {
 
 const couponAmount = computed(() => Number(order.value?.coupon_amount ?? 0))
 
+const reviewedItems = computed(() =>
+  (order.value?.items || []).filter((item) => item.review),
+)
+
 function itemCompareAt(item: NonNullable<Order['items']>[number]) {
   const compare = Number(item.compare_at ?? 0)
   return compare > item.unit_price ? compare : 0
@@ -142,13 +146,21 @@ async function sendChat() {
 </script>
 
 <template>
-  <div class="page" v-if="order">
+  <div class="page page--soft" v-if="order">
     <SubPageNav :title="t('orders.detail')" />
-    <section class="card">
-      <p>{{ order.order_no }}</p>
-      <h2>{{ t(statusMap[order.status] || order.status) }}</h2>
-      <p v-if="order.address">
-        {{ (order.address as any).receiver }} {{ (order.address as any).phone }}<br />
+
+    <section class="card status-card">
+      <p class="order-no">{{ order.order_no }}</p>
+      <h2 class="status">{{ t(statusMap[order.status] || order.status) }}</h2>
+    </section>
+
+    <section v-if="order.address" class="card">
+      <h3 class="sec-title">{{ t('orders.sectionShip') }}</h3>
+      <p class="ship-line">
+        <strong>{{ (order.address as any).receiver }}</strong>
+        <span>{{ (order.address as any).phone }}</span>
+      </p>
+      <p class="ship-addr">
         {{
           formatHkAddressLine(
             String((order.address as any).region || ''),
@@ -160,53 +172,22 @@ async function sendChat() {
         }}
       </p>
     </section>
+
     <section v-if="order.remark" class="card remark">
-      <h3>{{ t('checkout.remark') }}</h3>
+      <h3 class="sec-title">{{ t('checkout.remark') }}</h3>
       <p>{{ order.remark }}</p>
     </section>
+
     <section class="card">
+      <h3 class="sec-title">{{ t('orders.sectionItems') }}</h3>
       <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
-        <img :src="item.image" alt="" />
+        <img :src="assetUrl(item.image)" alt="" />
         <div class="meta">
-          <h3>{{ text(item.name) }}</h3>
+          <h4>{{ text(item.name) }}</h4>
           <p>{{ text(item.spec) }} × {{ item.qty }}</p>
           <div class="prices">
             <strong class="sale">HK$ {{ item.unit_price.toFixed(2) }}</strong>
             <s v-if="itemCompareAt(item)" class="origin">HK$ {{ itemCompareAt(item).toFixed(2) }}</s>
-          </div>
-          <div v-if="item.review" class="item-review">
-            <div class="rev-head">
-              <span class="rev-lab">{{ t('review.myReview') }}</span>
-              <span class="rev-stars" aria-hidden="true">
-                {{ '★'.repeat(item.review.stars) }}{{ '☆'.repeat(Math.max(0, 5 - item.review.stars)) }}
-              </span>
-              <span
-                v-if="item.review.moderation_status && item.review.moderation_status !== 'approved'"
-                class="rev-mod"
-              >
-                {{
-                  item.review.moderation_status === 'rejected' ? t('review.rejected') : t('review.pending')
-                }}
-              </span>
-            </div>
-            <p v-if="item.review.body" class="rev-body">{{ item.review.body }}</p>
-            <div v-if="item.review.images?.length" class="rev-imgs">
-              <button
-                v-for="(img, i) in item.review.images"
-                :key="i"
-                type="button"
-                class="rev-img"
-                @click="previewImages(item.review.images, i)"
-              >
-                <img :src="assetUrl(img)" alt="" />
-              </button>
-            </div>
-            <p v-if="item.review.follow" class="rev-follow">
-              <em>{{ t('review.followLabel') }}</em>{{ item.review.follow }}
-            </p>
-            <p v-if="item.review.reply" class="rev-reply">
-              <em>{{ t('review.replyLabel') }}</em>{{ item.review.reply }}
-            </p>
           </div>
           <div v-if="item.can_review || item.can_follow" class="item-actions">
             <van-button
@@ -236,8 +217,9 @@ async function sendChat() {
         </div>
       </div>
     </section>
+
     <section v-if="(order.aftersales || []).length" class="card aftersales">
-      <h3>{{ t('fulfill.records') }}</h3>
+      <h3 class="sec-title">{{ t('fulfill.records') }}</h3>
       <button
         v-for="as in order.aftersales"
         :key="as.id"
@@ -269,6 +251,7 @@ async function sendChat() {
     </section>
 
     <section class="card sum">
+      <h3 class="sec-title">{{ t('orders.sectionAmount') }}</h3>
       <p>
         <span>{{ t('checkout.goods') }}</span>
         <em>HK$ {{ order.goods_amount.toFixed(2) }}</em>
@@ -299,9 +282,65 @@ async function sendChat() {
       </p>
     </section>
 
+    <section v-if="reviewedItems.length" class="card reviews">
+      <h3 class="sec-title">{{ t('orders.sectionReviews') }}</h3>
+      <div v-for="item in reviewedItems" :key="item.id" class="rev-block">
+        <div class="rev-product">
+          <img :src="assetUrl(item.image)" alt="" />
+          <div>
+            <strong>{{ text(item.name) }}</strong>
+            <p v-if="text(item.spec)">{{ text(item.spec) }}</p>
+          </div>
+        </div>
+        <div class="rev-head">
+          <span class="rev-stars" aria-hidden="true">
+            {{ '★'.repeat(item.review!.stars) }}{{ '☆'.repeat(Math.max(0, 5 - item.review!.stars)) }}
+          </span>
+          <span
+            v-if="item.review!.moderation_status && item.review!.moderation_status !== 'approved'"
+            class="rev-mod"
+          >
+            {{
+              item.review!.moderation_status === 'rejected' ? t('review.rejected') : t('review.pending')
+            }}
+          </span>
+        </div>
+        <p v-if="item.review!.body" class="rev-body">{{ item.review!.body }}</p>
+        <div v-if="item.review!.images?.length" class="rev-imgs">
+          <button
+            v-for="(img, i) in item.review!.images"
+            :key="i"
+            type="button"
+            class="rev-img"
+            @click="previewImages(item.review!.images!, i)"
+          >
+            <img :src="assetUrl(img)" alt="" />
+          </button>
+        </div>
+        <p v-if="item.review!.follow" class="rev-follow">
+          <em>{{ t('review.followLabel') }}</em>{{ item.review!.follow }}
+        </p>
+        <p v-if="item.review!.reply" class="rev-reply">
+          <em>{{ t('review.replyLabel') }}</em>{{ item.review!.reply }}
+        </p>
+        <div v-if="item.can_follow" class="item-actions">
+          <van-button
+            size="mini"
+            plain
+            round
+            @click="
+              router.push({ name: 'order-review', params: { id: order.id }, query: { item: String(item.id) } })
+            "
+          >
+            {{ t('review.goFollow') }}
+          </van-button>
+        </div>
+      </div>
+    </section>
+
     <section class="card chat">
       <div class="chat-head">
-        <h3>{{ t('orders.chatTitle') }}</h3>
+        <h3 class="sec-title">{{ t('orders.chatTitle') }}</h3>
         <span class="chat-legend">
           <em class="seller">{{ t('orders.chatSeller') }}</em>
           <em class="buyer">{{ t('orders.chatBuyer') }}</em>
@@ -406,16 +445,56 @@ async function sendChat() {
 
 <style scoped>
 .card {
-  margin: 0.75rem;
-  padding: 0.875rem;
+  margin: 0.65rem 0.75rem;
+  padding: 0.9rem 0.875rem;
   background: #fff;
   border-radius: 0.75rem;
+  box-shadow: 0 0.06rem 0.2rem rgba(22, 22, 43, 0.04);
 }
-.remark h3 {
-  margin: 0 0 0.35rem;
+.sec-title {
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #f0ebe4;
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: 0.01em;
+}
+.status-card {
+  text-align: left;
+}
+.order-no {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #999;
+}
+.status {
+  margin: 0.35rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #16162b;
+  letter-spacing: -0.02em;
+}
+.ship-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+.ship-line strong {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.ship-line span {
+  color: #666;
+}
+.ship-addr {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #666;
 }
 .remark p {
   margin: 0;
@@ -429,24 +508,62 @@ async function sendChat() {
   display: grid;
   grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #f5f1ea;
+}
+.line:first-of-type {
+  padding-top: 0;
 }
 .line:last-child {
-  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 .line img {
   width: 4rem;
   height: 4rem;
   object-fit: cover;
   border-radius: 0.5rem;
+  background: #f5f2ec;
 }
 .item-actions {
-  margin-top: 0.35rem;
+  margin-top: 0.4rem;
 }
-.item-review {
-  margin-top: 0.55rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed #efeae3;
+.reviews .rev-block {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0ebe4;
+}
+.reviews .rev-block:first-of-type {
+  padding-top: 0;
+}
+.reviews .rev-block:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.rev-product {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.rev-product img {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: cover;
+  border-radius: 0.4rem;
+  background: #f5f2ec;
+}
+.rev-product strong {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #333;
+}
+.rev-product p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #999;
 }
 .rev-head {
   display: flex;
@@ -454,15 +571,10 @@ async function sendChat() {
   align-items: center;
   gap: 0.35rem 0.5rem;
 }
-.rev-lab {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #666;
-}
 .rev-stars {
   color: #f59a23;
   letter-spacing: 0.05em;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1;
 }
 .rev-mod {
@@ -475,7 +587,7 @@ async function sendChat() {
 .rev-body,
 .rev-follow,
 .rev-reply {
-  margin: 0.35rem 0 0;
+  margin: 0.4rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.45;
   color: #444;
@@ -492,7 +604,7 @@ async function sendChat() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  margin-top: 0.4rem;
+  margin-top: 0.45rem;
 }
 .rev-img {
   display: block;
@@ -503,8 +615,8 @@ async function sendChat() {
   line-height: 0;
 }
 .rev-img img {
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 3.5rem;
+  height: 3.5rem;
   object-fit: cover;
   border-radius: 0.35rem;
   background: #f5f2ec;
@@ -512,7 +624,7 @@ async function sendChat() {
 .meta {
   min-width: 0;
 }
-.meta h3 {
+.meta h4 {
   margin: 0 0 0.25rem;
   font-size: 0.95rem;
   font-weight: 600;
@@ -564,19 +676,20 @@ async function sendChat() {
   border-top: 1px solid #f0ebe4;
 }
 .sum .pay strong {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  color: #16162b;
 }
 .chat-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.65rem;
 }
-.chat-head h3 {
+.chat-head .sec-title {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 700;
+  padding: 0;
+  border: 0;
 }
 .chat-legend {
   display: flex;
