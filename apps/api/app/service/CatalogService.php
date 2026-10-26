@@ -334,9 +334,21 @@ class CatalogService
         if (!is_array($skus) || $skus === []) {
             throw new ApiException('INVALID', '請至少配置一個 SKU', 422, 42201);
         }
+        if (count($skus) > CatalogMetaService::MAX_SKUS) {
+            throw new ApiException('INVALID', 'SKU 最多 ' . CatalogMetaService::MAX_SKUS . ' 個', 422, 42201);
+        }
         $groups = $body['spec_groups'] ?? [];
         if (!is_array($groups) || $groups === []) {
             throw new ApiException('INVALID', '請配置規格', 422, 42201);
+        }
+        if (count($groups) > CatalogMetaService::MAX_SPEC_GROUPS) {
+            throw new ApiException('INVALID', '規格組最多 ' . CatalogMetaService::MAX_SPEC_GROUPS . ' 組', 422, 42201);
+        }
+        foreach ($groups as $group) {
+            $opts = is_array($group['options'] ?? null) ? $group['options'] : [];
+            if ($opts === []) {
+                throw new ApiException('INVALID', '規格組須至少一個選項', 422, 42201);
+            }
         }
 
         $now = date('Y-m-d H:i:s');
@@ -513,7 +525,7 @@ class CatalogService
                     'cost_price' => round((float) ($sku['cost_price'] ?? 0), 2),
                     'stock'      => max(0, (int) ($sku['stock'] ?? 0)),
                     'image_url'  => trim((string) ($sku['image'] ?? '')) ?: null,
-                    'status'     => 1,
+                    'status'     => (int) ($sku['status'] ?? 1) === 0 ? 0 : 1,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -641,7 +653,15 @@ class CatalogService
         foreach ($names as $n) {
             $name[$n['locale']] = $n['name'];
         }
-        $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
+        // 列表價：優先取「有標價」SKU 的最低價，避免大量 0 價占位 SKU 把展示價拉成 0
+        $price = (float) (Db::name('skus')
+            ->where('product_id', $row['id'])
+            ->where('status', 1)
+            ->where('price', '>', 0)
+            ->min('price') ?: 0);
+        if ($price <= 0) {
+            $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
+        }
         $stock = (int) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->sum('stock') ?: 0);
         $badgeItems = $this->presentBadgeItems((int) $row['id']);
         $badges = array_map(static fn ($b) => (string) $b['code'], $badgeItems);
@@ -847,7 +867,11 @@ class CatalogService
             ];
         }
 
-        $skus = Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->select()->toArray();
+        $skuQ = Db::name('skus')->where('product_id', $row['id']);
+        if (!$admin) {
+            $skuQ->where('status', 1);
+        }
+        $skus = $skuQ->select()->toArray();
         $skusOut = [];
         foreach ($skus as $sku) {
             $optionIds = Db::name('sku_options')->where('sku_id', $sku['id'])->column('spec_option_id');
@@ -865,16 +889,23 @@ class CatalogService
                     $selected[$opt['gcode']] = $opt['ocode'];
                 }
             }
+            // key = 規格組順序下的選項代碼，用 | 連接（與 H5 skuKey 一致），勿用 SKU 業務代碼
+            $keyParts = [];
+            foreach ($groupsOut as $g) {
+                $keyParts[] = (string) ($selected[$g['code']] ?? '');
+            }
+            $skuKey = implode('|', $keyParts);
             $skuRow = [
                 'id'          => (int) $sku['id'],
                 'code'        => (string) $sku['code'],
-                'key'         => (string) $sku['code'],
+                'key'         => $skuKey !== '' ? $skuKey : (string) $sku['code'],
                 'price'       => (float) $sku['price'],
                 'compare_at'  => (float) $sku['compare_at'],
                 'stock'       => (int) $sku['stock'],
                 'image'       => $sku['image_url'] ?: null,
                 'option_refs' => $refs,
                 'selected'    => $selected,
+                'status'      => (int) ($sku['status'] ?? 1),
             ];
             if ($admin) {
                 $skuRow['agent_price'] = (float) ($sku['agent_price'] ?? 0);

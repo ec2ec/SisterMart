@@ -47,7 +47,7 @@ onMounted(load)
 
 <template>
   <n-card title="規格管理">
-    <p class="hint">選擇商品後編輯其規格組與 SKU；商品編輯頁仍保留兩檔規格快捷編輯。</p>
+    <p class="hint">選擇商品進入商品編輯頁配置規格／SKU（可套用規格模板）。全局模板請到「規格模板」維護。</p>
     <div class="toolbar">
       <n-space>
         <n-input
@@ -88,7 +88,7 @@ onMounted(load)
           <td>{{ row.stock ?? 0 }}</td>
           <td>{{ row.status === 1 ? '上架' : '下架' }}</td>
           <td>
-            <n-button size="tiny" type="primary" @click="router.push(`/catalog/specs/${row.db_id}`)">
+            <n-button size="tiny" type="primary" @click="router.push(`/catalog/products/${row.db_id}`)">
               編輯規格
             </n-button>
           </td>

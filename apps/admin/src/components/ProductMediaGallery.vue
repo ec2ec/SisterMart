@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { NSpin, useMessage } from 'naive-ui'
+import { NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
 
@@ -27,6 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const message = useMessage()
+const dialog = useDialog()
 const inputRef = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 
@@ -51,9 +52,17 @@ function openPicker() {
 }
 
 function removeAt(idx: number) {
-  const next = items.value.slice()
-  next.splice(idx, 1)
-  items.value = next
+  dialog.warning({
+    title: '確認刪除圖片',
+    content: '確定從商品圖庫移除此圖？保存商品後才會生效。',
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      const next = items.value.slice()
+      next.splice(idx, 1)
+      items.value = next
+    },
+  })
 }
 
 function move(idx: number, delta: number) {

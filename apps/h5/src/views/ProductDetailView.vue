@@ -6,7 +6,7 @@ import { showDialog, showToast, type SwipeInstance } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
-import { fetchProduct, fetchProducts, skuKey, type ProductCard as Card, type ProductDetail } from '../api/catalog'
+import { fetchProduct, fetchProducts, findSku, type ProductCard as Card, type ProductDetail } from '../api/catalog'
 import { addCartItem } from '../api/trade'
 import { fetchSeckillProduct, postShareView } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
@@ -48,11 +48,6 @@ async function load() {
   product.value = await fetchProduct(id)
   const next: Record<string, string> = {}
   for (const group of product.value.spec_groups) next[group.id] = group.options[0]?.id || ''
-  // Prefer heart bracelet default red|16 if available
-  if (product.value.code === 'p4') {
-    next.color = 'red'
-    next.size = '16'
-  }
   selected.value = next
   slide.value = 0
   zooming.value = false
@@ -101,8 +96,7 @@ const detailHtml = computed(() => {
 
 const quote = computed(() => {
   if (!product.value) return null
-  const key = skuKey(selected.value, product.value.spec_groups)
-  return product.value.skus.find((sku) => sku.key === key || sku.code === key) || null
+  return findSku(product.value.skus, selected.value, product.value.spec_groups)
 })
 
 const price = computed(() =>
@@ -146,24 +140,6 @@ function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } 
   const fromI18n = t(key)
   return fromI18n !== key ? fromI18n : fromApi || item.code
 }
-
-const selectedImage = computed(() => {
-  if (!product.value) return ''
-  for (const group of product.value.spec_groups) {
-    const option = group.options.find((item) => item.id === selected.value[group.id])
-    if (option?.image) return assetUrl(option.image)
-  }
-  return assetUrl(quote.value?.image || '')
-})
-
-watch(selectedImage, (src) => {
-  if (!src) return
-  const index = gallery.value.indexOf(src)
-  if (index < 0 || index === slide.value) return
-  slide.value = index
-  // Vant 4 Swipe 無 v-model:active，需 swipeTo 同步輪播位置
-  nextTick(() => gallerySwipe.value?.swipeTo(index))
-})
 
 function onGalleryChange(index: number) {
   slide.value = index
@@ -614,7 +590,8 @@ h1 {
 }
 .sku button.on {
   border-color: #16162b;
-  color: #16162b;
+  background: #16162b;
+  color: #fff;
 }
 h2 {
   margin: 1rem 0 0.5rem;
