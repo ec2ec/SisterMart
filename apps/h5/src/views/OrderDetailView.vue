@@ -146,10 +146,10 @@ async function sendChat() {
 </script>
 
 <template>
-  <div class="page page--soft" v-if="order">
+  <div class="page order-detail" v-if="order">
     <SubPageNav :title="t('orders.detail')" />
 
-    <section class="card status-card">
+    <section class="status-card">
       <p class="order-no">{{ order.order_no }}</p>
       <h2 class="status">{{ t(statusMap[order.status] || order.status) }}</h2>
     </section>
@@ -444,36 +444,71 @@ async function sendChat() {
 </template>
 
 <style scoped>
+/* 配色對齊帳戶頁：深紫漸變底 + 白卡片（僅本頁，不改 Tab） */
+.order-detail {
+  --od-accent: #7d5bb6;
+  --od-accent-soft: #b794f6;
+  --od-ink: #111111;
+  --od-muted: #757575;
+  --od-line: #eee8f5;
+  --od-card: #ffffff;
+  min-height: 100%;
+  padding-bottom: 1.25rem;
+  background:
+    radial-gradient(ellipse 80% 50% at 85% -5%, rgba(183, 148, 246, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 10% 8%, rgba(125, 91, 182, 0.4) 0%, transparent 50%),
+    linear-gradient(165deg, #4a2d7a 0%, #2a1848 42%, #1a0f2e 72%, #120a22 100%);
+  color: var(--od-ink);
+}
+
+.order-detail :deep(.sub-nav.van-nav-bar),
+.order-detail :deep(.van-nav-bar) {
+  background: transparent;
+}
+.order-detail :deep(.van-nav-bar__placeholder) {
+  background: transparent;
+}
+.order-detail :deep(.van-nav-bar__title),
+.order-detail :deep(.van-nav-bar .van-icon),
+.order-detail :deep(.van-nav-bar__text) {
+  color: #fff;
+}
+
 .card {
   margin: 0.65rem 0.75rem;
   padding: 0.9rem 0.875rem;
-  background: #fff;
-  border-radius: 0.75rem;
-  box-shadow: 0 0.06rem 0.2rem rgba(22, 22, 43, 0.04);
+  background: var(--od-card);
+  border-radius: 1rem;
+  box-shadow: 0 0.35rem 1.1rem rgba(18, 10, 34, 0.18);
 }
 .sec-title {
   margin: 0 0 0.7rem;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid #f0ebe4;
+  border-bottom: 1px solid var(--od-line);
   font-size: 0.875rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--od-ink);
   letter-spacing: 0.01em;
 }
 .status-card {
+  margin: 0.15rem 0.9rem 0.85rem;
+  padding: 0.25rem 0.15rem 0.5rem;
   text-align: left;
+  background: transparent;
+  box-shadow: none;
 }
 .order-no {
   margin: 0;
   font-size: 0.75rem;
-  color: #999;
+  color: rgba(255, 255, 255, 0.65);
 }
 .status {
   margin: 0.35rem 0 0;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  color: #16162b;
+  color: #fff;
   letter-spacing: -0.02em;
+  text-shadow: 0 0.1rem 0.45rem rgba(0, 0, 0, 0.25);
 }
 .ship-line {
   margin: 0;
@@ -485,16 +520,16 @@ async function sendChat() {
 }
 .ship-line strong {
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--od-ink);
 }
 .ship-line span {
-  color: #666;
+  color: var(--od-muted);
 }
 .ship-addr {
   margin: 0.4rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: #666;
+  color: var(--od-muted);
 }
 .remark p {
   margin: 0;
@@ -509,7 +544,7 @@ async function sendChat() {
   grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.75rem;
   padding: 0.65rem 0;
-  border-bottom: 1px solid #f5f1ea;
+  border-bottom: 1px solid var(--od-line);
 }
 .line:first-of-type {
   padding-top: 0;
@@ -523,14 +558,14 @@ async function sendChat() {
   height: 4rem;
   object-fit: cover;
   border-radius: 0.5rem;
-  background: #f5f2ec;
+  background: #f3eef9;
 }
 .item-actions {
   margin-top: 0.4rem;
 }
 .reviews .rev-block {
   padding: 0.75rem 0;
-  border-bottom: 1px solid #f0ebe4;
+  border-bottom: 1px solid var(--od-line);
 }
 .reviews .rev-block:first-of-type {
   padding-top: 0;
@@ -551,19 +586,19 @@ async function sendChat() {
   height: 2.75rem;
   object-fit: cover;
   border-radius: 0.4rem;
-  background: #f5f2ec;
+  background: #f3eef9;
 }
 .rev-product strong {
   display: block;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.35;
-  color: #333;
+  color: var(--od-ink);
 }
 .rev-product p {
   margin: 0.15rem 0 0;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--od-muted);
 }
 .rev-head {
   display: flex;
@@ -579,8 +614,8 @@ async function sendChat() {
 }
 .rev-mod {
   font-size: 0.6875rem;
-  color: #b45309;
-  background: #fff7ed;
+  color: #6b46c1;
+  background: #f3e8ff;
   padding: 0.1rem 0.35rem;
   border-radius: 0.25rem;
 }
@@ -597,7 +632,7 @@ async function sendChat() {
 .rev-follow em,
 .rev-reply em {
   font-style: normal;
-  color: #888;
+  color: var(--od-muted);
   margin-right: 0.15rem;
 }
 .rev-imgs {
@@ -619,7 +654,7 @@ async function sendChat() {
   height: 3.5rem;
   object-fit: cover;
   border-radius: 0.35rem;
-  background: #f5f2ec;
+  background: #f3eef9;
 }
 .meta {
   min-width: 0;
@@ -632,10 +667,11 @@ async function sendChat() {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+  color: var(--od-ink);
 }
 .meta p {
   margin: 0;
-  color: #888;
+  color: var(--od-muted);
   font-size: 0.8125rem;
 }
 .prices {
@@ -645,7 +681,7 @@ async function sendChat() {
   margin-top: 0.35rem;
 }
 .sale {
-  color: #1a1a1a;
+  color: var(--od-ink);
   font-size: 0.95rem;
 }
 .origin {
@@ -659,25 +695,26 @@ async function sendChat() {
   align-items: baseline;
   margin: 0.4rem 0;
   font-size: 0.9rem;
+  color: var(--od-ink);
 }
 .sum em {
   font-style: normal;
 }
 .sum .discount {
-  color: #e11d48;
+  color: #c026d3;
 }
 .sum .discount em {
-  color: #e11d48;
+  color: #c026d3;
   font-weight: 600;
 }
 .sum .pay {
   margin-top: 0.65rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #f0ebe4;
+  border-top: 1px solid var(--od-line);
 }
 .sum .pay strong {
   font-size: 1.1rem;
-  color: #16162b;
+  color: var(--od-accent);
 }
 .chat-head {
   display: flex;
@@ -695,7 +732,7 @@ async function sendChat() {
   display: flex;
   gap: 0.75rem;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--od-muted);
 }
 .chat-legend em {
   font-style: normal;
@@ -712,10 +749,10 @@ async function sendChat() {
   flex: none;
 }
 .chat-legend .seller::before {
-  background: #5b7cfa;
+  background: var(--od-accent);
 }
 .chat-legend .buyer::before {
-  background: #e85d8e;
+  background: #de46ad;
 }
 .chat-empty {
   margin: 0.5rem 0 0.75rem;
@@ -759,13 +796,13 @@ async function sendChat() {
   word-break: break-word;
 }
 .bubble.is-seller .txt {
-  background: #eef2ff;
-  color: #24315c;
+  background: #f3e8ff;
+  color: #4c1d95;
   border-top-left-radius: 0.2rem;
 }
 .bubble.is-buyer .txt {
-  background: #ffe8f1;
-  color: #5a2340;
+  background: #fce7f3;
+  color: #9d174d;
   border-top-right-radius: 0.2rem;
 }
 .bubble time {
@@ -784,15 +821,23 @@ async function sendChat() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 1rem;
+  padding: 1rem 0.75rem 1.25rem;
 }
 .actions .van-button {
   flex: 1 1 calc(50% - 0.5rem);
 }
-.aftersales h3 {
-  margin: 0 0 0.65rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
+.order-detail .actions :deep(.van-button--primary) {
+  background: linear-gradient(100deg, #4a2d7a 0%, #7d5bb6 55%, #a78bfa 100%);
+  border: 0;
+}
+.order-detail .actions :deep(.van-button--plain) {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.65);
+  color: var(--od-ink);
+}
+.order-detail .chat-btn.van-button--plain {
+  border-color: var(--od-accent);
+  color: var(--od-accent);
 }
 .as-row {
   width: 100%;
@@ -803,7 +848,7 @@ async function sendChat() {
   margin: 0 0 0.65rem;
   padding: 0.65rem 0;
   border: 0;
-  border-bottom: 1px solid #f0ebe4;
+  border-bottom: 1px solid var(--od-line);
   background: transparent;
   text-align: left;
   font: inherit;
@@ -827,10 +872,10 @@ async function sendChat() {
 .as-item,
 .as-note {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--od-muted);
 }
 .as-note {
-  color: #b45309;
+  color: #7c3aed;
 }
 .as-ev {
   display: flex;
@@ -843,19 +888,19 @@ async function sendChat() {
   height: 2.75rem;
   object-fit: cover;
   border-radius: 0.3rem;
-  background: #f3f0ea;
+  background: #f3eef9;
   pointer-events: none;
 }
 .as-status {
   flex-shrink: 0;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #666;
+  color: var(--od-muted);
 }
 .as-status.pending_review,
 .as-status.awaiting_return,
 .as-status.pending_refund {
-  color: #c2410c;
+  color: #7c3aed;
 }
 .as-status.completed {
   color: #15803d;
