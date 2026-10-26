@@ -141,6 +141,16 @@ class CatalogService
         $category = trim((string) ($query['category'] ?? ''));
         $sort = (string) ($query['sort'] ?? 'default');
         $limit = isset($query['limit']) ? (int) $query['limit'] : 0;
+        $offset = isset($query['offset']) ? max(0, (int) $query['offset']) : 0;
+        $mode = SoldDisplay::mode();
+        $empty = static fn (int $total = 0): array => [
+            'items'              => [],
+            'sold_display_mode'  => $mode,
+            'total'              => $total,
+            'offset'             => $offset,
+            'limit'              => $limit > 0 ? max(1, min(100, $limit)) : 0,
+            'has_more'           => false,
+        ];
         $builder = Db::name('products')->alias('p');
         if (!$admin) {
             $builder->where('p.status', 1);
@@ -148,7 +158,7 @@ class CatalogService
         if ($category !== '') {
             $ids = $this->categoryScopeIds($category);
             if (!$ids) {
-                return ['items' => [], 'sold_display_mode' => SoldDisplay::mode()];
+                return $empty();
             }
             $builder->whereIn('p.category_id', $ids);
         }
@@ -170,7 +180,7 @@ class CatalogService
                 ),
             )));
             if (!$productIds) {
-                return ['items' => [], 'sold_display_mode' => SoldDisplay::mode()];
+                return $empty();
             }
             $builder->whereIn('p.id', $productIds);
         }
@@ -186,14 +196,28 @@ class CatalogService
                 ? $builder->order('p.id', 'desc')
                 : $builder->order('p.id', 'asc'),
         };
+        $pageLimit = 0;
+        $total = 0;
         if ($limit > 0) {
-            $builder->limit(max(1, min(100, $limit)));
+            $pageLimit = max(1, min(100, $limit));
+            $total = (int) (clone $builder)->count();
+            // ThinkPHP: limit(offset, length)
+            $builder->limit($offset, $pageLimit);
         }
         $rows = $builder->select()->toArray();
-        $mode = SoldDisplay::mode();
         $items = array_map(fn ($row) => $this->presentCard($row, $mode), $rows);
+        if ($limit <= 0) {
+            $total = count($items);
+        }
 
-        return ['items' => $items, 'sold_display_mode' => $mode];
+        return [
+            'items'             => $items,
+            'sold_display_mode' => $mode,
+            'total'             => $total,
+            'offset'            => $offset,
+            'limit'             => $pageLimit,
+            'has_more'          => $limit > 0 ? ($offset + count($items)) < $total : false,
+        ];
     }
 
     /**
