@@ -179,10 +179,11 @@ onUnmounted(() => {
 .field {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0;
+  padding: 0 !important;
 }
 
 .field :deep(.van-search__content) {
+  flex: 1;
   background: #f5f5f5;
 }
 
