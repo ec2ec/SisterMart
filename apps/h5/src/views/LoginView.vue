@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api } from '../api/client'
+import ArticlePopup from '../components/ArticlePopup.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
   afterAuthPath,
@@ -38,6 +39,8 @@ const agreed = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
+const showAgreement = ref(false)
+const agreementCode = ref('terms')
 const { left, start } = useCooldown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
@@ -51,12 +54,13 @@ function switchMode(next: 'email' | 'phone') {
   code.value = ''
 }
 
-function go(name: 'register' | 'forgot' | 'article', id?: string) {
-  if (name === 'article') {
-    router.push({ name: 'article', params: { id } })
-    return
-  }
+function go(name: 'register' | 'forgot') {
   router.push({ name, query: authQuery(route.query) })
+}
+
+function openAgreement(code: string) {
+  agreementCode.value = code
+  showAgreement.value = true
 }
 
 function remindAgree() {
@@ -202,8 +206,8 @@ async function submit() {
     <label ref="agreeRow" class="check">
       <input v-model="agreed" type="checkbox" />
       <span>
-        {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="go('article', 'terms')">{{ t('auth.terms') }}</button
-        >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="go('article', 'privacy')">{{ t('auth.privacy') }}</button
+        {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openAgreement('terms')">{{ t('auth.terms') }}</button
+        >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openAgreement('privacy')">{{ t('auth.privacy') }}</button
         >{{ t('auth.agreeAfter') }}
       </span>
     </label>
@@ -222,5 +226,6 @@ async function submit() {
       <button type="button" @click="go('register')">{{ t('auth.createAccount') }}</button>
     </p>
     <p class="slogan">{{ t('home.slogan') }}</p>
+    <ArticlePopup v-model:show="showAgreement" :code="agreementCode" />
   </AuthLayout>
 </template>

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
+import ArticlePopup from '../components/ArticlePopup.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
   afterAuthPath,
@@ -39,6 +40,8 @@ const registrationOpen = ref(true)
 const statusLoaded = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
 const refCode = ref(authQuery(route.query).ref || '')
+const showAgreement = ref(false)
+const agreementCode = ref('terms')
 const { left, start } = useCooldown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
@@ -73,8 +76,9 @@ function switchMode(next: 'email' | 'phone') {
   code.value = ''
 }
 
-function openArticle(id: string) {
-  router.push({ name: 'article', params: { id } })
+function openAgreement(code: string) {
+  agreementCode.value = code
+  showAgreement.value = true
 }
 
 function backToLogin() {
@@ -297,8 +301,8 @@ async function submit() {
       <label ref="agreeRow" class="check">
         <input v-model="agreed" type="checkbox" />
         <span>
-          {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openArticle('terms')">{{ t('auth.terms') }}</button
-          >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openArticle('privacy')">{{ t('auth.privacy') }}</button
+          {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openAgreement('terms')">{{ t('auth.terms') }}</button
+          >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openAgreement('privacy')">{{ t('auth.privacy') }}</button
           >{{ t('auth.agreeAfter') }}
         </span>
       </label>
@@ -314,6 +318,7 @@ async function submit() {
       </button>
       <p class="note">{{ t('auth.registerPhoneNote') }}</p>
     </template>
+    <ArticlePopup v-model:show="showAgreement" :code="agreementCode" />
   </AuthLayout>
 </template>
 
