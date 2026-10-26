@@ -6,6 +6,7 @@ import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
+  afterAuthPath,
   authError,
   authQuery,
   fillDevOtpCode,
@@ -13,8 +14,10 @@ import {
   isEmail,
   isPhone,
   isStrongPassword,
+  markPostAuthBack,
   useCooldown,
 } from '../composables/useAuth'
+import { loggedInAuthBouncePath } from '../composables/useNavBack'
 import { markJustRegistered, shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { setSession, type Member } from '../composables/useSession'
 import { i18n, setLocale } from '../i18n'
@@ -167,8 +170,10 @@ async function submit() {
       if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
       showToast(data.bound && ref ? t('auth.registerOkRef', { ref }) : t('auth.registerOk'))
       markJustRegistered()
-      // 註冊完成固定進首頁，展示歡迎內容
-      router.replace({ path: '/' })
+      markPostAuthBack(loggedInAuthBouncePath())
+      // 有 redirect 則去目標頁；否則首頁展示歡迎內容
+      const dest = afterAuthPath(route.query)
+      await router.replace(dest === '/' ? { path: '/' } : dest)
     } catch (error) {
       showToast(authError(t, error))
     }

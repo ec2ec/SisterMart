@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -18,7 +19,7 @@ const busy = ref(false)
 
 onMounted(async () => {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: '/profile' } })
+    void goLogin(router, '/profile', { replace: true })
     return
   }
   try {

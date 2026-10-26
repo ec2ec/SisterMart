@@ -13,6 +13,7 @@ import { useLocaleText } from '../composables/useLocaleText'
 import { isFavorite, requestFavorite } from '../composables/useFavorites'
 import { captureRefFromQuery, storedRef } from '../composables/useReferral'
 import { refreshCartBadge } from '../composables/useCartBadge'
+import { goLogin } from '../composables/useAuth'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
@@ -187,7 +188,7 @@ async function addToCart() {
   }
   if (!requireSku() || !quote.value) return
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    void goLogin(router, route.fullPath)
     return
   }
   try {
@@ -213,7 +214,7 @@ async function addToCart() {
 
 function buyNow() {
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    void goLogin(router, route.fullPath)
     return
   }
   if (seckill.value.active && seckill.value.seckill_item_id) {
@@ -229,7 +230,7 @@ function buyNow() {
 
 function toggleFav() {
   if (!product.value) return
-  requestFavorite(product.value.id, route.fullPath, (to) => router.push(to))
+  void requestFavorite(product.value.id, route.fullPath, router)
 }
 
 async function share() {

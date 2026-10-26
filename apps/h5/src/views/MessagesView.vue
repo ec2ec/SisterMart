@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -36,7 +37,7 @@ const systemBadge = computed(() => {
 
 onMounted(async () => {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: '/messages' } })
+    void goLogin(router, '/messages', { replace: true })
     return
   }
   const data = await fetchMessages()

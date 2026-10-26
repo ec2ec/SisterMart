@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import SubPageNav from '../components/SubPageNav.vue'
 import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { isOrdersTabName, useOrdersList, type OrdersTabName } from '../composables/useOrdersList'
+import { goLogin } from '../composables/useAuth'
 import { isLoggedIn } from '../composables/useSession'
 
 defineOptions({ name: 'OrdersView' })
@@ -45,7 +46,7 @@ function resolveTab(name: string): OrdersTabName {
 
 async function ensureLoaded(tab: OrdersTabName) {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: route.fullPath } })
+    void goLogin(router, route.fullPath, { replace: true })
     return
   }
   await load(tab)

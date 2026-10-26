@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -58,7 +59,7 @@ const windowText = computed(() => {
       <button type="button" class="retry" @click="emit('retry')">
         {{ t('maintenance.retry') }}
       </button>
-      <button type="button" class="login" @click="router.push({ name: 'login' })">
+      <button type="button" class="login" @click="void goLogin(router, '/')">
         {{ t('maintenance.login') }}
       </button>
     </div>
