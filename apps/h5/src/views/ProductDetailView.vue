@@ -590,7 +590,8 @@ h1 {
 }
 .sku button.on {
   border-color: #16162b;
-  color: #16162b;
+  background: #16162b;
+  color: #fff;
 }
 h2 {
   margin: 1rem 0 0.5rem;
