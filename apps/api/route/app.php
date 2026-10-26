@@ -184,6 +184,11 @@ Route::group('api/v1/admin', function () {
     Route::post('attrs/:id/values', 'admin.Attrs/storeValue');
     Route::put('attrs/:id/values/:valueId', 'admin.Attrs/updateValue');
     Route::delete('attrs/:id/values/:valueId', 'admin.Attrs/destroyValue');
+    /** M37 銷售規格模板 */
+    Route::get('spec-templates', 'admin.SpecTemplates/index');
+    Route::post('spec-templates', 'admin.SpecTemplates/store');
+    Route::put('spec-templates/:id', 'admin.SpecTemplates/update');
+    Route::delete('spec-templates/:id', 'admin.SpecTemplates/destroy');
 
     Route::get('articles/:code', 'admin.Articles/read');
     Route::put('articles/:id', 'admin.Articles/update');

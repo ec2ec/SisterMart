@@ -19,6 +19,7 @@ export const adminMenus: AdminMenu[] = [
       { label: '角標', key: '/catalog/badges', path: '/catalog/badges' },
       { label: '服務標籤', key: '/catalog/service-tags', path: '/catalog/service-tags' },
       { label: '商品參數', key: '/catalog/attrs', path: '/catalog/attrs' },
+      { label: '規格模板', key: '/catalog/spec-templates', path: '/catalog/spec-templates' },
       { label: '規格管理', key: '/catalog/specs', path: '/catalog/specs' },
     ],
   },

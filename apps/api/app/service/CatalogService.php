@@ -334,9 +334,21 @@ class CatalogService
         if (!is_array($skus) || $skus === []) {
             throw new ApiException('INVALID', '請至少配置一個 SKU', 422, 42201);
         }
+        if (count($skus) > CatalogMetaService::MAX_SKUS) {
+            throw new ApiException('INVALID', 'SKU 最多 ' . CatalogMetaService::MAX_SKUS . ' 個', 422, 42201);
+        }
         $groups = $body['spec_groups'] ?? [];
         if (!is_array($groups) || $groups === []) {
             throw new ApiException('INVALID', '請配置規格', 422, 42201);
+        }
+        if (count($groups) > CatalogMetaService::MAX_SPEC_GROUPS) {
+            throw new ApiException('INVALID', '規格組最多 ' . CatalogMetaService::MAX_SPEC_GROUPS . ' 組', 422, 42201);
+        }
+        foreach ($groups as $group) {
+            $opts = is_array($group['options'] ?? null) ? $group['options'] : [];
+            if ($opts === []) {
+                throw new ApiException('INVALID', '規格組須至少一個選項', 422, 42201);
+            }
         }
 
         $now = date('Y-m-d H:i:s');
@@ -513,7 +525,7 @@ class CatalogService
                     'cost_price' => round((float) ($sku['cost_price'] ?? 0), 2),
                     'stock'      => max(0, (int) ($sku['stock'] ?? 0)),
                     'image_url'  => trim((string) ($sku['image'] ?? '')) ?: null,
-                    'status'     => 1,
+                    'status'     => (int) ($sku['status'] ?? 1) === 0 ? 0 : 1,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -847,7 +859,11 @@ class CatalogService
             ];
         }
 
-        $skus = Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->select()->toArray();
+        $skuQ = Db::name('skus')->where('product_id', $row['id']);
+        if (!$admin) {
+            $skuQ->where('status', 1);
+        }
+        $skus = $skuQ->select()->toArray();
         $skusOut = [];
         foreach ($skus as $sku) {
             $optionIds = Db::name('sku_options')->where('sku_id', $sku['id'])->column('spec_option_id');
@@ -875,6 +891,7 @@ class CatalogService
                 'image'       => $sku['image_url'] ?: null,
                 'option_refs' => $refs,
                 'selected'    => $selected,
+                'status'      => (int) ($sku['status'] ?? 1),
             ];
             if ($admin) {
                 $skuRow['agent_price'] = (float) ($sku['agent_price'] ?? 0);

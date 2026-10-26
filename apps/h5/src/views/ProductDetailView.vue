@@ -48,11 +48,6 @@ async function load() {
   product.value = await fetchProduct(id)
   const next: Record<string, string> = {}
   for (const group of product.value.spec_groups) next[group.id] = group.options[0]?.id || ''
-  // Prefer heart bracelet default red|16 if available
-  if (product.value.code === 'p4') {
-    next.color = 'red'
-    next.size = '16'
-  }
   selected.value = next
   slide.value = 0
   zooming.value = false

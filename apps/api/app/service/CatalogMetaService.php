@@ -8,10 +8,13 @@ use app\support\ApiException;
 use think\facade\Db;
 
 /**
- * 角標 / 服務標籤 / 商品參數 主數據 CRUD。
+ * 角標 / 服務標籤 / 商品參數 / 銷售規格模板 主數據 CRUD。
  */
 class CatalogMetaService
 {
+    public const MAX_SPEC_GROUPS = 3;
+    public const MAX_SKUS = 50;
+
     /** @return list<array<string,mixed>> */
     public function listBadges(bool $activeOnly = false): array
     {
@@ -239,6 +242,172 @@ class CatalogMetaService
         Db::name('product_attr_values')->where('id', $valueId)->delete();
 
         return ['ok' => true];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function listSpecTemplates(bool $activeOnly = false): array
+    {
+        $q = Db::name('spec_templates')->order('sort_order', 'asc')->order('id', 'asc');
+        if ($activeOnly) {
+            $q->where('status', 1);
+        }
+        $out = [];
+        foreach ($q->select()->toArray() as $row) {
+            $out[] = $this->presentSpecTemplate($row, $activeOnly);
+        }
+
+        return $out;
+    }
+
+    public function saveSpecTemplate(array $body, ?int $id = null): array
+    {
+        $code = trim((string) ($body['code'] ?? ''));
+        if ($code === '' || !preg_match('/^[a-z][a-z0-9_\-]{0,62}$/', $code)) {
+            throw new ApiException('INVALID', '模板代碼須為小寫字母開頭', 422, 42201);
+        }
+        $nameZh = trim((string) ($body['name']['zh-HK'] ?? ''));
+        $nameEn = trim((string) ($body['name']['en'] ?? ''));
+        if ($nameZh === '' || $nameEn === '') {
+            throw new ApiException('INVALID', '請填寫模板中英文名稱', 422, 42201);
+        }
+        $dup = Db::name('spec_templates')->where('code', $code);
+        if ($id) {
+            $dup->where('id', '<>', $id);
+        }
+        if ($dup->find()) {
+            throw new ApiException('CONFLICT', '模板代碼已存在', 409, 40901);
+        }
+        $now = date('Y-m-d H:i:s');
+        $data = [
+            'code' => $code,
+            'sort_order' => (int) ($body['sort'] ?? $body['sort_order'] ?? 0),
+            'status' => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
+            'updated_at' => $now,
+        ];
+        if ($id) {
+            if (!Db::name('spec_templates')->where('id', $id)->find()) {
+                throw new ApiException('NOT_FOUND', '規格模板不存在', 404, 40402);
+            }
+            Db::name('spec_templates')->where('id', $id)->update($data);
+        } else {
+            $data['created_at'] = $now;
+            $id = (int) Db::name('spec_templates')->insertGetId($data);
+        }
+        $this->upsertI18n('spec_template_i18n', 'template_id', $id, $nameZh, $nameEn);
+
+        $values = $body['values'] ?? $body['options'] ?? null;
+        if (is_array($values)) {
+            $this->syncSpecTemplateOptions($id, $values);
+        }
+
+        return $this->presentSpecTemplate(Db::name('spec_templates')->where('id', $id)->find(), false);
+    }
+
+    public function deleteSpecTemplate(int $id): array
+    {
+        $row = Db::name('spec_templates')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '規格模板不存在', 404, 40402);
+        }
+        $optIds = Db::name('spec_template_options')->where('template_id', $id)->column('id');
+        if ($optIds) {
+            Db::name('spec_template_option_i18n')->whereIn('option_id', $optIds)->delete();
+            Db::name('spec_template_options')->whereIn('id', $optIds)->delete();
+        }
+        Db::name('spec_template_i18n')->where('template_id', $id)->delete();
+        Db::name('spec_templates')->where('id', $id)->delete();
+
+        return ['ok' => true];
+    }
+
+    /** @param list<array<string,mixed>> $values */
+    private function syncSpecTemplateOptions(int $templateId, array $values): void
+    {
+        $keep = [];
+        foreach ($values as $i => $v) {
+            if (!is_array($v)) {
+                continue;
+            }
+            $oid = isset($v['id']) ? (int) $v['id'] : 0;
+            $code = trim((string) ($v['code'] ?? ''));
+            if ($code === '' || !preg_match('/^[a-z][a-z0-9_\-]{0,62}$/', $code)) {
+                throw new ApiException('INVALID', '選項代碼無效: ' . $code, 422, 42201);
+            }
+            $nameZh = trim((string) ($v['name']['zh-HK'] ?? $v['name_zh'] ?? ''));
+            $nameEn = trim((string) ($v['name']['en'] ?? $v['name_en'] ?? ''));
+            if ($nameZh === '' || $nameEn === '') {
+                throw new ApiException('INVALID', '請填寫選項中英文', 422, 42201);
+            }
+            $data = [
+                'template_id' => $templateId,
+                'code' => $code,
+                'sort_order' => (int) ($v['sort'] ?? $v['sort_order'] ?? $i),
+                'status' => (int) ($v['status'] ?? 1) === 0 ? 0 : 1,
+            ];
+            if ($oid > 0) {
+                $exists = Db::name('spec_template_options')->where(['id' => $oid, 'template_id' => $templateId])->find();
+                if (!$exists) {
+                    throw new ApiException('NOT_FOUND', '模板選項不存在', 404, 40402);
+                }
+                Db::name('spec_template_options')->where('id', $oid)->update($data);
+            } else {
+                $oid = (int) Db::name('spec_template_options')->insertGetId($data);
+            }
+            $this->upsertI18n('spec_template_option_i18n', 'option_id', $oid, $nameZh, $nameEn);
+            $keep[] = $oid;
+        }
+        $existing = Db::name('spec_template_options')->where('template_id', $templateId)->column('id');
+        foreach ($existing as $eid) {
+            $eid = (int) $eid;
+            if (!in_array($eid, $keep, true)) {
+                Db::name('spec_template_option_i18n')->where('option_id', $eid)->delete();
+                Db::name('spec_template_options')->where('id', $eid)->delete();
+            }
+        }
+    }
+
+    /** @param array<string,mixed>|null $row */
+    private function presentSpecTemplate(?array $row, bool $activeOptionsOnly): array
+    {
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '規格模板不存在', 404, 40402);
+        }
+        $id = (int) $row['id'];
+        $names = Db::name('spec_template_i18n')->where('template_id', $id)->select()->toArray();
+        $name = ['zh-HK' => $row['code'], 'en' => $row['code']];
+        foreach ($names as $n) {
+            $name[$n['locale']] = $n['name'];
+        }
+        $oq = Db::name('spec_template_options')->where('template_id', $id)->order('sort_order', 'asc')->order('id', 'asc');
+        if ($activeOptionsOnly) {
+            $oq->where('status', 1);
+        }
+        $options = [];
+        foreach ($oq->select()->toArray() as $o) {
+            $oid = (int) $o['id'];
+            $onames = Db::name('spec_template_option_i18n')->where('option_id', $oid)->select()->toArray();
+            $oname = ['zh-HK' => $o['code'], 'en' => $o['code']];
+            foreach ($onames as $n) {
+                $oname[$n['locale']] = $n['name'];
+            }
+            $options[] = [
+                'id' => $oid,
+                'code' => (string) $o['code'],
+                'sort' => (int) $o['sort_order'],
+                'status' => (int) $o['status'],
+                'name' => $oname,
+            ];
+        }
+
+        return [
+            'id' => $id,
+            'code' => (string) $row['code'],
+            'sort' => (int) $row['sort_order'],
+            'status' => (int) $row['status'],
+            'name' => $name,
+            'options' => $options,
+            'values' => $options,
+        ];
     }
 
     /** @param list<array<string,mixed>> $values */

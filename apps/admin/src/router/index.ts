@@ -11,6 +11,7 @@ import ProductSpecsView from '../views/ProductSpecsView.vue'
 import ProductsView from '../views/ProductsView.vue'
 import ServiceTagsView from '../views/ServiceTagsView.vue'
 import SpecsView from '../views/SpecsView.vue'
+import SpecTemplatesView from '../views/SpecTemplatesView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
 import RegistrationConfigView from '../views/RegistrationConfigView.vue'
 import MaintenanceView from '../views/MaintenanceView.vue'
@@ -49,6 +50,7 @@ export const router = createRouter({
         { path: '/catalog/badges', component: BadgesView, meta: { title: '角標' } },
         { path: '/catalog/service-tags', component: ServiceTagsView, meta: { title: '服務標籤' } },
         { path: '/catalog/attrs', component: AttrsView, meta: { title: '商品參數' } },
+        { path: '/catalog/spec-templates', component: SpecTemplatesView, meta: { title: '規格模板' } },
         { path: '/catalog/specs', component: SpecsView, meta: { title: '規格管理' } },
         { path: '/catalog/specs/:id', component: ProductSpecsView, meta: { title: '規格編輯' } },
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
