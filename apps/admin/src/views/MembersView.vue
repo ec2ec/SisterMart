@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
@@ -24,16 +24,19 @@ type Member = {
   id: number
   email: string | null
   phone: string | null
+  nickname?: string | null
   promo_code: string
   balance: number
   points: number
   total_spent: number
+  status?: number
   level: { stars: number; name: { 'zh-HK': string } }
   created_at?: string
   last_active_at?: string | null
 }
 
 const route = useRoute()
+const router = useRouter()
 const message = useMessage()
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const active = ref(typeof route.query.active === 'string' ? route.query.active : '')
@@ -126,6 +129,7 @@ function activeLabel(row: Member) {
         <tr>
           <th>ID</th>
           <th>帳號</th>
+          <th>狀態</th>
           <th>等級</th>
           <th>累計實付</th>
           <th>餘額</th>
@@ -136,8 +140,21 @@ function activeLabel(row: Member) {
       </thead>
       <tbody>
         <tr v-for="row in paged" :key="row.id" v-bind="rowAttrs(row.id)">
-          <td>{{ row.id }}</td>
-          <td>{{ row.email || row.phone }}<br /><small>{{ row.promo_code }}</small></td>
+          <td>
+            <button type="button" class="id-link" @click="router.push(`/customers/members/${row.id}`)">
+              #{{ row.id }}
+            </button>
+          </td>
+          <td>
+            <div v-if="row.nickname">{{ row.nickname }}</div>
+            <div>{{ row.email || row.phone || '-' }}</div>
+            <small>{{ row.promo_code }}</small>
+          </td>
+          <td>
+            <n-tag size="small" :type="row.status === 0 ? 'error' : 'success'">
+              {{ row.status === 0 ? '禁用' : '正常' }}
+            </n-tag>
+          </td>
           <td>
             <n-tag size="small">{{ '★'.repeat(row.level?.stars || 1) }} {{ row.level?.name?.['zh-HK'] }}</n-tag>
           </td>
@@ -145,7 +162,12 @@ function activeLabel(row: Member) {
           <td>{{ Number(row.balance).toFixed(2) }}</td>
           <td>{{ row.points }}</td>
           <td :title="row.last_active_at || ''">{{ activeLabel(row) }}</td>
-          <td><n-button size="tiny" @click="openAdjust(row)">調整資產</n-button></td>
+          <td>
+            <n-space size="small">
+              <n-button size="tiny" @click="router.push(`/customers/members/${row.id}`)">詳情</n-button>
+              <n-button size="tiny" @click="openAdjust(row)">調整資產</n-button>
+            </n-space>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -188,5 +210,14 @@ td {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+.id-link {
+  border: 0;
+  background: transparent;
+  color: #24315c;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>

@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NCard, NDescriptions, NDescriptionsItem, NInput, NSpace, NTag, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NCard,
+  NDescriptions,
+  NDescriptionsItem,
+  NImage,
+  NImageGroup,
+  NInput,
+  NSpace,
+  NTag,
+  useMessage,
+} from 'naive-ui'
 import { api } from '../api'
 import { orderStatusLabel } from '../utils/orderStatus'
 import { assetUrl } from '../utils/assetUrl'
@@ -129,6 +140,25 @@ function aftersaleStatusLabel(s: string) {
 function openAftersale(id: number) {
   router.push({ path: '/sales/aftersales', query: { open: String(id) } })
 }
+
+const member = computed(() => {
+  const o = order.value
+  if (!o) return null
+  if (o.member && typeof o.member === 'object') return o.member
+  if (o.member_id) return { id: o.member_id, nickname: null, email: null, phone: null }
+  return null
+})
+
+const memberLabel = computed(() => {
+  const m = member.value
+  if (!m) return '-'
+  const parts = [m.nickname, m.email, m.phone].filter((x: unknown) => !!x)
+  return parts.length ? parts.join(' / ') : '（無暱稱／郵件）'
+})
+
+function goMember(id: number) {
+  router.push(`/customers/members/${id}`)
+}
 </script>
 
 <template>
@@ -141,6 +171,18 @@ function openAftersale(id: number) {
     <n-descriptions label-placement="left" :column="2">
       <n-descriptions-item label="狀態">{{ orderStatusLabel(order.status) }}</n-descriptions-item>
       <n-descriptions-item label="實付">{{ order.pay_amount }}</n-descriptions-item>
+      <n-descriptions-item label="會員 ID">
+        <button
+          v-if="member?.id"
+          type="button"
+          class="member-link"
+          @click="goMember(member.id)"
+        >
+          #{{ member.id }}
+        </button>
+        <span v-else>-</span>
+      </n-descriptions-item>
+      <n-descriptions-item label="會員暱稱／郵件">{{ memberLabel }}</n-descriptions-item>
       <n-descriptions-item label="商品金額">{{ order.goods_amount }}</n-descriptions-item>
       <n-descriptions-item label="運費">{{ order.shipping_amount }}</n-descriptions-item>
       <n-descriptions-item label="券抵扣">{{ order.coupon_amount }}</n-descriptions-item>
@@ -157,7 +199,7 @@ function openAftersale(id: number) {
 
     <h3 style="margin-top: 1rem">明細</h3>
     <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
-      <img :src="item.image" alt="" />
+      <img class="thumb" :src="assetUrl(item.image)" alt="" />
       <div>
         <div>{{ itemName(item) }} / {{ itemSpec(item) }}</div>
         <div>HK$ {{ item.unit_price }} × {{ item.qty }}（已退 {{ item.refunded_qty || 0 }}）= {{ item.line_amount }}</div>
@@ -169,9 +211,18 @@ function openAftersale(id: number) {
             </span>
           </div>
           <div v-if="item.review.body" class="rev-body">{{ item.review.body }}</div>
-          <div v-if="item.review.images?.length" class="rev-imgs">
-            <img v-for="(img, i) in item.review.images" :key="i" :src="img" alt="" />
-          </div>
+          <n-image-group v-if="item.review.images?.length">
+            <div class="rev-imgs">
+              <n-image
+                v-for="(img, i) in item.review.images"
+                :key="i"
+                :src="assetUrl(img)"
+                width="56"
+                height="56"
+                object-fit="cover"
+              />
+            </div>
+          </n-image-group>
           <div v-if="item.review.follow" class="rev-extra">追評：{{ item.review.follow }}</div>
           <div v-if="item.review.reply" class="rev-extra">商家回覆：{{ item.review.reply }}</div>
         </div>
@@ -293,11 +344,10 @@ function openAftersale(id: number) {
   gap: 0.35rem;
   margin-top: 0.35rem;
 }
-.rev-imgs img {
-  width: 3rem;
-  height: 3rem;
-  object-fit: cover;
+.rev-imgs :deep(.n-image) {
   border-radius: 0.25rem;
+  overflow: hidden;
+  background: #f3f0ea;
 }
 .rev-extra {
   margin-top: 0.25rem;
@@ -307,13 +357,24 @@ function openAftersale(id: number) {
   display: flex;
   gap: 0.75rem;
   margin: 0.5rem 0;
-  align-items: center;
+  align-items: flex-start;
 }
-.line img {
+.line .thumb {
   width: 3rem;
   height: 3rem;
   object-fit: cover;
   border-radius: 0.375rem;
+  flex-shrink: 0;
+  background: #f3f0ea;
+}
+.member-link {
+  border: 0;
+  background: transparent;
+  color: #24315c;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
 }
 ul {
   padding-left: 1.25rem;

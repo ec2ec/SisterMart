@@ -23,6 +23,7 @@ import CouponsView from '../views/CouponsView.vue'
 import PointsView from '../views/PointsView.vue'
 import PointsMallEditView from '../views/PointsMallEditView.vue'
 import MembersView from '../views/MembersView.vue'
+import MemberDetailView from '../views/MemberDetailView.vue'
 import LevelsView from '../views/LevelsView.vue'
 import AdminsView from '../views/AdminsView.vue'
 import MessagesView from '../views/MessagesView.vue'
@@ -58,6 +59,7 @@ export const router = createRouter({
         { path: '/sales/aftersales', component: AftersalesView, meta: { title: '售後' } },
         { path: '/sales/reviews', component: ReviewsView, meta: { title: '評價' } },
         { path: '/customers/members', component: MembersView, meta: { title: '會員' } },
+        { path: '/customers/members/:id', component: MemberDetailView, meta: { title: '會員詳情' } },
         { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         { path: '/cms/home', component: HomeBannersView, meta: { title: '首頁運營' } },
