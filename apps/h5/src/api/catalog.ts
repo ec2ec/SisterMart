@@ -62,6 +62,7 @@ export type Sku = {
   stock: number
   image?: string | null
   selected: Record<string, string>
+  option_refs?: string[]
 }
 
 export type ProductDetail = ProductCard & {
@@ -198,4 +199,21 @@ export async function fetchHomeSectionProducts(code: string) {
 
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
+}
+
+/** 依當前選中規格找 SKU：優先比對 selected 映射（組代碼→選項代碼） */
+export function findSku(
+  skus: Sku[],
+  selected: Record<string, string>,
+  groups: SpecGroup[],
+): Sku | null {
+  if (!skus.length) return null
+  const bySelected = skus.find((sku) => {
+    const map = sku.selected || {}
+    if (!groups.length) return false
+    return groups.every((g) => String(map[g.id] || '') === String(selected[g.id] || ''))
+  })
+  if (bySelected) return bySelected
+  const key = skuKey(selected, groups)
+  return skus.find((sku) => sku.key === key || sku.code === key) || null
 }

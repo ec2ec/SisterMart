@@ -653,7 +653,15 @@ class CatalogService
         foreach ($names as $n) {
             $name[$n['locale']] = $n['name'];
         }
-        $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
+        // 列表價：優先取「有標價」SKU 的最低價，避免大量 0 價占位 SKU 把展示價拉成 0
+        $price = (float) (Db::name('skus')
+            ->where('product_id', $row['id'])
+            ->where('status', 1)
+            ->where('price', '>', 0)
+            ->min('price') ?: 0);
+        if ($price <= 0) {
+            $price = (float) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->min('price') ?: 0);
+        }
         $stock = (int) (Db::name('skus')->where('product_id', $row['id'])->where('status', 1)->sum('stock') ?: 0);
         $badgeItems = $this->presentBadgeItems((int) $row['id']);
         $badges = array_map(static fn ($b) => (string) $b['code'], $badgeItems);
@@ -881,10 +889,16 @@ class CatalogService
                     $selected[$opt['gcode']] = $opt['ocode'];
                 }
             }
+            // key = 規格組順序下的選項代碼，用 | 連接（與 H5 skuKey 一致），勿用 SKU 業務代碼
+            $keyParts = [];
+            foreach ($groupsOut as $g) {
+                $keyParts[] = (string) ($selected[$g['code']] ?? '');
+            }
+            $skuKey = implode('|', $keyParts);
             $skuRow = [
                 'id'          => (int) $sku['id'],
                 'code'        => (string) $sku['code'],
-                'key'         => (string) $sku['code'],
+                'key'         => $skuKey !== '' ? $skuKey : (string) $sku['code'],
                 'price'       => (float) $sku['price'],
                 'compare_at'  => (float) $sku['compare_at'],
                 'stock'       => (int) $sku['stock'],

@@ -6,7 +6,7 @@ import { showDialog, showToast, type SwipeInstance } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
-import { fetchProduct, fetchProducts, skuKey, type ProductCard as Card, type ProductDetail } from '../api/catalog'
+import { fetchProduct, fetchProducts, findSku, type ProductCard as Card, type ProductDetail } from '../api/catalog'
 import { addCartItem } from '../api/trade'
 import { fetchSeckillProduct, postShareView } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
@@ -96,8 +96,7 @@ const detailHtml = computed(() => {
 
 const quote = computed(() => {
   if (!product.value) return null
-  const key = skuKey(selected.value, product.value.spec_groups)
-  return product.value.skus.find((sku) => sku.key === key || sku.code === key) || null
+  return findSku(product.value.skus, selected.value, product.value.spec_groups)
 })
 
 const price = computed(() =>
