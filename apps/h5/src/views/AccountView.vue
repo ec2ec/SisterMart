@@ -160,15 +160,18 @@ async function logout() {
 }
 
 const orderItems = [
+  { key: 'orderAll', icon: 'orders-o', tab: 'all' },
   { key: 'toPay', icon: 'credit-pay', tab: 'pending_payment', countKey: 'pending_payment' as const },
   { key: 'toShip', icon: 'logistics', tab: 'pending_shipment', countKey: 'pending_shipment' as const },
   { key: 'toReceive', icon: 'send-gift-o', tab: 'pending_receipt', countKey: 'pending_receipt' as const },
-  { key: 'toReview', icon: 'orders-o', tab: 'to_review', countKey: 'to_review' as const },
+  { key: 'toReview', icon: 'comment-o', tab: 'to_review', countKey: 'to_review' as const },
+  { key: 'orderDone', icon: 'checked', tab: 'completed' },
   { key: 'returns', icon: 'replay', route: 'aftersales', countKey: 'aftersales' as const },
 ] as const
 
 function orderBadge(o: (typeof orderItems)[number]): string {
   if (!loggedIn.value) return ''
+  if (!('countKey' in o) || !o.countKey) return ''
   return badgeText(orderCounts.value[o.countKey] || 0)
 }
 
@@ -281,9 +284,10 @@ function goBills() {
 }
 
 function goOrders(tab?: string) {
-  const path = tab ? `/orders?tab=${tab}` : '/orders'
+  const normalized = !tab || tab === 'all' ? undefined : tab
+  const path = normalized ? `/orders?tab=${normalized}` : '/orders'
   if (!requireAuth(path)) return
-  router.push({ name: 'orders', query: tab ? { tab } : {} })
+  router.push({ name: 'orders', query: normalized ? { tab: normalized } : {} })
 }
 </script>
 
@@ -330,8 +334,10 @@ function goOrders(tab?: string) {
 
     <section class="card">
       <div class="card-head">
-        <h2>{{ t('account.orders') }}</h2>
-        <button type="button" class="more" @click="() => goOrders()">{{ t('account.more') }}</button>
+        <button type="button" class="orders-title" @click="goOrders('all')">
+          <h2>{{ t('account.orders') }}</h2>
+        </button>
+        <button type="button" class="more" @click="goOrders('all')">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
         <button
@@ -504,6 +510,14 @@ function goOrders(tab?: string) {
   font-size: 0.9375rem;
 }
 
+.orders-title {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
 .more {
   border: 0;
   background: transparent;
@@ -512,12 +526,34 @@ function goOrders(tab?: string) {
 }
 
 .orders {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: nowrap;
   gap: 0.25rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
 }
 
-.orders button,
+.orders::-webkit-scrollbar {
+  display: none;
+}
+
+.orders button {
+  flex: 0 0 auto;
+  width: 4.25rem;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  color: #333;
+}
+
 .services button {
   border: 0;
   background: transparent;
