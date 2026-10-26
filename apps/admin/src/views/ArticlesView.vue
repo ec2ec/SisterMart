@@ -25,6 +25,8 @@ type Article = {
   title: { 'zh-HK': string; en: string }
   body: { 'zh-HK': string; en: string }
   has_body?: boolean
+  updated_at?: string | null
+  created_at?: string | null
 }
 
 /** 首頁頁腳三欄固定欄目（與 H5 佈局一致） */
@@ -213,6 +215,11 @@ function statusTag(row: { article: Article | null }) {
   return { type: 'success' as const, text: '已發布' }
 }
 
+function updatedLabel(at?: string | null) {
+  if (!at) return '-'
+  return at.replace('T', ' ').slice(0, 19)
+}
+
 onMounted(load)
 </script>
 
@@ -231,6 +238,9 @@ onMounted(load)
             <strong>{{ row.label }}</strong>
             <code>{{ row.code }}</code>
             <n-tag size="small" :type="statusTag(row).type">{{ statusTag(row).text }}</n-tag>
+            <span class="updated" :title="row.article?.updated_at || ''">
+              更新 {{ updatedLabel(row.article?.updated_at) }}
+            </span>
           </div>
           <n-button size="small" type="primary" @click="editFooter(row.code, row.label)">編輯</n-button>
         </div>
@@ -266,7 +276,10 @@ onMounted(load)
 
     <n-card title="其他文章">
       <div v-for="row in otherPaged" :key="row.id" class="row">
-        <span>{{ row.code }} · {{ row.title['zh-HK'] }}</span>
+        <span>
+          {{ row.code }} · {{ row.title['zh-HK'] }}
+          <span class="updated" :title="row.updated_at || ''">更新 {{ updatedLabel(row.updated_at) }}</span>
+        </span>
         <n-button size="tiny" @click="edit(row)">編輯</n-button>
       </div>
       <p v-if="!otherItems.length" class="hint">暫無其他文章</p>
@@ -320,11 +333,25 @@ onMounted(load)
   font-size: 0.75rem;
   color: #888;
 }
+.updated {
+  font-size: 0.75rem;
+  color: #8a8378;
+  white-space: nowrap;
+}
 .row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.4rem 0;
   border-bottom: 1px solid #eee;
+}
+.row > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  min-width: 0;
 }
 .pager {
   display: flex;

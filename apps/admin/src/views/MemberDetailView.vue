@@ -180,7 +180,7 @@ function activeLabel(at?: string | null) {
       <template #header-extra>
         <n-space>
           <n-button @click="router.push('/customers/members')">返回列表</n-button>
-          <n-button @click="openAdjust">調整資產</n-button>
+          <n-button type="warning" color="#f0851a" @click="openAdjust">調整資產</n-button>
           <n-button
             :type="member.status === 1 ? 'error' : 'primary'"
             :loading="statusBusy"
@@ -206,7 +206,7 @@ function activeLabel(at?: string | null) {
               {{ member.status === 1 ? '正常' : '已禁用' }}
             </n-tag>
             <n-tag size="small">
-              {{ '★'.repeat(member.level?.stars || 1) }} {{ member.level?.name?.['zh-HK'] || '' }}
+              {{ '★'.repeat(member.level?.stars || 1) }}
             </n-tag>
             <n-tag size="small" :bordered="false">推廣碼 {{ member.promo_code }}</n-tag>
           </n-space>
