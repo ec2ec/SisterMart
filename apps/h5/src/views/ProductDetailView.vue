@@ -141,24 +141,6 @@ function badgeLabel(item: { code: string; name: { 'zh-HK': string; en: string } 
   return fromI18n !== key ? fromI18n : fromApi || item.code
 }
 
-const selectedImage = computed(() => {
-  if (!product.value) return ''
-  for (const group of product.value.spec_groups) {
-    const option = group.options.find((item) => item.id === selected.value[group.id])
-    if (option?.image) return assetUrl(option.image)
-  }
-  return assetUrl(quote.value?.image || '')
-})
-
-watch(selectedImage, (src) => {
-  if (!src) return
-  const index = gallery.value.indexOf(src)
-  if (index < 0 || index === slide.value) return
-  slide.value = index
-  // Vant 4 Swipe 無 v-model:active，需 swipeTo 同步輪播位置
-  nextTick(() => gallerySwipe.value?.swipeTo(index))
-})
-
 function onGalleryChange(index: number) {
   slide.value = index
 }
