@@ -656,7 +656,7 @@ function goOrders(tab?: string) {
 }
 
 :deep(.footer) {
-  margin: 0.25rem 0.75rem 0;
+  margin: 0.25rem 0.75rem 2rem;
   padding: 1rem 0.75rem 0.75rem;
   border-radius: 1rem;
   background: #fff;
