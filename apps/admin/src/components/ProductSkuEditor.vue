@@ -399,23 +399,67 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
       <n-button @click="addGroup">加規格組</n-button>
     </n-space>
 
+    <h4 class="sub">規格組（{{ groupModel.length }}）</h4>
     <div v-for="(g, gIdx) in groupModel" :key="gIdx" class="group-block">
       <div class="group-head">
         <strong>規格組 {{ gIdx + 1 }}</strong>
         <n-button size="tiny" @click="removeGroup(gIdx)">刪組</n-button>
       </div>
-      <n-space>
-        <n-form-item label="組代碼"><n-input v-model:value="g.code" style="width: 8rem" /></n-form-item>
-        <n-form-item label="組繁中"><n-input v-model:value="g.name['zh-HK']" style="width: 8rem" /></n-form-item>
-        <n-form-item label="組英文"><n-input v-model:value="g.name.en" style="width: 8rem" /></n-form-item>
-      </n-space>
-      <div v-for="(o, oIdx) in g.options" :key="oIdx" class="opt-row">
-        <n-input v-model:value="o.code" placeholder="選項代碼" style="width: 7rem" />
-        <n-input v-model:value="o.name['zh-HK']" placeholder="繁中" style="width: 7rem" />
-        <n-input v-model:value="o.name.en" placeholder="英文" style="width: 7rem" />
-        <n-button size="tiny" @click="removeOption(gIdx, oIdx)">刪</n-button>
+      <div class="table-wrap">
+        <table class="sku-table group-meta-table">
+          <thead>
+            <tr>
+              <th>組代碼</th>
+              <th>組繁中</th>
+              <th>組英文</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <n-input v-model:value="g.code" placeholder="如 color" size="small" style="width: 8rem" />
+              </td>
+              <td>
+                <n-input v-model:value="g.name['zh-HK']" placeholder="顏色" size="small" style="width: 8rem" />
+              </td>
+              <td>
+                <n-input v-model:value="g.name.en" placeholder="Color" size="small" style="width: 8rem" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <n-button size="tiny" style="margin-top: 0.35rem" @click="addOption(gIdx)">加選項</n-button>
+      <div class="table-wrap">
+        <table class="sku-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>選項代碼</th>
+              <th>繁中</th>
+              <th>英文</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(o, oIdx) in g.options" :key="oIdx">
+              <td class="col-idx">{{ oIdx + 1 }}</td>
+              <td>
+                <n-input v-model:value="o.code" placeholder="選項代碼" size="small" style="width: 7.5rem" />
+              </td>
+              <td>
+                <n-input v-model:value="o.name['zh-HK']" placeholder="繁中" size="small" style="width: 7.5rem" />
+              </td>
+              <td>
+                <n-input v-model:value="o.name.en" placeholder="英文" size="small" style="width: 7.5rem" />
+              </td>
+              <td>
+                <n-button size="tiny" @click="removeOption(gIdx, oIdx)">刪</n-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <n-button size="tiny" style="margin-top: 0.5rem" @click="addOption(gIdx)">加選項</n-button>
     </div>
 
     <h4 class="sub">SKU 列表（{{ skuModel.length }}）</h4>
@@ -521,16 +565,17 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   align-items: center;
   margin-bottom: 0.5rem;
 }
-.opt-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.4rem;
-}
 .sub {
   margin: 0.5rem 0 0.75rem;
   font-size: 0.9375rem;
+}
+.group-meta-table {
+  min-width: 28rem;
+  margin-bottom: 0.5rem;
+}
+.col-idx {
+  width: 2rem;
+  color: #8a8378;
 }
 .table-wrap {
   overflow-x: auto;
