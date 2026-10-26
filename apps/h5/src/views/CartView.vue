@@ -7,6 +7,7 @@ import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
+import { goLogin } from '../composables/useAuth'
 import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -34,7 +35,7 @@ async function load() {
     void refreshCartBadge()
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      router.push({ name: 'login', query: { redirect: '/cart' } })
+      void goLogin(router, '/cart')
     }
   } finally {
     loading.value = false
@@ -91,7 +92,7 @@ async function onCheck(item: CartItem, checked: boolean) {
 
 function checkout() {
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: '/cart' } })
+    void goLogin(router, '/cart')
     return
   }
   if (checkedCount.value === 0) {
@@ -133,7 +134,7 @@ function reasonText(item: CartItem) {
     </div>
 
     <p v-if="!loggedIn" class="empty">
-      <button type="button" @click="router.push({ name: 'login', query: { redirect: '/cart' } })">{{ t('auth.login') }}</button>
+      <button type="button" @click="goLogin(router, '/cart')">{{ t('auth.login') }}</button>
     </p>
     <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
 

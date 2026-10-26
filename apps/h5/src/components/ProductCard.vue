@@ -51,7 +51,7 @@ function openDetail() {
 }
 
 function onWish() {
-  requestFavorite(props.product.id, route.fullPath, (to) => router.push(to))
+  void requestFavorite(props.product.id, route.fullPath, router)
 }
 </script>
 

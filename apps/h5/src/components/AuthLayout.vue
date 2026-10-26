@@ -1,16 +1,65 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toggleLocale } from '../i18n'
 
-defineProps<{
-  title: string
-  hint?: string
+withDefaults(
+  defineProps<{
+    title: string
+    hint?: string
+    /** 左上角返回 */
+    showBack?: boolean
+    /** 右上角語言切換 */
+    showLocale?: boolean
+  }>(),
+  {
+    showBack: false,
+    showLocale: false,
+  },
+)
+
+const emit = defineEmits<{
+  back: []
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+/** 按鈕表示「即將切換到」的語言 */
+const nextLocaleFlag = computed(() => (locale.value === 'zh-HK' ? '🇺🇸' : '🇭🇰'))
+const nextLocaleLabel = computed(() => t('account.switchLang'))
+
+function onBackClick() {
+  emit('back')
+}
 </script>
 
 <template>
-  <div class="auth">
+  <div class="auth" :class="{ 'has-top': showBack || showLocale }">
+    <header v-if="showBack || showLocale" class="auth-top">
+      <button
+        v-if="showBack"
+        type="button"
+        class="auth-icon-btn"
+        :aria-label="t('pages.back')"
+        @click="onBackClick"
+      >
+        <van-icon name="arrow-left" size="1.25rem" />
+      </button>
+      <span v-else class="auth-top-spacer" aria-hidden="true" />
+      <button
+        v-if="showLocale"
+        type="button"
+        class="auth-lang"
+        :title="nextLocaleLabel"
+        :aria-label="nextLocaleLabel"
+        @click="toggleLocale"
+      >
+        <span class="flag" aria-hidden="true">{{ nextLocaleFlag }}</span>
+        <span>{{ nextLocaleLabel }}</span>
+      </button>
+      <span v-else class="auth-top-spacer" aria-hidden="true" />
+    </header>
+
     <div class="auth-bg" aria-hidden="true">
       <span class="orb orb-a" />
       <span class="orb orb-b" />
@@ -47,6 +96,68 @@ const { t } = useI18n()
     #cfe6f6 100%
   );
   color: #1c1c1c;
+}
+
+.auth.has-top {
+  padding-top: calc(3.25rem + env(safe-area-inset-top, 0rem));
+}
+
+.auth-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: calc(0.5rem + env(safe-area-inset-top, 0rem)) 0.75rem 0.5rem;
+  pointer-events: none;
+}
+
+.auth-top > * {
+  pointer-events: auto;
+}
+
+.auth-top-spacer {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+}
+
+.auth-icon-btn {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  color: #14141f;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0.15rem 0.5rem rgba(80, 50, 100, 0.1);
+}
+
+.auth-lang {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.35rem 0.65rem;
+  color: #14141f;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 0.15rem 0.5rem rgba(80, 50, 100, 0.1);
+}
+
+.auth-lang .flag {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .auth-bg {

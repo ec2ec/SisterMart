@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api } from '../api/client'
+import ArticlePopup from '../components/ArticlePopup.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
   afterAuthPath,
@@ -13,8 +14,10 @@ import {
   isCode,
   isEmail,
   isPhone,
+  markPostAuthBack,
   useCooldown,
 } from '../composables/useAuth'
+import { loggedInAuthBouncePath, useNavBack } from '../composables/useNavBack'
 import { shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { useMaintenance } from '../composables/useMaintenance'
 import { setSession, type Member } from '../composables/useSession'
@@ -24,6 +27,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { refresh: refreshMaintenance } = useMaintenance()
+const { goBack } = useNavBack('/')
 
 const mode = ref<'email' | 'phone'>('email')
 const email = ref('')
@@ -35,6 +39,8 @@ const agreed = ref(false)
 const codeSent = ref(false)
 const whatsappFallback = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
+const showAgreement = ref(false)
+const agreementCode = ref('terms')
 const { left, start } = useCooldown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
@@ -48,12 +54,13 @@ function switchMode(next: 'email' | 'phone') {
   code.value = ''
 }
 
-function go(name: 'register' | 'forgot' | 'article', id?: string) {
-  if (name === 'article') {
-    router.push({ name: 'article', params: { id } })
-    return
-  }
+function go(name: 'register' | 'forgot') {
   router.push({ name, query: authQuery(route.query) })
+}
+
+function openAgreement(code: string) {
+  agreementCode.value = code
+  showAgreement.value = true
 }
 
 function remindAgree() {
@@ -131,7 +138,9 @@ async function submit() {
       // 先刷新維護狀態（member_bypass），避免進首頁被公開接口 503 蓋回維護頁
       await refreshMaintenance()
       showToast(t('auth.loginOk'))
-      router.replace(afterAuthPath(route.query))
+      // 目標頁點返回應回到來源 Tab／首頁，而非登錄棧
+      markPostAuthBack(loggedInAuthBouncePath())
+      await router.replace(afterAuthPath(route.query))
     } catch (error) {
       showToast(authError(t, error))
     }
@@ -140,7 +149,13 @@ async function submit() {
 </script>
 
 <template>
-  <AuthLayout :title="t('auth.loginTitle')" :hint="hint">
+  <AuthLayout
+    :title="t('auth.loginTitle')"
+    :hint="hint"
+    show-back
+    show-locale
+    @back="goBack"
+  >
     <div class="seg">
       <button type="button" :class="{ on: mode === 'email' }" @click="switchMode('email')">
         {{ t('auth.emailTab') }}
@@ -191,8 +206,8 @@ async function submit() {
     <label ref="agreeRow" class="check">
       <input v-model="agreed" type="checkbox" />
       <span>
-        {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="go('article', 'terms')">{{ t('auth.terms') }}</button
-        >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="go('article', 'privacy')">{{ t('auth.privacy') }}</button
+        {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openAgreement('terms')">{{ t('auth.terms') }}</button
+        >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openAgreement('privacy')">{{ t('auth.privacy') }}</button
         >{{ t('auth.agreeAfter') }}
       </span>
     </label>
@@ -211,5 +226,6 @@ async function submit() {
       <button type="button" @click="go('register')">{{ t('auth.createAccount') }}</button>
     </p>
     <p class="slogan">{{ t('home.slogan') }}</p>
+    <ArticlePopup v-model:show="showAgreement" :code="agreementCode" />
   </AuthLayout>
 </template>

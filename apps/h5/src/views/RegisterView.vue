@@ -4,8 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { api, ApiError } from '../api/client'
+import ArticlePopup from '../components/ArticlePopup.vue'
 import AuthLayout from '../components/AuthLayout.vue'
 import {
+  afterAuthPath,
   authError,
   authQuery,
   fillDevOtpCode,
@@ -13,8 +15,10 @@ import {
   isEmail,
   isPhone,
   isStrongPassword,
+  markPostAuthBack,
   useCooldown,
 } from '../composables/useAuth'
+import { loggedInAuthBouncePath } from '../composables/useNavBack'
 import { markJustRegistered, shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { setSession, type Member } from '../composables/useSession'
 import { i18n, setLocale } from '../i18n'
@@ -36,6 +40,8 @@ const registrationOpen = ref(true)
 const statusLoaded = ref(false)
 const agreeRow = ref<HTMLElement | null>(null)
 const refCode = ref(authQuery(route.query).ref || '')
+const showAgreement = ref(false)
+const agreementCode = ref('terms')
 const { left, start } = useCooldown()
 const { busy: sending, run: runSend } = useRequestBusy()
 const { busy: submitting, run: runSubmit } = useRequestBusy()
@@ -70,8 +76,13 @@ function switchMode(next: 'email' | 'phone') {
   code.value = ''
 }
 
-function openArticle(id: string) {
-  router.push({ name: 'article', params: { id } })
+function openAgreement(code: string) {
+  agreementCode.value = code
+  showAgreement.value = true
+}
+
+function backToLogin() {
+  void router.replace({ name: 'login', query: authQuery(route.query) })
 }
 
 function remindAgree() {
@@ -167,8 +178,10 @@ async function submit() {
       if (data.member.locale === 'en' || data.member.locale === 'zh-HK') setLocale(data.member.locale)
       showToast(data.bound && ref ? t('auth.registerOkRef', { ref }) : t('auth.registerOk'))
       markJustRegistered()
-      // 註冊完成固定進首頁，展示歡迎內容
-      router.replace({ path: '/' })
+      markPostAuthBack(loggedInAuthBouncePath())
+      // 有 redirect 則去目標頁；否則首頁展示歡迎內容
+      const dest = afterAuthPath(route.query)
+      await router.replace(dest === '/' ? { path: '/' } : dest)
     } catch (error) {
       showToast(authError(t, error))
     }
@@ -177,7 +190,12 @@ async function submit() {
 </script>
 
 <template>
-  <AuthLayout :title="registrationOpen || !statusLoaded ? t('auth.registerTitle') : t('auth.register')">
+  <AuthLayout
+    :title="registrationOpen || !statusLoaded ? t('auth.registerTitle') : t('auth.register')"
+    show-back
+    show-locale
+    @back="backToLogin"
+  >
     <template v-if="!statusLoaded" />
     <template v-else-if="!registrationOpen">
       <div class="closed-illu" aria-hidden="true">
@@ -283,8 +301,8 @@ async function submit() {
       <label ref="agreeRow" class="check">
         <input v-model="agreed" type="checkbox" />
         <span>
-          {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openArticle('terms')">{{ t('auth.terms') }}</button
-          >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openArticle('privacy')">{{ t('auth.privacy') }}</button
+          {{ t('auth.agreeBefore') }}<button type="button" @click.prevent="openAgreement('terms')">{{ t('auth.terms') }}</button
+          >{{ t('auth.agreeMid') }}<button type="button" @click.prevent="openAgreement('privacy')">{{ t('auth.privacy') }}</button
           >{{ t('auth.agreeAfter') }}
         </span>
       </label>
@@ -300,6 +318,7 @@ async function submit() {
       </button>
       <p class="note">{{ t('auth.registerPhoneNote') }}</p>
     </template>
+    <ArticlePopup v-model:show="showAgreement" :code="agreementCode" />
   </AuthLayout>
 </template>
 

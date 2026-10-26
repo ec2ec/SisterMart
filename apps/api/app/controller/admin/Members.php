@@ -20,7 +20,7 @@ class Members extends ApiController
         return $this->run(function () {
             $q = trim((string) $this->request->get('q', ''));
             $active = trim((string) $this->request->get('active', ''));
-            $sort = (string) $this->request->get('sort', 'id');
+            $sort = (string) $this->request->get('sort', 'last_active_at');
             $order = strtolower((string) $this->request->get('order', 'desc')) === 'asc' ? 'asc' : 'desc';
 
             $query = Db::name('members');

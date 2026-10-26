@@ -102,7 +102,14 @@ export async function fetchCategories() {
 
 export async function fetchProducts(params: Record<string, string> = {}) {
   const qs = new URLSearchParams(params).toString()
-  return api<{ items: ProductCard[]; sold_display_mode: string }>(`/api/v1/products${qs ? `?${qs}` : ''}`)
+  return api<{
+    items: ProductCard[]
+    sold_display_mode: string
+    total?: number
+    offset?: number
+    limit?: number
+    has_more?: boolean
+  }>(`/api/v1/products${qs ? `?${qs}` : ''}`)
 }
 
 export async function fetchProduct(id: string) {

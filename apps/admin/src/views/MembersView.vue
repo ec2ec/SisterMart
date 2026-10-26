@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
-  NForm,
-  NFormItem,
   NInput,
-  NInputNumber,
-  NModal,
   NPagination,
   NSelect,
   NSpace,
   NTag,
-  useMessage,
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
@@ -37,17 +32,13 @@ type Member = {
 
 const route = useRoute()
 const router = useRouter()
-const message = useMessage()
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const active = ref(typeof route.query.active === 'string' ? route.query.active : '')
-const sort = ref(typeof route.query.sort === 'string' ? route.query.sort : 'id')
+const sort = ref(typeof route.query.sort === 'string' ? route.query.sort : 'last_active_at')
 const order = ref(typeof route.query.order === 'string' ? route.query.order : 'desc')
 const rows = ref<Member[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const { rowAttrs } = useTableRowSelect()
-const show = ref(false)
-const current = ref<Member | null>(null)
-const adjust = reactive({ points_delta: 0, balance_delta: 0, reason: '' })
 
 const activeOptions = [
   { label: '全部活躍', value: '' },
@@ -82,26 +73,6 @@ async function load() {
 }
 
 onMounted(load)
-
-function openAdjust(row: Member) {
-  current.value = row
-  adjust.points_delta = 0
-  adjust.balance_delta = 0
-  adjust.reason = ''
-  show.value = true
-}
-
-async function submitAdjust() {
-  if (!current.value) return
-  await api(
-    `/api/v1/admin/members/${current.value.id}/asset-adjustments`,
-    { method: 'POST', body: JSON.stringify(adjust) },
-    true,
-  )
-  message.success('已調整')
-  show.value = false
-  await load()
-}
 
 function activeLabel(row: Member) {
   if (!row.last_active_at) return '-'
@@ -156,17 +127,14 @@ function activeLabel(row: Member) {
             </n-tag>
           </td>
           <td>
-            <n-tag size="small">{{ '★'.repeat(row.level?.stars || 1) }} {{ row.level?.name?.['zh-HK'] }}</n-tag>
+            <n-tag size="small">{{ '★'.repeat(row.level?.stars || 1) }}</n-tag>
           </td>
           <td>{{ Number(row.total_spent || 0).toFixed(2) }}</td>
           <td>{{ Number(row.balance).toFixed(2) }}</td>
           <td>{{ row.points }}</td>
           <td :title="row.last_active_at || ''">{{ activeLabel(row) }}</td>
           <td>
-            <n-space size="small">
-              <n-button size="tiny" @click="router.push(`/customers/members/${row.id}`)">詳情</n-button>
-              <n-button size="tiny" @click="openAdjust(row)">調整資產</n-button>
-            </n-space>
+            <n-button size="tiny" @click="router.push(`/customers/members/${row.id}`)">詳情</n-button>
           </td>
         </tr>
       </tbody>
@@ -181,16 +149,6 @@ function activeLabel(row: Member) {
         show-size-picker
       />
     </div>
-
-    <n-modal v-model:show="show" preset="card" title="調整會員資產" style="width: 28rem">
-      <p v-if="current">會員 #{{ current.id }} · {{ current.email || current.phone }}</p>
-      <n-form label-placement="left" label-width="6rem">
-        <n-form-item label="積分變動"><n-input-number v-model:value="adjust.points_delta" /></n-form-item>
-        <n-form-item label="餘額變動"><n-input-number v-model:value="adjust.balance_delta" :step="0.01" /></n-form-item>
-        <n-form-item label="原因"><n-input v-model:value="adjust.reason" type="textarea" placeholder="必填" /></n-form-item>
-      </n-form>
-      <n-button type="primary" @click="submitAdjust">確認調整</n-button>
-    </n-modal>
   </n-card>
 </template>
 

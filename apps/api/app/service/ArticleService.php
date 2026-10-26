@@ -109,6 +109,8 @@ class ArticleService
             'title'          => $title,
             'body'           => $withBody ? $body : ['zh-HK' => '', 'en' => ''],
             'has_body'       => $hasBody,
+            'updated_at'     => !empty($row['updated_at']) ? (string) $row['updated_at'] : null,
+            'created_at'     => !empty($row['created_at']) ? (string) $row['created_at'] : null,
         ];
     }
 }

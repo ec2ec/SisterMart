@@ -21,6 +21,7 @@ import {
   token,
   type Member,
 } from '../composables/useSession'
+import { goLogin } from '../composables/useAuth'
 import { APP_VERSION } from '../config/appVersion'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
@@ -71,13 +72,13 @@ function showAppVersion() {
 function openAccount() {
   syncSessionFromStorage()
   if (loggedIn.value) return
-  router.push({ name: 'login', query: { redirect: '/account' } })
+  void goLogin(router, '/account')
 }
 
 function onAvatarClick() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    router.push({ name: 'login', query: { redirect: '/account' } })
+    void goLogin(router, '/account')
     return
   }
   showAvatarCrop.value = true
@@ -231,7 +232,7 @@ const routePaths: Record<string, string> = {
 function requireAuth(redirect: string): boolean {
   syncSessionFromStorage()
   if (loggedIn.value) return true
-  router.push({ name: 'login', query: { redirect } })
+  void goLogin(router, redirect)
   return false
 }
 
@@ -292,7 +293,7 @@ function goOrders(tab?: string) {
 </script>
 
 <template>
-  <div class="page page--soft">
+  <div class="page account-page">
     <section class="hero">
       <div class="user" role="button" @click="openAccount">
         <button type="button" class="avatar" :disabled="avatarBusy" @click.stop="onAvatarClick">
@@ -356,13 +357,19 @@ function goOrders(tab?: string) {
 
     <section class="checkin">
       <div class="left">
-        <van-icon name="calendar-o" color="var(--sm-primary)" size="1.25rem" />
+        <van-icon name="calendar-o" color="#16162b" size="1.25rem" />
         <div>
           <p class="title">{{ t('account.checkinTitle') }}</p>
-          <p class="sub">{{ t('account.checkinSub', { n: checkinStreakDisplay }) }}</p>
+          <p class="sub">
+            {{
+              loggedIn
+                ? t('account.checkinSub', { n: checkinStreakDisplay })
+                : t('account.checkinSubGuest')
+            }}
+          </p>
         </div>
       </div>
-      <van-button size="small" round color="var(--sm-primary)" @click="goService('checkin')">
+      <van-button size="small" round color="#16162b" @click="goService('checkin')">
         {{ loggedIn && checkinSignedToday ? t('m7.signed') : t('account.checkinBtn') }}
       </van-button>
     </section>
@@ -396,10 +403,35 @@ function goOrders(tab?: string) {
 </template>
 
 <style scoped>
+/* 配色對齊登錄頁 AuthLayout：粉 → lavender → 淺藍（不改底欄 Tab） */
+.account-page {
+  --ac-accent: var(--sm-brand-sister);
+  --ac-ink: #14141f;
+  --ac-muted: #3a3540;
+  --ac-soft: #6b6574;
+  --ac-card-shadow: 0 0.25rem 0.9rem rgba(160, 130, 210, 0.22);
+  position: relative;
+  color: var(--ac-ink);
+  /* 柔光併入背景，避免 ::before + filter 在部分 WebKit 上擋住點擊 */
+  background:
+    radial-gradient(circle at 92% -4%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 182, 212, 0.28) 42%, transparent 68%),
+    radial-gradient(circle at -8% 32%, rgba(255, 255, 255, 0.45) 0%, rgba(210, 190, 255, 0.28) 45%, transparent 70%),
+    radial-gradient(circle at 108% 88%, rgba(255, 255, 255, 0.4) 0%, rgba(180, 220, 255, 0.32) 48%, transparent 72%),
+    linear-gradient(
+      165deg,
+      #f46ca9 10%,
+      #f0d8ee 28%,
+      #e4daf6 55%,
+      #7dbaf7 82%,
+      #407cfb 100%
+    );
+}
+
 .hero {
   position: relative;
+  z-index: 1;
   padding: 1.25rem 1rem 0.875rem;
-  background: linear-gradient(180deg, #ffe8df 0%, #fff 70%);
+  background: transparent;
 }
 
 .user {
@@ -409,20 +441,25 @@ function goOrders(tab?: string) {
 }
 
 .avatar {
+  position: relative;
+  z-index: 2;
   width: 3.625rem;
   height: 3.625rem;
-  border: 0;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.18);
   padding: 0;
   border-radius: 50%;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(236, 228, 255, 0.7) 100%);
   color: var(--sm-primary);
   display: grid;
   place-items: center;
   font-size: 1.625rem;
   font-weight: 700;
-  box-shadow: 0 0.125rem 0.5rem rgba(238, 80, 47, 0.15);
+  box-shadow: var(--ac-card-shadow);
   overflow: hidden;
   flex-shrink: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .avatar img {
@@ -434,16 +471,18 @@ function goOrders(tab?: string) {
 
 .user h1 {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.35;
   word-break: break-all;
+  color: var(--ac-ink);
+  font-weight: 700;
 }
 
 .phone,
 .spent {
   margin: 0.125rem 0 0;
   font-size: 0.75rem;
-  color: #888;
+  color: var(--ac-soft);
 }
 
 .stats {
@@ -456,11 +495,16 @@ function goOrders(tab?: string) {
 .stats strong {
   display: block;
   font-size: 1.125rem;
+  color: var(--ac-ink);
 }
 
 .stats span {
+  display: inline-block;
+  margin-top: 0.2rem;
   font-size: 0.75rem;
-  color: #888;
+  color: var(--ac-soft);
+  border-top: 0.125rem solid rgba(222, 70, 173, 0.85);
+  padding-top: 0.2rem;
 }
 
 .quick {
@@ -471,31 +515,36 @@ function goOrders(tab?: string) {
 }
 
 .quick button {
-  border: 0;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.12);
   text-align: left;
   padding: 0.875rem;
-  border-radius: 0.75rem;
-  background: #fff;
-  box-shadow: 0 0.0625rem 0.375rem rgba(0, 0, 0, 0.04);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(236, 228, 255, 0.55) 100%);
+  box-shadow: var(--ac-card-shadow);
+  backdrop-filter: blur(8px);
 }
 
 .quick strong {
   display: block;
   font-size: 0.875rem;
+  color: var(--ac-ink);
 }
 
 .quick span {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.6875rem;
-  color: #999;
+  color: var(--ac-soft);
 }
 
 .card {
   margin: 0.75rem;
   padding: 0.75rem;
-  border-radius: 0.875rem;
-  background: #fff;
+  border-radius: 1rem;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.72) 100%);
+  box-shadow: var(--ac-card-shadow);
+  backdrop-filter: blur(8px);
 }
 
 .card-head {
@@ -508,6 +557,7 @@ function goOrders(tab?: string) {
 .card-head h2 {
   margin: 0;
   font-size: 0.9375rem;
+  color: var(--ac-ink);
 }
 
 .orders-title {
@@ -522,7 +572,7 @@ function goOrders(tab?: string) {
   border: 0;
   background: transparent;
   font-size: 0.75rem;
-  color: #999;
+  color: var(--ac-muted);
 }
 
 .orders {
@@ -551,7 +601,7 @@ function goOrders(tab?: string) {
   align-items: center;
   gap: 0.375rem;
   font-size: 0.6875rem;
-  color: #333;
+  color: var(--ac-ink);
 }
 
 .services button {
@@ -563,19 +613,21 @@ function goOrders(tab?: string) {
   align-items: center;
   gap: 0.375rem;
   font-size: 0.6875rem;
-  color: #333;
+  color: var(--ac-ink);
 }
 
 .checkin {
   margin: 0 0.75rem;
   padding: 0.625rem 0.75rem;
-  border: 0.0625rem solid #ffc9b8;
-  border-radius: 0.75rem;
-  background: #fff8f5;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.16);
+  border-radius: 1rem;
+  background: linear-gradient(100deg, #fdf9fd 0%, #dccefdb8 50%, #fba9cda6 100%);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.625rem;
+  box-shadow: var(--ac-card-shadow);
+  backdrop-filter: blur(8px);
 }
 
 .checkin .left {
@@ -588,12 +640,13 @@ function goOrders(tab?: string) {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
+  color: #d61d81;
 }
 
 .checkin .sub {
   margin: 0.125rem 0 0;
   font-size: 0.6875rem;
-  color: #999;
+  color: var(--ac-soft);
 }
 
 .services {
@@ -621,18 +674,21 @@ function goOrders(tab?: string) {
   display: block;
   width: calc(100% - 1.5rem);
   margin: 0.25rem 0.75rem 1.25rem;
-  border: 0.0625rem solid #eee;
-  border-radius: 0.625rem;
-  background: #fff;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.12);
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(236, 228, 255, 0.55) 100%);
   padding: 0.75rem;
-  color: #666;
+  color: var(--ac-muted);
   font-size: 0.8125rem;
+  box-shadow: var(--ac-card-shadow);
 }
 
 :deep(.footer) {
-  margin: 0.25rem 0.75rem 0;
+  margin: 0.25rem 0.75rem 2rem;
   padding: 1rem 0.75rem 0.75rem;
-  border-radius: 0.875rem;
-  background: #fff;
+  border-radius: 1rem;
+  border: 0.0625rem solid rgba(120, 90, 160, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.72) 100%);
+  box-shadow: var(--ac-card-shadow);
 }
 </style>

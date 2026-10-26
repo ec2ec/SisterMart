@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useNavBack } from '../composables/useNavBack'
 
-defineProps<{ title: string }>()
-const router = useRouter()
+const props = withDefaults(
+  defineProps<{ title: string; fallback?: string }>(),
+  { fallback: '/' },
+)
+
+const { goBack } = useNavBack(() => props.fallback || '/')
 </script>
 
 <template>
@@ -13,7 +17,7 @@ const router = useRouter()
     fixed
     placeholder
     :border="false"
-    @click-left="router.back()"
+    @click-left="goBack"
   >
     <template v-if="$slots.right" #right>
       <slot name="right" />
