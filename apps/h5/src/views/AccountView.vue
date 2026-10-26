@@ -360,7 +360,13 @@ function goOrders(tab?: string) {
         <van-icon name="calendar-o" color="#16162b" size="1.25rem" />
         <div>
           <p class="title">{{ t('account.checkinTitle') }}</p>
-          <p class="sub">{{ t('account.checkinSub', { n: checkinStreakDisplay }) }}</p>
+          <p class="sub">
+            {{
+              loggedIn
+                ? t('account.checkinSub', { n: checkinStreakDisplay })
+                : t('account.checkinSubGuest')
+            }}
+          </p>
         </div>
       </div>
       <van-button size="small" round color="#16162b" @click="goService('checkin')">
@@ -410,11 +416,11 @@ function goOrders(tab?: string) {
   color: var(--ac-ink);
   background: linear-gradient(
     165deg,
-    #f8d4e4 0%,
+    #f46ca9 10%,
     #f0d8ee 28%,
     #e4daf6 55%,
-    #d8e8f8 82%,
-    #cfe6f6 100%
+    #7dbaf7 82%,
+    #407cfb 100%
   );
 }
 
@@ -625,7 +631,7 @@ function goOrders(tab?: string) {
   padding: 0.625rem 0.75rem;
   border: 0.0625rem solid rgba(120, 90, 160, 0.16);
   border-radius: 1rem;
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.78) 0%, rgba(236, 228, 255, 0.72) 55%, rgba(255, 214, 232, 0.65) 100%);
+  background: linear-gradient(100deg, #fdf9fd 0%, #dccefdb8 50%, #fba9cda6 100%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -644,7 +650,7 @@ function goOrders(tab?: string) {
   margin: 0;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--ac-ink);
+  color: #d61d81;
 }
 
 .checkin .sub {
