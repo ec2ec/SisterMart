@@ -8,6 +8,7 @@ export type OrdersTabName =
   | 'pending_shipment'
   | 'pending_receipt'
   | 'to_review'
+  | 'completed'
   | 'aftersale'
 
 const TAB_STATUS: Record<OrdersTabName, string> = {
@@ -16,6 +17,7 @@ const TAB_STATUS: Record<OrdersTabName, string> = {
   pending_shipment: 'pending_shipment',
   pending_receipt: 'pending_receipt',
   to_review: 'to_review',
+  completed: 'completed',
   aftersale: 'aftersale',
 }
 

@@ -21,6 +21,7 @@ const tabs = [
   { name: 'pending_shipment' as const, label: 'orders.pendingShipment', countKey: 'pending_shipment' as const },
   { name: 'pending_receipt' as const, label: 'orders.pendingReceipt', countKey: 'pending_receipt' as const },
   { name: 'to_review' as const, label: 'orders.toReview', countKey: 'to_review' as const },
+  { name: 'completed' as const, label: 'orders.tabCompleted', countKey: null },
   { name: 'aftersale' as const, label: 'orders.tabAftersale', countKey: 'aftersales' as const },
 ]
 
