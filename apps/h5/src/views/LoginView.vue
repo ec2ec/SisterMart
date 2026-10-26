@@ -13,8 +13,10 @@ import {
   isCode,
   isEmail,
   isPhone,
+  markPostAuthBack,
   useCooldown,
 } from '../composables/useAuth'
+import { loggedInAuthBouncePath } from '../composables/useNavBack'
 import { shakeAgreeRow, useRequestBusy } from '../composables/useAuthUi'
 import { useMaintenance } from '../composables/useMaintenance'
 import { setSession, type Member } from '../composables/useSession'
@@ -131,7 +133,9 @@ async function submit() {
       // 先刷新維護狀態（member_bypass），避免進首頁被公開接口 503 蓋回維護頁
       await refreshMaintenance()
       showToast(t('auth.loginOk'))
-      router.replace(afterAuthPath(route.query))
+      // 目標頁點返回應回到來源 Tab／首頁，而非登錄棧
+      markPostAuthBack(loggedInAuthBouncePath())
+      await router.replace(afterAuthPath(route.query))
     } catch (error) {
       showToast(authError(t, error))
     }

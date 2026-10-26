@@ -21,6 +21,7 @@ import {
   token,
   type Member,
 } from '../composables/useSession'
+import { goLogin } from '../composables/useAuth'
 import { APP_VERSION } from '../config/appVersion'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
@@ -71,13 +72,13 @@ function showAppVersion() {
 function openAccount() {
   syncSessionFromStorage()
   if (loggedIn.value) return
-  router.push({ name: 'login', query: { redirect: '/account' } })
+  void goLogin(router, '/account')
 }
 
 function onAvatarClick() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    router.push({ name: 'login', query: { redirect: '/account' } })
+    void goLogin(router, '/account')
     return
   }
   showAvatarCrop.value = true
@@ -231,7 +232,7 @@ const routePaths: Record<string, string> = {
 function requireAuth(redirect: string): boolean {
   syncSessionFromStorage()
   if (loggedIn.value) return true
-  router.push({ name: 'login', query: { redirect } })
+  void goLogin(router, redirect)
   return false
 }
 

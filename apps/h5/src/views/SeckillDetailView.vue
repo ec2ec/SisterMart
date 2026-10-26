@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { goLogin } from '../composables/useAuth'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -40,7 +41,7 @@ function buy() {
     return
   }
   if (!isLoggedIn()) {
-    router.push({ name: 'login', query: { redirect: route.fullPath } })
+    void goLogin(router, route.fullPath)
     return
   }
   router.push({

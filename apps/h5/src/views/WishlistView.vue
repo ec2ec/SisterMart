@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import { api } from '../api/client'
 import type { ProductCard as Card } from '../api/catalog'
+import { goLogin } from '../composables/useAuth'
 import { hydrateFavorites, isLoggedIn } from '../composables/useFavorites'
 
 type Row = Card & { favorited_at?: string; invalid?: boolean }
@@ -17,7 +18,7 @@ const loaded = ref(false)
 
 async function load() {
   if (!isLoggedIn()) {
-    router.replace({ name: 'login', query: { redirect: '/wishlist' } })
+    void goLogin(router, '/wishlist', { replace: true })
     return
   }
   try {
