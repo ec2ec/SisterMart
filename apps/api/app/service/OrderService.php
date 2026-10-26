@@ -280,12 +280,15 @@ class OrderService
         ];
     }
 
-    public function listAdmin(?string $status = null): array
+    public function listAdmin(?string $status = null, ?int $memberId = null): array
     {
         $this->closeExpired();
         $q = Db::name('orders')->order('id', 'desc');
         if ($status) {
             $q->where('status', $status);
+        }
+        if ($memberId !== null && $memberId > 0) {
+            $q->where('member_id', $memberId);
         }
         $rows = $q->limit(200)->select()->toArray();
 
@@ -906,10 +909,20 @@ class OrderService
             }
         }
 
+        $memberId = (int) $row['member_id'];
+        $memberRow = Db::name('members')->where('id', $memberId)->find();
+        $member = [
+            'id' => $memberId,
+            'nickname' => $memberRow && !empty($memberRow['nickname']) ? (string) $memberRow['nickname'] : null,
+            'email' => $memberRow && !empty($memberRow['email']) ? (string) $memberRow['email'] : null,
+            'phone' => $memberRow && !empty($memberRow['phone']) ? (string) $memberRow['phone'] : null,
+        ];
+
         return [
             'id' => (int) $row['id'],
             'order_no' => $row['order_no'],
-            'member_id' => (int) $row['member_id'],
+            'member_id' => $memberId,
+            'member' => $member,
             'status' => $row['status'],
             'remark' => $row['remark'],
             'address' => $addr,

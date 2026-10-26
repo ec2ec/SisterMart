@@ -281,6 +281,7 @@ Route::group('api/v1/admin', function () {
     Route::get('member-levels', 'admin.Levels/index');
     Route::put('member-levels/:id', 'admin.Levels/update');
     Route::get('members/:id', 'admin.Members/read');
+    Route::put('members/:id/status', 'admin.Members/updateStatus');
     Route::post('members/:id/asset-adjustments', 'admin.Members/adjust');
     Route::get('members', 'admin.Members/index');
 

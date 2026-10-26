@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace app\controller\admin;
 
 use app\controller\ApiController;
+use app\service\AddressService;
 use app\service\AssetService;
 use app\service\MemberAuthService;
+use app\service\OrderService;
 use app\support\ApiException;
 use think\facade\Db;
 use think\Response;
@@ -96,13 +98,18 @@ class Members extends ApiController
             $auth = new MemberAuthService();
             $assets = new AssetService();
             $member = $auth->present($row);
+            $member['status'] = (int) ($row['status'] ?? 1);
             $member['last_active_at'] = !empty($row['last_active_at']) ? (string) $row['last_active_at'] : null;
             $member['created_at'] = $row['created_at'] ?? null;
 
+            $orders = (new OrderService())->listAdmin(null, $id);
+
             return [
                 'member' => $member,
-                'point_logs' => $assets->pointLogs($id, 20)['items'],
-                'balance_logs' => $assets->balanceLogs($id, 20)['items'],
+                'addresses' => (new AddressService())->list($id),
+                'recent_orders' => array_slice($orders['items'] ?? [], 0, 30),
+                'point_logs' => $assets->pointLogs($id, 30)['items'],
+                'balance_logs' => $assets->balanceLogs($id, 30)['items'],
             ];
         });
     }
@@ -110,5 +117,33 @@ class Members extends ApiController
     public function adjust(int $id): Response
     {
         return $this->run(fn () => (new AssetService())->adminAdjust($id, $this->payload()));
+    }
+
+    /** 啟用 / 禁用會員帳號（status: 1=正常，0=禁用） */
+    public function updateStatus(int $id): Response
+    {
+        return $this->run(function () use ($id) {
+            $row = Db::name('members')->where('id', $id)->find();
+            if (!$row) {
+                throw new ApiException('NOT_FOUND', '會員不存在', 404, 40410);
+            }
+            $body = $this->payload();
+            if (!array_key_exists('status', $body)) {
+                throw new ApiException('INVALID', '缺少 status', 422, 42201);
+            }
+            $status = (int) $body['status'] === 1 ? 1 : 0;
+            Db::name('members')->where('id', $id)->update([
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $row = Db::name('members')->where('id', $id)->find();
+            $auth = new MemberAuthService();
+            $member = $auth->present($row);
+            $member['status'] = (int) $row['status'];
+            $member['last_active_at'] = !empty($row['last_active_at']) ? (string) $row['last_active_at'] : null;
+            $member['created_at'] = $row['created_at'] ?? null;
+
+            return ['member' => $member];
+        });
     }
 }

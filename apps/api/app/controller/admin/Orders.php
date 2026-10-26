@@ -14,8 +14,12 @@ class Orders extends ApiController
     public function index(): Response
     {
         $status = $this->request->get('status');
+        $memberId = (int) $this->request->get('member_id', 0);
 
-        return $this->run(fn () => (new OrderService())->listAdmin($status ?: null));
+        return $this->run(fn () => (new OrderService())->listAdmin(
+            $status ? (string) $status : null,
+            $memberId > 0 ? $memberId : null,
+        ));
     }
 
     public function read(string $id): Response
