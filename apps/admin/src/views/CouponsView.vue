@@ -3,12 +3,15 @@ import { onMounted, reactive, ref } from 'vue'
 import {
   NButton,
   NCard,
+  NDatePicker,
   NForm,
   NFormItem,
   NInput,
   NInputNumber,
   NModal,
   NPagination,
+  NRadio,
+  NRadioGroup,
   NSelect,
   NSpace,
   NTag,
@@ -37,12 +40,15 @@ type Coupon = {
   per_member_limit: number
   starts_at: string | null
   ends_at: string | null
+  claim_permanent?: boolean
+  valid_days: number
 }
 
 const message = useMessage()
 const rows = ref<Coupon[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const { rowAttrs } = useTableRowSelect()
+
 const form = reactive({
   code: '',
   name_zh: '',
@@ -54,7 +60,12 @@ const form = reactive({
   amount: 20,
   stock: 100,
   per_member_limit: 1,
+  claim_mode: 'range' as 'range' | 'permanent',
+  starts_at: '2026-01-01',
+  ends_at: '2027-01-01',
+  valid_days: 30,
 })
+
 const types = [
   { label: '固定減免', value: 'fixed' },
   { label: '折扣（如 0.9=九折）', value: 'discount' },
@@ -70,7 +81,25 @@ const edit = reactive({
   name_en: '',
   rules_zh: '',
   rules_en: '',
+  claim_mode: 'range' as 'range' | 'permanent',
+  starts_at: null as string | null,
+  ends_at: null as string | null,
+  valid_days: 30,
 })
+
+function claimWindowLabel(row: Coupon) {
+  if (row.claim_permanent || !row.ends_at) {
+    const start = row.starts_at ? String(row.starts_at).slice(0, 10) + ' 起' : ''
+    return start ? `永久（${start}）` : '永久'
+  }
+  const a = row.starts_at ? String(row.starts_at).slice(0, 10) : '—'
+  const b = String(row.ends_at).slice(0, 10)
+  return `${a} ~ ${b}`
+}
+
+function validLabel(days: number) {
+  return days > 0 ? `領取後 ${days} 天` : '永久有效'
+}
 
 async function load() {
   const data = await api<{ items: Coupon[] }>('/api/v1/admin/coupons', {}, true)
@@ -79,15 +108,39 @@ async function load() {
 
 onMounted(load)
 
+function payloadClaimWindow(mode: 'range' | 'permanent', starts: string | null, ends: string | null) {
+  if (mode === 'permanent') {
+    return { claim_permanent: true, starts_at: starts || null, ends_at: null }
+  }
+  return {
+    claim_permanent: false,
+    starts_at: starts ? `${starts} 00:00:00` : null,
+    ends_at: ends ? `${ends} 23:59:59` : null,
+  }
+}
+
 async function create() {
+  if (form.claim_mode === 'range' && (!form.starts_at || !form.ends_at)) {
+    message.warning('請選擇發放時段起止日期')
+    return
+  }
   await api(
     '/api/v1/admin/coupons',
     {
       method: 'POST',
       body: JSON.stringify({
-        ...form,
-        starts_at: new Date(Date.now() - 86400000).toISOString().slice(0, 19).replace('T', ' '),
-        ends_at: new Date(Date.now() + 180 * 86400000).toISOString().slice(0, 19).replace('T', ' '),
+        code: form.code,
+        name_zh: form.name_zh,
+        name_en: form.name_en,
+        rules_zh: form.rules_zh,
+        rules_en: form.rules_en,
+        type: form.type,
+        threshold: form.threshold,
+        amount: form.amount,
+        stock: form.stock,
+        per_member_limit: form.per_member_limit,
+        valid_days: form.valid_days,
+        ...payloadClaimWindow(form.claim_mode, form.starts_at, form.ends_at),
       }),
     },
     true,
@@ -116,10 +169,18 @@ function openEdit(row: Coupon) {
   edit.name_en = row.name_en || row.name?.en || ''
   edit.rules_zh = row.rules_zh || row.rules?.['zh-HK'] || ''
   edit.rules_en = row.rules_en || row.rules?.en || ''
+  edit.claim_mode = row.claim_permanent || !row.ends_at ? 'permanent' : 'range'
+  edit.starts_at = row.starts_at ? String(row.starts_at).slice(0, 10) : null
+  edit.ends_at = row.ends_at ? String(row.ends_at).slice(0, 10) : null
+  edit.valid_days = Number(row.valid_days ?? 30)
   editOpen.value = true
 }
 
 async function saveEdit() {
+  if (edit.claim_mode === 'range' && (!edit.starts_at || !edit.ends_at)) {
+    message.warning('請選擇發放時段起止日期')
+    return
+  }
   editSaving.value = true
   try {
     await api(
@@ -131,6 +192,8 @@ async function saveEdit() {
           name_en: edit.name_en,
           rules_zh: edit.rules_zh,
           rules_en: edit.rules_en,
+          valid_days: edit.valid_days,
+          ...payloadClaimWindow(edit.claim_mode, edit.starts_at, edit.ends_at),
         }),
       },
       true,
@@ -155,6 +218,8 @@ async function saveEdit() {
               <th>名稱</th>
               <th>類型</th>
               <th>門檻/額度</th>
+              <th>發放時段</th>
+              <th>使用有效期</th>
               <th>領取</th>
               <th>細則</th>
               <th>狀態</th>
@@ -167,6 +232,8 @@ async function saveEdit() {
               <td>{{ row.name['zh-HK'] }}</td>
               <td>{{ row.type }}</td>
               <td>≥{{ row.threshold }} / {{ row.amount }}</td>
+              <td>{{ claimWindowLabel(row) }}</td>
+              <td>{{ validLabel(row.valid_days) }}</td>
               <td>{{ row.claimed }}/{{ row.stock }}（限{{ row.per_member_limit }}）</td>
               <td>{{ (row.rules_zh || row.rules?.['zh-HK'] || '').trim() ? '已填' : '—' }}</td>
               <td>
@@ -196,7 +263,7 @@ async function saveEdit() {
     </n-card>
 
     <n-card title="新建券">
-      <n-form label-placement="left" label-width="6rem" style="max-width: 44rem">
+      <n-form label-placement="left" label-width="7rem" style="max-width: 44rem">
         <n-form-item label="券碼"><n-input v-model:value="form.code" placeholder="如 SAVE15" /></n-form-item>
         <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
@@ -205,6 +272,49 @@ async function saveEdit() {
         <n-form-item label="面額/折扣"><n-input-number v-model:value="form.amount" :min="0" :step="0.1" /></n-form-item>
         <n-form-item label="庫存"><n-input-number v-model:value="form.stock" :min="0" /></n-form-item>
         <n-form-item label="每人限領"><n-input-number v-model:value="form.per_member_limit" :min="1" /></n-form-item>
+        <n-form-item label="發放時段">
+          <n-space vertical :size="8" style="width: 100%">
+            <n-radio-group v-model:value="form.claim_mode">
+              <n-radio value="range">指定時段</n-radio>
+              <n-radio value="permanent">永久</n-radio>
+            </n-radio-group>
+            <n-space v-if="form.claim_mode === 'range'" wrap>
+              <n-date-picker
+                v-model:formatted-value="form.starts_at"
+                type="date"
+                value-format="yyyy-MM-dd"
+                clearable
+                placeholder="開始"
+                style="width: 10rem"
+              />
+              <span>至</span>
+              <n-date-picker
+                v-model:formatted-value="form.ends_at"
+                type="date"
+                value-format="yyyy-MM-dd"
+                clearable
+                placeholder="結束"
+                style="width: 10rem"
+              />
+            </n-space>
+            <n-date-picker
+              v-else
+              v-model:formatted-value="form.starts_at"
+              type="date"
+              value-format="yyyy-MM-dd"
+              clearable
+              placeholder="可選：開始發放日"
+              style="width: 12rem"
+            />
+          </n-space>
+        </n-form-item>
+        <n-form-item label="使用有效期">
+          <n-space align="center">
+            <span>領取後</span>
+            <n-input-number v-model:value="form.valid_days" :min="0" style="width: 7rem" />
+            <span>天有效（0 = 永久）</span>
+          </n-space>
+        </n-form-item>
         <n-form-item label="使用細則（繁中）">
           <WangSimpleEditor v-model="form.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="180" />
         </n-form-item>
@@ -224,6 +334,40 @@ async function saveEdit() {
       <n-form label-placement="top">
         <n-form-item label="中文名"><n-input v-model:value="edit.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="edit.name_en" /></n-form-item>
+        <n-form-item label="發放時段">
+          <n-space vertical :size="8" style="width: 100%">
+            <n-radio-group v-model:value="edit.claim_mode">
+              <n-radio value="range">指定時段</n-radio>
+              <n-radio value="permanent">永久</n-radio>
+            </n-radio-group>
+            <n-space v-if="edit.claim_mode === 'range'" wrap>
+              <n-date-picker
+                v-model:formatted-value="edit.starts_at"
+                type="date"
+                value-format="yyyy-MM-dd"
+                clearable
+                placeholder="開始"
+                style="width: 10rem"
+              />
+              <span>至</span>
+              <n-date-picker
+                v-model:formatted-value="edit.ends_at"
+                type="date"
+                value-format="yyyy-MM-dd"
+                clearable
+                placeholder="結束"
+                style="width: 10rem"
+              />
+            </n-space>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="使用有效期">
+          <n-space align="center">
+            <span>領取後</span>
+            <n-input-number v-model:value="edit.valid_days" :min="0" style="width: 7rem" />
+            <span>天有效（0 = 永久）</span>
+          </n-space>
+        </n-form-item>
         <n-form-item label="使用細則（繁中）">
           <WangSimpleEditor v-model="edit.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="220" />
         </n-form-item>

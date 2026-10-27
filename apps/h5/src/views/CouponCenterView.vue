@@ -17,6 +17,7 @@ type Item = {
   type: string
   threshold: number
   amount: number
+  valid_days?: number
   can_claim: boolean
   claim_blocked_reason: string
   stock_left: number
@@ -46,6 +47,11 @@ function desc(row: Item) {
   if (row.type === 'free_shipping') return t('m6.freeShip')
   if (row.type === 'discount') return t('m6.discountOff', { n: row.amount })
   return t('m6.fixedOff', { n: row.amount })
+}
+
+function validText(row: Item) {
+  const days = Number(row.valid_days ?? 0)
+  return days > 0 ? t('m6.validDays', { n: days }) : t('m6.validForever')
 }
 
 async function load() {
@@ -90,6 +96,7 @@ const popupTitle = computed(() => rulesTitle.value)
         <div class="left">
           <strong>{{ nameOf(row) }}</strong>
           <span>{{ desc(row) }} · {{ t('m6.threshold', { n: row.threshold }) }}</span>
+          <small>{{ validText(row) }}</small>
           <small>{{ row.code }} · {{ t('m6.left', { n: row.stock_left }) }}</small>
         </div>
         <van-button
@@ -169,10 +176,11 @@ const popupTitle = computed(() => rulesTitle.value)
   align-items: center;
   gap: 0.25rem;
   margin: 0;
-  padding: 0;
-  border: 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--sm-primary);
+  border-radius: 999px;
   background: transparent;
-  color: #8a8378;
+  color: var(--sm-primary);
   font-size: 0.75rem;
   line-height: 1.2;
 }

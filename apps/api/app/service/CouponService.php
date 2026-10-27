@@ -82,7 +82,7 @@ class CouponService
                 'member_id' => $memberId,
                 'status' => 'unused',
                 'order_id' => null,
-                'expires_at' => $c['ends_at'] ?: null,
+                'expires_at' => self::expiresAtAfterClaim($c, $now),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -90,6 +90,66 @@ class CouponService
         });
 
         return $this->grantDetail($grantId);
+    }
+
+    /**
+     * 領取後有效期：valid_days>0 → 領取時刻 + N 天（當日 23:59:59）；0 → 永久。
+     *
+     * @param array<string, mixed> $coupon
+     */
+    public static function expiresAtAfterClaim(array $coupon, ?string $from = null): ?string
+    {
+        $days = max(0, (int) ($coupon['valid_days'] ?? 0));
+        if ($days <= 0) {
+            return null;
+        }
+        $base = $from ? strtotime($from) : time();
+        if ($base === false) {
+            $base = time();
+        }
+
+        return date('Y-m-d 23:59:59', strtotime('+' . $days . ' days', $base));
+    }
+
+    /** @return array{0:?string,1:?string} [starts_at, ends_at] */
+    private function normalizeClaimWindow(array $body, bool $forCreate = false): array
+    {
+        $permanent = in_array($body['claim_permanent'] ?? false, [true, 1, '1', 'true'], true);
+        if ($permanent) {
+            $starts = array_key_exists('starts_at', $body)
+                ? $this->normalizeDateTime($body['starts_at'] ?? null)
+                : ($forCreate ? null : null);
+
+            return [$starts, null];
+        }
+        $starts = $this->normalizeDateTime($body['starts_at'] ?? null);
+        $ends = $this->normalizeDateTime($body['ends_at'] ?? null);
+        if ($forCreate && ($starts === null || $ends === null)) {
+            throw new ApiException('INVALID', '請設置發放時段起止，或選擇永久', 422, 42277);
+        }
+        if ($starts !== null && $ends !== null && $starts > $ends) {
+            throw new ApiException('INVALID', '發放開始時間不可晚於結束時間', 422, 42278);
+        }
+
+        return [$starts, $ends];
+    }
+
+    private function normalizeDateTime(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+        // 允許僅日期：補全時間
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return $raw . ' 00:00:00';
+        }
+        $ts = strtotime($raw);
+
+        return $ts === false ? null : date('Y-m-d H:i:s', $ts);
     }
 
     public function mine(int $memberId, ?string $status = null): array
@@ -155,6 +215,8 @@ class CouponService
             throw new ApiException('CODE_TAKEN', '券碼已存在', 422, 42276);
         }
         $now = date('Y-m-d H:i:s');
+        [$startsAt, $endsAt] = $this->normalizeClaimWindow($body, true);
+        $validDays = max(0, (int) ($body['valid_days'] ?? 30));
         $id = (int) Db::name('coupons')->insertGetId([
             'code' => $code,
             'name_zh' => trim((string) ($body['name_zh'] ?? $code)),
@@ -168,8 +230,9 @@ class CouponService
             'stock' => max(0, (int) ($body['stock'] ?? 0)),
             'claimed' => 0,
             'per_member_limit' => max(1, (int) ($body['per_member_limit'] ?? 1)),
-            'starts_at' => $body['starts_at'] ?? null,
-            'ends_at' => $body['ends_at'] ?? null,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'valid_days' => $validDays,
             'scope' => (string) ($body['scope'] ?? 'all'),
             'created_at' => $now,
         ]);
@@ -184,7 +247,7 @@ class CouponService
             throw new ApiException('NOT_FOUND', '優惠券不存在', 404, 40470);
         }
         $data = [];
-        foreach (['name_zh', 'name_en', 'rules_zh', 'rules_en', 'type', 'scope', 'starts_at', 'ends_at'] as $k) {
+        foreach (['name_zh', 'name_en', 'rules_zh', 'rules_en', 'type', 'scope'] as $k) {
             if (array_key_exists($k, $body)) {
                 $data[$k] = $body[$k];
             }
@@ -194,10 +257,24 @@ class CouponService
                 $data[$k] = round((float) $body[$k], $k === 'amount' ? 4 : 2);
             }
         }
-        foreach (['status', 'stock', 'per_member_limit'] as $k) {
+        foreach (['status', 'stock', 'per_member_limit', 'valid_days'] as $k) {
             if (array_key_exists($k, $body)) {
                 $data[$k] = (int) $body[$k];
+                if ($k === 'valid_days') {
+                    $data[$k] = max(0, $data[$k]);
+                }
             }
+        }
+        if (array_key_exists('claim_permanent', $body)
+            || array_key_exists('starts_at', $body)
+            || array_key_exists('ends_at', $body)) {
+            [$startsAt, $endsAt] = $this->normalizeClaimWindow(array_merge([
+                'starts_at' => $row['starts_at'] ?? null,
+                'ends_at' => $row['ends_at'] ?? null,
+                'claim_permanent' => ($row['ends_at'] ?? null) === null,
+            ], $body), false);
+            $data['starts_at'] = $startsAt;
+            $data['ends_at'] = $endsAt;
         }
         if ($data) {
             Db::name('coupons')->where('id', $id)->update($data);
@@ -279,6 +356,8 @@ class CouponService
             'status' => (int) $r['status'],
             'starts_at' => $r['starts_at'] ?? null,
             'ends_at' => $r['ends_at'] ?? null,
+            'claim_permanent' => ($r['ends_at'] ?? null) === null,
+            'valid_days' => max(0, (int) ($r['valid_days'] ?? 0)),
             'scope' => $r['scope'] ?? 'all',
         ];
         if ($admin) {

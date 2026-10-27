@@ -57,6 +57,12 @@ function statusLabel(status: string) {
   return key ? t(key) : status
 }
 
+function expiryText(row: Row) {
+  if (!row.expires_at) return t('m6.validForever')
+  const d = String(row.expires_at).slice(0, 10)
+  return t('m6.expiresAt', { d })
+}
+
 function openRules(row: Row) {
   rulesTitle.value = t('m6.rules')
   rulesHtml.value = rulesOf(row)
@@ -81,6 +87,7 @@ const popupTitle = computed(() => rulesTitle.value)
           <div class="left">
             <strong>{{ nameOf(row) }}</strong>
             <span>{{ row.coupon.code }} · ≥HK${{ row.coupon.threshold }}</span>
+            <small>{{ expiryText(row) }}</small>
           </div>
           <em class="status">{{ statusLabel(row.status) }}</em>
         </div>
@@ -135,7 +142,8 @@ const popupTitle = computed(() => rulesTitle.value)
   font-size: 0.9375rem;
   color: #222;
 }
-.left span {
+.left span,
+.left small {
   color: #888;
   font-size: 0.75rem;
 }
@@ -151,10 +159,11 @@ const popupTitle = computed(() => rulesTitle.value)
   align-items: center;
   gap: 0.25rem;
   margin: 0;
-  padding: 0;
-  border: 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--sm-primary);
+  border-radius: 999px;
   background: transparent;
-  color: #8a8378;
+  color: var(--sm-primary);
   font-size: 0.75rem;
   line-height: 1.2;
 }
