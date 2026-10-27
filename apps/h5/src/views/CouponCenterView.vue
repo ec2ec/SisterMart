@@ -24,6 +24,8 @@ type Item = {
   upcoming?: boolean
   starts_in_ms?: number
   starts_at?: string | null
+  ends_at?: string | null
+  claimed_by_me?: number
 }
 
 const { t, locale } = useI18n()
@@ -81,6 +83,24 @@ function claimDisabled(row: Item) {
   return !row.can_claim && isLoggedIn()
 }
 
+/** 已開始且尚未領取：顯示離發放結束剩餘天數 */
+function isStartedUnclaimed(row: Item) {
+  if (isUpcoming(row)) return false
+  if ((row.claimed_by_me ?? 0) > 0) return false
+  if (isLoggedIn() && !row.can_claim && row.claim_blocked_reason === 'limit_reached') return false
+  return true
+}
+
+function endsRemainingText(row: Item) {
+  if (!isStartedUnclaimed(row) || !row.ends_at) return ''
+  const ts = Date.parse(String(row.ends_at).replace(' ', 'T'))
+  if (!Number.isFinite(ts)) return ''
+  const ms = ts - Date.now()
+  if (ms <= 0) return ''
+  const days = Math.max(1, Math.ceil(ms / 86400000))
+  return t('m6.endsInDays', { n: days })
+}
+
 async function load() {
   const data = await api<{ items: Item[] }>('/api/v1/coupons/claimable', {}, isLoggedIn() ? 'member' : 'none')
   items.value = data.items
@@ -128,7 +148,10 @@ const popupTitle = computed(() => rulesTitle.value)
         <div class="left">
           <strong>{{ nameOf(row) }}</strong>
           <span>{{ desc(row) }} · {{ t('m6.threshold', { n: row.threshold }) }}</span>
-          <small>{{ validText(row) }}</small>
+          <small>
+            {{ validText(row) }}
+            <em v-if="endsRemainingText(row)" class="ends-left">{{ endsRemainingText(row) }}</em>
+          </small>
           <small>{{ row.code }} · {{ t('m6.left', { n: row.stock_left }) }}</small>
         </div>
         <van-button
@@ -220,6 +243,11 @@ const popupTitle = computed(() => rulesTitle.value)
   color: #888;
   font-size: 0.75rem;
 }
+.ends-left {
+  margin-left: 0.25rem;
+  font-style: normal;
+  color: #c45c4a;
+}
 .foot {
   display: flex;
   align-items: center;
@@ -230,7 +258,7 @@ const popupTitle = computed(() => rulesTitle.value)
 .foot.has-tip {
   justify-content: space-between;
 }
-.foot.has-tip:not(:has(.rules-btn)) {
+.foot.tip-only {
   justify-content: flex-end;
 }
 .rules-btn {
