@@ -68,6 +68,9 @@ function onUpdate(v: boolean) {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0 1.25rem 1.5rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #3b3e42;
 }
 .empty {
   margin: 2rem 0;
@@ -81,8 +84,8 @@ function onUpdate(v: boolean) {
 }
 .rich :deep(p) {
   margin: 0 0 0.75rem;
-  line-height: 1.6;
-  font-size: 0.875rem;
-  color: #333;
+  line-height: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 </style>
