@@ -108,14 +108,31 @@ async function load() {
 
 onMounted(load)
 
-function payloadClaimWindow(mode: 'range' | 'permanent', starts: string | null, ends: string | null) {
+function asDateOnly(v: unknown): string | null {
+  if (v == null || v === '') return null
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const d = new Date(v > 1e12 ? v : v * 1000)
+    if (Number.isNaN(d.getTime())) return null
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  if (typeof v !== 'string') return null
+  const m = v.trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return m ? m[1] : null
+}
+
+function payloadClaimWindow(mode: 'range' | 'permanent', starts: unknown, ends: unknown) {
+  const s = asDateOnly(starts)
+  const e = asDateOnly(ends)
   if (mode === 'permanent') {
-    return { claim_permanent: true, starts_at: starts || null, ends_at: null }
+    return { claim_permanent: true, starts_at: s ? `${s} 00:00:00` : null, ends_at: null }
   }
   return {
     claim_permanent: false,
-    starts_at: starts ? `${starts} 00:00:00` : null,
-    ends_at: ends ? `${ends} 23:59:59` : null,
+    starts_at: s ? `${s} 00:00:00` : null,
+    ends_at: e ? `${e} 23:59:59` : null,
   }
 }
 
