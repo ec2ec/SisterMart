@@ -30,6 +30,7 @@ type Popup = {
   link_value: string
   frequency: string
   targets: string[]
+  image_scale: number
   starts_at: string | null
   ends_at: string | null
   sort_order: number
@@ -47,6 +48,7 @@ const form = ref({
   link_value: '',
   frequency: 'once',
   targets: ['all'] as string[],
+  image_scale: 100,
   starts_at: null as string | null,
   ends_at: null as string | null,
   sort_order: 0,
@@ -139,6 +141,7 @@ function reset() {
     link_value: '',
     frequency: 'once',
     targets: ['all'],
+    image_scale: 100,
     starts_at: null,
     ends_at: null,
     sort_order: 0,
@@ -156,6 +159,7 @@ function edit(row: Popup) {
     link_value: row.link_value || '',
     frequency: row.frequency || 'once',
     targets: row.targets?.length ? [...row.targets] : ['all'],
+    image_scale: Number(row.image_scale ?? 100) || 100,
     starts_at: row.starts_at ? String(row.starts_at).slice(0, 16) : null,
     ends_at: row.ends_at ? String(row.ends_at).slice(0, 16) : null,
     sort_order: row.sort_order,
@@ -186,6 +190,7 @@ async function save() {
     link_value: form.value.link_value,
     frequency: form.value.frequency,
     targets: form.value.targets,
+    image_scale: form.value.image_scale,
     starts_at: asDateTime(form.value.starts_at),
     ends_at: asDateTime(form.value.ends_at),
     sort_order: form.value.sort_order,
@@ -232,7 +237,7 @@ onMounted(load)
           <div>
             <strong>#{{ row.id }} · {{ row.title['zh-HK'] || '(無標題)' }}</strong>
             <p>
-              {{ freqLabel(row.frequency) }} · {{ row.link_type }}
+              {{ freqLabel(row.frequency) }} · 縮放 {{ row.image_scale ?? 100 }}% · {{ row.link_type }}
               {{ row.link_value }} · sort {{ row.sort_order }}
             </p>
             <p>定向：{{ targetsText(row) }}</p>
@@ -267,6 +272,13 @@ onMounted(load)
         <n-input v-model:value="form.link_value" placeholder="商品/分類/文章 code 或 URL" />
       </n-form-item>
       <n-form-item label="顯示頻率"><n-select v-model:value="form.frequency" :options="frequencies" /></n-form-item>
+      <n-form-item label="圖片縮放比例">
+        <n-space align="center">
+          <n-input-number v-model:value="form.image_scale" :min="40" :max="150" :step="5" style="width: 8rem" />
+          <span>%</span>
+          <span class="field-hint">相對默認寬度，40–150，默認 100</span>
+        </n-space>
+      </n-form-item>
       <n-form-item label="定向（可複選，命中任一）">
         <n-checkbox-group :value="form.targets" @update:value="onTargetsChange">
           <n-space vertical :size="6">
@@ -343,6 +355,10 @@ onMounted(load)
 .meta p {
   margin: 0.15rem 0 0;
   color: #888;
+  font-size: 0.75rem;
+}
+.field-hint {
+  color: #8a8378;
   font-size: 0.75rem;
 }
 </style>

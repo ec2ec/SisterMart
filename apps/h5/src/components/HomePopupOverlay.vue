@@ -28,6 +28,18 @@ const canClickImage = computed(() => {
   return !!(row && row.link_type && row.link_type !== 'none' && row.link_value)
 })
 
+const popupStyle = computed(() => {
+  const scale = Number(current.value?.image_scale ?? 100) || 100
+  const clamped = Math.min(150, Math.max(40, scale))
+  // 基準寬度 86%，按比例縮放
+  const widthPct = Math.round((86 * clamped) / 100)
+  return {
+    width: `${widthPct}%`,
+    maxWidth: `${((22 * clamped) / 100).toFixed(2)}rem`,
+    background: 'transparent',
+  }
+})
+
 function today(): string {
   const d = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -217,7 +229,7 @@ watch(loggedIn, () => {
     closeable
     position="center"
     :close-on-click-overlay="false"
-    :style="{ width: '86%', maxWidth: '22rem', background: 'transparent' }"
+    :style="popupStyle"
     class="home-popup"
     @update:show="(v: boolean) => { if (!v && show) void closeCurrent(false) }"
   >

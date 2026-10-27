@@ -152,6 +152,7 @@ class HomePopupService
         if ($targets === []) {
             $targets = ['all'];
         }
+        $imageScale = $this->normalizeImageScale($body['image_scale'] ?? 100);
         $startsAt = $this->normalizeDateTime($body['starts_at'] ?? null, false);
         $endsAt = $this->normalizeDateTime($body['ends_at'] ?? null, true);
         if ($startsAt && $endsAt && $startsAt > $endsAt) {
@@ -167,6 +168,7 @@ class HomePopupService
             'link_value' => $linkType === 'none' ? null : $linkValue,
             'frequency' => $freq,
             'targets' => json_encode($targets, JSON_UNESCAPED_UNICODE),
+            'image_scale' => $imageScale,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'sort_order' => (int) ($body['sort_order'] ?? $body['sort'] ?? 0),
@@ -330,6 +332,20 @@ class HomePopupService
         return $freq;
     }
 
+    /** 圖片縮放比例（%），限制 40–150，默認 100 */
+    private function normalizeImageScale(mixed $raw): int
+    {
+        $n = (int) round((float) $raw);
+        if ($n < 40) {
+            return 40;
+        }
+        if ($n > 150) {
+            return 150;
+        }
+
+        return $n > 0 ? $n : 100;
+    }
+
     private function normalizeDateTime(mixed $raw, bool $endOfDayIfDateOnly): ?string
     {
         if ($raw === null || $raw === '') {
@@ -368,6 +384,7 @@ class HomePopupService
             'link_value' => $row['link_value'] !== null ? (string) $row['link_value'] : '',
             'frequency' => $this->normalizeFrequency($row['frequency'] ?? 'once'),
             'targets' => $targets,
+            'image_scale' => $this->normalizeImageScale($row['image_scale'] ?? 100),
             'starts_at' => $row['starts_at'] ?? null,
             'ends_at' => $row['ends_at'] ?? null,
             'sort_order' => (int) $row['sort_order'],
@@ -403,6 +420,7 @@ class HomePopupService
               `link_value` VARCHAR(512) NULL,
               `frequency` VARCHAR(16) NOT NULL DEFAULT 'once',
               `targets` JSON NULL,
+              `image_scale` INT NOT NULL DEFAULT 100,
               `starts_at` DATETIME NULL,
               `ends_at` DATETIME NULL,
               `sort_order` INT NOT NULL DEFAULT 0,
@@ -436,6 +454,15 @@ class HomePopupService
             $c = (int) (($hasTargets[0]['c'] ?? 0));
             if ($c === 0) {
                 Db::execute("ALTER TABLE `{$popups}` ADD COLUMN `targets` JSON NULL AFTER `frequency`");
+            }
+            $hasScale = Db::query(
+                "SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'image_scale'",
+                [$popups],
+            );
+            $sc = (int) (($hasScale[0]['c'] ?? 0));
+            if ($sc === 0) {
+                Db::execute("ALTER TABLE `{$popups}` ADD COLUMN `image_scale` INT NOT NULL DEFAULT 100 AFTER `targets`");
             }
             $ready = true;
         } catch (\Throwable $e) {

@@ -144,6 +144,7 @@ export type HomePopup = {
   link_value: string
   frequency: 'once' | 'daily' | 'always' | string
   targets?: string[]
+  image_scale?: number
   starts_at?: string | null
   ends_at?: string | null
   sort_order: number
