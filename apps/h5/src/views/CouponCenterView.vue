@@ -148,8 +148,7 @@ const popupTitle = computed(() => rulesTitle.value)
         <div class="left">
           <strong>{{ nameOf(row) }}</strong>
           <span>{{ desc(row) }} · {{ t('m6.threshold', { n: row.threshold }) }}</span>
-          <small>{{ validText(row) }}</small>
-          <small>{{ row.code }} · {{ t('m6.left', { n: row.stock_left }) }}</small>
+          <small>{{ validText(row) }} · {{ t('m6.left', { n: row.stock_left }) }}</small>
         </div>
         <van-button
           size="small"
@@ -175,7 +174,7 @@ const popupTitle = computed(() => rulesTitle.value)
           class="rules-btn"
           @click="openRules(row)"
         >
-          <van-icon name="info-o" />
+          <van-icon name="info" />
           <span>{{ t('m6.rules') }}</span>
         </button>
         <div v-if="isUpcoming(row)" class="side-tip">
@@ -263,10 +262,9 @@ const popupTitle = computed(() => rulesTitle.value)
   align-items: center;
   gap: 0.25rem;
   margin: 0;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid var(--sm-primary);
-  border-radius: 999px;
-  background: transparent;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--sm-primary);
   font-size: 0.75rem;
   line-height: 1.2;
