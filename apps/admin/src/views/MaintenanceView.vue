@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   NButton,
@@ -131,7 +132,7 @@ async function save() {
     message.success(form.enabled ? '維護模式已開啟（H5 業務接口將回維護狀態）' : '維護模式已關閉')
     await load()
   } catch (e) {
-    message.error(e instanceof Error ? e.message : '保存失敗')
+    showError(e instanceof Error ? e.message : '保存失敗')
   } finally {
     loading.value = false
   }

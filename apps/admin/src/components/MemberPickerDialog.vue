@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, ref, watch } from 'vue'
-import { NButton, NEmpty, NInput, NModal, NSpace, NSpin, useMessage } from 'naive-ui'
+import { NButton, NEmpty, NInput, NModal, NSpace, NSpin } from 'naive-ui'
 import { api } from '../api'
 
 export type MemberPickResult = {
@@ -30,7 +31,6 @@ const emit = defineEmits<{
   select: [value: MemberPickResult]
 }>()
 
-const message = useMessage()
 const keyword = ref('')
 const loading = ref(false)
 const rows = ref<MemberPickResult[]>([])
@@ -73,7 +73,7 @@ async function load() {
     rows.value = data.items || []
     searched.value = true
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : '搜索失敗')
+    showError(e instanceof Error ? e.message : '搜索失敗')
   } finally {
     loading.value = false
   }
@@ -104,7 +104,7 @@ function labelOf(m: MemberPickResult) {
     :title="title"
     style="width: min(40rem, 96vw)"
     :mask-closable="false"
-  >
+   :close-on-esc="false">
     <n-space style="margin-bottom: 0.75rem">
       <n-input
         v-model:value="keyword"

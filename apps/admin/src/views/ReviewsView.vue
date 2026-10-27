@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
@@ -116,7 +117,7 @@ async function toggleHidden() {
     message.success(next ? '已隱藏（前台不顯示）' : '已恢復顯示')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '操作失敗')
+    showError(e?.message || '操作失敗')
   } finally {
     busy.value = false
   }
@@ -134,7 +135,7 @@ async function setModeration(status: 'approved' | 'rejected') {
     message.success(status === 'approved' ? '已通過審核' : '已拒絕')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '審核失敗')
+    showError(e?.message || '審核失敗')
   } finally {
     busy.value = false
   }
@@ -156,7 +157,7 @@ async function saveReply() {
     message.success('回覆已保存')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '保存失敗')
+    showError(e?.message || '保存失敗')
   } finally {
     busy.value = false
   }
@@ -229,10 +230,10 @@ async function saveReply() {
     preset="card"
     title="評價管理"
     style="width: min(36rem, 96vw)"
-    :mask-closable="!busy"
+    :mask-closable="false"
     :closable="!busy"
     :auto-focus="false"
-  >
+   :close-on-esc="false">
     <n-space v-if="current" vertical size="large">
       <div class="meta">
         <div>{{ current.product_code }} · {{ current.author }} · {{ current.stars }}★</div>

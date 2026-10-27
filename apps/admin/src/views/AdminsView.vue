@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { onMounted, reactive, ref } from 'vue'
 import {
   NButton,
@@ -52,7 +53,7 @@ onMounted(async () => {
   try {
     await load()
   } catch (e) {
-    message.error(e instanceof Error ? e.message : '無權限')
+    showError(e instanceof Error ? e.message : '無權限')
   }
 })
 

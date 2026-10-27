@@ -325,7 +325,7 @@ function activeLabel(at?: string | null) {
       </n-card>
     </div>
 
-    <n-modal v-model:show="showAdjust" preset="card" title="調整會員資產" style="width: 28rem">
+    <n-modal v-model:show="showAdjust" preset="card" title="調整會員資產" style="width: 28rem" :mask-closable="false" :close-on-esc="false">
       <p>會員 #{{ member.id }} · {{ accountLabel }}</p>
       <n-form label-placement="left" label-width="6rem">
         <n-form-item label="積分變動"><n-input-number v-model:value="adjust.points_delta" /></n-form-item>

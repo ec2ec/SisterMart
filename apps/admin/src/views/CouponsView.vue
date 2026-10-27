@@ -347,7 +347,7 @@ async function saveEdit() {
       preset="card"
       :title="`編輯優惠券 · ${edit.code}`"
       style="width: min(44rem, 94vw)"
-    >
+     :mask-closable="false" :close-on-esc="false">
       <n-form label-placement="top">
         <n-form-item label="中文名"><n-input v-model:value="edit.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="edit.name_en" /></n-form-item>

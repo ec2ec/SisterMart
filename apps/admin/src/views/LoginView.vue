@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NCard, NForm, NFormItem, NInput, useMessage } from 'naive-ui'
+import { NButton, NCard, NForm, NFormItem, NInput } from 'naive-ui'
 import { api, type AdminUser } from '../api'
 
 const route = useRoute()
 const router = useRouter()
-const message = useMessage()
 const email = ref('admin@sistermart.local')
 const password = ref('')
 const loading = ref(false)
@@ -23,7 +23,7 @@ async function submit() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     router.replace(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '登錄失敗')
+    showError(error instanceof Error ? error.message : '登錄失敗')
   } finally {
     loading.value = false
   }

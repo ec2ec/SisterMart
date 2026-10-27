@@ -1,3 +1,5 @@
+import { showError } from './feedback'
+
 const base = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
 
 type Envelope<T> = {
@@ -29,10 +31,19 @@ export async function api<T>(path: string, init: RequestInit = {}, auth = false)
     const token = localStorage.getItem('sm_admin_token')
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
-  const res = await fetch(`${base}${path}`, { ...init, headers })
+  let res: Response
+  try {
+    res = await fetch(`${base}${path}`, { ...init, headers })
+  } catch (e) {
+    const err = new ApiError('NETWORK', e instanceof Error ? e.message : '網絡異常，請稍後再試', 0)
+    showError(err, '網絡異常，請稍後再試', '網絡錯誤')
+    throw err
+  }
   const body = (await res.json().catch(() => ({}))) as Envelope<T>
   if (!res.ok || body.code !== 0) {
-    throw new ApiError(body.error?.name || 'HTTP', body.message || '請求失敗', body.code ?? 0)
+    const err = new ApiError(body.error?.name || 'HTTP', body.message || '請求失敗', body.code ?? 0)
+    showError(err, '請求失敗', '接口錯誤')
+    throw err
   }
   return body.data
 }

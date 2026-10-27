@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, ref } from 'vue'
 import { NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
@@ -53,6 +54,8 @@ function openPicker() {
 
 function removeAt(idx: number) {
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認刪除圖片',
     content: '確定從商品圖庫移除此圖？保存商品後才會生效。',
     positiveText: '刪除',
@@ -115,7 +118,7 @@ async function onFiles(ev: Event) {
           url,
         })
       } catch (e: unknown) {
-        message.error(e instanceof Error ? e.message : `上傳失敗：${file.name}`)
+        showError(e instanceof Error ? e.message : `上傳失敗：${file.name}`)
       }
     }
     if (added.length) {

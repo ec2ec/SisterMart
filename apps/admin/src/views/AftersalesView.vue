@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -110,7 +111,7 @@ onMounted(async () => {
     try {
       await openDetail({ id: openId })
     } catch (e: any) {
-      message.error(e?.message || '售後單加載失敗')
+      showError(e?.message || '售後單加載失敗')
     }
     const nextQuery = { ...route.query }
     delete nextQuery.open
@@ -140,7 +141,7 @@ async function approve() {
     show.value = false
     await load()
   } catch (e: any) {
-    message.error(e?.message || '審核失敗')
+    showError(e?.message || '審核失敗')
   } finally {
     busy.value = false
   }
@@ -166,7 +167,7 @@ async function reject() {
     show.value = false
     await load()
   } catch (e: any) {
-    message.error(e?.message || '駁回失敗')
+    showError(e?.message || '駁回失敗')
   } finally {
     busy.value = false
   }
@@ -181,7 +182,7 @@ async function markReturned() {
     show.value = false
     await load()
   } catch (e: any) {
-    message.error(e?.message || '操作失敗')
+    showError(e?.message || '操作失敗')
   } finally {
     busy.value = false
   }
@@ -203,7 +204,7 @@ async function forceBalance() {
     show.value = false
     await load()
   } catch (e: any) {
-    message.error(e?.message || '操作失敗')
+    showError(e?.message || '操作失敗')
   } finally {
     busy.value = false
   }
@@ -284,9 +285,9 @@ async function forceBalance() {
     preset="card"
     :title="current ? `售後審核 ${current.aftersale_no}` : '售後審核'"
     style="width: min(40rem, 96vw)"
-    :mask-closable="!busy"
+    :mask-closable="false"
     :closable="!busy"
-  >
+   :close-on-esc="false">
     <n-space v-if="current" vertical size="large">
       <div class="meta">
         <div>類型：{{ typeLabel(current.type) }} · 金額 {{ current.amount }} · {{ current.refund_to }}</div>

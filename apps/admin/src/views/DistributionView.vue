@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -241,7 +242,7 @@ async function submitReview(id: number, action: 'approve' | 'reject', note: stri
     approveConfirmOpen.value = false
     await loadWithdrawals()
   } catch (e: any) {
-    message.error(e?.message || '審核失敗')
+    showError(e?.message || '審核失敗')
   } finally {
     reviewBusy.value = false
   }
@@ -456,7 +457,7 @@ onMounted(() => {
       preset="card"
       :title="reviewAction === 'approve' ? '通過提現' : '駁回提現'"
       style="width: 28rem; max-width: 94vw"
-    >
+     :mask-closable="false" :close-on-esc="false">
       <p v-if="reviewRow" class="modal-lead">
         #{{ reviewRow.id }} · HK$ {{ reviewRow.amount.toFixed(2) }} ·
         {{ reviewRow.fps_name || '-' }} / {{ reviewRow.fps_id || '-' }}
@@ -499,7 +500,7 @@ onMounted(() => {
       preset="card"
       title="確認已線下打款"
       style="width: 28rem; max-width: 94vw"
-    >
+     :mask-closable="false" :close-on-esc="false">
       <p v-if="reviewRow" class="modal-lead">
         將標記 #{{ reviewRow.id }} · HK$ {{ reviewRow.amount.toFixed(2) }}（FPS
         {{ reviewRow.fps_id || '-' }}）為已打款。此操作不可撤銷。

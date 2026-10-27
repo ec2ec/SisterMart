@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { onMounted, ref } from 'vue'
 import {
   NButton,
@@ -59,7 +60,7 @@ async function setStatus(row: Row, status: number) {
     message.success(status ? '已恢復' : '已關閉')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '操作失敗')
+    showError(e?.message || '操作失敗')
   } finally {
     busy.value = false
   }
@@ -73,7 +74,7 @@ async function remove(row: Row) {
     message.success('已刪除')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '刪除失敗')
+    showError(e?.message || '刪除失敗')
   } finally {
     busy.value = false
   }

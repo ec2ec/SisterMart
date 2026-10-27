@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   NButton,
@@ -101,7 +102,7 @@ async function save() {
     message.success('新用戶配置已保存')
     await load()
   } catch (e) {
-    message.error(e instanceof Error ? e.message : '保存失敗')
+    showError(e instanceof Error ? e.message : '保存失敗')
   } finally {
     loading.value = false
   }
