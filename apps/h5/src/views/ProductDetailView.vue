@@ -275,6 +275,7 @@ async function share() {
       ref="gallerySwipe"
       class="gallery"
       :initial-swipe="0"
+      :duration="250"
       :show-indicators="false"
       :loop="gallery.length > 1"
       @change="onGalleryChange"
