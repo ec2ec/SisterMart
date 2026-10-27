@@ -106,7 +106,7 @@ class CouponService
         $q = Db::name('coupon_grants')->alias('g')
             ->join('coupons c', 'c.id = g.coupon_id')
             ->where('g.member_id', $memberId)
-            ->field('g.*, c.code, c.name_zh, c.name_en, c.type, c.threshold, c.amount')
+            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.type, c.threshold, c.amount')
             ->order('g.id', 'desc');
         if ($status) {
             $q->where('g.status', $status);
@@ -123,6 +123,10 @@ class CouponService
                     'id' => (int) $r['coupon_id'],
                     'code' => $r['code'],
                     'name' => ['zh-HK' => $r['name_zh'], 'en' => $r['name_en']],
+                    'rules' => [
+                        'zh-HK' => (string) ($r['rules_zh'] ?? ''),
+                        'en' => (string) ($r['rules_en'] ?? ''),
+                    ],
                     'type' => $r['type'],
                     'threshold' => (float) $r['threshold'],
                     'amount' => (float) $r['amount'],
@@ -155,6 +159,8 @@ class CouponService
             'code' => $code,
             'name_zh' => trim((string) ($body['name_zh'] ?? $code)),
             'name_en' => trim((string) ($body['name_en'] ?? $code)),
+            'rules_zh' => (string) ($body['rules_zh'] ?? ''),
+            'rules_en' => (string) ($body['rules_en'] ?? ''),
             'type' => $type,
             'threshold' => round((float) ($body['threshold'] ?? 0), 2),
             'amount' => round((float) ($body['amount'] ?? 0), 4),
@@ -178,7 +184,7 @@ class CouponService
             throw new ApiException('NOT_FOUND', '優惠券不存在', 404, 40470);
         }
         $data = [];
-        foreach (['name_zh', 'name_en', 'type', 'scope', 'starts_at', 'ends_at'] as $k) {
+        foreach (['name_zh', 'name_en', 'rules_zh', 'rules_en', 'type', 'scope', 'starts_at', 'ends_at'] as $k) {
             if (array_key_exists($k, $body)) {
                 $data[$k] = $body[$k];
             }
@@ -236,7 +242,7 @@ class CouponService
         $r = Db::name('coupon_grants')->alias('g')
             ->join('coupons c', 'c.id = g.coupon_id')
             ->where('g.id', $grantId)
-            ->field('g.*, c.code, c.name_zh, c.name_en, c.type, c.threshold, c.amount')
+            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.type, c.threshold, c.amount')
             ->find();
 
         return [
@@ -247,6 +253,10 @@ class CouponService
                 'id' => (int) $r['coupon_id'],
                 'code' => $r['code'],
                 'name' => ['zh-HK' => $r['name_zh'], 'en' => $r['name_en']],
+                'rules' => [
+                    'zh-HK' => (string) ($r['rules_zh'] ?? ''),
+                    'en' => (string) ($r['rules_en'] ?? ''),
+                ],
                 'type' => $r['type'],
                 'threshold' => (float) $r['threshold'],
                 'amount' => (float) $r['amount'],
@@ -256,10 +266,13 @@ class CouponService
 
     private function presentCoupon(array $r, bool $admin = false): array
     {
+        $rulesZh = (string) ($r['rules_zh'] ?? '');
+        $rulesEn = (string) ($r['rules_en'] ?? '');
         $data = [
             'id' => (int) $r['id'],
             'code' => $r['code'],
             'name' => ['zh-HK' => $r['name_zh'], 'en' => $r['name_en']],
+            'rules' => ['zh-HK' => $rulesZh, 'en' => $rulesEn],
             'type' => $r['type'],
             'threshold' => (float) $r['threshold'],
             'amount' => (float) $r['amount'],
@@ -268,6 +281,12 @@ class CouponService
             'ends_at' => $r['ends_at'] ?? null,
             'scope' => $r['scope'] ?? 'all',
         ];
+        if ($admin) {
+            $data['name_zh'] = (string) $r['name_zh'];
+            $data['name_en'] = (string) $r['name_en'];
+            $data['rules_zh'] = $rulesZh;
+            $data['rules_en'] = $rulesEn;
+        }
         if ($admin || isset($r['stock'])) {
             $data['stock'] = (int) ($r['stock'] ?? 0);
             $data['claimed'] = (int) ($r['claimed'] ?? 0);
