@@ -148,10 +148,7 @@ const popupTitle = computed(() => rulesTitle.value)
         <div class="left">
           <strong>{{ nameOf(row) }}</strong>
           <span>{{ desc(row) }} · {{ t('m6.threshold', { n: row.threshold }) }}</span>
-          <small>
-            {{ validText(row) }}
-            <em v-if="endsRemainingText(row)" class="ends-left">{{ endsRemainingText(row) }}</em>
-          </small>
+          <small>{{ validText(row) }}</small>
           <small>{{ row.code }} · {{ t('m6.left', { n: row.stock_left }) }}</small>
         </div>
         <van-button
@@ -165,10 +162,11 @@ const popupTitle = computed(() => rulesTitle.value)
         </van-button>
       </div>
       <div
+        v-if="hasRules(row) || isUpcoming(row) || endsRemainingText(row)"
         class="foot"
         :class="{
-          'has-tip': isUpcoming(row),
-          'tip-only': isUpcoming(row) && !hasRules(row),
+          'has-tip': isUpcoming(row) || !!endsRemainingText(row),
+          'tip-only': (isUpcoming(row) || !!endsRemainingText(row)) && !hasRules(row),
         }"
       >
         <button
@@ -180,7 +178,7 @@ const popupTitle = computed(() => rulesTitle.value)
           <van-icon name="info-o" />
           <span>{{ t('m6.rules') }}</span>
         </button>
-        <div v-if="isUpcoming(row)" class="upcoming-tip">
+        <div v-if="isUpcoming(row)" class="side-tip">
           <span>{{ t('m6.upcomingBefore') }}</span>
           <van-count-down
             class="upcoming-cd"
@@ -189,6 +187,9 @@ const popupTitle = computed(() => rulesTitle.value)
             @finish="onCountdownFinish"
           />
           <span>{{ t('m6.upcomingAfter') }}</span>
+        </div>
+        <div v-else-if="endsRemainingText(row)" class="side-tip ends-tip">
+          {{ endsRemainingText(row) }}
         </div>
       </div>
     </div>
@@ -243,11 +244,6 @@ const popupTitle = computed(() => rulesTitle.value)
   color: #888;
   font-size: 0.75rem;
 }
-.ends-left {
-  margin-left: 0.25rem;
-  font-style: normal;
-  color: #c45c4a;
-}
 .foot {
   display: flex;
   align-items: center;
@@ -275,7 +271,7 @@ const popupTitle = computed(() => rulesTitle.value)
   font-size: 0.75rem;
   line-height: 1.2;
 }
-.upcoming-tip {
+.side-tip {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
@@ -286,6 +282,9 @@ const popupTitle = computed(() => rulesTitle.value)
   color: #8a8378;
   font-size: 0.75rem;
   line-height: 1.4;
+}
+.ends-tip {
+  color: #c45c4a;
 }
 .upcoming-cd {
   display: inline-block;
