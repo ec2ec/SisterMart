@@ -24,13 +24,10 @@ html {
   --sm-tabbar-pad-y: 0.5rem;
   /* 頁面底部避讓 = 欄高 + 上下 padding；safe-area 另加（見 .page） */
   --sm-tabbar-h: 4.125rem;
-  /* 觸控／CTA 標準（H5 交互規範 · 第一批） */
+  /* 觸控／CTA 標準（勿對元素做 scale 縮小） */
   --sm-tap-min: 2.75rem;
   --sm-icon-btn: 2.75rem;
-  /* 按壓變色：明顯亮度降低 + 輕縮放（勿只用微弱 opacity） */
-  --sm-press-dim: 0.86;
-  --sm-press-scale: 0.97;
-  --sm-press-overlay: 0.22;
+  --sm-press-overlay: 0.14;
   --sm-cta-radius: 999px;
   --van-primary-color: var(--sm-primary);
   --van-tabbar-height: 3.125rem;
@@ -93,59 +90,35 @@ a {
 }
 
 /*
- * 觸控基底：取消 iOS 灰閃、縮短點擊延遲感。
- * 手勢區（縮放／裁剪）自行設 touch-action: none，不受影響。
- * iOS Safari 需 document touchstart 才能穩定觸發 :active（見 main.ts）。
+ * 觸控基底：取消 iOS 灰閃、touch-action。
+ * 不對按下做 scale 縮小。變色僅：van-button 遮罩、.sm-pressable／.sm-icon-btn 背景。
+ * iOS :active 見 main.ts touchstart。
  */
 button,
 [role='button'],
 a,
 .van-button,
 .van-tabbar-item,
-.van-cell,
-.van-grid-item,
 .sm-pressable {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-/* native／自定義可點塊：變暗 + 微縮 */
+/* 可選按壓：僅背景變色，不縮放 */
 .sm-pressable {
-  transition:
-    filter 0.12s ease,
-    transform 0.12s ease,
-    background-color 0.12s ease,
-    opacity 0.12s ease;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
 }
 
-.sm-pressable:active:not(:disabled),
-button:active:not(:disabled):not(.van-button):not(.sm-icon-btn),
-[role='button']:active {
-  filter: brightness(var(--sm-press-dim));
-  transform: scale(var(--sm-press-scale));
+.sm-pressable:active:not(:disabled) {
+  background-color: rgba(22, 22, 43, 0.06);
 }
 
-/*
- * Vant Button：加強官方 :before 遮罩（默認 0.1 太淡），
- * 並疊 filter，深色／淺色按鈕都能看出「按下去變色」。
- */
-.van-button {
-  transition:
-    opacity var(--van-duration-fast, 0.2s),
-    filter 0.12s ease,
-    transform 0.12s ease;
-}
-
+/* Vant Button：略加深官方 :before（默認 0.1），不加 scale */
 .van-button:active:not(.van-button--disabled):not(.van-button--loading)::before {
   opacity: var(--sm-press-overlay) !important;
 }
 
-.van-button:active:not(.van-button--disabled):not(.van-button--loading) {
-  filter: brightness(var(--sm-press-dim));
-  transform: scale(var(--sm-press-scale));
-}
-
-/* 圖標熱區：圓形可點區 ≥ --sm-icon-btn */
+/* 圖標熱區 ≥ --sm-icon-btn；按下僅底色，不縮放 */
 .sm-icon-btn {
   box-sizing: border-box;
   flex: none;
@@ -161,15 +134,10 @@ button:active:not(:disabled):not(.van-button):not(.sm-icon-btn),
   place-items: center;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  transition:
-    filter 0.12s ease,
-    transform 0.12s ease,
-    background-color 0.12s ease;
+  transition: background-color 0.12s ease;
 }
 
 .sm-icon-btn:active:not(:disabled) {
-  filter: brightness(var(--sm-press-dim));
-  transform: scale(var(--sm-press-scale));
   background-color: rgba(22, 22, 43, 0.08);
 }
 

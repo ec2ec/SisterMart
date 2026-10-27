@@ -295,39 +295,39 @@ function goOrders(tab?: string) {
 <template>
   <div class="page account-page">
     <section class="hero">
-      <div class="user" role="button" @click="openAccount">
-        <button type="button" class="avatar" :disabled="avatarBusy" @click.stop="onAvatarClick">
+      <div class="user">
+        <button type="button" class="avatar" :disabled="avatarBusy" @click="onAvatarClick">
           <img v-if="avatarSrc" :src="avatarSrc" alt="" />
           <span v-else>{{ avatarLetter }}</span>
         </button>
-        <div>
+        <button type="button" class="user-meta sm-pressable" @click="openAccount">
           <h1>{{ displayName }}</h1>
           <p class="phone">{{ displaySub }}</p>
           <p class="spent">{{ spentDisplay }}</p>
-        </div>
+        </button>
       </div>
       <div class="stats">
-        <div role="button" @click="goBills">
+        <button type="button" class="sm-pressable" @click="goBills">
           <strong>{{ statBalance }}</strong>
           <span>{{ t('account.balance') }}</span>
-        </div>
-        <div role="button" @click="goCoupons">
+        </button>
+        <button type="button" class="sm-pressable" @click="goCoupons">
           <strong>{{ statCoupons }}</strong>
           <span>{{ t('account.coupons') }}</span>
-        </div>
-        <div role="button" @click="goPoints">
+        </button>
+        <button type="button" class="sm-pressable" @click="goPoints">
           <strong>{{ statPoints }}</strong>
           <span>{{ t('account.points') }}</span>
-        </div>
+        </button>
       </div>
     </section>
 
     <div class="quick">
-      <button type="button" @click="goLevel">
+      <button type="button" class="sm-pressable" @click="goLevel">
         <strong>{{ t('account.member') }}</strong>
         <span>{{ t('account.memberSub') }}</span>
       </button>
-      <button type="button" @click="goService('points-mall')">
+      <button type="button" class="sm-pressable" @click="goService('points-mall')">
         <strong>{{ t('account.rewards') }}</strong>
         <span>{{ t('account.rewardsSub') }}</span>
       </button>
@@ -335,16 +335,17 @@ function goOrders(tab?: string) {
 
     <section class="card">
       <div class="card-head">
-        <button type="button" class="orders-title" @click="goOrders('all')">
+        <button type="button" class="orders-title sm-pressable" @click="goOrders('all')">
           <h2>{{ t('account.orders') }}</h2>
         </button>
-        <button type="button" class="more" @click="goOrders('all')">{{ t('account.more') }}</button>
+        <button type="button" class="more sm-pressable" @click="goOrders('all')">{{ t('account.more') }}</button>
       </div>
       <div class="orders">
         <button
           v-for="o in orderItems"
           :key="o.key"
           type="button"
+          class="sm-pressable"
           @click="'route' in o && o.route ? goService(o.route) : goOrders('tab' in o ? o.tab : undefined)"
         >
           <van-badge :content="orderBadge(o)" :show-zero="false">
@@ -375,15 +376,26 @@ function goOrders(tab?: string) {
     </section>
 
     <section class="card services">
-      <button v-for="s in services" :key="s.key" type="button" @click="onServiceClick(s)">
+      <button
+        v-for="s in services"
+        :key="s.key"
+        type="button"
+        class="sm-pressable"
+        @click="onServiceClick(s)"
+      >
         <van-icon :name="s.icon" size="1.375rem" />
         <span>{{ t(`account.${s.key}`) }}</span>
       </button>
-      <button type="button" :title="t('account.switchLang')" @click="toggleLocale">
+      <button type="button" class="sm-pressable" :title="t('account.switchLang')" @click="toggleLocale">
         <span class="flag" aria-hidden="true">{{ nextLocaleFlag }}</span>
         <span>{{ t('account.switchLang') }}</span>
       </button>
-      <button type="button" class="ver-btn" :title="t('account.versionTip')" @click="showAppVersion">
+      <button
+        type="button"
+        class="ver-btn sm-pressable"
+        :title="t('account.versionTip')"
+        @click="showAppVersion"
+      >
         <van-icon name="info-o" size="1.375rem" />
         <span>{{ APP_VERSION }}</span>
       </button>
@@ -391,7 +403,18 @@ function goOrders(tab?: string) {
 
     <HomeFooter :slogan="footerSlogan" />
 
-    <button v-if="loggedIn" type="button" class="lang" @click="logout">{{ t('account.logout') }}</button>
+    <van-button
+      v-if="loggedIn"
+      class="lang"
+      block
+      round
+      plain
+      hairline
+      type="primary"
+      @click="logout"
+    >
+      {{ t('account.logout') }}
+    </van-button>
 
     <SupportContactPopup v-model:show="showSupport" />
     <AvatarCropDialog
@@ -440,6 +463,19 @@ function goOrders(tab?: string) {
   align-items: flex-start;
 }
 
+.user-meta {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.35rem;
+  margin: -0.15rem -0.35rem;
+  border-radius: 0.5rem;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
 .avatar {
   position: relative;
   z-index: 2;
@@ -469,7 +505,7 @@ function goOrders(tab?: string) {
   display: block;
 }
 
-.user h1 {
+.user-meta h1 {
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.35;
@@ -490,6 +526,16 @@ function goOrders(tab?: string) {
   grid-template-columns: repeat(3, 1fr);
   margin-top: 1rem;
   text-align: center;
+  gap: 0.25rem;
+}
+
+.stats > button {
+  border: 0;
+  background: transparent;
+  padding: 0.35rem 0.25rem;
+  border-radius: 0.5rem;
+  color: inherit;
+  font: inherit;
 }
 
 .stats strong {
@@ -671,16 +717,8 @@ function goOrders(tab?: string) {
 }
 
 .lang {
-  display: block;
   width: calc(100% - 1.5rem);
   margin: 0.25rem 0.75rem 1.25rem;
-  border: 0.0625rem solid rgba(120, 90, 160, 0.12);
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(236, 228, 255, 0.55) 100%);
-  padding: 0.75rem;
-  color: var(--ac-muted);
-  font-size: 0.8125rem;
-  box-shadow: var(--ac-card-shadow);
 }
 
 :deep(.footer) {

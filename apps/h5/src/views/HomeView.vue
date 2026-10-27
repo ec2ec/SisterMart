@@ -529,10 +529,10 @@ const tabLabel = (tab: HomeRecTab) => {
 
       <section v-if="showCatsSkeleton || homeCategories.length" class="cats">
         <div class="section-title">
-          <button type="button" class="section-title-btn" @click="goCategory">
+          <button type="button" class="section-title-btn sm-pressable" @click="goCategory">
             <h2>{{ t('home.categories') }}</h2>
           </button>
-          <button type="button" class="more" @click="goCategory">
+          <button type="button" class="more sm-pressable" @click="goCategory">
             {{ t('account.more') }}
           </button>
         </div>
@@ -543,7 +543,13 @@ const tabLabel = (tab: HomeRecTab) => {
           </div>
         </div>
         <div v-else class="cats-row">
-          <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+          <button
+            v-for="c in homeCategories"
+            :key="c.id"
+            type="button"
+            class="sm-pressable"
+            @click="goList(c.code)"
+          >
             <img
               v-if="c.icon"
               :src="c.icon"
@@ -574,7 +580,9 @@ const tabLabel = (tab: HomeRecTab) => {
       <section v-else-if="flashSession || flashVisible.length" class="flash">
         <div class="section-title">
           <h2>{{ t('home.flashSale') }}</h2>
-          <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
+          <button type="button" class="more sm-pressable" @click="router.push({ name: 'seckill' })">
+            {{ t('account.more') }}
+          </button>
           <div class="count" :title="flashClock">
             <span class="clock">{{ flashClock }}</span>
           </div>
@@ -607,7 +615,7 @@ const tabLabel = (tab: HomeRecTab) => {
             <button
               v-if="sec.view_all_type !== 'none'"
               type="button"
-              class="more"
+              class="more sm-pressable"
               @click="onSectionViewAll(sec)"
             >
               {{ t('home.viewAll') }}
@@ -625,6 +633,7 @@ const tabLabel = (tab: HomeRecTab) => {
             v-for="(tab, i) in feedTabs"
             :key="tab"
             type="button"
+            class="sm-pressable"
             :class="{ on: feedTab === i }"
             @click="feedTab = i"
           >

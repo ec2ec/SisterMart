@@ -39,7 +39,7 @@ function onBackClick() {
       <button
         v-if="showBack"
         type="button"
-        class="auth-icon-btn"
+        class="sm-icon-btn auth-icon-btn"
         :aria-label="t('pages.back')"
         @click="onBackClick"
       >
@@ -49,7 +49,7 @@ function onBackClick() {
       <button
         v-if="showLocale"
         type="button"
-        class="auth-lang"
+        class="auth-lang sm-pressable"
         :title="nextLocaleLabel"
         :aria-label="nextLocaleLabel"
         @click="toggleLocale"
@@ -127,16 +127,8 @@ function onBackClick() {
 }
 
 .auth-icon-btn {
-  flex: none;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 0;
-  padding: 0;
-  border-radius: 50%;
   background: rgba(255, 255, 255, 0.55);
   color: #14141f;
-  display: grid;
-  place-items: center;
   box-shadow: 0 0.15rem 0.5rem rgba(80, 50, 100, 0.1);
 }
 

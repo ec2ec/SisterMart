@@ -67,7 +67,7 @@ function onWish() {
           :style="{ background: badge.color }"
         >{{ badgeLabel(badge) }}</span>
       </span>
-      <button class="wish" type="button" :aria-label="t('pdp.fav')" @click.stop="onWish">
+      <button class="sm-icon-btn wish" type="button" :aria-label="t('pdp.fav')" @click.stop="onWish">
         <van-icon :name="liked ? 'like' : 'like-o'" color="var(--sm-primary)" />
       </button>
     </div>
@@ -131,15 +131,10 @@ function onWish() {
 
 .wish {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: 50%;
+  top: 0.35rem;
+  right: 0.35rem;
+  /* 視覺圓仍偏小；熱區由 .sm-icon-btn（2.75rem）保證 */
   background: rgba(255, 255, 255, 0.95);
-  display: grid;
-  place-items: center;
   box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.12);
 }
 
