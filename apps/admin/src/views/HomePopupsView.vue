@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import {
   NButton,
   NCard,
+  NCheckbox,
+  NCheckboxGroup,
   NDatePicker,
   NFormItem,
   NInput,
@@ -27,6 +29,7 @@ type Popup = {
   link_type: string
   link_value: string
   frequency: string
+  targets: string[]
   starts_at: string | null
   ends_at: string | null
   sort_order: number
@@ -43,6 +46,7 @@ const form = ref({
   link_type: 'none',
   link_value: '',
   frequency: 'once',
+  targets: ['all'] as string[],
   starts_at: null as string | null,
   ends_at: null as string | null,
   sort_order: 0,
@@ -63,12 +67,30 @@ const frequencies = [
   { label: '每次進首頁', value: 'always' },
 ]
 
-const bgHint = '遮罩圖單張不超過 3M，僅 1 張；建議豎圖或接近方圖，H5 居中展示'
+const targetOptions = [
+  { label: '全部用戶', value: 'all' },
+  { label: '訪客（未登錄）', value: 'guest' },
+  { label: '已登錄會員', value: 'member' },
+  { label: '新會員（註冊 7 天內）', value: 'new_member' },
+  { label: '從未下單', value: 'no_order' },
+  { label: '已下過單', value: 'has_order' },
+]
+
+const bgHint = '遮罩圖單張不超過 3M，僅 1 張'
 const bgDeleteTitle = '確認刪除圖片'
 const bgDeleteContent = '確定移除此遮罩圖？保存後才會生效。'
 
 function freqLabel(v: string) {
   return frequencies.find((f) => f.value === v)?.label || v
+}
+
+function targetLabel(v: string) {
+  return targetOptions.find((t) => t.value === v)?.label || v
+}
+
+function targetsText(row: Popup) {
+  const list = row.targets?.length ? row.targets : ['all']
+  return list.map(targetLabel).join('、')
 }
 
 function windowLabel(row: Popup) {
@@ -92,6 +114,17 @@ function asDateTime(v: unknown): string | null {
   return m ? `${m[1]}:00` : null
 }
 
+function onTargetsChange(vals: (string | number)[]) {
+  const next = vals.map(String)
+  if (next.includes('all') && next.length > 1) {
+    // 勾選「全部」時清掉其他；從全部改勾其他時去掉 all
+    const last = next[next.length - 1]
+    form.value.targets = last === 'all' ? ['all'] : next.filter((v) => v !== 'all')
+    return
+  }
+  form.value.targets = next.length ? next : ['all']
+}
+
 async function load() {
   const data = await api<{ items: Popup[] }>('/api/v1/admin/home-popups', {}, true)
   items.value = data.items
@@ -105,6 +138,7 @@ function reset() {
     link_type: 'none',
     link_value: '',
     frequency: 'once',
+    targets: ['all'],
     starts_at: null,
     ends_at: null,
     sort_order: 0,
@@ -121,6 +155,7 @@ function edit(row: Popup) {
     link_type: row.link_type || 'none',
     link_value: row.link_value || '',
     frequency: row.frequency || 'once',
+    targets: row.targets?.length ? [...row.targets] : ['all'],
     starts_at: row.starts_at ? String(row.starts_at).slice(0, 16) : null,
     ends_at: row.ends_at ? String(row.ends_at).slice(0, 16) : null,
     sort_order: row.sort_order,
@@ -139,6 +174,10 @@ async function save() {
     message.warning('請填寫跳轉目標')
     return
   }
+  if (!form.value.targets.length) {
+    message.warning('請至少選擇一個定向')
+    return
+  }
   const body = {
     image_url: image,
     title_zh: form.value.title_zh,
@@ -146,6 +185,7 @@ async function save() {
     link_type: form.value.link_type,
     link_value: form.value.link_value,
     frequency: form.value.frequency,
+    targets: form.value.targets,
     starts_at: asDateTime(form.value.starts_at),
     ends_at: asDateTime(form.value.ends_at),
     sort_order: form.value.sort_order,
@@ -165,7 +205,7 @@ async function save() {
 function remove(row: Popup) {
   showWarningDialog({
     title: '刪除遮罩廣告',
-    content: `確定刪除 #${row.id}？會員關閉記錄也會一併清除。`,
+    content: `確定刪除 #${row.id}？會員關閉／曝光記錄也會一併清除。`,
     positiveText: '刪除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -183,7 +223,9 @@ onMounted(load)
 <template>
   <n-space vertical :size="16">
     <n-card title="首頁遮罩廣告">
-      <p class="hint">圖片 + 跳轉（含文章）；訪客關閉存本地，登錄會員存數據庫。與輪播分開運營。</p>
+      <p class="hint">
+        圖片 + 跳轉；訪客／會員關閉狀態分開；每人每天最多展示 2 張。定向可複選（命中任一即展示）。
+      </p>
       <div v-for="row in items" :key="row.id" class="row">
         <div class="meta">
           <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
@@ -193,6 +235,7 @@ onMounted(load)
               {{ freqLabel(row.frequency) }} · {{ row.link_type }}
               {{ row.link_value }} · sort {{ row.sort_order }}
             </p>
+            <p>定向：{{ targetsText(row) }}</p>
             <p>{{ windowLabel(row) }}</p>
           </div>
         </div>
@@ -224,6 +267,13 @@ onMounted(load)
         <n-input v-model:value="form.link_value" placeholder="商品/分類/文章 code 或 URL" />
       </n-form-item>
       <n-form-item label="顯示頻率"><n-select v-model:value="form.frequency" :options="frequencies" /></n-form-item>
+      <n-form-item label="定向（可複選，命中任一）">
+        <n-checkbox-group :value="form.targets" @update:value="onTargetsChange">
+          <n-space vertical :size="6">
+            <n-checkbox v-for="opt in targetOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+          </n-space>
+        </n-checkbox-group>
+      </n-form-item>
       <n-form-item label="排期（可空＝不限）">
         <n-space wrap>
           <n-date-picker

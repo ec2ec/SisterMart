@@ -143,15 +143,22 @@ export type HomePopup = {
   link_type: string
   link_value: string
   frequency: 'once' | 'daily' | 'always' | string
+  targets?: string[]
   starts_at?: string | null
   ends_at?: string | null
   sort_order: number
   status: number
 }
 
+export type HomePopupsPayload = {
+  items: HomePopup[]
+  daily_max: number
+  daily_shown: number | null
+  daily_remaining: number | null
+}
+
 export async function fetchHomePopups(auth: 'member' | 'none' = 'none') {
-  const data = await api<{ items: HomePopup[] }>('/api/v1/home/popups', {}, auth)
-  return data.items
+  return api<HomePopupsPayload>('/api/v1/home/popups', {}, auth)
 }
 
 export async function dismissHomePopup(id: number) {
