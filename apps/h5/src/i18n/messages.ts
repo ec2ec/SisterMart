@@ -177,8 +177,11 @@ export const messages = {
     review: {
       title: '評價商品',
       followTitle: '追評',
+      rereviewTitle: '重新評價',
       go: '去評價',
       goFollow: '追評',
+      goRereview: '重新評價',
+      rereviewDone: '已重新評價，等待審核',
       myReview: '我的評價',
       followLabel: '追評：',
       replyLabel: '商家回覆：',
@@ -755,8 +758,11 @@ export const messages = {
     review: {
       title: 'Write a review',
       followTitle: 'Follow-up review',
+      rereviewTitle: 'Re-review',
       go: 'Review',
       goFollow: 'Follow-up',
+      goRereview: 'Re-review',
+      rereviewDone: 'Re-submitted, pending review',
       myReview: 'My review',
       followLabel: 'Follow-up: ',
       replyLabel: 'Seller reply: ',

@@ -32,6 +32,11 @@ type Row = {
   moderation_status?: string
   created_at: string
   order_id?: number
+  re_review_requested_at?: string | null
+  re_reviewed_at?: string | null
+  can_request_re_review?: boolean
+  within_re_review_window?: boolean
+  re_review_days?: number
 }
 
 const route = useRoute()
@@ -162,6 +167,24 @@ async function saveReply() {
     busy.value = false
   }
 }
+
+async function requestReReview() {
+  if (!current.value) return
+  busy.value = true
+  try {
+    current.value = await api<Row>(
+      `/api/v1/admin/reviews/${current.value.id}/request-re-review`,
+      { method: 'POST', body: '{}' },
+      true,
+    )
+    message.success('已發起重評，用戶可在訂單中重新評價')
+    await load()
+  } catch (e: any) {
+    showError(e?.message || '發起重評失敗')
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
@@ -243,7 +266,13 @@ async function saveReply() {
           <n-tag size="small" :type="isHidden ? 'warning' : 'success'">
             {{ isHidden ? '已隱藏' : '顯示中' }}
           </n-tag>
+          <n-tag v-if="current.re_review_requested_at" size="small" type="info">待用戶重評</n-tag>
+          <n-tag v-else-if="current.re_reviewed_at" size="small">已重評</n-tag>
         </n-space>
+        <p v-if="current.re_review_requested_at" class="hint">
+          已於 {{ current.re_review_requested_at }} 發起重評（首評起 {{ current.re_review_days || 30 }} 天內有效）
+        </p>
+        <p v-else-if="current.re_reviewed_at" class="hint">用戶已於 {{ current.re_reviewed_at }} 完成重評</p>
       </div>
       <div>
         <strong>主評</strong>
@@ -287,7 +316,19 @@ async function saveReply() {
         </n-button>
         <n-button type="primary" secondary :loading="busy" @click="saveReply">保存回覆</n-button>
         <n-button :loading="busy" @click="toggleHidden">{{ isHidden ? '恢復顯示' : '隱藏評價' }}</n-button>
+        <n-button
+          v-if="current.can_request_re_review"
+          type="info"
+          secondary
+          :loading="busy"
+          @click="requestReReview"
+        >
+          發起重評
+        </n-button>
       </n-space>
+      <p v-if="!current.can_request_re_review && !current.re_review_requested_at && current.within_re_review_window === false" class="hint">
+        已超過 {{ current.re_review_days || 30 }} 天，無法再發起重評
+      </p>
     </n-space>
   </n-modal>
 </template>
@@ -335,5 +376,10 @@ td {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+.hint {
+  margin: 0.35rem 0 0;
+  color: #8a8378;
+  font-size: 0.75rem;
 }
 </style>

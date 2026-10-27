@@ -108,6 +108,7 @@ Route::group('api/v1', function () {
     Route::post('uploads/review-image', 'api.Uploads/reviewImage');
     Route::post('uploads/avatar', 'api.Uploads/avatar');
     Route::post('reviews/:id/follow', 'api.Reviews/follow');
+    Route::post('reviews/:id/rereview', 'api.Reviews/rereview');
     Route::post('reviews', 'api.Reviews/store');
 
     /** M28 收藏 */
@@ -267,6 +268,7 @@ Route::group('api/v1/admin', function () {
     Route::post('reviews/:id/visibility', 'admin.Reviews/visibility');
     Route::post('reviews/:id/reply', 'admin.Reviews/reply');
     Route::post('reviews/:id/moderate', 'admin.Reviews/moderate');
+    Route::post('reviews/:id/request-re-review', 'admin.Reviews/requestReReview');
     Route::get('reviews', 'admin.Reviews/index');
 
     /** M6 營銷與會員資產 */

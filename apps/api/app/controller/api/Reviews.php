@@ -24,4 +24,9 @@ class Reviews extends ApiController
     {
         return $this->run(fn () => (new ReviewService())->follow($this->memberId(), $id, $this->payload()));
     }
+
+    public function rereview(int $id): Response
+    {
+        return $this->run(fn () => (new ReviewService())->rereview($this->memberId(), $id, $this->payload()));
+    }
 }

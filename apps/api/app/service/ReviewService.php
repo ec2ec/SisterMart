@@ -11,12 +11,16 @@ use think\facade\Db;
  * M18 商品評價：主評一次 + 追評一次。
  * M23：後台隱藏 / 商家回覆。
  * M25：審核（pending / approved / rejected）；本人可見，他人僅 approved。
+ * M44：管理員 30 天內可發起重評；用戶以首評同表單覆蓋舊評價。
  */
 class ReviewService
 {
     public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
+
+    /** 自首次評價 created_at 起可發起重評／完成重評的天數 */
+    public const RE_REVIEW_DAYS = 30;
 
     /**
      * 商品詳情評價列表。
@@ -53,6 +57,7 @@ class ReviewService
      */
     public function adminList(array $filters = []): array
     {
+        $this->ensureReReviewColumns();
         $q = Db::name('product_reviews')->order('id', 'desc');
         if (array_key_exists('is_hidden', $filters) && $filters['is_hidden'] !== '' && $filters['is_hidden'] !== null) {
             $q->where('is_hidden', (int) $filters['is_hidden'] ? 1 : 0);
@@ -154,6 +159,31 @@ class ReviewService
         return $this->adminRead($id);
     }
 
+    /**
+     * 管理員發起重評（評價創建起 30 天內；同一時間僅一筆待完成重評）。
+     */
+    public function adminRequestReReview(int $id): array
+    {
+        $this->ensureReReviewColumns();
+        $row = Db::name('product_reviews')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        if (!$this->withinReReviewWindow($row)) {
+            throw new ApiException('INVALID', '已超過 ' . self::RE_REVIEW_DAYS . ' 天，無法發起重評', 422, 42310);
+        }
+        if (!empty($row['re_review_requested_at'])) {
+            throw new ApiException('INVALID', '已發起重評，等待用戶提交', 422, 42311);
+        }
+        $now = date('Y-m-d H:i:s');
+        Db::name('product_reviews')->where('id', $id)->update([
+            're_review_requested_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return $this->adminRead($id);
+    }
+
     /** 依已通過且未隱藏評價重算商品評分 */
     public static function refreshProductRating(int $productId): void
     {
@@ -203,6 +233,7 @@ class ReviewService
      *   review_id: ?int,
      *   can_review: bool,
      *   can_follow: bool,
+     *   can_re_review: bool,
      *   reviewed: bool,
      *   review: ?array{
      *     id: int,
@@ -214,12 +245,15 @@ class ReviewService
      *     reply: ?string,
      *     replied_at: mixed,
      *     created_at: mixed,
-     *     moderation_status: string
+     *     moderation_status: string,
+     *     re_review_requested_at: mixed,
+     *     re_reviewed_at: mixed
      *   }
      * }>
      */
     public function flagsForOrderItems(string $orderStatus, array $orderItems): array
     {
+        $this->ensureReReviewColumns();
         $itemIds = array_map(fn ($i) => (int) $i['id'], $orderItems);
         $reviews = [];
         if ($itemIds) {
@@ -240,11 +274,15 @@ class ReviewService
             $qty = (int) ($item['qty'] ?? 0);
             $fullyRefunded = $qty > 0 && $refunded >= $qty;
             $canReview = $orderStatus === 'completed' && !$fullyRefunded && $review === null;
-            $canFollow = $review !== null && ($review['follow_body'] === null || $review['follow_body'] === '');
+            $canFollow = $review !== null
+                && ($review['follow_body'] === null || $review['follow_body'] === '')
+                && !$this->canMemberReReview($review);
+            $canReReview = $review !== null && $this->canMemberReReview($review);
             $out[$id] = [
                 'review_id' => $review ? (int) $review['id'] : null,
                 'can_review' => $canReview,
                 'can_follow' => $canFollow,
+                'can_re_review' => $canReReview,
                 'reviewed' => $review !== null,
                 'review' => $review ? $this->summaryForOrderItem($review) : null,
             ];
@@ -295,6 +333,8 @@ class ReviewService
             'replied_at' => $row['replied_at'] ?? null,
             'created_at' => $row['created_at'] ?? null,
             'moderation_status' => (string) ($row['moderation_status'] ?? self::STATUS_APPROVED),
+            're_review_requested_at' => $row['re_review_requested_at'] ?? null,
+            're_reviewed_at' => $row['re_reviewed_at'] ?? null,
         ];
     }
 
@@ -402,6 +442,62 @@ class ReviewService
     }
 
     /**
+     * 用戶重評：與首評相同字段，覆蓋舊評價（清追評／商家回覆，重回待審）。
+     */
+    public function rereview(int $memberId, int $reviewId, array $body): array
+    {
+        $this->ensureReReviewColumns();
+        $stars = (int) ($body['stars'] ?? 0);
+        $text = trim((string) ($body['body'] ?? ''));
+        $images = $body['images'] ?? [];
+        if (!is_array($images)) {
+            $images = [];
+        }
+        if ($stars < 1 || $stars > 5) {
+            throw new ApiException('INVALID', '星級須為 1–5', 422, 42292);
+        }
+        if ($text === '') {
+            throw new ApiException('INVALID', '請填寫評價內容', 422, 42293);
+        }
+        if (mb_strlen($text) > 1000) {
+            throw new ApiException('INVALID', '評價內容過長', 422, 42294);
+        }
+        if (count($images) > 5) {
+            throw new ApiException('INVALID', '最多上傳 5 張圖片', 422, 42295);
+        }
+        $images = $this->normalizeImages($memberId, $images);
+
+        $row = Db::name('product_reviews')->where('id', $reviewId)->find();
+        if (!$row || (int) $row['member_id'] !== $memberId) {
+            throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
+        }
+        if (!$this->canMemberReReview($row)) {
+            throw new ApiException('INVALID', '當前不可重新評價', 422, 42312);
+        }
+
+        $now = date('Y-m-d H:i:s');
+        Db::name('product_reviews')->where('id', $reviewId)->update([
+            'stars' => $stars,
+            'body' => $text,
+            'images_json' => $images ? json_encode(array_values($images), JSON_UNESCAPED_UNICODE) : null,
+            'follow_body' => null,
+            'follow_at' => null,
+            'admin_reply' => null,
+            'replied_at' => null,
+            'moderation_status' => self::STATUS_PENDING,
+            're_review_requested_at' => null,
+            're_reviewed_at' => $now,
+            'updated_at' => $now,
+        ]);
+        self::refreshProductRating((int) $row['product_id']);
+
+        $row = Db::name('product_reviews')->where('id', $reviewId)->find();
+        $member = Db::name('members')->where('id', $memberId)->find();
+
+        return $this->present($row, $member, false, $memberId);
+    }
+
+    /**
      * 訂單是否仍有待評價行項。
      */
     public function orderNeedsReview(array $order, ?array $items = null): bool
@@ -472,9 +568,12 @@ class ReviewService
             'reply' => $reply,
             'replied_at' => $row['replied_at'] ?? null,
             'created_at' => $row['created_at'],
-            'can_follow' => $follow === null && $isOwner,
+            'can_follow' => $follow === null && $isOwner && !$this->canMemberReReview($row),
+            'can_re_review' => $isOwner && $this->canMemberReReview($row),
             'moderation_status' => $moderation,
             'is_mine' => $isOwner,
+            're_review_requested_at' => $row['re_review_requested_at'] ?? null,
+            're_reviewed_at' => $row['re_reviewed_at'] ?? null,
         ];
         if ($admin) {
             $data['is_hidden'] = (int) ($row['is_hidden'] ?? 0);
@@ -482,9 +581,69 @@ class ReviewService
             $data['order_id'] = (int) $row['order_id'];
             $data['admin_reply'] = $reply;
             $data['can_follow'] = $follow === null;
+            $data['can_request_re_review'] = $this->canAdminRequestReReview($row);
+            $data['within_re_review_window'] = $this->withinReReviewWindow($row);
+            $data['re_review_days'] = self::RE_REVIEW_DAYS;
         }
 
         return $data;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function withinReReviewWindow(array $row): bool
+    {
+        $created = strtotime((string) ($row['created_at'] ?? ''));
+        if ($created === false) {
+            return false;
+        }
+
+        return time() <= $created + self::RE_REVIEW_DAYS * 86400;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function canAdminRequestReReview(array $row): bool
+    {
+        if (!$this->withinReReviewWindow($row)) {
+            return false;
+        }
+
+        return empty($row['re_review_requested_at']);
+    }
+
+    /** @param array<string, mixed> $row */
+    private function canMemberReReview(array $row): bool
+    {
+        if (!$this->withinReReviewWindow($row)) {
+            return false;
+        }
+
+        return !empty($row['re_review_requested_at']);
+    }
+
+    private function ensureReReviewColumns(): void
+    {
+        static $ready = false;
+        if ($ready) {
+            return;
+        }
+        $prefix = (string) config('database.connections.mysql.prefix', '');
+        $table = $prefix . 'product_reviews';
+        try {
+            foreach (['re_review_requested_at' => 'DATETIME NULL', 're_reviewed_at' => 'DATETIME NULL'] as $col => $def) {
+                $rows = Db::query(
+                    "SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                    [$table, $col],
+                );
+                if ((int) ($rows[0]['c'] ?? 0) === 0) {
+                    Db::execute("ALTER TABLE `{$table}` ADD COLUMN `{$col}` {$def}");
+                }
+            }
+            $ready = true;
+        } catch (\Throwable $e) {
+            // 列表在缺列時仍盡量工作；寫入路徑會再拋錯
+            $ready = true;
+        }
     }
 
     /** 前台展示：脫敏作者名 */

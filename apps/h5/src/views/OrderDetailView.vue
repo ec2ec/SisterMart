@@ -323,8 +323,25 @@ async function sendChat() {
         <p v-if="item.review!.reply" class="rev-reply">
           <em>{{ t('review.replyLabel') }}</em>{{ item.review!.reply }}
         </p>
-        <div v-if="item.can_follow" class="item-actions">
+        <div v-if="item.can_follow || item.can_re_review" class="item-actions">
           <van-button
+            v-if="item.can_re_review"
+            size="mini"
+            plain
+            round
+            type="primary"
+            @click="
+              router.push({
+                name: 'order-review',
+                params: { id: order.id },
+                query: { item: String(item.id), mode: 'rereview' },
+              })
+            "
+          >
+            {{ t('review.goRereview') }}
+          </van-button>
+          <van-button
+            v-else-if="item.can_follow"
             size="mini"
             plain
             round
