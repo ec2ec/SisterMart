@@ -131,11 +131,18 @@ function onWish() {
 
 .wish {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  /* 視覺圓仍偏小；熱區由 .sm-icon-btn（2.75rem）保證 */
-  background: rgba(255, 255, 255, 0.95);
+  top: 0.5rem;
+  right: 0.5rem;
+  /* 覆蓋全局 .sm-icon-btn：恢復原先較小外框 */
+  width: 1.75rem;
+  height: 1.75rem;
+  background: #fff;
   box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.12);
+}
+
+/* 按下加深實心底色，不用半透明遮罩 */
+.wish:active:not(:disabled) {
+  background: #e4e4ea;
 }
 
 .meta {

@@ -143,6 +143,13 @@ function onBack() {
   color: #111;
 }
 
+/* 圓鈕外框與搜索框同高，視覺協調（覆蓋全局 .sm-icon-btn 2.75rem） */
+.back-btn,
+.action-btn {
+  width: var(--van-search-input-height);
+  height: var(--van-search-input-height);
+}
+
 .back-btn {
   background: #f2f3f5;
   color: var(--sm-text);
