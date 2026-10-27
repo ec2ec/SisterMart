@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
+import HomePopupOverlay from '../components/HomePopupOverlay.vue'
 import WelcomeRegisterPopup from '../components/WelcomeRegisterPopup.vue'
 import { banners as mockBanners } from '../mock/data'
 import {
@@ -690,6 +691,7 @@ const tabLabel = (tab: HomeRecTab) => {
     />
 
     <WelcomeRegisterPopup />
+    <HomePopupOverlay />
   </div>
 </template>
 

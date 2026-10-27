@@ -99,6 +99,7 @@ class AdminAcl
             '/api/v1/admin/notify-outbox' => self::PERM_CMS,
             '/api/v1/admin/newsletter-subscribers' => self::PERM_CMS,
             '/api/v1/admin/home-banners' => self::PERM_CMS,
+            '/api/v1/admin/home-popups' => self::PERM_CMS,
             '/api/v1/admin/home-ops' => self::PERM_CMS,
             '/api/v1/admin/home-sections' => self::PERM_CMS,
             '/api/v1/admin/uploads/banner' => self::PERM_CMS,

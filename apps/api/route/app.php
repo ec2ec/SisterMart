@@ -49,6 +49,7 @@ Route::post('api/v1/newsletter/subscribe', 'api.Newsletter/subscribe');
 Route::get('api/v1/products', 'api.Products/index')->middleware(MemberTouch::class);
 Route::get('api/v1/articles/:code', 'api.Articles/read')->middleware(MemberTouch::class);
 Route::get('api/v1/home/banners', 'api.HomeBanners/index')->middleware(MemberTouch::class);
+Route::get('api/v1/home/popups', 'api.HomePopups/index')->middleware(MemberTouch::class);
 Route::get('api/v1/home/ops', 'api.HomeOps/index')->middleware(MemberTouch::class);
 /** M29 首頁商品展示區 */
 Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products')->middleware(MemberTouch::class);
@@ -130,6 +131,9 @@ Route::group('api/v1', function () {
     /** M27 訂閱狀態（本人） */
     Route::get('newsletter/me', 'api.Newsletter/me');
 
+    /** 首頁遮罩廣告關閉（會員持久化） */
+    Route::post('home/popups/:id/dismiss', 'api.HomePopups/dismiss');
+
     /** M14 簽到 + M13 分銷 + M15 站內消息 */
     Route::get('checkins/calendar', 'api.Checkins/calendar');
     Route::post('checkins', 'api.Checkins/store');
@@ -199,6 +203,10 @@ Route::group('api/v1/admin', function () {
     Route::post('home-banners', 'admin.HomeBanners/store');
     Route::put('home-banners/:id', 'admin.HomeBanners/update');
     Route::delete('home-banners/:id', 'admin.HomeBanners/destroy');
+    Route::get('home-popups', 'admin.HomePopups/index');
+    Route::post('home-popups', 'admin.HomePopups/store');
+    Route::put('home-popups/:id', 'admin.HomePopups/update');
+    Route::delete('home-popups/:id', 'admin.HomePopups/destroy');
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
     Route::post('uploads/image', 'admin.Uploads/image');
     Route::get('home-ops', 'admin.HomeOps/read');

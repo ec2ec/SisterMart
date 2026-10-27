@@ -33,6 +33,7 @@ import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
 import ReviewsView from '../views/ReviewsView.vue'
 import HomeBannersView from '../views/HomeBannersView.vue'
+import HomePopupsView from '../views/HomePopupsView.vue'
 import ReleasesView from '../views/ReleasesView.vue'
 
 export const router = createRouter({
@@ -63,6 +64,7 @@ export const router = createRouter({
         { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
         { path: '/cms/home', component: HomeBannersView, meta: { title: '首頁運營' } },
+        { path: '/cms/home-popups', component: HomePopupsView, meta: { title: '首頁遮罩' } },
         { path: '/cms/messages', component: MessagesView, meta: { title: '系統消息' } },
         { path: '/cms/notify-outbox', component: NotifyOutboxView, meta: { title: '發送流水' } },
         { path: '/cms/newsletter', component: NewsletterView, meta: { title: '訂閱名單' } },

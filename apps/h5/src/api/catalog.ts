@@ -136,6 +136,32 @@ export async function fetchHomeBanners() {
   return data.items
 }
 
+export type HomePopup = {
+  id: number
+  image_url: string
+  title: Localized
+  link_type: string
+  link_value: string
+  frequency: 'once' | 'daily' | 'always' | string
+  starts_at?: string | null
+  ends_at?: string | null
+  sort_order: number
+  status: number
+}
+
+export async function fetchHomePopups(auth: 'member' | 'none' = 'none') {
+  const data = await api<{ items: HomePopup[] }>('/api/v1/home/popups', {}, auth)
+  return data.items
+}
+
+export async function dismissHomePopup(id: number) {
+  return api<{ popup_id: number; dismissed: boolean }>(
+    `/api/v1/home/popups/${id}/dismiss`,
+    { method: 'POST', body: '{}' },
+    'member',
+  )
+}
+
 export type HomeMarquee = {
   text: Localized
   link_type: string
