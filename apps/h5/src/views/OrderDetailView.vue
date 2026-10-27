@@ -285,13 +285,6 @@ async function sendChat() {
     <section v-if="reviewedItems.length" class="card reviews">
       <h3 class="sec-title">{{ t('orders.sectionReviews') }}</h3>
       <div v-for="item in reviewedItems" :key="item.id" class="rev-block">
-        <div class="rev-product">
-          <img :src="assetUrl(item.image)" alt="" />
-          <div>
-            <strong>{{ text(item.name) }}</strong>
-            <p v-if="text(item.spec)">{{ text(item.spec) }}</p>
-          </div>
-        </div>
         <div class="rev-head">
           <span class="rev-stars" aria-hidden="true">
             {{ '★'.repeat(item.review!.stars) }}{{ '☆'.repeat(Math.max(0, 5 - item.review!.stars)) }}
@@ -323,12 +316,13 @@ async function sendChat() {
         <p v-if="item.review!.reply" class="rev-reply">
           <em>{{ t('review.replyLabel') }}</em>{{ item.review!.reply }}
         </p>
-        <div v-if="item.can_follow || item.can_re_review" class="item-actions">
+        <div v-if="item.can_re_review || item.can_follow" class="rev-actions">
           <van-button
             v-if="item.can_re_review"
-            size="mini"
-            plain
+            size="small"
+            block
             round
+            plain
             type="primary"
             @click="
               router.push({
@@ -591,32 +585,6 @@ async function sendChat() {
   padding-bottom: 0;
   border-bottom: 0;
 }
-.rev-product {
-  display: grid;
-  grid-template-columns: 2.75rem minmax(0, 1fr);
-  gap: 0.55rem;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-.rev-product img {
-  width: 2.75rem;
-  height: 2.75rem;
-  object-fit: cover;
-  border-radius: 0.4rem;
-  background: #f3eef9;
-}
-.rev-product strong {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--od-ink);
-}
-.rev-product p {
-  margin: 0.15rem 0 0;
-  font-size: 0.75rem;
-  color: var(--od-muted);
-}
 .rev-head {
   display: flex;
   flex-wrap: wrap;
@@ -672,6 +640,9 @@ async function sendChat() {
   object-fit: cover;
   border-radius: 0.35rem;
   background: #f3eef9;
+}
+.rev-actions {
+  margin-top: 0.65rem;
 }
 .meta {
   min-width: 0;
