@@ -8,6 +8,7 @@ import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem 
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { goLogin } from '../composables/useAuth'
+import { useRequestBusy } from '../composables/useAuthUi'
 import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -19,6 +20,7 @@ const router = useRouter()
 const items = ref<CartItem[]>([])
 const managing = ref(false)
 const loading = ref(false)
+const { busy: actionBusy, run: runAction } = useRequestBusy()
 const SCROLL_KEY = 'cart'
 
 async function load() {
@@ -105,9 +107,20 @@ function checkout() {
 async function removeChecked() {
   const ids = items.value.filter((i) => i.checked).map((i) => i.id)
   if (!ids.length) return
-  await deleteCartItems(ids)
-  managing.value = false
-  await load()
+  await runAction(async () => {
+    await deleteCartItems(ids)
+    managing.value = false
+    await load()
+  })
+}
+
+function onSubmitClick() {
+  if (actionBusy.value) return
+  if (managing.value) {
+    void removeChecked()
+    return
+  }
+  checkout()
 }
 
 function reasonText(item: CartItem) {
@@ -128,13 +141,15 @@ function reasonText(item: CartItem) {
 
     <div class="toolbar">
       <h1>{{ t('cart.items', { n: items.length }) }}</h1>
-      <button type="button" class="manage" @click="managing = !managing">
+      <van-button class="manage" size="small" round plain hairline type="primary" @click="managing = !managing">
         {{ managing ? t('cart.done') : t('cart.manage') }}
-      </button>
+      </van-button>
     </div>
 
     <p v-if="!loggedIn" class="empty">
-      <button type="button" @click="goLogin(router, '/cart')">{{ t('auth.login') }}</button>
+      <van-button round type="primary" color="var(--sm-primary)" @click="goLogin(router, '/cart')">
+        {{ t('auth.login') }}
+      </van-button>
     </p>
     <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
 
@@ -158,7 +173,7 @@ function reasonText(item: CartItem) {
               :max="Math.max(1, item.stock)"
               min="1"
               theme="round"
-              button-size="1.375rem"
+              button-size="1.75rem"
               @change="(v: number) => onQty(item, v)"
             />
           </div>
@@ -180,8 +195,12 @@ function reasonText(item: CartItem) {
         type="primary"
         round
         color="var(--sm-primary)"
-        :disabled="managing ? checkedCount === 0 && !items.some((i) => i.checked) : checkedCount === 0"
-        @click="managing ? removeChecked() : checkout()"
+        :loading="actionBusy"
+        :disabled="
+          actionBusy ||
+          (managing ? checkedCount === 0 && !items.some((i) => i.checked) : checkedCount === 0)
+        "
+        @click="onSubmitClick"
       >
         {{ managing ? t('cart.delete') : t('cart.checkout') }}
       </van-button>
@@ -209,11 +228,7 @@ function reasonText(item: CartItem) {
   font-size: 1rem;
 }
 .manage {
-  border: 0.0625rem solid #ddd;
-  background: #fff;
-  border-radius: 62.4375rem;
-  padding: 0.25rem 0.875rem;
-  font-size: 0.75rem;
+  min-width: 4.5rem;
 }
 .list {
   padding: 0 0.75rem 5.625rem;
