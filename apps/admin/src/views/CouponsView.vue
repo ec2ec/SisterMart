@@ -56,6 +56,20 @@ const types = [
   { label: '免運', value: 'free_shipping' },
 ]
 
+function formatYmd(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function defaultClaimRange() {
+  const start = new Date()
+  const end = new Date()
+  end.setMonth(end.getMonth() + 1)
+  return { starts_at: formatYmd(start), ends_at: formatYmd(end) }
+}
+
 const createOpen = ref(false)
 const createSaving = ref(false)
 const form = reactive({
@@ -70,8 +84,8 @@ const form = reactive({
   stock: 100,
   per_member_limit: 1,
   claim_mode: 'range' as 'range' | 'permanent',
-  starts_at: '2026-01-01' as string | null,
-  ends_at: '2027-01-01' as string | null,
+  starts_at: defaultClaimRange().starts_at as string | null,
+  ends_at: defaultClaimRange().ends_at as string | null,
   valid_days: 30,
 })
 
@@ -140,6 +154,7 @@ function payloadClaimWindow(mode: 'range' | 'permanent', starts: unknown, ends: 
 }
 
 function resetCreateForm() {
+  const range = defaultClaimRange()
   form.code = ''
   form.name_zh = ''
   form.name_en = ''
@@ -151,8 +166,8 @@ function resetCreateForm() {
   form.stock = 100
   form.per_member_limit = 1
   form.claim_mode = 'range'
-  form.starts_at = '2026-01-01'
-  form.ends_at = '2027-01-01'
+  form.starts_at = range.starts_at
+  form.ends_at = range.ends_at
   form.valid_days = 30
 }
 
