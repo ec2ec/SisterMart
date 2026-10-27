@@ -128,21 +128,28 @@ textarea,
   -webkit-touch-callout: default;
 }
 
-/* 可選按壓：僅背景變色，不縮放 */
-.sm-pressable {
-  transition: background-color 0.12s ease, opacity 0.12s ease;
-}
-
+/* 可選按壓：僅背景變色，即時出現（無 transition） */
 .sm-pressable:active:not(:disabled) {
   background-color: rgba(22, 22, 43, 0.06);
 }
 
-/* Vant Button：略加深官方 :before（默認 0.1），不加 scale */
+/*
+ * Vant Button：按壓縮罩即時顯示。
+ * 官方 transition: opacity .2s 會讓按下感覺「慢慢出來」，關掉。
+ */
+.van-button {
+  transition: none;
+}
+
+.van-button::before {
+  transition: none !important;
+}
+
 .van-button:active:not(.van-button--disabled):not(.van-button--loading)::before {
   opacity: var(--sm-press-overlay) !important;
 }
 
-/* 圖標熱區 ≥ --sm-icon-btn；按下僅底色，不縮放 */
+/* 圖標熱區 ≥ --sm-icon-btn；按下僅底色，即時 */
 .sm-icon-btn {
   box-sizing: border-box;
   flex: none;
@@ -158,7 +165,6 @@ textarea,
   place-items: center;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  transition: background-color 0.12s ease;
 }
 
 .sm-icon-btn:active:not(:disabled) {
