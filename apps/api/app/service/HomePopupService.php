@@ -277,7 +277,12 @@ class HomePopupService
     {
         if (is_string($raw) && $raw !== '') {
             $decoded = json_decode($raw, true);
-            $raw = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $raw) ?: [];
+            if (is_array($decoded)) {
+                $raw = $decoded;
+            } else {
+                $parts = preg_split('/\s*,\s*/', $raw);
+                $raw = is_array($parts) ? $parts : [];
+            }
         }
         if (!is_array($raw)) {
             return ['all'];
