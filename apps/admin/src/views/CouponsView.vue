@@ -119,7 +119,7 @@ function claimWindowLabel(row: Coupon) {
 }
 
 function validLabel(days: number) {
-  return days > 0 ? `領取後 ${days} 天` : '永久有效'
+  return days > 0 ? `${days}天` : '永久'
 }
 
 async function load() {
