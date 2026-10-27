@@ -202,7 +202,7 @@ class CouponService
         $q = Db::name('coupon_grants')->alias('g')
             ->join('coupons c', 'c.id = g.coupon_id')
             ->where('g.member_id', $memberId)
-            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.type, c.threshold, c.amount')
+            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.background_image, c.type, c.threshold, c.amount')
             ->order('g.id', 'desc');
         if ($status) {
             $q->where('g.status', $status);
@@ -223,6 +223,7 @@ class CouponService
                         'zh-HK' => (string) ($r['rules_zh'] ?? ''),
                         'en' => (string) ($r['rules_en'] ?? ''),
                     ],
+                    'background_image' => $this->normalizeBackgroundImage($r['background_image'] ?? null),
                     'type' => $r['type'],
                     'threshold' => (float) $r['threshold'],
                     'amount' => (float) $r['amount'],
@@ -259,6 +260,7 @@ class CouponService
             'name_en' => trim((string) ($body['name_en'] ?? $code)),
             'rules_zh' => (string) ($body['rules_zh'] ?? ''),
             'rules_en' => (string) ($body['rules_en'] ?? ''),
+            'background_image' => $this->normalizeBackgroundImage($body['background_image'] ?? null),
             'type' => $type,
             'threshold' => round((float) ($body['threshold'] ?? 0), 2),
             'amount' => round((float) ($body['amount'] ?? 0), 4),
@@ -311,6 +313,9 @@ class CouponService
             if (array_key_exists($k, $body)) {
                 $data[$k] = $body[$k];
             }
+        }
+        if (array_key_exists('background_image', $body)) {
+            $data['background_image'] = $this->normalizeBackgroundImage($body['background_image']);
         }
         foreach (['threshold', 'amount'] as $k) {
             if (array_key_exists($k, $body)) {
@@ -379,7 +384,7 @@ class CouponService
         $r = Db::name('coupon_grants')->alias('g')
             ->join('coupons c', 'c.id = g.coupon_id')
             ->where('g.id', $grantId)
-            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.type, c.threshold, c.amount')
+            ->field('g.*, c.code, c.name_zh, c.name_en, c.rules_zh, c.rules_en, c.background_image, c.type, c.threshold, c.amount')
             ->find();
 
         return [
@@ -394,6 +399,7 @@ class CouponService
                     'zh-HK' => (string) ($r['rules_zh'] ?? ''),
                     'en' => (string) ($r['rules_en'] ?? ''),
                 ],
+                'background_image' => $this->normalizeBackgroundImage($r['background_image'] ?? null),
                 'type' => $r['type'],
                 'threshold' => (float) $r['threshold'],
                 'amount' => (float) $r['amount'],
@@ -401,15 +407,33 @@ class CouponService
         ];
     }
 
+    private function normalizeBackgroundImage(mixed $raw): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+        $url = trim((string) $raw);
+        if ($url === '') {
+            return null;
+        }
+        if (mb_strlen($url) > 512) {
+            throw new ApiException('INVALID', '背景圖 URL 過長', 422, 42277);
+        }
+
+        return $url;
+    }
+
     private function presentCoupon(array $r, bool $admin = false): array
     {
         $rulesZh = (string) ($r['rules_zh'] ?? '');
         $rulesEn = (string) ($r['rules_en'] ?? '');
+        $bg = $this->normalizeBackgroundImage($r['background_image'] ?? null);
         $data = [
             'id' => (int) $r['id'],
             'code' => $r['code'],
             'name' => ['zh-HK' => $r['name_zh'], 'en' => $r['name_en']],
             'rules' => ['zh-HK' => $rulesZh, 'en' => $rulesEn],
+            'background_image' => $bg,
             'type' => $r['type'],
             'threshold' => (float) $r['threshold'],
             'amount' => (float) $r['amount'],

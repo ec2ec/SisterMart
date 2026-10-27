@@ -8,12 +8,14 @@ import CouponRulesPopup from '../components/CouponRulesPopup.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import { api, ApiError } from '../api/client'
 import { isLoggedIn } from '../composables/useSession'
+import { assetUrl } from '../utils/assetUrl'
 
 type Item = {
   id: number
   code: string
   name: { 'zh-HK': string; en: string }
   rules?: { 'zh-HK': string; en: string }
+  background_image?: string | null
   type: string
   threshold: number
   amount: number
@@ -101,6 +103,19 @@ function endsRemainingText(row: Item) {
   return t('m6.endsInDays', { n: days })
 }
 
+function bgStyle(row: Item) {
+  const raw = (row.background_image || '').trim()
+  if (!raw) return undefined
+  const url = assetUrl(raw)
+  return {
+    backgroundImage: `url("${url}")`,
+    backgroundSize: '100% auto',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center top',
+    backgroundColor: 'transparent',
+  } as Record<string, string>
+}
+
 async function load() {
   const data = await api<{ items: Item[] }>('/api/v1/coupons/claimable', {}, isLoggedIn() ? 'member' : 'none')
   items.value = data.items
@@ -143,7 +158,13 @@ const popupTitle = computed(() => rulesTitle.value)
       <button type="button" @click="router.push({ name: 'my-coupons' })">{{ t('m6.myCoupons') }}</button>
     </div>
     <p v-if="!items.length" class="empty">{{ t('m6.noClaimable') }}</p>
-    <div v-for="row in items" :key="row.id" class="coupon">
+    <div
+      v-for="row in items"
+      :key="row.id"
+      class="coupon"
+      :class="{ 'has-bg': !!bgStyle(row) }"
+      :style="bgStyle(row)"
+    >
       <div class="main">
         <div class="left">
           <strong>{{ nameOf(row) }}</strong>
@@ -217,11 +238,18 @@ const popupTitle = computed(() => rulesTitle.value)
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  margin: 0.75rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.75rem 0;
   padding: 1rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
   background: linear-gradient(135deg, #fff8f0, #fff);
   border: 1px solid #f0e0d0;
+  border-left: 0;
+  border-right: 0;
+}
+.coupon.has-bg {
+  border-color: transparent;
 }
 .main {
   display: flex;

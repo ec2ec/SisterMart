@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import CouponRulesPopup from '../components/CouponRulesPopup.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import { api } from '../api/client'
+import { assetUrl } from '../utils/assetUrl'
 
 type Row = {
   grant_id: number
@@ -13,6 +14,7 @@ type Row = {
     code: string
     name: { 'zh-HK': string; en: string }
     rules?: { 'zh-HK': string; en: string }
+    background_image?: string | null
     type: string
     threshold: number
     amount: number
@@ -69,6 +71,19 @@ function openRules(row: Row) {
   rulesShow.value = true
 }
 
+function bgStyle(row: Row) {
+  const raw = (row.coupon.background_image || '').trim()
+  if (!raw) return undefined
+  const url = assetUrl(raw)
+  return {
+    backgroundImage: `url("${url}")`,
+    backgroundSize: '100% auto',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center top',
+    backgroundColor: 'transparent',
+  } as Record<string, string>
+}
+
 const popupTitle = computed(() => rulesTitle.value)
 </script>
 
@@ -82,11 +97,17 @@ const popupTitle = computed(() => rulesTitle.value)
     </van-tabs>
     <p v-if="!items.length" class="empty">{{ t('m6.noCoupons') }}</p>
     <div v-else class="list">
-      <div v-for="row in items" :key="row.grant_id" class="coupon">
+      <div
+        v-for="row in items"
+        :key="row.grant_id"
+        class="coupon"
+        :class="{ 'has-bg': !!bgStyle(row) }"
+        :style="bgStyle(row)"
+      >
         <div class="main">
           <div class="left">
             <strong>{{ nameOf(row) }}</strong>
-            <span>{{ row.coupon.code }} · ≥HK${{ row.coupon.threshold }}</span>
+            <span>≥HK${{ row.coupon.threshold }}</span>
             <small>{{ expiryText(row) }}</small>
           </div>
           <em class="status">{{ statusLabel(row.status) }}</em>
@@ -97,7 +118,7 @@ const popupTitle = computed(() => rulesTitle.value)
           class="rules-btn"
           @click="openRules(row)"
         >
-          <van-icon name="info-o" />
+          <van-icon name="info" />
           <span>{{ t('m6.rules') }}</span>
         </button>
       </div>
@@ -120,11 +141,18 @@ const popupTitle = computed(() => rulesTitle.value)
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  margin: 0.75rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.75rem 0;
   padding: 1rem;
-  border-radius: 0.75rem;
-  background: #fff;
-  border: 1px solid #eee;
+  border-radius: 0;
+  background: linear-gradient(135deg, #fff8f0, #fff);
+  border: 1px solid #f0e0d0;
+  border-left: 0;
+  border-right: 0;
+}
+.coupon.has-bg {
+  border-color: transparent;
 }
 .main {
   display: flex;
@@ -159,10 +187,9 @@ const popupTitle = computed(() => rulesTitle.value)
   align-items: center;
   gap: 0.25rem;
   margin: 0;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid var(--sm-primary);
-  border-radius: 999px;
-  background: transparent;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--sm-primary);
   font-size: 0.75rem;
   line-height: 1.2;

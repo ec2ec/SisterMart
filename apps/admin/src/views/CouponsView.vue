@@ -17,7 +17,7 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui'
-import { api } from '../api'
+import { api, uploadImage } from '../api'
 import { showWarningDialog } from '../feedback'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import { useClientPager } from '../composables/useClientPager'
@@ -32,6 +32,7 @@ type Coupon = {
   rules?: { 'zh-HK': string; en: string }
   rules_zh?: string
   rules_en?: string
+  background_image?: string | null
   type: string
   threshold: number
   amount: number
@@ -78,6 +79,7 @@ const form = reactive({
   name_en: '',
   rules_zh: '',
   rules_en: '',
+  background_image: '' as string,
   type: 'fixed',
   threshold: 0,
   amount: 20,
@@ -91,6 +93,7 @@ const form = reactive({
 
 const editOpen = ref(false)
 const editSaving = ref(false)
+const bgUploading = ref(false)
 const edit = reactive({
   id: 0,
   code: '',
@@ -98,6 +101,7 @@ const edit = reactive({
   name_en: '',
   rules_zh: '',
   rules_en: '',
+  background_image: '' as string,
   claim_mode: 'range' as 'range' | 'permanent',
   starts_at: null as string | null,
   ends_at: null as string | null,
@@ -160,6 +164,7 @@ function resetCreateForm() {
   form.name_en = ''
   form.rules_zh = ''
   form.rules_en = ''
+  form.background_image = ''
   form.type = 'fixed'
   form.threshold = 0
   form.amount = 20
@@ -197,6 +202,7 @@ async function create() {
           name_en: form.name_en,
           rules_zh: form.rules_zh,
           rules_en: form.rules_en,
+          background_image: form.background_image.trim() || null,
           type: form.type,
           threshold: form.threshold,
           amount: form.amount,
@@ -234,6 +240,7 @@ function openEdit(row: Coupon) {
   edit.name_en = row.name_en || row.name?.en || ''
   edit.rules_zh = row.rules_zh || row.rules?.['zh-HK'] || ''
   edit.rules_en = row.rules_en || row.rules?.en || ''
+  edit.background_image = row.background_image || ''
   edit.claim_mode = row.claim_permanent || !row.ends_at ? 'permanent' : 'range'
   edit.starts_at = row.starts_at ? String(row.starts_at).slice(0, 10) : null
   edit.ends_at = row.ends_at ? String(row.ends_at).slice(0, 10) : null
@@ -257,6 +264,7 @@ async function saveEdit() {
           name_en: edit.name_en,
           rules_zh: edit.rules_zh,
           rules_en: edit.rules_en,
+          background_image: edit.background_image.trim() || null,
           valid_days: edit.valid_days,
           ...payloadClaimWindow(edit.claim_mode, edit.starts_at, edit.ends_at),
         }),
@@ -269,6 +277,27 @@ async function saveEdit() {
   } finally {
     editSaving.value = false
   }
+}
+
+async function onBgFile(target: 'create' | 'edit', ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  bgUploading.value = true
+  try {
+    const data = await uploadImage(file, { preset: 'banner' })
+    if (target === 'create') form.background_image = data.url
+    else edit.background_image = data.url
+    message.success('背景圖已上傳')
+  } finally {
+    bgUploading.value = false
+    input.value = ''
+  }
+}
+
+function clearBg(target: 'create' | 'edit') {
+  if (target === 'create') form.background_image = ''
+  else edit.background_image = ''
 }
 
 /** 臨時刪除：正式上線後移除此功能 */
@@ -310,6 +339,7 @@ function removeCoupon(row: Coupon) {
               <th>使用有效期</th>
               <th>領取</th>
               <th>細則</th>
+              <th>背景</th>
               <th>狀態</th>
               <th />
             </tr>
@@ -324,6 +354,10 @@ function removeCoupon(row: Coupon) {
               <td>{{ validLabel(row.valid_days) }}</td>
               <td>{{ row.claimed }}/{{ row.stock }}（限{{ row.per_member_limit }}）</td>
               <td>{{ (row.rules_zh || row.rules?.['zh-HK'] || '').trim() ? '已填' : '—' }}</td>
+              <td>
+                <img v-if="row.background_image" class="bg-thumb" :src="row.background_image" alt="" />
+                <span v-else>—</span>
+              </td>
               <td>
                 <n-tag size="small" :type="row.status === 1 ? 'success' : 'default'">
                   {{ row.status === 1 ? '啟用' : '停用' }}
@@ -412,6 +446,16 @@ function removeCoupon(row: Coupon) {
             <span>天有效（0 = 永久）</span>
           </n-space>
         </n-form-item>
+        <n-form-item label="背景圖（可選，H5 券卡 100% 寬）">
+          <n-space vertical :size="8" style="width: 100%">
+            <n-input v-model:value="form.background_image" placeholder="/storage/... 或留空用漸變" />
+            <n-space align="center">
+              <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="bgUploading" @change="onBgFile('create', $event)" />
+              <n-button v-if="form.background_image" size="tiny" quaternary @click="clearBg('create')">清除</n-button>
+            </n-space>
+            <img v-if="form.background_image" class="bg-preview" :src="form.background_image" alt="" />
+          </n-space>
+        </n-form-item>
         <n-form-item label="使用細則（繁中）">
           <WangSimpleEditor v-model="form.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="180" />
         </n-form-item>
@@ -472,6 +516,16 @@ function removeCoupon(row: Coupon) {
             <span>天有效（0 = 永久）</span>
           </n-space>
         </n-form-item>
+        <n-form-item label="背景圖（可選，H5 券卡 100% 寬）">
+          <n-space vertical :size="8" style="width: 100%">
+            <n-input v-model:value="edit.background_image" placeholder="/storage/... 或留空用漸變" />
+            <n-space align="center">
+              <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="bgUploading" @change="onBgFile('edit', $event)" />
+              <n-button v-if="edit.background_image" size="tiny" quaternary @click="clearBg('edit')">清除</n-button>
+            </n-space>
+            <img v-if="edit.background_image" class="bg-preview" :src="edit.background_image" alt="" />
+          </n-space>
+        </n-form-item>
         <n-form-item label="使用細則（繁中）">
           <WangSimpleEditor v-model="edit.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="220" />
         </n-form-item>
@@ -500,6 +554,22 @@ td {
   padding: 0.5rem;
   text-align: left;
   font-size: 0.875rem;
+}
+.bg-thumb {
+  display: block;
+  width: 4.5rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  border: 1px solid #eee;
+}
+.bg-preview {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #eee;
 }
 .pager {
   display: flex;
