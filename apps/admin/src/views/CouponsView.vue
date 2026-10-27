@@ -446,7 +446,7 @@ function removeCoupon(row: Coupon) {
             <span>天有效（0 = 永久）</span>
           </n-space>
         </n-form-item>
-        <n-form-item label="背景圖（可選，H5 券卡 100% 寬）">
+        <n-form-item label="背景圖（可選，鋪滿券卡；留空用漸變）">
           <n-space vertical :size="8" style="width: 100%">
             <n-input v-model:value="form.background_image" placeholder="/storage/... 或留空用漸變" />
             <n-space align="center">
@@ -516,7 +516,7 @@ function removeCoupon(row: Coupon) {
             <span>天有效（0 = 永久）</span>
           </n-space>
         </n-form-item>
-        <n-form-item label="背景圖（可選，H5 券卡 100% 寬）">
+        <n-form-item label="背景圖（可選，鋪滿券卡；留空用漸變）">
           <n-space vertical :size="8" style="width: 100%">
             <n-input v-model:value="edit.background_image" placeholder="/storage/... 或留空用漸變" />
             <n-space align="center">

@@ -109,10 +109,9 @@ function bgStyle(row: Item) {
   const url = assetUrl(raw)
   return {
     backgroundImage: `url("${url}")`,
-    backgroundSize: '100% auto',
+    backgroundSize: '100% 100%',
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center top',
-    backgroundColor: 'transparent',
+    backgroundPosition: 'center',
   } as Record<string, string>
 }
 
@@ -238,18 +237,13 @@ const popupTitle = computed(() => rulesTitle.value)
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0.75rem 0;
+  margin: 0.75rem 1rem;
   padding: 1rem;
-  border-radius: 0;
+  border-radius: 0.75rem;
   background: linear-gradient(135deg, #fff8f0, #fff);
   border: 1px solid #f0e0d0;
-  border-left: 0;
-  border-right: 0;
-}
-.coupon.has-bg {
-  border-color: transparent;
+  background-clip: padding-box;
+  overflow: hidden;
 }
 .main {
   display: flex;
