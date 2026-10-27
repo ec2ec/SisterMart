@@ -12,9 +12,11 @@ class CouponService
     public function claimable(?int $memberId): array
     {
         $now = date('Y-m-d H:i:s');
+        // 提前 1 天展示即將開始的券（仍不可領）
+        $previewUntil = date('Y-m-d H:i:s', strtotime($now . ' +1 day'));
         $rows = Db::name('coupons')
             ->where('status', 1)
-            ->whereRaw('(starts_at IS NULL OR starts_at <= ?)', [$now])
+            ->whereRaw('(starts_at IS NULL OR starts_at <= ?)', [$previewUntil])
             ->whereRaw('(ends_at IS NULL OR ends_at >= ?)', [$now])
             ->order('id', 'desc')
             ->select()->toArray();
@@ -32,6 +34,7 @@ class CouponService
             }
         }
 
+        $nowTs = time();
         $items = [];
         foreach ($rows as $r) {
             $stock = (int) ($r['stock'] ?? 0);
@@ -39,13 +42,30 @@ class CouponService
             $limit = max(1, (int) ($r['per_member_limit'] ?? 1));
             $mine = $claimedMap[(int) $r['id']] ?? 0;
             $left = max(0, $stock - $claimed);
-            $canClaim = $left > 0 && $mine < $limit;
+            $startsAt = $r['starts_at'] ?? null;
+            $upcoming = is_string($startsAt) && $startsAt !== '' && $startsAt > $now;
+            $startsInMs = 0;
+            if ($upcoming) {
+                $startTs = strtotime($startsAt);
+                $startsInMs = $startTs === false ? 0 : max(0, ($startTs - $nowTs) * 1000);
+            }
+            $canClaim = !$upcoming && $left > 0 && $mine < $limit;
+            $blocked = '';
+            if ($upcoming) {
+                $blocked = 'not_started';
+            } elseif ($left <= 0) {
+                $blocked = 'sold_out';
+            } elseif ($mine >= $limit) {
+                $blocked = 'limit_reached';
+            }
             $items[] = array_merge($this->presentCoupon($r), [
                 'stock_left' => $left,
                 'claimed_by_me' => $mine,
                 'per_member_limit' => $limit,
                 'can_claim' => $canClaim,
-                'claim_blocked_reason' => $canClaim ? '' : ($left <= 0 ? 'sold_out' : 'limit_reached'),
+                'claim_blocked_reason' => $blocked,
+                'upcoming' => $upcoming,
+                'starts_in_ms' => $startsInMs,
             ]);
         }
 

@@ -21,6 +21,9 @@ type Item = {
   can_claim: boolean
   claim_blocked_reason: string
   stock_left: number
+  upcoming?: boolean
+  starts_in_ms?: number
+  starts_at?: string | null
 }
 
 const { t, locale } = useI18n()
@@ -54,6 +57,30 @@ function validText(row: Item) {
   return days > 0 ? t('m6.validDays', { n: days }) : t('m6.validForever')
 }
 
+function isUpcoming(row: Item) {
+  return Boolean(row.upcoming) || row.claim_blocked_reason === 'not_started'
+}
+
+function startsInMs(row: Item) {
+  const fromApi = Number(row.starts_in_ms ?? 0)
+  if (fromApi > 0) return fromApi
+  if (!row.starts_at) return 0
+  const ts = Date.parse(String(row.starts_at).replace(' ', 'T'))
+  if (!Number.isFinite(ts)) return 0
+  return Math.max(0, ts - Date.now())
+}
+
+function claimLabel(row: Item) {
+  if (isUpcoming(row)) return t('m6.waitStart')
+  if (row.can_claim || !isLoggedIn()) return t('m6.claim')
+  return t('m6.claimedDone')
+}
+
+function claimDisabled(row: Item) {
+  if (isUpcoming(row)) return true
+  return !row.can_claim && isLoggedIn()
+}
+
 async function load() {
   const data = await api<{ items: Item[] }>('/api/v1/coupons/claimable', {}, isLoggedIn() ? 'member' : 'none')
   items.value = data.items
@@ -62,6 +89,7 @@ async function load() {
 onMounted(load)
 
 async function claim(row: Item) {
+  if (isUpcoming(row)) return
   if (!isLoggedIn()) {
     void goLogin(router, '/coupons')
     return
@@ -79,6 +107,10 @@ function openRules(row: Item) {
   rulesTitle.value = t('m6.rules')
   rulesHtml.value = rulesOf(row)
   rulesShow.value = true
+}
+
+function onCountdownFinish() {
+  void load()
 }
 
 const popupTitle = computed(() => rulesTitle.value)
@@ -102,22 +134,40 @@ const popupTitle = computed(() => rulesTitle.value)
         <van-button
           size="small"
           round
-          :disabled="!row.can_claim && isLoggedIn()"
+          :disabled="claimDisabled(row)"
           color="var(--sm-primary)"
           @click="claim(row)"
         >
-          {{ row.can_claim || !isLoggedIn() ? t('m6.claim') : t('m6.claimedDone') }}
+          {{ claimLabel(row) }}
         </van-button>
       </div>
-      <button
-        v-if="hasRules(row)"
-        type="button"
-        class="rules-btn"
-        @click="openRules(row)"
+      <div
+        class="foot"
+        :class="{
+          'has-tip': isUpcoming(row),
+          'tip-only': isUpcoming(row) && !hasRules(row),
+        }"
       >
-        <van-icon name="info-o" />
-        <span>{{ t('m6.rules') }}</span>
-      </button>
+        <button
+          v-if="hasRules(row)"
+          type="button"
+          class="rules-btn"
+          @click="openRules(row)"
+        >
+          <van-icon name="info-o" />
+          <span>{{ t('m6.rules') }}</span>
+        </button>
+        <div v-if="isUpcoming(row)" class="upcoming-tip">
+          <span>{{ t('m6.upcomingBefore') }}</span>
+          <van-count-down
+            class="upcoming-cd"
+            :time="startsInMs(row)"
+            format="HH:mm:ss"
+            @finish="onCountdownFinish"
+          />
+          <span>{{ t('m6.upcomingAfter') }}</span>
+        </div>
+      </div>
     </div>
 
     <CouponRulesPopup v-model:show="rulesShow" :title="popupTitle" :html="rulesHtml" />
@@ -170,8 +220,21 @@ const popupTitle = computed(() => rulesTitle.value)
   color: #888;
   font-size: 0.75rem;
 }
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.foot.has-tip {
+  justify-content: space-between;
+}
+.foot.has-tip:not(:has(.rules-btn)) {
+  justify-content: flex-end;
+}
 .rules-btn {
-  align-self: flex-start;
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -183,5 +246,29 @@ const popupTitle = computed(() => rulesTitle.value)
   color: var(--sm-primary);
   font-size: 0.75rem;
   line-height: 1.2;
+}
+.upcoming-tip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  text-align: right;
+  color: #8a8378;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.upcoming-cd {
+  display: inline-block;
+  color: var(--sm-primary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+.upcoming-cd :deep(.van-count-down) {
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 </style>
