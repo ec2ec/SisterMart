@@ -21,14 +21,30 @@ const recItems = ref<Card[]>([])
 const recBusy = ref(false)
 
 const isEmpty = computed(() => loaded.value && items.value.length === 0)
+const showRec = computed(() => recBusy.value || recItems.value.length > 0)
 
 async function loadRecs() {
   recBusy.value = true
   try {
-    // 隨機偏移 + 服務端頁內 shuffle，每次進入空態推薦不同
+    // 隨機偏移 + 服務端頁內 shuffle，每次進入推薦不同
     const offset = Math.floor(Math.random() * 500)
     const data = await fetchHomeRecommendations('hot', REC_LIMIT, offset)
-    recItems.value = data.items || []
+    const favIds = new Set(items.value.map((p) => p.id))
+    // 略過已在心願清單的商品，再補足至最多 30
+    const filtered = (data.items || []).filter((p) => !favIds.has(p.id))
+    if (filtered.length >= REC_LIMIT || !favIds.size) {
+      recItems.value = filtered.slice(0, REC_LIMIT)
+    } else {
+      const more = await fetchHomeRecommendations('hot', REC_LIMIT, offset + REC_LIMIT)
+      const seen = new Set(filtered.map((p) => p.id))
+      for (const p of more.items || []) {
+        if (favIds.has(p.id) || seen.has(p.id)) continue
+        filtered.push(p)
+        seen.add(p.id)
+        if (filtered.length >= REC_LIMIT) break
+      }
+      recItems.value = filtered.slice(0, REC_LIMIT)
+    }
   } catch {
     recItems.value = []
   } finally {
@@ -50,11 +66,7 @@ async function load() {
   } finally {
     loaded.value = true
   }
-  if (items.value.length === 0) {
-    void loadRecs()
-  } else {
-    recItems.value = []
-  }
+  void loadRecs()
 }
 
 onMounted(load)
@@ -64,28 +76,10 @@ onMounted(load)
   <div class="page wishlist-page">
     <SubPageNav :title="t('pages.wishlist')" />
 
-    <template v-if="isEmpty">
-      <div class="empty-block">
-        <h2 class="empty-title">{{ t('account.wishlistEmpty') }}</h2>
-        <p class="empty-hint">{{ t('account.wishlistEmptyHint') }}</p>
-      </div>
-
-      <section v-if="recBusy || recItems.length" class="rec">
-        <h3 class="rec-title">{{ t('account.wishlistRecommend') }}</h3>
-        <div v-if="recBusy && !recItems.length" class="grid" aria-hidden="true">
-          <div v-for="n in 6" :key="`sk-${n}`" class="sk-card">
-            <div class="sk-media sk-pulse" />
-            <div class="sk-meta">
-              <span class="sk-line sk-pulse" />
-              <span class="sk-line sk-pulse sk-short" />
-            </div>
-          </div>
-        </div>
-        <div v-else class="grid">
-          <ProductCard v-for="p in recItems" :key="p.id" :product="p" />
-        </div>
-      </section>
-    </template>
+    <div v-if="isEmpty" class="empty-block">
+      <h2 class="empty-title">{{ t('account.wishlistEmpty') }}</h2>
+      <p class="empty-hint">{{ t('account.wishlistEmptyHint') }}</p>
+    </div>
 
     <div v-else-if="loaded" class="grid">
       <div v-for="p in items" :key="p.id" class="cell">
@@ -93,6 +87,22 @@ onMounted(load)
         <span v-if="p.invalid" class="badge">{{ t('footprint.invalid') }}</span>
       </div>
     </div>
+
+    <section v-if="loaded && showRec" class="rec">
+      <h3 class="rec-title">{{ t('account.wishlistRecommend') }}</h3>
+      <div v-if="recBusy && !recItems.length" class="grid" aria-hidden="true">
+        <div v-for="n in 6" :key="`sk-${n}`" class="sk-card">
+          <div class="sk-media sk-pulse" />
+          <div class="sk-meta">
+            <span class="sk-line sk-pulse" />
+            <span class="sk-line sk-pulse sk-short" />
+          </div>
+        </div>
+      </div>
+      <div v-else class="grid">
+        <ProductCard v-for="p in recItems" :key="`rec-${p.id}`" :product="p" />
+      </div>
+    </section>
   </div>
 </template>
 
