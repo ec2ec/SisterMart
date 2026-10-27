@@ -16,12 +16,26 @@ const props = withDefaults(
     max?: number
     /** 單張上限（字節），UI 文案按 3MB */
     maxBytes?: number
+    /** 底部提示；空字串隱藏 */
+    hint?: string
+    deleteTitle?: string
+    deleteContent?: string
   }>(),
   {
     max: 12,
     maxBytes: 3 * 1024 * 1024,
+    hint: '',
+    deleteTitle: '確認刪除圖片',
+    deleteContent: '確定從商品圖庫移除此圖？保存商品後才會生效。',
   },
 )
+
+const hintText = computed(() => {
+  if (props.hint !== '') return props.hint
+  return `商品圖片單張大小不能超過 3M，最多可上傳 ${props.max} 張，支持 JPG、PNG、GIF、視頻等格式`
+})
+
+const single = computed(() => props.max <= 1)
 
 const emit = defineEmits<{
   'update:modelValue': [value: MediaItem[]]
@@ -56,8 +70,8 @@ function removeAt(idx: number) {
   dialog.warning({
     maskClosable: false,
     closeOnEsc: false,
-    title: '確認刪除圖片',
-    content: '確定從商品圖庫移除此圖？保存商品後才會生效。',
+    title: props.deleteTitle,
+    content: props.deleteContent,
     positiveText: '刪除',
     negativeText: '取消',
     onPositiveClick: () => {
@@ -149,25 +163,31 @@ async function onFiles(ev: Event) {
         <div v-for="(item, idx) in items" :key="`${item.url}-${idx}`" class="tile media">
           <video v-if="isVideo(item)" class="thumb" :src="previewUrl(item.url)" muted />
           <img v-else class="thumb" :src="previewUrl(item.url)" alt="" />
-          <div class="actions">
-            <button type="button" title="左移" :disabled="idx === 0" @click="move(idx, -1)">‹</button>
-            <button type="button" title="右移" :disabled="idx === items.length - 1" @click="move(idx, 1)">›</button>
+          <div class="actions" :class="{ 'del-only': single }">
+            <button v-if="!single" type="button" title="左移" :disabled="idx === 0" @click="move(idx, -1)">‹</button>
+            <button
+              v-if="!single"
+              type="button"
+              title="右移"
+              :disabled="idx === items.length - 1"
+              @click="move(idx, 1)"
+            >
+              ›
+            </button>
             <button type="button" class="del" title="刪除" @click="removeAt(idx)">×</button>
           </div>
         </div>
       </div>
     </n-spin>
 
-    <p class="hint">
-      商品圖片單張大小不能超過 3M，最多可上傳 {{ max }} 張，支持 JPG、PNG、GIF、視頻等格式
-    </p>
+    <p v-if="hintText" class="hint">{{ hintText }}</p>
 
     <input
       ref="inputRef"
       type="file"
       class="hidden"
       accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
-      multiple
+      :multiple="!single"
       @change="onFiles"
     />
   </div>
@@ -267,6 +287,10 @@ async function onFiles(ev: Event) {
 .actions .del {
   color: #ffb4b4;
   font-weight: 700;
+}
+
+.actions.del-only .del {
+  flex: 1;
 }
 
 .hint {
