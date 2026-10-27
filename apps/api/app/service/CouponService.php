@@ -139,8 +139,24 @@ class CouponService
         if ($value === null || $value === '') {
             return null;
         }
-        $raw = trim((string) $value);
-        if ($raw === '') {
+        // 毫秒／秒時間戳（避免前端誤傳 number 導致 500）
+        if (is_int($value) || is_float($value)) {
+            $n = (float) $value;
+            if ($n > 1e12) {
+                $n = $n / 1000.0;
+            }
+            if ($n <= 0) {
+                return null;
+            }
+
+            return date('Y-m-d H:i:s', (int) $n);
+        }
+        if (!is_string($value)) {
+            // 陣列／物件不可轉字串（PHP 8 會 TypeError → 500）
+            return null;
+        }
+        $raw = trim($value);
+        if ($raw === '' || strcasecmp($raw, 'null') === 0) {
             return null;
         }
         // 允許僅日期：補全時間
