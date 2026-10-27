@@ -502,6 +502,8 @@ const tabLabel = (tab: HomeRecTab) => {
     <van-pull-refresh
       v-model="pulling"
       class="home-pull"
+      :head-height="100"
+      :pull-distance="100"
       :pulling-text="t('home.refreshPulling')"
       :loosing-text="t('home.refreshLoose')"
       :loading-text="t('home.refreshLoading')"
