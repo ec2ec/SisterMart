@@ -265,6 +265,7 @@ Route::group('api/v1/admin', function () {
     Route::get('coupons', 'admin.Coupons/index');
     Route::post('coupons', 'admin.Coupons/store');
     Route::put('coupons/:id', 'admin.Coupons/update');
+    Route::delete('coupons/:id', 'admin.Coupons/destroy');
     Route::get('points/settings', 'admin.Points/settings');
     Route::put('points/settings', 'admin.Points/updateSettings');
     /** M32 積分商城後台 */

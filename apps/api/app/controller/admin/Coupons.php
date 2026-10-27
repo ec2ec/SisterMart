@@ -24,4 +24,10 @@ class Coupons extends ApiController
     {
         return $this->run(fn () => (new CouponService())->adminUpdate($id, $this->payload()));
     }
+
+    /** 臨時刪除接口，正式上線後可移除 */
+    public function destroy(int $id): Response
+    {
+        return $this->run(fn () => (new CouponService())->adminDelete($id));
+    }
 }

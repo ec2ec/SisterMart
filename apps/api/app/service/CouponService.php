@@ -256,6 +256,30 @@ class CouponService
         return $this->presentCoupon(Db::name('coupons')->where('id', $id)->find(), true);
     }
 
+    /**
+     * 臨時刪除（上線前運維用）：連同領取記錄一併刪除。
+     *
+     * @return array{deleted: bool, id: int, grants_deleted: int}
+     */
+    public function adminDelete(int $id): array
+    {
+        $row = Db::name('coupons')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '優惠券不存在', 404, 40470);
+        }
+        $grantsDeleted = 0;
+        Db::transaction(function () use ($id, &$grantsDeleted) {
+            $grantsDeleted = (int) Db::name('coupon_grants')->where('coupon_id', $id)->delete();
+            Db::name('coupons')->where('id', $id)->delete();
+        });
+
+        return [
+            'deleted' => true,
+            'id' => $id,
+            'grants_deleted' => $grantsDeleted,
+        ];
+    }
+
     public function adminUpdate(int $id, array $body): array
     {
         $row = Db::name('coupons')->where('id', $id)->find();

@@ -18,6 +18,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import { showWarningDialog } from '../feedback'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
@@ -49,6 +50,14 @@ const rows = ref<Coupon[]>([])
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const { rowAttrs } = useTableRowSelect()
 
+const types = [
+  { label: '固定減免', value: 'fixed' },
+  { label: '折扣（如 0.9=九折）', value: 'discount' },
+  { label: '免運', value: 'free_shipping' },
+]
+
+const createOpen = ref(false)
+const createSaving = ref(false)
 const form = reactive({
   code: '',
   name_zh: '',
@@ -61,16 +70,10 @@ const form = reactive({
   stock: 100,
   per_member_limit: 1,
   claim_mode: 'range' as 'range' | 'permanent',
-  starts_at: '2026-01-01',
-  ends_at: '2027-01-01',
+  starts_at: '2026-01-01' as string | null,
+  ends_at: '2027-01-01' as string | null,
   valid_days: 30,
 })
-
-const types = [
-  { label: '固定減免', value: 'fixed' },
-  { label: '折扣（如 0.9=九折）', value: 'discount' },
-  { label: '免運', value: 'free_shipping' },
-]
 
 const editOpen = ref(false)
 const editSaving = ref(false)
@@ -136,37 +139,67 @@ function payloadClaimWindow(mode: 'range' | 'permanent', starts: unknown, ends: 
   }
 }
 
+function resetCreateForm() {
+  form.code = ''
+  form.name_zh = ''
+  form.name_en = ''
+  form.rules_zh = ''
+  form.rules_en = ''
+  form.type = 'fixed'
+  form.threshold = 0
+  form.amount = 20
+  form.stock = 100
+  form.per_member_limit = 1
+  form.claim_mode = 'range'
+  form.starts_at = '2026-01-01'
+  form.ends_at = '2027-01-01'
+  form.valid_days = 30
+}
+
+function openCreate() {
+  resetCreateForm()
+  createOpen.value = true
+}
+
 async function create() {
+  if (!form.code.trim()) {
+    message.warning('請填寫券碼')
+    return
+  }
   if (form.claim_mode === 'range' && (!form.starts_at || !form.ends_at)) {
     message.warning('請選擇發放時段起止日期')
     return
   }
-  await api(
-    '/api/v1/admin/coupons',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        code: form.code,
-        name_zh: form.name_zh,
-        name_en: form.name_en,
-        rules_zh: form.rules_zh,
-        rules_en: form.rules_en,
-        type: form.type,
-        threshold: form.threshold,
-        amount: form.amount,
-        stock: form.stock,
-        per_member_limit: form.per_member_limit,
-        valid_days: form.valid_days,
-        ...payloadClaimWindow(form.claim_mode, form.starts_at, form.ends_at),
-      }),
-    },
-    true,
-  )
-  message.success('已創建')
-  form.code = ''
-  form.rules_zh = ''
-  form.rules_en = ''
-  await load()
+  createSaving.value = true
+  try {
+    await api(
+      '/api/v1/admin/coupons',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          code: form.code,
+          name_zh: form.name_zh,
+          name_en: form.name_en,
+          rules_zh: form.rules_zh,
+          rules_en: form.rules_en,
+          type: form.type,
+          threshold: form.threshold,
+          amount: form.amount,
+          stock: form.stock,
+          per_member_limit: form.per_member_limit,
+          valid_days: form.valid_days,
+          ...payloadClaimWindow(form.claim_mode, form.starts_at, form.ends_at),
+        }),
+      },
+      true,
+    )
+    message.success('已創建')
+    createOpen.value = false
+    resetCreateForm()
+    await load()
+  } finally {
+    createSaving.value = false
+  }
 }
 
 async function toggle(row: Coupon) {
@@ -222,11 +255,34 @@ async function saveEdit() {
     editSaving.value = false
   }
 }
+
+/** 臨時刪除：正式上線後移除此功能 */
+function removeCoupon(row: Coupon) {
+  showWarningDialog({
+    title: '臨時刪除優惠券',
+    content: `確定刪除「${row.code} / ${row.name['zh-HK']}」？將同時刪除已領取記錄（${row.claimed}）。此為上線前臨時功能。`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const data = await api<{ deleted: boolean; grants_deleted: number }>(
+        `/api/v1/admin/coupons/${row.id}`,
+        { method: 'DELETE' },
+        true,
+      )
+      message.success(`已刪除（含領取記錄 ${data.grants_deleted} 條）`)
+      await load()
+    },
+  })
+}
 </script>
 
 <template>
   <n-space vertical :size="16">
     <n-card title="優惠券列表">
+      <template #header-extra>
+        <n-button type="primary" @click="openCreate">新增優惠券</n-button>
+      </template>
+
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -262,6 +318,7 @@ async function saveEdit() {
                 <n-space>
                   <n-button size="tiny" @click="openEdit(row)">編輯</n-button>
                   <n-button size="tiny" @click="toggle(row)">{{ row.status === 1 ? '停用' : '啟用' }}</n-button>
+                  <n-button size="tiny" type="error" quaternary @click="removeCoupon(row)">刪除</n-button>
                 </n-space>
               </td>
             </tr>
@@ -277,10 +334,18 @@ async function saveEdit() {
           show-size-picker
         />
       </div>
+      <p class="temp-hint">※ 刪除為上線前臨時功能，正式上線後將移除。</p>
     </n-card>
 
-    <n-card title="新建券">
-      <n-form label-placement="left" label-width="7rem" style="max-width: 44rem">
+    <n-modal
+      v-model:show="createOpen"
+      preset="card"
+      title="新增優惠券"
+      style="width: min(44rem, 94vw)"
+      :mask-closable="false"
+      :close-on-esc="false"
+    >
+      <n-form label-placement="top">
         <n-form-item label="券碼"><n-input v-model:value="form.code" placeholder="如 SAVE15" /></n-form-item>
         <n-form-item label="中文名"><n-input v-model:value="form.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="form.name_en" /></n-form-item>
@@ -338,16 +403,23 @@ async function saveEdit() {
         <n-form-item label="使用細則（英文）">
           <WangSimpleEditor v-model="form.rules_en" preset="admin" placeholder="Usage rules (EN)…" :height="180" />
         </n-form-item>
-        <n-button type="primary" @click="create">新建券</n-button>
       </n-form>
-    </n-card>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="createOpen = false">取消</n-button>
+          <n-button type="primary" :loading="createSaving" @click="create">創建</n-button>
+        </n-space>
+      </template>
+    </n-modal>
 
     <n-modal
       v-model:show="editOpen"
       preset="card"
       :title="`編輯優惠券 · ${edit.code}`"
       style="width: min(44rem, 94vw)"
-     :mask-closable="false" :close-on-esc="false">
+      :mask-closable="false"
+      :close-on-esc="false"
+    >
       <n-form label-placement="top">
         <n-form-item label="中文名"><n-input v-model:value="edit.name_zh" /></n-form-item>
         <n-form-item label="英文名"><n-input v-model:value="edit.name_en" /></n-form-item>
@@ -418,5 +490,10 @@ td {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+.temp-hint {
+  margin: 0.75rem 0 0;
+  color: #8a8378;
+  font-size: 0.75rem;
 }
 </style>
