@@ -90,18 +90,42 @@ a {
 }
 
 /*
- * 觸控基底：取消 iOS 灰閃、touch-action。
+ * 觸控基底：取消 iOS 灰閃、touch-action；長按不出現選字／系統菜單。
  * 不對按下做 scale 縮小。變色僅：van-button 遮罩、.sm-pressable／.sm-icon-btn 背景。
  * iOS :active 見 main.ts touchstart。
  */
+.page,
+.app-header,
+.van-tabbar,
+.van-nav-bar,
+.van-popup,
 button,
 [role='button'],
+[role='link'],
 a,
 .van-button,
 .van-tabbar-item,
-.sm-pressable {
+.van-cell,
+.sm-pressable,
+.sm-icon-btn {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 表單／可複製正文仍允許選取 */
+input,
+textarea,
+[contenteditable='true'],
+.van-field__control,
+.allow-select,
+.article .body,
+.rich {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* 可選按壓：僅背景變色，不縮放 */
