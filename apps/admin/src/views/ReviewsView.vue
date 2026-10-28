@@ -90,6 +90,23 @@ function modLabel(s?: string) {
   return '待審核'
 }
 
+/** 前台實際可見性：僅「已通過且未手動隱藏」才算顯示中 */
+function isFrontVisible(row: { is_hidden?: number; moderation_status?: string }) {
+  return Number(row.is_hidden || 0) !== 1 && (row.moderation_status || 'pending') === 'approved'
+}
+
+function visibilityLabel(row: { is_hidden?: number; moderation_status?: string }) {
+  if (Number(row.is_hidden || 0) === 1) return '已隱藏'
+  if ((row.moderation_status || 'pending') !== 'approved') return '未展示'
+  return '顯示中'
+}
+
+function visibilityTagType(row: { is_hidden?: number; moderation_status?: string }): 'warning' | 'success' | 'default' {
+  if (Number(row.is_hidden || 0) === 1) return 'warning'
+  if (!isFrontVisible(row)) return 'default'
+  return 'success'
+}
+
 async function load() {
   const qs = new URLSearchParams()
   if (hiddenFilter.value !== '') qs.set('is_hidden', hiddenFilter.value)
