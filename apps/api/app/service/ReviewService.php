@@ -84,6 +84,7 @@ class ReviewService
 
     public function adminRead(int $id): array
     {
+        $this->ensureReReviewColumns();
         $row = Db::name('product_reviews')->where('id', $id)->find();
         if (!$row) {
             throw new ApiException('NOT_FOUND', '評價不存在', 404, 40492);
@@ -171,6 +172,9 @@ class ReviewService
         }
         if (!$this->withinReReviewWindow($row)) {
             throw new ApiException('INVALID', '已超過 ' . self::RE_REVIEW_DAYS . ' 天，無法發起重評', 422, 42310);
+        }
+        if (!empty($row['re_reviewed_at'])) {
+            throw new ApiException('INVALID', '用戶已完成重評，無法再次發起', 422, 42313);
         }
         if (!empty($row['re_review_requested_at'])) {
             throw new ApiException('INVALID', '已發起重評，等待用戶提交', 422, 42311);
@@ -606,8 +610,12 @@ class ReviewService
         if (!$this->withinReReviewWindow($row)) {
             return false;
         }
+        // 已發起待重評、或用戶已完成重評 → 不再顯示發起按鈕
+        if (!empty($row['re_review_requested_at']) || !empty($row['re_reviewed_at'])) {
+            return false;
+        }
 
-        return empty($row['re_review_requested_at']);
+        return true;
     }
 
     /** @param array<string, mixed> $row */

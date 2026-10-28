@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { showError } from '../feedback'
+import { showError, showWarningDialog } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
@@ -109,7 +109,17 @@ async function openDetail(row: Row) {
   show.value = true
 }
 
-async function toggleHidden() {
+function confirmAction(title: string, content: string, run: () => Promise<void>) {
+  showWarningDialog({
+    title,
+    content,
+    positiveText: '確認',
+    negativeText: '取消',
+    onPositiveClick: () => run(),
+  })
+}
+
+async function doToggleHidden() {
   if (!current.value) return
   busy.value = true
   try {
@@ -128,7 +138,16 @@ async function toggleHidden() {
   }
 }
 
-async function setModeration(status: 'approved' | 'rejected') {
+function toggleHidden() {
+  if (!current.value || busy.value) return
+  confirmAction(
+    isHidden.value ? '恢復顯示' : '隱藏評價',
+    isHidden.value ? '是否確認恢復顯示此評價？' : '是否確認隱藏此評價？前台將不再展示。',
+    doToggleHidden,
+  )
+}
+
+async function doSetModeration(status: 'approved' | 'rejected') {
   if (!current.value) return
   busy.value = true
   try {
@@ -146,12 +165,17 @@ async function setModeration(status: 'approved' | 'rejected') {
   }
 }
 
-async function saveReply() {
+function setModeration(status: 'approved' | 'rejected') {
+  if (!current.value || busy.value) return
+  confirmAction(
+    status === 'approved' ? '通過審核' : '拒絕評價',
+    status === 'approved' ? '是否確認通過此評價？' : '是否確認拒絕此評價？',
+    () => doSetModeration(status),
+  )
+}
+
+async function doSaveReply() {
   if (!current.value) return
-  if (!replyText.value.trim()) {
-    message.warning('請填寫商家回覆')
-    return
-  }
   busy.value = true
   try {
     current.value = await api<Row>(
@@ -168,7 +192,16 @@ async function saveReply() {
   }
 }
 
-async function requestReReview() {
+function saveReply() {
+  if (!current.value || busy.value) return
+  if (!replyText.value.trim()) {
+    message.warning('請填寫商家回覆')
+    return
+  }
+  confirmAction('保存回覆', '是否確認保存商家回覆？', doSaveReply)
+}
+
+async function doRequestReReview() {
   if (!current.value) return
   busy.value = true
   try {
@@ -184,6 +217,11 @@ async function requestReReview() {
   } finally {
     busy.value = false
   }
+}
+
+function requestReReview() {
+  if (!current.value || busy.value) return
+  confirmAction('發起重評', '是否確認發起重新評價？用戶可在訂單詳情中重新提交評價。', doRequestReReview)
 }
 </script>
 
@@ -326,8 +364,14 @@ async function requestReReview() {
           發起重評
         </n-button>
       </n-space>
-      <p v-if="!current.can_request_re_review && !current.re_review_requested_at && current.within_re_review_window === false" class="hint">
+      <p
+        v-if="!current.can_request_re_review && !current.re_review_requested_at && !current.re_reviewed_at && current.within_re_review_window === false"
+        class="hint"
+      >
         已超過 {{ current.re_review_days || 30 }} 天，無法再發起重評
+      </p>
+      <p v-else-if="current.re_reviewed_at && !current.can_request_re_review" class="hint">
+        用戶已完成重評，不可再次發起
       </p>
     </n-space>
   </n-modal>
