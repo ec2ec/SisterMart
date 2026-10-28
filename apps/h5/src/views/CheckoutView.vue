@@ -215,13 +215,17 @@ async function submit() {
       <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
     </section>
 
-    <van-popup v-model:show="showCouponPicker" position="bottom" round :style="{ maxHeight: '70%' }">
+    <van-popup
+      v-model:show="showCouponPicker"
+      position="bottom"
+      round
+      closeable
+      close-icon="cross"
+      :style="{ maxHeight: '70%' }"
+    >
       <div class="coupon-sheet">
         <div class="coupon-sheet-hd">
           <strong>{{ t('checkout.coupon') }}</strong>
-          <button type="button" class="coupon-close" @click="showCouponPicker = false">
-            {{ t('addr.closePicker') }}
-          </button>
         </div>
         <van-radio-group v-model="couponRadio" class="coupon-radios">
           <van-cell-group :border="false">
