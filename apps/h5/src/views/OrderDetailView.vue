@@ -397,7 +397,7 @@ async function sendChat() {
       >
         {{ t('fulfill.logistics') }}
       </van-button>
-      <van-button v-if="order.status === 'pending_receipt'" type="primary" color="var(--sm-primary)" round @click="onConfirm">
+      <van-button v-if="order.status === 'pending_receipt'" type="primary" color="#f97316" round @click="onConfirm">
         {{ t('fulfill.confirm') }}
       </van-button>
       <van-button
