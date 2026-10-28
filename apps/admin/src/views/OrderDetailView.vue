@@ -54,7 +54,8 @@ async function load() {
     return
   }
   try {
-    shipment.value = await api(`/api/v1/admin/orders/${route.params.id}/shipment`, {}, true)
+    // 未發貨時接口返回 null（不再 404），避免全局錯誤彈窗
+    shipment.value = (await api(`/api/v1/admin/orders/${route.params.id}/shipment`, {}, true)) || null
   } catch {
     shipment.value = null
   }
