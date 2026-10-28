@@ -318,10 +318,8 @@ async function sendChat() {
           <van-button
             v-if="item.can_re_review"
             class="rev-action-btn"
-            size="mini"
             plain
             round
-            type="primary"
             @click="
               router.push({
                 name: 'order-review',
@@ -335,10 +333,8 @@ async function sendChat() {
           <van-button
             v-else-if="item.can_follow"
             class="rev-action-btn"
-            size="mini"
             plain
             round
-            type="primary"
             @click="
               router.push({ name: 'order-review', params: { id: order.id }, query: { item: String(item.id) } })
             "
@@ -647,7 +643,7 @@ async function sendChat() {
   margin-top: 0.65rem;
 }
 .rev-action-btn {
-  min-width: 4.75rem;
+  min-width: 5.5rem;
 }
 .meta {
   min-width: 0;
