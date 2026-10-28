@@ -293,9 +293,7 @@ async function sendChat() {
             v-if="item.review!.moderation_status && item.review!.moderation_status !== 'approved'"
             class="rev-mod"
           >
-            {{
-              item.review!.moderation_status === 'rejected' ? t('review.rejected') : t('review.pending')
-            }}
+            {{ t('review.publishing') }}
           </span>
         </div>
         <p v-if="item.review!.body" class="rev-body">{{ item.review!.body }}</p>
@@ -319,10 +317,10 @@ async function sendChat() {
         <div v-if="item.can_re_review || item.can_follow" class="rev-actions">
           <van-button
             v-if="item.can_re_review"
-            size="small"
-            block
-            round
+            class="rev-action-btn"
+            size="mini"
             plain
+            round
             type="primary"
             @click="
               router.push({
@@ -336,9 +334,11 @@ async function sendChat() {
           </van-button>
           <van-button
             v-else-if="item.can_follow"
+            class="rev-action-btn"
             size="mini"
             plain
             round
+            type="primary"
             @click="
               router.push({ name: 'order-review', params: { id: order.id }, query: { item: String(item.id) } })
             "
@@ -642,7 +642,12 @@ async function sendChat() {
   background: #f3eef9;
 }
 .rev-actions {
+  display: flex;
+  justify-content: flex-end;
   margin-top: 0.65rem;
+}
+.rev-action-btn {
+  min-width: 4.75rem;
 }
 .meta {
   min-width: 0;

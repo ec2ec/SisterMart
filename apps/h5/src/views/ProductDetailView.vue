@@ -346,12 +346,6 @@ async function share() {
           <div class="rev-head">
             <strong>{{ r.author }}</strong>
             <span class="rev-stars">{{ '★'.repeat(r.stars) }}{{ '☆'.repeat(Math.max(0, 5 - r.stars)) }}</span>
-            <span
-              v-if="r.is_mine && r.moderation_status && r.moderation_status !== 'approved'"
-              class="rev-mod"
-            >
-              {{ r.moderation_status === 'rejected' ? t('pdp.reviewRejected') : t('pdp.reviewPending') }}
-            </span>
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
