@@ -192,6 +192,7 @@ function reasonText(item: CartItem) {
         </template>
       </div>
       <van-button
+        class="submit-btn"
         type="primary"
         round
         color="var(--sm-primary)"
