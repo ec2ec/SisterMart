@@ -74,6 +74,20 @@ class MailService
         }
         $from = trim((string) env('MAIL_FROM', ''));
         $now = date('Y-m-d H:i:s');
+        // SES 沙盒階段預設強制 mock；出沙盒後設 MAIL_FORCE_MOCK=false
+        $forceMock = filter_var(env('MAIL_FORCE_MOCK', true), FILTER_VALIDATE_BOOLEAN);
+        $driver = strtolower(trim((string) env('MAIL_DRIVER', 'smtp')));
+        if ($forceMock || in_array($driver, ['mock', 'off', 'none'], true)) {
+            Db::name('mail_outbox')->where('id', $id)->update([
+                'status' => 'mock',
+                'sent_at' => $now,
+                'error_message' => $forceMock
+                    ? 'MAIL_FORCE_MOCK=true; SES sandbox — not sent'
+                    : 'MAIL_DRIVER=' . $driver . '; logged as mock',
+            ]);
+
+            return ['id' => $id, 'status' => 'mock'];
+        }
         if ($from === '') {
             Db::name('mail_outbox')->where('id', $id)->update([
                 'status' => 'mock',
@@ -135,21 +149,40 @@ class MailService
     /** 供後台診斷：是否具備真實 SMTP 出站條件（不回傳密文）。 */
     public function diagnostics(): array
     {
+        $forceMock = filter_var(env('MAIL_FORCE_MOCK', true), FILTER_VALIDATE_BOOLEAN);
+        $smtpReady = $this->smtpCredentialsPresent();
+
         return [
+            'mail_force_mock' => $forceMock,
             'mail_from_set' => trim((string) env('MAIL_FROM', '')) !== '',
             'mail_from_name_set' => trim((string) env('MAIL_FROM_NAME', '')) !== '',
             'smtp_host_set' => trim((string) env('MAIL_HOST', '')) !== '',
             'smtp_port' => (int) env('MAIL_PORT', 587),
             'smtp_user_set' => trim((string) env('MAIL_USERNAME', env('MAIL_USER', ''))) !== '',
             'smtp_pass_set' => trim((string) env('MAIL_PASSWORD', env('MAIL_PASS', ''))) !== '',
-            'smtp_configured' => $this->smtpConfigured(),
-            'driver' => $this->smtpConfigured()
-                ? 'smtp'
-                : (trim((string) env('MAIL_FROM', '')) !== '' ? 'php_mail' : 'mock'),
+            'smtp_configured' => !$forceMock && $smtpReady,
+            'driver' => $forceMock
+                ? 'mock'
+                : ($smtpReady
+                    ? 'smtp'
+                    : (trim((string) env('MAIL_FROM', '')) !== '' ? 'php_mail' : 'mock')),
         ];
     }
 
     private function smtpConfigured(): bool
+    {
+        if (filter_var(env('MAIL_FORCE_MOCK', true), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+        $driver = strtolower(trim((string) env('MAIL_DRIVER', 'smtp')));
+        if (in_array($driver, ['mock', 'off', 'none'], true)) {
+            return false;
+        }
+
+        return $this->smtpCredentialsPresent();
+    }
+
+    private function smtpCredentialsPresent(): bool
     {
         $host = trim((string) env('MAIL_HOST', ''));
         $user = trim((string) env('MAIL_USERNAME', env('MAIL_USER', '')));
