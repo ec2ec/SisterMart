@@ -231,6 +231,10 @@ Route::group('api/v1/admin', function () {
     /** 推廣編號補校驗位（僅超管） */
     Route::post('promo-codes/rehash', 'admin.PromoCodes/rehash');
 
+    /** 郵件出站診斷／測試（僅超管） */
+    Route::get('mail/status', 'admin.Mail/status');
+    Route::post('mail/test', 'admin.Mail/test');
+
     /** 窄版發佈通道（僅超管；需 RELEASE_ENABLED + RELEASE_HMAC_SECRET） */
     Route::get('releases/state', 'admin.Releases/state');
     Route::get('releases/audit', 'admin.Releases/audit');
