@@ -225,7 +225,7 @@ async function submit() {
     >
       <div class="coupon-sheet">
         <div class="coupon-sheet-hd">
-          <strong>{{ t('checkout.coupon') }}</strong>
+          <strong>{{ t('checkout.myCoupons') }}</strong>
         </div>
         <van-radio-group v-model="couponRadio" class="coupon-radios">
           <van-cell-group :border="false">
@@ -360,18 +360,12 @@ async function submit() {
 .coupon-sheet-hd {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 1rem 0.75rem;
+  justify-content: flex-start;
+  padding: 0.25rem 2.5rem 0.75rem 1rem;
 }
 .coupon-sheet-hd strong {
   font-size: 1rem;
-}
-.coupon-close {
-  border: 0;
-  background: transparent;
-  color: #888;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.15rem;
+  text-align: left;
 }
 .coupon-name {
   font-size: 0.875rem;

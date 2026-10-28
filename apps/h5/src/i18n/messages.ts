@@ -109,6 +109,7 @@ export const messages = {
       saveAddress: '保存地址',
       saved: '已保存',
       coupon: '優惠券',
+      myCoupons: '我的優惠券',
       noCoupon: '不使用優惠券',
       points: '積分抵扣（可用 {n}，最多抵 HK$ {cap}）',
       balance: '餘額抵扣（HK$ {n}）',
