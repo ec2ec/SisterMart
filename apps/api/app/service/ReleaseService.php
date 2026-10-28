@@ -113,6 +113,9 @@ class ReleaseService
     public function list(): array
     {
         $this->assertEnabled();
+        // 列表時一併清理，確保上線後即可把歷史記錄／備份壓到最近 10 條
+        $this->prunePendingReleases(10);
+        $this->pruneSnapshots(10);
         $pending = $this->releasesRoot() . '/pending';
         $items = [];
         if (is_dir($pending)) {
@@ -438,6 +441,9 @@ class ReleaseService
             $this->writeJson($dir . '/meta.json', $meta);
             $this->logLine($id, $log, 'publish ok');
             $this->audit('publish', $adminId, $id, ['snapshot_id' => $snapId]);
+            // 僅保留最近 10 條發佈記錄與 10 份備份快照
+            $this->prunePendingReleases(10);
+            $this->pruneSnapshots(10);
 
             return [
                 'release' => $this->publicMeta($meta),
@@ -993,7 +999,7 @@ class ReleaseService
             'files_format' => 'zip',
         ];
         $this->writeJson($dir . '/meta.json', $meta);
-        $this->pruneSnapshots(5);
+        $this->pruneSnapshots(10);
 
         return $snapId;
     }
@@ -1260,10 +1266,79 @@ class ReleaseService
     private function pruneSnapshots(int $keep): void
     {
         $dir = $this->releasesRoot() . '/snapshots';
+        if (!is_dir($dir)) {
+            return;
+        }
         $names = array_values(array_filter(scandir($dir) ?: [], static fn ($n) => str_starts_with($n, 'snap_')));
         rsort($names);
-        foreach (array_slice($names, $keep) as $old) {
+        $keepIds = array_slice($names, 0, max(0, $keep));
+        $prev = (string) (($this->readState())['previous_snapshot_id'] ?? '');
+        if ($prev !== '' && !in_array($prev, $keepIds, true)) {
+            $keepIds[] = $prev;
+        }
+        foreach ($names as $old) {
+            if (in_array($old, $keepIds, true)) {
+                continue;
+            }
             $this->rmTree($dir . '/' . $old);
+        }
+    }
+
+    /** 僅保留最近 $keep 條 pending 發佈記錄（保護當前版本與進行中任務） */
+    private function prunePendingReleases(int $keep): void
+    {
+        $pending = $this->releasesRoot() . '/pending';
+        if (!is_dir($pending)) {
+            return;
+        }
+        $state = $this->readState();
+        $current = (string) ($state['current_release_id'] ?? '');
+        $rows = [];
+        foreach (scandir($pending) ?: [] as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+            $dir = $pending . '/' . $name;
+            if (!is_dir($dir)) {
+                continue;
+            }
+            $meta = $this->readJson($dir . '/meta.json') ?: [];
+            $status = (string) ($meta['status'] ?? '');
+            // 上傳／發佈進行中不刪
+            if (in_array($status, [self::STATUS_UPLOADING, self::STATUS_PUBLISHING], true)) {
+                continue;
+            }
+            $rows[] = [
+                'id' => $name,
+                'created_at' => (string) ($meta['created_at'] ?? $name),
+            ];
+        }
+        usort($rows, static fn ($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        $keepIds = array_column(array_slice($rows, 0, max(0, $keep)), 'id');
+        if ($current !== '' && !in_array($current, $keepIds, true)) {
+            $keepIds[] = $current;
+        }
+        foreach ($rows as $row) {
+            if (in_array($row['id'], $keepIds, true)) {
+                continue;
+            }
+            $this->rmTree($pending . '/' . $row['id']);
+            $log = $this->releasesRoot() . '/logs/publish_' . $row['id'] . '.log';
+            if (is_file($log)) {
+                @unlink($log);
+            }
+        }
+        // 清掉殘留 staging
+        $stagingRoot = $this->releasesRoot() . '/staging';
+        if (is_dir($stagingRoot)) {
+            foreach (scandir($stagingRoot) ?: [] as $name) {
+                if ($name === '.' || $name === '..') {
+                    continue;
+                }
+                if (!in_array($name, $keepIds, true) && $name !== $current) {
+                    $this->rmTree($stagingRoot . '/' . $name);
+                }
+            }
         }
     }
 

@@ -28,6 +28,7 @@ const couponGrantId = ref<number | null>(null)
 const showCouponPicker = ref(false)
 const submitting = ref(false)
 
+const unusedCouponCount = computed(() => (quote.value?.coupons || []).length)
 const usableCoupons = computed(() => (quote.value?.coupons || []).filter((x) => x.usable))
 const couponLabel = computed(() => {
   if (!couponGrantId.value) return t('checkout.noCoupon')
@@ -195,11 +196,17 @@ async function submit() {
     <section v-if="quote && !quote.points_mall" class="card">
       <van-cell
         class="coupon-cell"
-        :title="t('checkout.coupon')"
         is-link
         :value="couponLabel"
         @click="showCouponPicker = true"
-      />
+      >
+        <template #title>
+          <span class="coupon-title-wrap">
+            <span>{{ t('checkout.coupon') }}</span>
+            <span class="coupon-count-tag">{{ unusedCouponCount }}</span>
+          </span>
+        </template>
+      </van-cell>
       <label class="row">
         <span>{{ t('checkout.points', { n: quote.points_available, cap: quote.points_cap_amount.toFixed(2) }) }}</span>
         <van-switch v-model="usePoints" size="1.125rem" />
@@ -353,6 +360,25 @@ async function submit() {
   min-width: 0;
   color: var(--sm-primary);
   font-size: 0.8125rem;
+}
+.coupon-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.coupon-count-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: #7c3aed;
 }
 .coupon-sheet {
   padding: 1rem 0 calc(1rem + env(safe-area-inset-bottom, 0rem));
