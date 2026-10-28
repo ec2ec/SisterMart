@@ -211,6 +211,10 @@ async function submit() {
       <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
     </section>
 
+    <section v-else-if="quote" class="card">
+      <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
+    </section>
+
     <van-popup v-model:show="showCouponPicker" position="bottom" round :style="{ maxHeight: '70%' }">
       <div class="coupon-sheet">
         <div class="coupon-sheet-hd">
@@ -246,10 +250,6 @@ async function submit() {
         <p v-if="!usableCoupons.length" class="coupon-empty">{{ t('checkout.noCoupon') }}</p>
       </div>
     </van-popup>
-
-    <section v-else-if="quote" class="card">
-      <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
-    </section>
 
     <section v-if="quote" class="card sum">
       <template v-if="quote.points_mall">
