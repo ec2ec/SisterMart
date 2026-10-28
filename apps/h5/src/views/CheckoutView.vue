@@ -203,7 +203,7 @@ async function submit() {
         <template #title>
           <span class="coupon-title-wrap">
             <span>{{ t('checkout.coupon') }}</span>
-            <span class="coupon-count-tag">{{ unusedCouponCount }}</span>
+            <span class="coupon-count-plain">({{ unusedCouponCount }})</span>
           </span>
         </template>
       </van-cell>
@@ -364,21 +364,12 @@ async function submit() {
 .coupon-title-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
-.coupon-count-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.15rem;
-  height: 1.15rem;
-  padding: 0 0.35rem;
-  border-radius: 999px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  background: #7c3aed;
+.coupon-count-plain {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
 }
 .coupon-sheet {
   padding: 1rem 0 calc(1rem + env(safe-area-inset-bottom, 0rem));
