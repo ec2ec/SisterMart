@@ -8,6 +8,8 @@ use think\facade\Db;
 
 /**
  * 郵件出站：優先 SES/SMTP（MAIL_HOST + 憑證）；否則有 MAIL_FROM 時回退 mail()；皆無則 mock。
+ *
+ * SES 沙盒期間可用 MAIL_FORCE_MOCK=true（預設 true）強制 mock，出沙盒後設為 false。
  */
 class MailService
 {
