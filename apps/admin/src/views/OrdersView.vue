@@ -5,7 +5,7 @@ import { NButton, NCard, NPagination, NSelect, NSpace, NTag } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
-import { ORDER_STATUS_FILTER_OPTIONS, orderStatusLabel } from '../utils/orderStatus'
+import { ORDER_STATUS_FILTER_OPTIONS, orderStatusLabel, orderStatusTagType } from '../utils/orderStatus'
 
 type Row = {
   id: number
@@ -84,7 +84,11 @@ function clearMemberFilter() {
           </td>
           <td>{{ row.title }}</td>
           <td>{{ row.pay_amount }}</td>
-          <td><n-tag size="small">{{ orderStatusLabel(row.status) }}</n-tag></td>
+          <td>
+            <n-tag size="small" :type="orderStatusTagType(row.status)" :bordered="false">
+              {{ orderStatusLabel(row.status) }}
+            </n-tag>
+          </td>
           <td>{{ row.created_at }}</td>
           <td><n-button size="tiny" @click="router.push(`/sales/orders/${row.id}`)">詳情</n-button></td>
         </tr>
