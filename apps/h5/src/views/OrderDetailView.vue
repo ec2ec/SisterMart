@@ -462,7 +462,7 @@ async function sendChat() {
   --od-line: #eee8f5;
   --od-card: #ffffff;
   --od-card-shadow: 0 0.25rem 0.9rem rgba(160, 130, 210, 0.22);
-  --od-primary-btn: linear-gradient(100deg, #6b2d7a 0%, #b14f9a 48%, #de7ab8 100%);
+  --od-primary-btn: linear-gradient(100deg, #b14f9a 0%, #de7ab8 45%, #f3a9d0 100%);
   min-height: 100%;
   padding-bottom: 1.25rem;
   background:
