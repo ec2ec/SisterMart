@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
-import SubPageNav from '../components/SubPageNav.vue'
 import {
   fetchCampaign,
   fetchCampaignProducts,
@@ -11,12 +10,14 @@ import {
   type ProductCard as Card,
 } from '../api/catalog'
 import { useLocaleText } from '../composables/useLocaleText'
+import { useNavBack } from '../composables/useNavBack'
 import { assetUrl } from '../utils/assetUrl'
 
 const PAGE = 30
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
 const route = useRoute()
+const { goBack } = useNavBack('/')
 
 const code = computed(() => String(route.params.code || ''))
 const campaign = ref<CampaignSummary | null>(null)
@@ -107,7 +108,14 @@ watch(code, boot)
 
 <template>
   <div class="page camp">
-    <SubPageNav :title="title" />
+    <button
+      type="button"
+      class="sm-icon-btn camp-back"
+      :aria-label="t('pages.back')"
+      @click="goBack"
+    >
+      <van-icon name="arrow-left" size="1.25rem" />
+    </button>
 
     <div v-if="bannerUrl" class="banner">
       <img :src="bannerUrl" :alt="title" />
@@ -143,6 +151,21 @@ watch(code, boot)
 </template>
 
 <style scoped>
+.camp {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #fff;
+}
+.camp-back {
+  position: fixed;
+  top: calc(0.625rem + env(safe-area-inset-top, 0rem));
+  left: 0.75rem;
+  z-index: 300;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--sm-text);
+  box-shadow: 0 0.15rem 0.55rem rgba(20, 20, 30, 0.12);
+}
 .banner {
   width: 100%;
   background: var(--sm-bg-soft);
