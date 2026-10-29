@@ -15,6 +15,7 @@ import {
 } from 'naive-ui'
 import { api, uploadImage } from '../api'
 import { showError } from '../feedback'
+import { assetUrl, toStoredUrl } from '../utils/assetUrl'
 
 type ImageAdItem = {
   code: string
@@ -89,7 +90,7 @@ function buildPayloadFromForm() {
     code: form.value.code.trim() || undefined,
     title_zh: form.value.title_zh.trim(),
     title_en: form.value.title_en.trim(),
-    image_url: form.value.image_url.trim(),
+    image_url: toStoredUrl(form.value.image_url.trim()),
     link_type: form.value.link_type,
     link_value: form.value.link_value.trim(),
     status: form.value.status ? 1 : 0,
@@ -103,7 +104,7 @@ function toPersistRow(row: ImageAdItem) {
     code: row.code,
     title_zh: row.title?.['zh-HK'] || '',
     title_en: row.title?.en || '',
-    image_url: row.image_url,
+    image_url: toStoredUrl(row.image_url),
     link_type: row.link_type,
     link_value: row.link_value,
     status: row.status,
@@ -168,7 +169,7 @@ async function onFile(ev: Event) {
   uploading.value = true
   try {
     const data = await uploadImage(file, { preset: 'banner' })
-    form.value.image_url = data.url
+    form.value.image_url = toStoredUrl(data.url)
     message.success('圖片已上傳')
   } catch (e: unknown) {
     showError(e instanceof Error ? e.message : '圖片上傳失敗')
@@ -190,7 +191,7 @@ onMounted(load)
       <n-empty v-if="!items.length" description="尚未建立圖片廣告" />
       <div v-for="row in items" :key="row.code" class="row">
         <div class="meta">
-          <img v-if="row.image_url" :src="row.image_url" alt="" />
+          <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
           <div class="meta-text">
             <strong>{{ row.title?.['zh-HK'] || row.title?.en || row.code }}</strong>
             <p>
@@ -224,7 +225,7 @@ onMounted(load)
         <n-space vertical style="width: 100%">
           <n-input v-model:value="form.image_url" placeholder="上傳後自動填入，或手動貼 URL" />
           <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="uploading" @change="onFile" />
-          <img v-if="form.image_url" class="preview" :src="form.image_url" alt="預覽" />
+          <img v-if="form.image_url" class="preview" :src="assetUrl(form.image_url)" alt="預覽" />
         </n-space>
       </n-form-item>
       <n-form-item label="跳轉類型"><n-select v-model:value="form.link_type" :options="linkTypes" /></n-form-item>
@@ -262,17 +263,24 @@ onMounted(load)
   align-items: center;
   min-width: 0;
 }
-.meta img,
-.preview {
+.meta img {
   width: 6rem;
   height: 3.25rem;
   object-fit: cover;
   border-radius: 0.25rem;
   background: #f3f3f3;
+  flex-shrink: 0;
 }
 .preview {
-  width: 12rem;
-  height: 6.5rem;
+  display: block;
+  max-width: min(100%, 22rem);
+  max-height: 10rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.25rem;
+  border: 1px solid #eee;
+  background: #fafafa;
 }
 .meta-text {
   min-width: 0;
