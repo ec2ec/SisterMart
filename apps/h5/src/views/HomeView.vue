@@ -805,7 +805,7 @@ const tabLabel = (tab: HomeRecTab) => {
   width: 100%;
   margin: 0;
   border: 0;
-  text-align: left;
+  text-align: center;
   padding: 0.625rem 0.875rem;
   background: var(--sm-promo-bg);
   color: var(--sm-text);
