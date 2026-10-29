@@ -54,6 +54,11 @@ Route::get('api/v1/home/ops', 'api.HomeOps/index')->middleware(MemberTouch::clas
 /** M29 首頁商品展示區 */
 Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products')->middleware(MemberTouch::class);
 Route::get('api/v1/home/sections', 'api.HomeSections/index')->middleware(MemberTouch::class);
+/** M45 首頁版面 + 活動專區 */
+Route::get('api/v1/home/layout', 'api.HomeLayout/index')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code/products', 'api.Campaigns/products')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code/rail', 'api.Campaigns/rail')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code', 'api.Campaigns/read')->middleware(MemberTouch::class);
 
 /** M6 公開：領券中心列表、等級檔位 */
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable')->middleware(MemberTouch::class);
@@ -218,6 +223,14 @@ Route::group('api/v1/admin', function () {
     Route::put('home-sections/:id', 'admin.HomeSections/update');
     Route::delete('home-sections/:id', 'admin.HomeSections/destroy');
     Route::put('home-sections/:id/products', 'admin.HomeSections/products');
+    /** M45 首頁版面 + 活動 */
+    Route::get('home-layout', 'admin.HomeLayout/index');
+    Route::put('home-layout/reorder', 'admin.HomeLayout/reorder');
+    Route::put('home-layout/:id', 'admin.HomeLayout/update');
+    Route::get('campaigns', 'admin.Campaigns/index');
+    Route::post('campaigns', 'admin.Campaigns/store');
+    Route::put('campaigns/:id', 'admin.Campaigns/update');
+    Route::delete('campaigns/:id', 'admin.Campaigns/destroy');
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');

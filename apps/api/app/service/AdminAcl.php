@@ -103,6 +103,8 @@ class AdminAcl
             '/api/v1/admin/home-popups' => self::PERM_CMS,
             '/api/v1/admin/home-ops' => self::PERM_CMS,
             '/api/v1/admin/home-sections' => self::PERM_CMS,
+            '/api/v1/admin/home-layout' => self::PERM_CMS,
+            '/api/v1/admin/campaigns' => self::PERM_CMS,
             '/api/v1/admin/uploads/banner' => self::PERM_CMS,
             '/api/v1/admin/uploads/image' => self::PERM_CATALOG,
             '/api/v1/admin/coupons' => self::PERM_MARKETING,

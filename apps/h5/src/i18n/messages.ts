@@ -59,6 +59,7 @@ export const messages = {
       hot: '熱銷',
       new: '新品',
       editor: '店長推薦',
+      newcomer: '新人專屬',
     },
     category: {
       all: '全部商品',
@@ -644,6 +645,7 @@ export const messages = {
       hot: 'Hot',
       new: 'New',
       editor: 'Editor',
+      newcomer: 'Newcomer',
     },
     category: {
       all: 'All',
