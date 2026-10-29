@@ -323,10 +323,43 @@ SQL);
         $out['product_source'] = (string) ($row['product_source'] ?? 'badge');
         $out['product_badge'] = $row['product_badge'] !== null ? (string) $row['product_badge'] : '';
         $out['sort_order'] = (int) ($row['sort_order'] ?? 0);
-        $out['product_ids'] = Db::name('campaign_products')
+        $productIds = Db::name('campaign_products')
             ->where('campaign_id', (int) $row['id'])
             ->order('sort_order', 'asc')
             ->column('product_id');
+        $productIds = array_map('intval', $productIds);
+        $out['product_ids'] = $productIds;
+        $out['product_codes'] = [];
+        $out['manual_products'] = [];
+        if ($productIds) {
+            $products = Db::name('products')->whereIn('id', $productIds)->select()->toArray();
+            $byId = [];
+            foreach ($products as $p) {
+                $byId[(int) $p['id']] = $p;
+            }
+            $i18nRows = Db::name('product_i18n')->whereIn('product_id', $productIds)->select()->toArray();
+            $namesById = [];
+            foreach ($i18nRows as $n) {
+                $pid = (int) $n['product_id'];
+                if (!isset($namesById[$pid])) {
+                    $namesById[$pid] = ['zh-HK' => '', 'en' => ''];
+                }
+                $namesById[$pid][(string) $n['locale']] = (string) ($n['name'] ?? '');
+            }
+            foreach ($productIds as $pid) {
+                $p = $byId[$pid] ?? null;
+                if (!$p) {
+                    continue;
+                }
+                $code = (string) $p['code'];
+                $out['product_codes'][] = $code;
+                $out['manual_products'][] = [
+                    'id' => $pid,
+                    'code' => $code,
+                    'name' => $namesById[$pid] ?? ['zh-HK' => '', 'en' => ''],
+                ];
+            }
+        }
 
         return $out;
     }

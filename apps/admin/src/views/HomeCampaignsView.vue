@@ -3,15 +3,25 @@ import { onMounted, ref } from 'vue'
 import {
   NButton,
   NCard,
+  NEmpty,
   NFormItem,
   NInput,
   NInputNumber,
   NSelect,
   NSpace,
   NSwitch,
+  NTag,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import WangSimpleEditor from '../components/WangSimpleEditor.vue'
+import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
+
+type ManualProduct = {
+  id?: number
+  code: string
+  name: { 'zh-HK': string; en: string }
+}
 
 type Campaign = {
   id: number
@@ -29,6 +39,8 @@ type Campaign = {
   home_rail_limit: number
   sort_order: number
   product_ids: number[]
+  product_codes?: string[]
+  manual_products?: ManualProduct[]
 }
 
 type Badge = { code: string; name: { 'zh-HK': string; en: string } }
@@ -37,6 +49,8 @@ const message = useMessage()
 const items = ref<Campaign[]>([])
 const badges = ref<Badge[]>([])
 const form = ref(emptyForm())
+const pickerShow = ref(false)
+const uploading = ref(false)
 
 const sources = [
   { label: '按角標自動', value: 'badge' },
@@ -63,7 +77,7 @@ function emptyForm() {
     show_on_home: true,
     home_rail_limit: 10,
     sort_order: 0,
-    product_codes_text: '',
+    manual_products: [] as ManualProduct[],
   }
 }
 
@@ -83,6 +97,17 @@ function reset() {
 function edit(row: Campaign) {
   const aud = row.audience || {}
   const days = typeof aud.registered_within_days === 'number' ? aud.registered_within_days : 0
+  const manuals =
+    row.manual_products?.length
+      ? row.manual_products.map((p) => ({
+          id: p.id,
+          code: p.code,
+          name: { 'zh-HK': p.name?.['zh-HK'] || '', en: p.name?.en || '' },
+        }))
+      : (row.product_codes || []).map((code) => ({
+          code,
+          name: { 'zh-HK': '', en: '' },
+        }))
   form.value = {
     id: row.id,
     code: row.code,
@@ -101,7 +126,7 @@ function edit(row: Campaign) {
     show_on_home: row.show_on_home === 1,
     home_rail_limit: row.home_rail_limit || 10,
     sort_order: row.sort_order || 0,
-    product_codes_text: '',
+    manual_products: manuals,
   }
 }
 
@@ -120,11 +145,56 @@ function onAudienceAll(v: boolean) {
   }
 }
 
+function productLabel(p: ManualProduct) {
+  const zh = p.name?.['zh-HK'] || ''
+  return zh ? `${p.code} · ${zh}` : p.code
+}
+
+function onPicked(result: ProductPickResult) {
+  const exists = form.value.manual_products.some((p) => p.code === result.code)
+  if (exists) {
+    message.info('該商品已在列表中')
+    return
+  }
+  form.value.manual_products.push({
+    id: result.db_id,
+    code: result.code,
+    name: { 'zh-HK': result.name['zh-HK'] || '', en: result.name.en || '' },
+  })
+  message.success(`已加入 ${result.code}`)
+}
+
+function removeManual(index: number) {
+  form.value.manual_products.splice(index, 1)
+}
+
+async function onBannerFile(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const data = await api<{ url: string }>('/api/v1/admin/uploads/banner', { method: 'POST', body: fd }, true)
+    form.value.banner_image_url = data.url
+    message.success('橫幅已上傳')
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
+
 async function save() {
-  const codes = form.value.product_codes_text
-    .split(/[,，\s]+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
+  if (!form.value.title_zh.trim()) {
+    message.warning('請填寫繁中標題')
+    return
+  }
+  const codes = form.value.manual_products.map((p) => p.code).filter(Boolean)
+  if (form.value.product_source === 'manual' && !codes.length) {
+    message.warning('手工選品請至少加入一件商品')
+    return
+  }
   const body: Record<string, unknown> = {
     code: form.value.code || undefined,
     title: { 'zh-HK': form.value.title_zh, en: form.value.title_en },
@@ -140,7 +210,7 @@ async function save() {
     home_rail_limit: form.value.home_rail_limit,
     sort_order: form.value.sort_order,
   }
-  if (codes.length || form.value.product_source !== 'badge') {
+  if (form.value.product_source !== 'badge') {
     body.product_codes = codes
   }
   if (form.value.id) {
@@ -173,6 +243,7 @@ onMounted(load)
   <n-space vertical :size="16">
     <n-card title="活動專區">
       <p class="hint">勾選「展示於首頁」後會出現在「首頁佈局」列表，可再拖放排序。</p>
+      <n-empty v-if="!items.length" description="尚未建立活動。下方表單可新增新人專區等活動。" />
       <div v-for="row in items" :key="row.id" class="row">
         <div class="meta">
           <strong>#{{ row.id }} · {{ row.title['zh-HK'] || row.code }}</strong>
@@ -209,16 +280,57 @@ onMounted(load)
       <n-form-item v-if="form.product_source !== 'manual'" label="商品角標">
         <n-select v-model:value="form.product_badge" :options="badgeOptions()" filterable />
       </n-form-item>
-      <n-form-item v-if="form.product_source !== 'badge'" label="手工商品 codes">
-        <n-input v-model:value="form.product_codes_text" placeholder="p1,p2（保存時覆蓋手工列表）" />
+      <n-form-item v-if="form.product_source !== 'badge'" label="手工商品">
+        <div class="manual-box">
+          <n-space>
+            <n-button size="small" type="primary" secondary @click="pickerShow = true">加入商品</n-button>
+            <span class="hint-inline">可重複加入；保存時覆蓋手工列表</span>
+          </n-space>
+          <div v-if="form.manual_products.length" class="manual-list">
+            <n-tag
+              v-for="(p, idx) in form.manual_products"
+              :key="p.code"
+              closable
+              size="small"
+              @close="removeManual(idx)"
+            >
+              {{ productLabel(p) }}
+            </n-tag>
+          </div>
+          <p v-else class="hint-inline">尚未選擇手工商品</p>
+        </div>
       </n-form-item>
 
-      <n-form-item label="落地頁橫幅 URL"><n-input v-model:value="form.banner_image_url" /></n-form-item>
-      <n-form-item label="介紹 HTML（繁）">
-        <n-input v-model:value="form.intro_html_zh" type="textarea" :rows="3" />
+      <n-form-item label="落地頁橫幅">
+        <n-space vertical style="width: 100%">
+          <n-input v-model:value="form.banner_image_url" placeholder="圖片 URL 或下方上傳" />
+          <n-space align="center">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              :disabled="uploading"
+              @change="onBannerFile"
+            />
+            <span v-if="uploading" class="hint-inline">上傳中…</span>
+          </n-space>
+          <img v-if="form.banner_image_url" class="banner-preview" :src="form.banner_image_url" alt="" />
+        </n-space>
       </n-form-item>
-      <n-form-item label="介紹 HTML（英）">
-        <n-input v-model:value="form.intro_html_en" type="textarea" :rows="3" />
+      <n-form-item label="介紹（繁）">
+        <WangSimpleEditor
+          v-model="form.intro_html_zh"
+          preset="admin"
+          placeholder="活動介紹（繁中）…"
+          :height="200"
+        />
+      </n-form-item>
+      <n-form-item label="介紹（英）">
+        <WangSimpleEditor
+          v-model="form.intro_html_en"
+          preset="admin"
+          placeholder="Campaign intro (EN)…"
+          :height="180"
+        />
       </n-form-item>
 
       <n-form-item label="展示於首頁"><n-switch v-model:value="form.show_on_home" /></n-form-item>
@@ -232,12 +344,23 @@ onMounted(load)
         <n-button v-if="form.id" @click="reset">新建</n-button>
       </n-space>
     </n-card>
+
+    <ProductPickerDialog
+      v-model:show="pickerShow"
+      title="選擇活動商品"
+      :require-sku="false"
+      @select="onPicked"
+    />
   </n-space>
 </template>
 
 <style scoped>
 .hint {
   margin: 0 0 0.75rem;
+  color: #888;
+  font-size: 0.8125rem;
+}
+.hint-inline {
   color: #888;
   font-size: 0.8125rem;
 }
@@ -253,5 +376,24 @@ onMounted(load)
   margin: 0.15rem 0 0;
   color: #888;
   font-size: 0.8125rem;
+}
+.manual-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.manual-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.banner-preview {
+  max-width: 22rem;
+  max-height: 8rem;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  background: #fafafa;
 }
 </style>

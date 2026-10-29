@@ -81,9 +81,6 @@ const banners = ref<HomeBanner[]>(
 const marquee = ref<HomeMarquee>(null)
 const opsLoaded = ref(false)
 const sections = ref<HomeSection[]>([])
-/** 後台可配置首頁模組順序；失敗時回退本地默認 */
-const layoutModules = ref<HomeLayoutModule[]>([])
-const layoutReady = ref(false)
 const campaignRailRefs = ref<Record<string, InstanceType<typeof CampaignRail> | null>>({})
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
 const { products, categories, refresh } = useHomeCatalog()
@@ -96,6 +93,8 @@ const DEFAULT_LAYOUT: HomeLayoutModule[] = [
   { id: 5, module_key: 'seckill_rail', module_type: 'seckill_rail', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 50, config: null },
   { id: 6, module_key: 'recommend_feed', module_type: 'recommend_feed', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 900, config: null },
 ]
+/** 後台可配置首頁模組順序；首屏先用默認，拉取後覆蓋 */
+const layoutModules = ref<HomeLayoutModule[]>(DEFAULT_LAYOUT.slice())
 
 function sectionByCode(code: string | null | undefined) {
   if (!code) return null
@@ -222,11 +221,9 @@ async function loadSections() {
 async function loadLayout() {
   try {
     const items = await fetchHomeLayout()
-    layoutModules.value = items.length ? items : DEFAULT_LAYOUT
+    layoutModules.value = items.length ? items : DEFAULT_LAYOUT.slice()
   } catch {
-    if (!layoutModules.value.length) layoutModules.value = DEFAULT_LAYOUT
-  } finally {
-    layoutReady.value = true
+    /* 保留默認／現有 */
   }
 }
 
