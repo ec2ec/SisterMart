@@ -18,6 +18,7 @@ import {
   type HomeBanner,
   type HomeLayoutModule,
   type HomeMarquee,
+  type HomeMarqueeItem,
   type HomeRecTab,
   type HomeSection,
   type ProductCard as Card,
@@ -79,6 +80,7 @@ const banners = ref<HomeBanner[]>(
   })),
 )
 const marquee = ref<HomeMarquee>(null)
+const marquees = ref<HomeMarqueeItem[]>([])
 const opsLoaded = ref(false)
 const sections = ref<HomeSection[]>([])
 const campaignRailRefs = ref<Record<string, InstanceType<typeof CampaignRail> | null>>({})
@@ -87,7 +89,7 @@ const { products, categories, refresh } = useHomeCatalog()
 
 const DEFAULT_LAYOUT: HomeLayoutModule[] = [
   { id: 1, module_key: 'banner_swipe', module_type: 'banner_swipe', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 10, config: null },
-  { id: 2, module_key: 'text_marquee', module_type: 'text_marquee', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 20, config: null },
+  { id: 2, module_key: 'marquee:default', module_type: 'text_marquee', ref_type: 'marquee', ref_code: 'default', title: { 'zh-HK': '首頁字幕', en: 'Home marquee' }, enabled: 1, sort_order: 20, config: null },
   { id: 3, module_key: 'category_row', module_type: 'category_row', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 30, config: null },
   { id: 4, module_key: 'campaign:newcomer', module_type: 'campaign_rail', ref_type: 'campaign', ref_code: 'newcomer', title: { 'zh-HK': '新人專區', en: 'Newcomer Zone' }, enabled: 1, sort_order: 40, config: { rail_limit: 10 } },
   { id: 5, module_key: 'seckill_rail', module_type: 'seckill_rail', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 50, config: null },
@@ -105,13 +107,24 @@ function setCampaignRailRef(key: string, el: unknown) {
   campaignRailRefs.value[key] = (el as InstanceType<typeof CampaignRail> | null) || null
 }
 
-const promoText = computed(() => {
-  if (marquee.value?.enabled) {
-    const loc = String(locale.value || 'zh-HK')
-    return loc.startsWith('en') ? marquee.value.text.en || marquee.value.text['zh-HK'] : marquee.value.text['zh-HK'] || marquee.value.text.en
+function marqueeForModule(mod: HomeLayoutModule): HomeMarqueeItem | null {
+  if (mod.marquee?.enabled) return mod.marquee
+  const code = mod.ref_code
+  if (code) {
+    const hit = marquees.value.find((m) => m.code === code && m.enabled)
+    if (hit) return hit
   }
-  return t('home.promo')
-})
+  if (marquee.value?.enabled) return marquee.value
+  return null
+}
+
+function marqueeTextOf(item: HomeMarqueeItem | null) {
+  if (!item?.enabled) return t('home.promo')
+  const loc = String(locale.value || 'zh-HK')
+  return loc.startsWith('en')
+    ? item.text.en || item.text['zh-HK']
+    : item.text['zh-HK'] || item.text.en
+}
 
 async function loadSubscribeStatus() {
   if (!isLoggedIn()) {
@@ -201,6 +214,11 @@ async function loadOps() {
   try {
     const ops = await fetchHomeOps()
     marquee.value = ops.marquee
+    marquees.value = ops.marquees?.length
+      ? ops.marquees
+      : ops.marquee
+        ? [ops.marquee]
+        : []
   } catch {
     /* 保留現有 */
   } finally {
@@ -363,9 +381,9 @@ function onBannerClick(b: HomeBanner) {
   onLink(b.link_type, b.link_value)
 }
 
-function onPromoClick() {
-  if (!marquee.value?.enabled) return
-  onLink(marquee.value.link_type, marquee.value.link_value)
+function onPromoClick(item: HomeMarqueeItem | null) {
+  if (!item?.enabled) return
+  onLink(item.link_type, item.link_value)
 }
 
 /** 首頁秒殺橫滑：取當前場次商品（最多 4），價為秒殺價 */
@@ -558,13 +576,16 @@ const tabLabel = (tab: HomeRecTab) => {
         </section>
 
         <button
-          v-else-if="mod.module_type === 'text_marquee' && (!opsLoaded || marquee?.enabled)"
+          v-else-if="mod.module_type === 'text_marquee' && (!opsLoaded || marqueeForModule(mod))"
           type="button"
           class="promo"
-          :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
-          @click="onPromoClick"
+          :class="{
+            clickable:
+              !!marqueeForModule(mod)?.enabled && marqueeForModule(mod)!.link_type !== 'none',
+          }"
+          @click="onPromoClick(marqueeForModule(mod))"
         >
-          {{ promoText }}
+          {{ marqueeTextOf(marqueeForModule(mod)) }}
         </button>
 
         <section

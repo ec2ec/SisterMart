@@ -170,16 +170,24 @@ export async function dismissHomePopup(id: number) {
   )
 }
 
-export type HomeMarquee = {
+export type HomeMarqueeItem = {
+  code: string
+  title?: Localized
   text: Localized
   link_type: string
   link_value: string
   status: number
   enabled: boolean
-} | null
+  show_on_home?: number
+  sort_order?: number
+}
+
+export type HomeMarquee = HomeMarqueeItem | null
 
 export type HomeOps = {
   marquee: HomeMarquee
+  /** 全部已啟用字幕（可多條） */
+  marquees?: HomeMarqueeItem[]
   footer_slogan: Localized
 }
 
@@ -250,6 +258,8 @@ export type HomeLayoutModule = {
   sort_order: number
   config: { rail_limit?: number } | null
   campaign?: CampaignSummary
+  /** text_marquee 佈局附帶的字幕內容 */
+  marquee?: HomeMarqueeItem
 }
 
 export type CampaignSummary = {

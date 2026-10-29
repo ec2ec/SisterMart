@@ -53,6 +53,7 @@ SQL);
     public function listPublic(): array
     {
         $this->ensureSchema();
+        $this->ensureMarqueeModulesSynced();
         $rows = Db::name('home_layout_modules')
             ->where('enabled', 1)
             ->order('sort_order', 'asc')
@@ -80,6 +81,14 @@ SQL);
                     continue;
                 }
             }
+            if ($mod['module_type'] === 'text_marquee') {
+                $ops = new HomeOpsService();
+                $marquee = $ops->publicByCode($mod['ref_code'] ?: null);
+                if (!$marquee) {
+                    continue;
+                }
+                $mod['marquee'] = $marquee;
+            }
             $items[] = $mod;
         }
 
@@ -89,6 +98,7 @@ SQL);
     public function listAdmin(): array
     {
         $this->ensureSchema();
+        $this->ensureMarqueeModulesSynced();
         $rows = Db::name('home_layout_modules')
             ->order('sort_order', 'asc')
             ->order('id', 'asc')
@@ -96,6 +106,28 @@ SQL);
             ->toArray();
 
         return ['items' => array_map(fn ($r) => $this->present($r), $rows)];
+    }
+
+    /** 首次讀取佈局時：把舊單一字幕／legacy text_marquee 模組遷到 marquee:* */
+    private function ensureMarqueeModulesSynced(): void
+    {
+        static $synced = false;
+        if ($synced) {
+            return;
+        }
+        $synced = true;
+        try {
+            $ops = new HomeOpsService();
+            $items = $ops->listItems();
+            foreach ($items as $item) {
+                $this->syncMarqueeModule($item, true);
+            }
+            $this->migrateLegacyTextMarquee($items);
+            $alive = array_map(static fn ($it) => 'marquee:' . $it['code'], $items);
+            $this->pruneMarqueeModules($alive);
+        } catch (\Throwable $e) {
+            // 佈局讀取不因字幕遷移失敗而中斷
+        }
     }
 
     /**
@@ -169,6 +201,138 @@ SQL);
         Db::name('home_layout_modules')->where('id', $id)->update($data);
 
         return $this->present(Db::name('home_layout_modules')->where('id', $id)->find());
+    }
+
+    /**
+     * 字幕勾選「展示於首頁」時同步／插入 text_marquee 模組。
+     *
+     * @param array<string, mixed> $marquee raw item（含 code / title_* / status / show_on_home）
+     */
+    public function syncMarqueeModule(array $marquee, bool $appendIfNew = true): void
+    {
+        $this->ensureSchema();
+        $code = (string) ($marquee['code'] ?? '');
+        if ($code === '') {
+            return;
+        }
+        $key = 'marquee:' . $code;
+        $now = date('Y-m-d H:i:s');
+        $existing = Db::name('home_layout_modules')->where('module_key', $key)->find();
+        $show = (int) ($marquee['show_on_home'] ?? 0) === 1 && (int) ($marquee['status'] ?? 0) === 1;
+        $titleZh = (string) ($marquee['title_zh'] ?? $marquee['title']['zh-HK'] ?? $code);
+        $titleEn = (string) ($marquee['title_en'] ?? $marquee['title']['en'] ?? '');
+
+        if ($existing) {
+            Db::name('home_layout_modules')->where('id', (int) $existing['id'])->update([
+                'title_zh' => $titleZh !== '' ? $titleZh : (string) $existing['title_zh'],
+                'title_en' => $titleEn !== '' ? $titleEn : (string) $existing['title_en'],
+                'enabled' => $show ? 1 : 0,
+                'module_type' => 'text_marquee',
+                'ref_type' => 'marquee',
+                'ref_code' => $code,
+                'updated_at' => $now,
+            ]);
+
+            return;
+        }
+        if (!$show || !$appendIfNew) {
+            return;
+        }
+        $maxSort = (int) Db::name('home_layout_modules')->max('sort_order');
+        $cats = Db::name('home_layout_modules')->where('module_key', 'category_row')->find();
+        // 默認插在分類前（字幕常見位置）；若無分類則靠前
+        $sort = $cats ? max(10, (int) $cats['sort_order'] - 5) : max(20, $maxSort + 10);
+        // default 字幕優先沿用種子 sort 20
+        if ($code === 'default') {
+            $legacy = Db::name('home_layout_modules')->where('module_key', 'text_marquee')->find();
+            $sort = $legacy ? (int) $legacy['sort_order'] : 20;
+        }
+        Db::name('home_layout_modules')->insert([
+            'module_key' => $key,
+            'module_type' => 'text_marquee',
+            'ref_type' => 'marquee',
+            'ref_code' => $code,
+            'title_zh' => $titleZh,
+            'title_en' => $titleEn,
+            'enabled' => 1,
+            'sort_order' => $sort,
+            'config_json' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    /**
+     * 把舊的無 ref 通用 text_marquee 模組遷到 marquee:default。
+     *
+     * @param list<array<string, mixed>> $items
+     */
+    public function migrateLegacyTextMarquee(array $items): void
+    {
+        $this->ensureSchema();
+        $legacy = Db::name('home_layout_modules')->where('module_key', 'text_marquee')->find();
+        if (!$legacy) {
+            return;
+        }
+        $default = null;
+        foreach ($items as $it) {
+            if (($it['code'] ?? '') === 'default') {
+                $default = $it;
+                break;
+            }
+        }
+        if (!$default && $items) {
+            $default = $items[0];
+        }
+        if (!$default) {
+            return;
+        }
+        $code = (string) $default['code'];
+        $key = 'marquee:' . $code;
+        $now = date('Y-m-d H:i:s');
+        $target = Db::name('home_layout_modules')->where('module_key', $key)->find();
+        if ($target) {
+            // 已有新模組：把舊模組的排序／開關合入後刪舊
+            Db::name('home_layout_modules')->where('id', (int) $target['id'])->update([
+                'sort_order' => (int) $legacy['sort_order'],
+                'enabled' => (int) $legacy['enabled'] === 1 && (int) ($default['show_on_home'] ?? 0) === 1 && (int) ($default['status'] ?? 0) === 1 ? 1 : 0,
+                'updated_at' => $now,
+            ]);
+            Db::name('home_layout_modules')->where('id', (int) $legacy['id'])->delete();
+
+            return;
+        }
+        Db::name('home_layout_modules')->where('id', (int) $legacy['id'])->update([
+            'module_key' => $key,
+            'module_type' => 'text_marquee',
+            'ref_type' => 'marquee',
+            'ref_code' => $code,
+            'title_zh' => (string) ($default['title_zh'] ?: $legacy['title_zh']),
+            'title_en' => (string) ($default['title_en'] ?: $legacy['title_en']),
+            'updated_at' => $now,
+        ]);
+    }
+
+    /**
+     * 刪除已不存在於字幕列表的 marquee:* 模組。
+     *
+     * @param list<string> $aliveKeys module_key 白名單
+     */
+    public function pruneMarqueeModules(array $aliveKeys): void
+    {
+        $this->ensureSchema();
+        $rows = Db::name('home_layout_modules')
+            ->where('module_type', 'text_marquee')
+            ->whereLike('module_key', 'marquee:%')
+            ->select()
+            ->toArray();
+        $alive = array_fill_keys($aliveKeys, true);
+        foreach ($rows as $row) {
+            $key = (string) $row['module_key'];
+            if (!isset($alive[$key])) {
+                Db::name('home_layout_modules')->where('id', (int) $row['id'])->delete();
+            }
+        }
     }
 
     /**
