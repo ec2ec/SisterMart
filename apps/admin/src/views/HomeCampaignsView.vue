@@ -199,7 +199,7 @@ onMounted(load)
       <n-form-item label="結束時間"><n-input v-model:value="form.ends_at" placeholder="可空" /></n-form-item>
 
       <n-form-item label="受眾：全員可買">
-        <n-switch v-model:value="form.audience_all" />
+        <n-switch :value="form.audience_all" @update:value="onAudienceAll" />
       </n-form-item>
       <n-form-item v-if="!form.audience_all" label="僅註冊 N 天內可買">
         <n-input-number v-model:value="form.registered_within_days" :min="1" :max="365" />
