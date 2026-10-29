@@ -84,14 +84,18 @@ defineExpose({ reload: load })
 
 <style scoped>
 .camp-rail {
-  padding-bottom: 0.125rem;
+  --rail-gap: 0.75rem;
+  /* 左內距放在非滾動父級，避免 scroll-snap 把軌道 padding 滾出視口 */
+  --rail-pad-left: calc(var(--rail-gap) / 2);
+  padding: 0 0 0.125rem var(--rail-pad-left);
 }
 .section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.75rem 0.875rem 0.35rem;
+  /* 抵消父級左 pad，標題仍距螢幕左側 0.875rem */
+  padding: 0.75rem 0.875rem 0.35rem calc(0.875rem - var(--rail-pad-left));
 }
 .section-title h2 {
   margin: 0;
@@ -106,15 +110,9 @@ defineExpose({ reload: load })
   padding: 0;
 }
 .rail {
-  --rail-gap: 0.75rem;
-  /* 左側 = 商品間隔一半：用 margin 內縮整個 scrollport，避免 snap 把 padding 滾出視口貼邊 */
-  --rail-pad-left: calc(var(--rail-gap) / 2);
   --rail-pad-right: 0.875rem;
   display: flex;
   gap: var(--rail-gap);
-  box-sizing: border-box;
-  margin-left: var(--rail-pad-left);
-  width: calc(100% - var(--rail-pad-left));
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   padding: 0 var(--rail-pad-right) 0.375rem 0;
