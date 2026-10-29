@@ -107,18 +107,23 @@ defineExpose({ reload: load })
 }
 .rail {
   --rail-gap: 0.75rem;
+  /* 左側內距 = 商品間隔一半；scroll-padding 防止 snap 把 padding 滾出視口 */
+  --rail-pad-left: calc(var(--rail-gap) / 2);
+  --rail-pad-right: 0.875rem;
   display: flex;
   gap: var(--rail-gap);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  /* 左側內距 = 商品間隔一半 */
-  padding: 0 0.875rem 0.375rem calc(var(--rail-gap) / 2);
+  scroll-padding-left: var(--rail-pad-left);
+  scroll-padding-right: var(--rail-pad-right);
+  padding: 0 var(--rail-pad-right) 0.375rem var(--rail-pad-left);
   -webkit-overflow-scrolling: touch;
 }
 .rail :deep(.card) {
   flex: 0 0 calc((100% - 1.5rem) / 3);
   min-width: 0;
   scroll-snap-align: start;
+  scroll-snap-stop: normal;
 }
 .more-card {
   flex: 0 0 calc((100% - 1.5rem) / 3);
