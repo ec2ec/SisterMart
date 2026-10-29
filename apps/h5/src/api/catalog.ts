@@ -238,6 +238,63 @@ export async function fetchHomeSectionProducts(code: string) {
   }>(`/api/v1/home/sections/${encodeURIComponent(code)}/products`)
 }
 
+/** M45 首頁版面模組 */
+export type HomeLayoutModule = {
+  id: number
+  module_key: string
+  module_type: string
+  ref_type: string | null
+  ref_code: string | null
+  title: Localized
+  enabled: number
+  sort_order: number
+  config: { rail_limit?: number } | null
+  campaign?: CampaignSummary
+}
+
+export type CampaignSummary = {
+  id: number
+  code: string
+  title: Localized
+  banner_image_url: string
+  intro_html: Localized
+  home_rail_limit: number
+  show_on_home: number
+  audience: Record<string, unknown>
+}
+
+export async function fetchHomeLayout() {
+  const data = await api<{ items: HomeLayoutModule[] }>('/api/v1/home/layout')
+  return data.items
+}
+
+export async function fetchCampaign(code: string) {
+  return api<{ campaign: CampaignSummary }>(`/api/v1/campaigns/${encodeURIComponent(code)}`)
+}
+
+export async function fetchCampaignRail(code: string) {
+  return api<{
+    campaign: CampaignSummary
+    items: ProductCard[]
+    limit: number
+  }>(`/api/v1/campaigns/${encodeURIComponent(code)}/rail`)
+}
+
+export async function fetchCampaignProducts(code: string, offset = 0, limit = 30) {
+  const qs = new URLSearchParams({
+    offset: String(Math.max(0, offset)),
+    limit: String(Math.max(1, Math.min(60, limit))),
+  })
+  return api<{
+    campaign: CampaignSummary
+    items: ProductCard[]
+    total: number
+    offset: number
+    limit: number
+    next_offset: number | null
+  }>(`/api/v1/campaigns/${encodeURIComponent(code)}/products?${qs}`)
+}
+
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {
   return groups.map((group) => selected[group.id] || '').join('|')
 }
