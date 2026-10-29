@@ -896,15 +896,12 @@ const tabLabel = (tab: HomeRecTab) => {
   background: rgba(255, 255, 255, 0.88);
   border-radius: 0.5rem;
 }
-.cats {
-  padding-bottom: 0.5rem;
-}
 .cats-row {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 0 0.875rem 0.75rem;
+  padding: 0 0.875rem;
   -webkit-overflow-scrolling: touch;
 }
 .cats-row button {
