@@ -23,7 +23,7 @@ const TYPE_LABEL: Record<string, string> = {
   recommend_feed: '為你推薦',
   campaign_rail: '活動橫滑',
   product_showcase: '商品櫥窗',
-  image_block: '圖片塊',
+  image_block: '圖片廣告',
 }
 
 const message = useMessage()

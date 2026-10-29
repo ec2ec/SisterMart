@@ -47,6 +47,7 @@ export const adminMenus: AdminMenu[] = [
       { label: '首頁佈局', key: '/home-ops/layout', path: '/home-ops/layout' },
       { label: '輪播廣告', key: '/home-ops/banners', path: '/home-ops/banners' },
       { label: '廣告字幕', key: '/home-ops/marquee', path: '/home-ops/marquee' },
+      { label: '圖片廣告', key: '/home-ops/image-ads', path: '/home-ops/image-ads' },
       { label: '頁腳標語', key: '/home-ops/slogan', path: '/home-ops/slogan' },
       { label: '活動專區', key: '/home-ops/campaigns', path: '/home-ops/campaigns' },
       { label: '商品櫥窗', key: '/home-ops/showcases', path: '/home-ops/showcases' },

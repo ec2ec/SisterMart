@@ -53,7 +53,7 @@ SQL);
     public function listPublic(): array
     {
         $this->ensureSchema();
-        $this->ensureMarqueeModulesSynced();
+        $this->ensureContentModulesSynced();
         $rows = Db::name('home_layout_modules')
             ->where('enabled', 1)
             ->order('sort_order', 'asc')
@@ -89,6 +89,13 @@ SQL);
                 }
                 $mod['marquee'] = $marquee;
             }
+            if ($mod['module_type'] === 'image_block') {
+                $ad = (new HomeImageAdService())->publicByCode($mod['ref_code'] ?: null);
+                if (!$ad) {
+                    continue;
+                }
+                $mod['image_ad'] = $ad;
+            }
             $items[] = $mod;
         }
 
@@ -98,7 +105,7 @@ SQL);
     public function listAdmin(): array
     {
         $this->ensureSchema();
-        $this->ensureMarqueeModulesSynced();
+        $this->ensureContentModulesSynced();
         $rows = Db::name('home_layout_modules')
             ->order('sort_order', 'asc')
             ->order('id', 'asc')
@@ -108,8 +115,8 @@ SQL);
         return ['items' => array_map(fn ($r) => $this->present($r), $rows)];
     }
 
-    /** 首次讀取佈局時：把舊單一字幕／legacy text_marquee 模組遷到 marquee:* */
-    private function ensureMarqueeModulesSynced(): void
+    /** 首次讀取佈局時：同步字幕／圖片廣告模組 */
+    private function ensureContentModulesSynced(): void
     {
         static $synced = false;
         if ($synced) {
@@ -127,6 +134,16 @@ SQL);
             $this->pruneMarqueeModules($alive);
         } catch (\Throwable $e) {
             // 佈局讀取不因字幕遷移失敗而中斷
+        }
+        try {
+            $ads = (new HomeImageAdService())->listItems();
+            foreach ($ads as $item) {
+                $this->syncImageAdModule($item, true);
+            }
+            $aliveAds = array_map(static fn ($it) => 'image_ad:' . $it['code'], $ads);
+            $this->pruneImageAdModules($aliveAds);
+        } catch (\Throwable $e) {
+            // 佈局讀取不因圖片廣告同步失敗而中斷
         }
     }
 
@@ -324,6 +341,89 @@ SQL);
         $rows = Db::name('home_layout_modules')
             ->where('module_type', 'text_marquee')
             ->whereLike('module_key', 'marquee:%')
+            ->select()
+            ->toArray();
+        $alive = array_fill_keys($aliveKeys, true);
+        foreach ($rows as $row) {
+            $key = (string) $row['module_key'];
+            if (!isset($alive[$key])) {
+                Db::name('home_layout_modules')->where('id', (int) $row['id'])->delete();
+            }
+        }
+    }
+
+    /**
+     * 圖片廣告勾選「展示於首頁」時同步／插入 image_block 模組。
+     *
+     * @param array<string, mixed> $ad raw item（含 code / title_* / status / show_on_home）
+     */
+    public function syncImageAdModule(array $ad, bool $appendIfNew = true): void
+    {
+        $this->ensureSchema();
+        $code = (string) ($ad['code'] ?? '');
+        if ($code === '') {
+            return;
+        }
+        $key = 'image_ad:' . $code;
+        $now = date('Y-m-d H:i:s');
+        $existing = Db::name('home_layout_modules')->where('module_key', $key)->find();
+        $show = (int) ($ad['show_on_home'] ?? 0) === 1 && (int) ($ad['status'] ?? 0) === 1;
+        $titleZh = (string) ($ad['title_zh'] ?? $ad['title']['zh-HK'] ?? $code);
+        $titleEn = (string) ($ad['title_en'] ?? $ad['title']['en'] ?? '');
+
+        if ($existing) {
+            Db::name('home_layout_modules')->where('id', (int) $existing['id'])->update([
+                'title_zh' => $titleZh !== '' ? $titleZh : (string) $existing['title_zh'],
+                'title_en' => $titleEn !== '' ? $titleEn : (string) $existing['title_en'],
+                'enabled' => $show ? 1 : 0,
+                'module_type' => 'image_block',
+                'ref_type' => 'image_ad',
+                'ref_code' => $code,
+                'updated_at' => $now,
+            ]);
+
+            return;
+        }
+        if (!$show || !$appendIfNew) {
+            return;
+        }
+        $maxSort = (int) Db::name('home_layout_modules')->max('sort_order');
+        // 默認插在分類後、活動前
+        $cats = Db::name('home_layout_modules')->where('module_key', 'category_row')->find();
+        $camp = Db::name('home_layout_modules')->whereLike('module_key', 'campaign:%')->order('sort_order', 'asc')->find();
+        if ($cats) {
+            $sort = (int) $cats['sort_order'] + 5;
+        } elseif ($camp) {
+            $sort = max(10, (int) $camp['sort_order'] - 5);
+        } else {
+            $sort = $maxSort + 10;
+        }
+        Db::name('home_layout_modules')->insert([
+            'module_key' => $key,
+            'module_type' => 'image_block',
+            'ref_type' => 'image_ad',
+            'ref_code' => $code,
+            'title_zh' => $titleZh,
+            'title_en' => $titleEn,
+            'enabled' => 1,
+            'sort_order' => $sort,
+            'config_json' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    /**
+     * 刪除已不存在於圖片廣告列表的 image_ad:* 模組。
+     *
+     * @param list<string> $aliveKeys module_key 白名單
+     */
+    public function pruneImageAdModules(array $aliveKeys): void
+    {
+        $this->ensureSchema();
+        $rows = Db::name('home_layout_modules')
+            ->where('module_type', 'image_block')
+            ->whereLike('module_key', 'image_ad:%')
             ->select()
             ->toArray();
         $alive = array_fill_keys($aliveKeys, true);

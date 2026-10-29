@@ -184,10 +184,24 @@ export type HomeMarqueeItem = {
 
 export type HomeMarquee = HomeMarqueeItem | null
 
+export type HomeImageAdItem = {
+  code: string
+  title: Localized
+  image_url: string
+  link_type: string
+  link_value: string
+  status: number
+  enabled: boolean
+  show_on_home?: number
+  sort_order?: number
+}
+
 export type HomeOps = {
   marquee: HomeMarquee
   /** 全部已啟用字幕（可多條） */
   marquees?: HomeMarqueeItem[]
+  /** 全部已啟用圖片廣告 */
+  image_ads?: HomeImageAdItem[]
   footer_slogan: Localized
 }
 
@@ -260,6 +274,8 @@ export type HomeLayoutModule = {
   campaign?: CampaignSummary
   /** text_marquee 佈局附帶的字幕內容 */
   marquee?: HomeMarqueeItem
+  /** image_block 佈局附帶的圖片廣告 */
+  image_ad?: HomeImageAdItem
 }
 
 export type CampaignSummary = {

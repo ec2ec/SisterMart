@@ -16,6 +16,7 @@ import {
   fetchHomeRecommendations,
   fetchHomeSections,
   type HomeBanner,
+  type HomeImageAdItem,
   type HomeLayoutModule,
   type HomeMarquee,
   type HomeMarqueeItem,
@@ -81,6 +82,7 @@ const banners = ref<HomeBanner[]>(
 )
 const marquee = ref<HomeMarquee>(null)
 const marquees = ref<HomeMarqueeItem[]>([])
+const imageAds = ref<HomeImageAdItem[]>([])
 const opsLoaded = ref(false)
 const sections = ref<HomeSection[]>([])
 const campaignRailRefs = ref<Record<string, InstanceType<typeof CampaignRail> | null>>({})
@@ -116,6 +118,13 @@ function marqueeForModule(mod: HomeLayoutModule): HomeMarqueeItem | null {
   }
   if (marquee.value?.enabled) return marquee.value
   return null
+}
+
+function imageAdForModule(mod: HomeLayoutModule): HomeImageAdItem | null {
+  if (mod.image_ad?.enabled && mod.image_ad.image_url) return mod.image_ad
+  const code = mod.ref_code
+  if (!code) return null
+  return imageAds.value.find((a) => a.code === code && a.enabled && a.image_url) || null
 }
 
 function marqueeTextOf(item: HomeMarqueeItem | null) {
@@ -219,6 +228,7 @@ async function loadOps() {
       : ops.marquee
         ? [ops.marquee]
         : []
+    imageAds.value = ops.image_ads?.length ? ops.image_ads : []
   } catch {
     /* 保留現有 */
   } finally {
@@ -382,6 +392,11 @@ function onBannerClick(b: HomeBanner) {
 }
 
 function onPromoClick(item: HomeMarqueeItem | null) {
+  if (!item?.enabled) return
+  onLink(item.link_type, item.link_value)
+}
+
+function onImageAdClick(item: HomeImageAdItem | null) {
   if (!item?.enabled) return
   onLink(item.link_type, item.link_value)
 }
@@ -587,6 +602,24 @@ const tabLabel = (tab: HomeRecTab) => {
         >
           {{ marqueeTextOf(marqueeForModule(mod)) }}
         </button>
+
+        <section
+          v-else-if="mod.module_type === 'image_block' && (!opsLoaded || imageAdForModule(mod))"
+          class="image-ad"
+        >
+          <button
+            v-if="imageAdForModule(mod)"
+            type="button"
+            class="image-ad-btn"
+            :class="{ clickable: imageAdForModule(mod)!.link_type !== 'none' }"
+            @click="onImageAdClick(imageAdForModule(mod))"
+          >
+            <img
+              :src="assetUrl(imageAdForModule(mod)!.image_url)"
+              :alt="text(imageAdForModule(mod)!.title) || ''"
+            />
+          </button>
+        </section>
 
         <section
           v-else-if="mod.module_type === 'category_row' && (showCatsSkeleton || homeCategories.length)"
@@ -814,6 +847,26 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .promo.clickable {
   cursor: pointer;
+}
+.image-ad {
+  width: 100%;
+}
+.image-ad-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.image-ad-btn.clickable {
+  cursor: pointer;
+}
+.image-ad-btn img {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
 }
 .section-title {
   display: flex;

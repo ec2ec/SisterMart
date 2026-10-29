@@ -36,6 +36,7 @@ import HomeBannersView from '../views/HomeBannersView.vue'
 import HomeCampaignsView from '../views/HomeCampaignsView.vue'
 import HomeLayoutView from '../views/HomeLayoutView.vue'
 import HomeMarqueeView from '../views/HomeMarqueeView.vue'
+import HomeImageAdsView from '../views/HomeImageAdsView.vue'
 import HomePopupsView from '../views/HomePopupsView.vue'
 import HomeShowcasesView from '../views/HomeShowcasesView.vue'
 import HomeSloganView from '../views/HomeSloganView.vue'
@@ -75,6 +76,7 @@ export const router = createRouter({
         { path: '/home-ops/layout', component: HomeLayoutView, meta: { title: '首頁佈局' } },
         { path: '/home-ops/banners', component: HomeBannersView, meta: { title: '輪播廣告' } },
         { path: '/home-ops/marquee', component: HomeMarqueeView, meta: { title: '廣告字幕' } },
+        { path: '/home-ops/image-ads', component: HomeImageAdsView, meta: { title: '圖片廣告' } },
         { path: '/home-ops/slogan', component: HomeSloganView, meta: { title: '頁腳標語' } },
         { path: '/home-ops/campaigns', component: HomeCampaignsView, meta: { title: '活動專區' } },
         { path: '/home-ops/showcases', component: HomeShowcasesView, meta: { title: '商品櫥窗' } },

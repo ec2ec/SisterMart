@@ -25,10 +25,12 @@ class HomeOpsService
     public function publicBundle(): array
     {
         $items = $this->enabledPresented($this->listItems());
+        $imageAds = (new HomeImageAdService())->publicList();
 
         return [
             'marquee' => $items[0] ?? null,
             'marquees' => $items,
+            'image_ads' => $imageAds,
             'footer_slogan' => $this->presentSlogan($this->rawSlogan()),
         ];
     }
@@ -41,6 +43,7 @@ class HomeOpsService
         return [
             'marquee' => $primary,
             'marquees' => $items,
+            'image_ads' => (new HomeImageAdService())->adminList(),
             'footer_slogan' => $this->presentSlogan($this->rawSlogan()),
         ];
     }
@@ -55,6 +58,9 @@ class HomeOpsService
         } elseif (array_key_exists('marquee', $body) && is_array($body['marquee'])) {
             // 兼容舊單一保存：寫入／更新 code=default（或指定 code）
             $this->upsertSingleMarquee($body['marquee']);
+        }
+        if (array_key_exists('image_ads', $body) && is_array($body['image_ads'])) {
+            (new HomeImageAdService())->adminSave($body['image_ads']);
         }
         if (array_key_exists('footer_slogan', $body) && is_array($body['footer_slogan'])) {
             $this->saveSlogan($body['footer_slogan']);
