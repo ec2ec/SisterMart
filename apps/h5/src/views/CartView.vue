@@ -136,9 +136,11 @@ function checkout() {
 }
 
 function reasonText(item: CartItem) {
+  if (item.invalid_message) return item.invalid_message
   if (item.invalid_reason === 'off_sale') return t('cart.invalidOff')
   if (item.invalid_reason === 'out_of_stock') return t('cart.invalidStock')
   if (item.invalid_reason === 'qty_exceed') return t('cart.invalidQty')
+  if (item.invalid_reason === 'campaign_exclusive') return t('cart.invalidCampaign')
   return ''
 }
 </script>

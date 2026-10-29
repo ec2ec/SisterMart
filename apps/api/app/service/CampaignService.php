@@ -228,18 +228,52 @@ SQL);
      */
     public function purchaseBlockReason(?int $memberId, int $productId): ?string
     {
-        $this->ensureSchema();
-        $badges = Db::name('product_badges')->where('product_id', $productId)->column('badge');
-        if (!$badges) {
+        $camp = $this->blockingCampaign($memberId, $productId);
+        if (!$camp) {
             return null;
         }
-        $camps = Db::name('campaigns')
-            ->where('status', 1)
-            ->whereIn('product_badge', $badges)
-            ->whereIn('product_source', ['badge', 'badge_and_manual'])
-            ->select()
-            ->toArray();
-        foreach ($camps as $camp) {
+        $title = (string) ($camp['title_zh'] ?: $camp['title_en'] ?: '專屬');
+
+        return '此商品為' . $title . '商品，當前無法加入購物車';
+    }
+
+    /**
+     * 找出攔截該會員購買此商品的活動（僅限有受眾限制者）。
+     *
+     * @return array<string,mixed>|null
+     */
+    public function blockingCampaign(?int $memberId, int $productId): ?array
+    {
+        $this->ensureSchema();
+        $candidates = [];
+
+        $badges = Db::name('product_badges')->where('product_id', $productId)->column('badge');
+        if ($badges) {
+            $byBadge = Db::name('campaigns')
+                ->where('status', 1)
+                ->whereIn('product_badge', $badges)
+                ->whereIn('product_source', ['badge', 'badge_and_manual'])
+                ->select()
+                ->toArray();
+            foreach ($byBadge as $c) {
+                $candidates[(int) $c['id']] = $c;
+            }
+        }
+
+        $manualIds = Db::name('campaign_products')->where('product_id', $productId)->column('campaign_id');
+        if ($manualIds) {
+            $byManual = Db::name('campaigns')
+                ->where('status', 1)
+                ->whereIn('id', $manualIds)
+                ->whereIn('product_source', ['manual', 'badge_and_manual'])
+                ->select()
+                ->toArray();
+            foreach ($byManual as $c) {
+                $candidates[(int) $c['id']] = $c;
+            }
+        }
+
+        foreach ($candidates as $camp) {
             if (!$this->inWindow($camp)) {
                 continue;
             }
@@ -248,9 +282,7 @@ SQL);
                 continue;
             }
             if (!$this->memberMatchesAudience($memberId, $audience)) {
-                $title = (string) ($camp['title_zh'] ?: $camp['title_en'] ?: '專屬');
-
-                return '此商品為' . $title . '商品，當前無法加入購物車';
+                return $camp;
             }
         }
 

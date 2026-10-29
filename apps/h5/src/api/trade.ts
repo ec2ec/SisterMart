@@ -17,6 +17,8 @@ export type CartItem = {
   checked: boolean
   available: boolean
   invalid_reason: string
+  /** 活動專屬等動態文案（後端直出） */
+  invalid_message?: string
 }
 
 export type Address = {

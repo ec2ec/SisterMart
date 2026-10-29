@@ -27,7 +27,7 @@ class CartService
         $out = [];
         $availableTotal = 0.0;
         foreach ($items as $item) {
-            $presented = $this->presentItem($item);
+            $presented = $this->presentItem($item, $memberId);
             $out[] = $presented;
             if ($presented['available'] && $presented['checked']) {
                 $availableTotal += $presented['price'] * $presented['qty'];
@@ -54,6 +54,10 @@ class CartService
         }
         if ((int) $sku['stock'] <= 0) {
             throw new ApiException('OUT_OF_STOCK', '庫存不足，無法加入購物車', 422, 42220);
+        }
+        $campaignBlock = (new CampaignService())->purchaseBlockReason($memberId, (int) $product['id']);
+        if ($campaignBlock) {
+            throw new ApiException('CAMPAIGN_EXCLUSIVE', $campaignBlock, 422, 42230);
         }
         $cartId = $this->ensureCart($memberId);
         $now = date('Y-m-d H:i:s');
@@ -145,7 +149,7 @@ class CartService
         }
     }
 
-    private function presentItem(array $item): array
+    private function presentItem(array $item, int $memberId = 0): array
     {
         $sku = Db::name('skus')->where('id', $item['sku_id'])->find();
         $product = Db::name('products')->where('id', $item['product_id'])->find();
@@ -158,6 +162,7 @@ class CartService
         $stock = $sku ? (int) $sku['stock'] : 0;
         $onSale = $product && (int) $product['status'] === 1 && $sku && (int) $sku['status'] === 1;
         $reason = '';
+        $invalidMessage = '';
         $available = true;
         if (!$onSale) {
             $available = false;
@@ -168,6 +173,16 @@ class CartService
         } elseif ((int) $item['qty'] > $stock) {
             $available = false;
             $reason = 'qty_exceed';
+        } else {
+            $campaignBlock = (new CampaignService())->purchaseBlockReason(
+                $memberId > 0 ? $memberId : null,
+                (int) $item['product_id'],
+            );
+            if ($campaignBlock) {
+                $available = false;
+                $reason = 'campaign_exclusive';
+                $invalidMessage = $campaignBlock;
+            }
         }
 
         return [
@@ -186,6 +201,7 @@ class CartService
             'checked' => (int) $item['checked'] === 1 && $available,
             'available' => $available,
             'invalid_reason' => $reason,
+            'invalid_message' => $invalidMessage,
         ];
     }
 

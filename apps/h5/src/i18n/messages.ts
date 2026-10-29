@@ -84,6 +84,7 @@ export const messages = {
       invalidOff: '商品已下架',
       invalidStock: '暫時無貨',
       invalidQty: '數量超過庫存，請調減',
+      invalidCampaign: '此商品為活動專屬，當前無法購買',
     },
     checkout: {
       title: '確認訂單',
@@ -674,6 +675,7 @@ export const messages = {
       invalidOff: 'Unavailable',
       invalidStock: 'Out of stock',
       invalidQty: 'Reduce quantity to available stock',
+      invalidCampaign: 'This item is campaign-exclusive and unavailable to you',
     },
     checkout: {
       title: 'Checkout',
