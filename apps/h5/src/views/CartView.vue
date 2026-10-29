@@ -2,7 +2,7 @@
 import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
 import RecommendFeed from '../components/RecommendFeed.vue'
@@ -19,7 +19,6 @@ const { t } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 const items = ref<CartItem[]>([])
-const managing = ref(false)
 const loading = ref(false)
 /** 下拉刷新購物車商品（不刷新底部推薦） */
 const pulling = ref(false)
@@ -70,10 +69,7 @@ onActivated(() => {
 
 /** 退出登錄後 keep-alive 實例仍在：立刻清空列表，避免串號 */
 watch(loggedIn, (v) => {
-  if (!v) {
-    items.value = []
-    managing.value = false
-  }
+  if (!v) items.value = []
 })
 
 const cartProductIds = computed(() =>
@@ -96,8 +92,28 @@ const total = computed(() =>
 )
 
 async function onQty(item: CartItem, qty: number) {
+  if (qty < 1) return
   await patchCartItem(item.id, { qty })
   await load()
+}
+
+/** 數量為 1 時再按減號：確認後移除商品 */
+async function onQtyOverlimit(item: CartItem, type: string) {
+  if (type !== 'minus' || item.qty !== 1 || actionBusy.value) return
+  try {
+    await showConfirmDialog({
+      title: t('cart.removeConfirm'),
+      confirmButtonText: t('cart.delete'),
+      confirmButtonColor: '#c45c26',
+      cancelButtonText: t('checkout.cancelForm'),
+    })
+  } catch {
+    return
+  }
+  await runAction(async () => {
+    await deleteCartItems([item.id])
+    await load()
+  })
 }
 
 async function onCheck(item: CartItem, checked: boolean) {
@@ -107,6 +123,7 @@ async function onCheck(item: CartItem, checked: boolean) {
 }
 
 function checkout() {
+  if (actionBusy.value) return
   if (!isLoggedIn()) {
     void goLogin(router, '/cart')
     return
@@ -116,25 +133,6 @@ function checkout() {
     return
   }
   router.push({ name: 'checkout' })
-}
-
-async function removeChecked() {
-  const ids = items.value.filter((i) => i.checked).map((i) => i.id)
-  if (!ids.length) return
-  await runAction(async () => {
-    await deleteCartItems(ids)
-    managing.value = false
-    await load()
-  })
-}
-
-function onSubmitClick() {
-  if (actionBusy.value) return
-  if (managing.value) {
-    void removeChecked()
-    return
-  }
-  checkout()
 }
 
 function reasonText(item: CartItem) {
@@ -165,9 +163,6 @@ function reasonText(item: CartItem) {
 
       <div class="toolbar">
         <h1>{{ t('cart.items', { n: items.length }) }}</h1>
-        <van-button class="manage" size="small" round plain hairline type="primary" @click="managing = !managing">
-          {{ managing ? t('cart.done') : t('cart.manage') }}
-        </van-button>
       </div>
 
       <p v-if="!loggedIn" class="empty">
@@ -195,10 +190,11 @@ function reasonText(item: CartItem) {
               <van-stepper
                 :model-value="item.qty"
                 :max="Math.max(1, item.stock)"
-                min="1"
+                :min="1"
                 theme="round"
                 button-size="1.75rem"
                 @change="(v: number) => onQty(item, v)"
+                @overlimit="(type: string) => onQtyOverlimit(item, type)"
               />
             </div>
           </div>
@@ -215,10 +211,8 @@ function reasonText(item: CartItem) {
         {{ t('cart.selectAll', { n: checkedCount }) }}
       </van-checkbox>
       <div class="sum">
-        <template v-if="!managing">
-          <span>{{ t('cart.total') }}</span>
-          <strong class="price">HK$ {{ total.toFixed(2) }}</strong>
-        </template>
+        <span>{{ t('cart.total') }}</span>
+        <strong class="price">HK$ {{ total.toFixed(2) }}</strong>
       </div>
       <van-button
         class="submit-btn"
@@ -226,13 +220,10 @@ function reasonText(item: CartItem) {
         round
         color="var(--sm-primary)"
         :loading="actionBusy"
-        :disabled="
-          actionBusy ||
-          (managing ? checkedCount === 0 && !items.some((i) => i.checked) : checkedCount === 0)
-        "
-        @click="onSubmitClick"
+        :disabled="actionBusy || checkedCount === 0"
+        @click="checkout"
       >
-        {{ managing ? t('cart.delete') : t('cart.checkout') }}
+        {{ t('cart.checkout') }}
       </van-button>
     </div>
   </div>
@@ -254,15 +245,11 @@ function reasonText(item: CartItem) {
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0.75rem 1rem;
 }
 .toolbar h1 {
   margin: 0;
   font-size: 1rem;
-}
-.manage {
-  min-width: 4.5rem;
 }
 .list {
   padding: 0 0.75rem 0.75rem;
