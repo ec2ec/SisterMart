@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProductCard from './ProductCard.vue'
 import { fetchHomeRecommendations, type ProductCard as Card } from '../api/catalog'
+import {
+  clearRecommendFeedCache,
+  getRecommendFeedCache,
+  saveRecommendFeedCache,
+} from '../composables/useRecommendFeedCache'
 
 const props = withDefaults(
   defineProps<{
@@ -20,6 +25,7 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
+/** 緩存中的原始列表（未按頁面排除） */
 const items = ref<Card[]>([])
 const offset = ref(0)
 const total = ref(0)
@@ -31,51 +37,95 @@ let seq = 0
 
 const titleText = computed(() => props.title || t('account.wishlistRecommend'))
 const excludeSet = computed(() => new Set(props.excludeIds || []))
+const displayItems = computed(() => {
+  const ex = excludeSet.value
+  if (!ex.size) return items.value
+  return items.value.filter((p) => !ex.has(p.id))
+})
 const showSkeleton = computed(() => initial.value && busy.value && !items.value.length)
 const finished = computed(
-  () => total.value === 0 && !busy.value && items.value.length === 0 && !initial.value,
+  () => total.value === 0 && !busy.value && displayItems.value.length === 0 && !initial.value,
 )
 
-function filterNew(batch: Card[], seen: Set<string>): Card[] {
-  const out: Card[] = []
-  for (const p of batch) {
-    if (excludeSet.value.has(p.id) || seen.has(p.id)) continue
-    out.push(p)
-    seen.add(p.id)
+function restoreFromCache(): boolean {
+  const cache = getRecommendFeedCache()
+  if (!cache || !cache.items.length) return false
+  items.value = cache.items
+  offset.value = cache.nextOffset
+  total.value = cache.total
+  initial.value = false
+  busy.value = false
+  loading.value = false
+  error.value = false
+  return true
+}
+
+async function fetchBatch(pageOffset: number): Promise<{
+  batch: Card[]
+  nextOffset: number
+  total: number
+}> {
+  const data = await fetchHomeRecommendations('hot', props.pageSize, pageOffset)
+  return {
+    batch: data.items || [],
+    nextOffset: Number(data.next_offset ?? pageOffset + (data.items || []).length),
+    total: Number(data.total || 0),
   }
-  return out
 }
 
 async function loadPage(reset: boolean) {
   const my = ++seq
+
   if (reset) {
+    if (restoreFromCache()) return
     offset.value = Math.floor(Math.random() * 500)
     error.value = false
   }
-  const pageOffset = reset ? offset.value : offset.value
+
+  const pageOffset = offset.value
   busy.value = true
   loading.value = true
   try {
-    const data = await fetchHomeRecommendations('hot', props.pageSize, pageOffset)
+    let { batch, nextOffset, total: tot } = await fetchBatch(pageOffset)
     if (my !== seq) return
-    const batch = data.items || []
-    total.value = Number(data.total || 0)
-    offset.value = Number(data.next_offset ?? pageOffset + batch.length)
+    total.value = tot
+    offset.value = nextOffset
+
     const seen = new Set(reset ? [] : items.value.map((p) => p.id))
-    let filtered = filterNew(batch, seen)
-    // 排除過多時再補一頁，儘量湊滿 pageSize
-    if (filtered.length < props.pageSize && excludeSet.value.size > 0) {
-      const more = await fetchHomeRecommendations('hot', props.pageSize, offset.value)
-      if (my !== seq) return
-      offset.value = Number(more.next_offset ?? offset.value + (more.items || []).length)
-      filtered = filtered.concat(filterNew(more.items || [], seen))
+    const merged: Card[] = reset ? [] : items.value.slice()
+    for (const p of batch) {
+      if (seen.has(p.id)) continue
+      merged.push(p)
+      seen.add(p.id)
     }
-    const next = filtered.slice(0, props.pageSize)
-    items.value = reset ? next : items.value.concat(next)
+    // 本頁排除後展示偏少時再補一頁進緩存
+    const visibleAfter = merged.filter((p) => !excludeSet.value.has(p.id)).length
+    const prevVisible = reset
+      ? 0
+      : items.value.filter((p) => !excludeSet.value.has(p.id)).length
+    if (visibleAfter - prevVisible < props.pageSize && excludeSet.value.size > 0) {
+      const more = await fetchBatch(offset.value)
+      if (my !== seq) return
+      offset.value = more.nextOffset
+      total.value = more.total || total.value
+      for (const p of more.batch) {
+        if (seen.has(p.id)) continue
+        merged.push(p)
+        seen.add(p.id)
+      }
+    }
+
+    items.value = merged
+    saveRecommendFeedCache({
+      items: merged,
+      nextOffset: offset.value,
+      total: total.value,
+      renewTtl: reset,
+    })
   } catch {
     if (my !== seq) return
     error.value = true
-    if (reset) items.value = []
+    if (reset && !items.value.length) items.value = []
   } finally {
     if (my === seq) {
       busy.value = false
@@ -87,21 +137,28 @@ async function loadPage(reset: boolean) {
 
 async function onLoad() {
   if (busy.value) return
+  // 有緩存時首屏已恢復；觸底才追加
   await loadPage(items.value.length === 0)
 }
 
-watch(
-  () => (props.excludeIds || []).join(','),
-  () => {
-    // 排除集變化時不強制重拉，僅影響後續分頁過濾
-  },
-)
-
 onMounted(() => {
+  if (restoreFromCache()) return
   void loadPage(true)
 })
 
-defineExpose({ reload: () => loadPage(true) })
+defineExpose({
+  reload: () => {
+    // 強制過期重拉
+    saveRecommendFeedCache({
+      items: [],
+      nextOffset: 0,
+      total: 0,
+      renewTtl: true,
+    })
+    items.value = []
+    void loadPage(true)
+  },
+})
 </script>
 
 <template>
@@ -127,9 +184,9 @@ defineExpose({ reload: () => loadPage(true) })
       @load="onLoad"
     >
       <div class="grid">
-        <ProductCard v-for="(p, idx) in items" :key="`${p.id}-${idx}`" :product="p" />
+        <ProductCard v-for="(p, idx) in displayItems" :key="`${p.id}-${idx}`" :product="p" />
       </div>
-      <p v-if="!busy && !items.length" class="rec-empty">{{ t('home.feedEmpty') }}</p>
+      <p v-if="!busy && !displayItems.length" class="rec-empty">{{ t('home.feedEmpty') }}</p>
     </van-list>
   </section>
 </template>
