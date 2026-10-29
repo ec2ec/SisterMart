@@ -162,7 +162,9 @@ watch(code, boot)
   top: calc(0.625rem + env(safe-area-inset-top, 0rem));
   left: 0.75rem;
   z-index: 300;
-  background: rgba(255, 255, 255, 0.92);
+  width: 2.3rem;
+  height: 2.3rem;
+  background: #ffffff75;
   color: var(--sm-text);
   box-shadow: 0 0.15rem 0.55rem rgba(20, 20, 30, 0.12);
 }
