@@ -145,14 +145,12 @@ watch(code, boot)
 <style scoped>
 .banner {
   width: 100%;
-  aspect-ratio: 16 / 7;
   background: var(--sm-bg-soft);
   overflow: hidden;
 }
 .banner img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 .intro,
