@@ -12,7 +12,8 @@ import {
   useMessage,
   NPagination,
 } from 'naive-ui'
-import { api } from '../api'
+import { api, uploadImage } from '../api'
+import { showError } from '../feedback'
 import { useClientPager } from '../composables/useClientPager'
 
 type Banner = {
@@ -108,12 +109,15 @@ async function onFile(ev: Event) {
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  const fd = new FormData()
-  fd.append('file', file)
-  const data = await api<{ url: string }>('/api/v1/admin/uploads/banner', { method: 'POST', body: fd }, true)
-  form.value.image_url = data.url
-  message.success('圖片已上傳')
-  input.value = ''
+  try {
+    const data = await uploadImage(file, { preset: 'banner' })
+    form.value.image_url = data.url
+    message.success('圖片已上傳')
+  } catch (e: unknown) {
+    showError(e instanceof Error ? e.message : '圖片上傳失敗')
+  } finally {
+    input.value = ''
+  }
 }
 
 onMounted(load)

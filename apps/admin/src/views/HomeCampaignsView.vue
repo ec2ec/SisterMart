@@ -13,7 +13,8 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui'
-import { api } from '../api'
+import { api, uploadImage } from '../api'
+import { showError } from '../feedback'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
 
@@ -174,11 +175,11 @@ async function onBannerFile(ev: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const fd = new FormData()
-    fd.append('file', file)
-    const data = await api<{ url: string }>('/api/v1/admin/uploads/banner', { method: 'POST', body: fd }, true)
+    const data = await uploadImage(file, { preset: 'banner' })
     form.value.banner_image_url = data.url
     message.success('橫幅已上傳')
+  } catch (e: unknown) {
+    showError(e instanceof Error ? e.message : '橫幅上傳失敗')
   } finally {
     uploading.value = false
     input.value = ''
