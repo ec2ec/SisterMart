@@ -146,24 +146,34 @@ onMounted(() => {
   void loadPage(true)
 })
 
-defineExpose({
-  reload: () => {
-    // 強制過期重拉
-    saveRecommendFeedCache({
-      items: [],
-      nextOffset: 0,
-      total: 0,
-      renewTtl: true,
-    })
-    items.value = []
-    void loadPage(true)
-  },
-})
+function onRefresh() {
+  if (busy.value) return
+  clearRecommendFeedCache()
+  items.value = []
+  offset.value = 0
+  total.value = 0
+  initial.value = true
+  error.value = false
+  void loadPage(true)
+}
+
+defineExpose({ reload: onRefresh })
 </script>
 
 <template>
   <section class="rec">
-    <h3 class="rec-title">{{ titleText }}</h3>
+    <div class="rec-hd">
+      <h3 class="rec-title">{{ titleText }}</h3>
+      <button
+        type="button"
+        class="rec-refresh sm-icon-btn"
+        :aria-label="t('home.feedRefresh')"
+        :disabled="busy"
+        @click="onRefresh"
+      >
+        <van-icon name="replay" :class="{ spinning: busy && !initial }" />
+      </button>
+    </div>
     <div v-if="showSkeleton" class="grid" aria-hidden="true">
       <div v-for="n in 6" :key="`sk-${n}`" class="sk-card">
         <div class="sk-media sk-pulse" />
@@ -195,12 +205,40 @@ defineExpose({
 .rec {
   padding-top: 0.75rem;
 }
+.rec-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.25rem;
+}
 .rec-title {
   margin: 0;
-  padding: 0.5rem 0.75rem 0.25rem;
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--sm-text);
+}
+.rec-refresh {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: var(--sm-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rec-refresh:disabled {
+  opacity: 0.55;
+}
+.rec-refresh .spinning {
+  animation: rec-spin 0.75s linear infinite;
+}
+@keyframes rec-spin {
+  to {
+    transform: rotate(-360deg);
+  }
 }
 .grid {
   display: grid;

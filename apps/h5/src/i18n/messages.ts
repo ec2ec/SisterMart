@@ -692,6 +692,7 @@ export const messages = {
       saveAddress: 'Save address',
       saved: 'Saved',
       coupon: 'Coupon',
+      myCoupons: 'My coupons',
       noCoupon: 'No coupon',
       points: 'Points ({n} available, up to HK$ {cap})',
       balance: 'Balance (HK$ {n})',
