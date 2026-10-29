@@ -21,6 +21,8 @@ const router = useRouter()
 const items = ref<CartItem[]>([])
 const managing = ref(false)
 const loading = ref(false)
+/** 下拉刷新購物車商品（不刷新底部推薦） */
+const pulling = ref(false)
 const { busy: actionBusy, run: runAction } = useRequestBusy()
 const SCROLL_KEY = 'cart'
 
@@ -42,6 +44,14 @@ async function load() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+async function onPullRefresh() {
+  try {
+    await load()
+  } finally {
+    pulling.value = false
   }
 }
 
@@ -137,57 +147,68 @@ function reasonText(item: CartItem) {
 
 <template>
   <div class="page">
-    <div class="trust">
-      <span>{{ t('cart.trust1') }}</span>
-      <span>{{ t('cart.trust2') }}</span>
-      <span>{{ t('cart.trust3') }}</span>
-    </div>
+    <van-pull-refresh
+      v-model="pulling"
+      class="cart-pull"
+      :head-height="80"
+      :pull-distance="80"
+      :pulling-text="t('home.refreshPulling')"
+      :loosing-text="t('home.refreshLoose')"
+      :loading-text="t('home.refreshLoading')"
+      @refresh="onPullRefresh"
+    >
+      <div class="trust">
+        <span>{{ t('cart.trust1') }}</span>
+        <span>{{ t('cart.trust2') }}</span>
+        <span>{{ t('cart.trust3') }}</span>
+      </div>
 
-    <div class="toolbar">
-      <h1>{{ t('cart.items', { n: items.length }) }}</h1>
-      <van-button class="manage" size="small" round plain hairline type="primary" @click="managing = !managing">
-        {{ managing ? t('cart.done') : t('cart.manage') }}
-      </van-button>
-    </div>
+      <div class="toolbar">
+        <h1>{{ t('cart.items', { n: items.length }) }}</h1>
+        <van-button class="manage" size="small" round plain hairline type="primary" @click="managing = !managing">
+          {{ managing ? t('cart.done') : t('cart.manage') }}
+        </van-button>
+      </div>
 
-    <p v-if="!loggedIn" class="empty">
-      <van-button round type="primary" color="var(--sm-primary)" @click="goLogin(router, '/cart')">
-        {{ t('auth.login') }}
-      </van-button>
-    </p>
-    <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
+      <p v-if="!loggedIn" class="empty">
+        <van-button round type="primary" color="var(--sm-primary)" @click="goLogin(router, '/cart')">
+          {{ t('auth.login') }}
+        </van-button>
+      </p>
+      <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
 
-    <div v-else class="list">
-      <div v-for="item in items" :key="item.id" class="row" :class="{ bad: !item.available }">
-        <van-checkbox
-          :model-value="item.checked"
-          :disabled="!item.available"
-          checked-color="var(--sm-primary)"
-          @update:model-value="(v: boolean) => onCheck(item, v)"
-        />
-        <img :src="item.image" alt="" />
-        <div class="info">
-          <h3>{{ text(item.name) }}</h3>
-          <p>{{ text(item.spec) }}</p>
-          <p v-if="!item.available" class="warn">{{ reasonText(item) }}</p>
-          <div class="bottom">
-            <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
-            <van-stepper
-              :model-value="item.qty"
-              :max="Math.max(1, item.stock)"
-              min="1"
-              theme="round"
-              button-size="1.75rem"
-              @change="(v: number) => onQty(item, v)"
-            />
+      <div v-else class="list">
+        <div v-for="item in items" :key="item.id" class="row" :class="{ bad: !item.available }">
+          <van-checkbox
+            :model-value="item.checked"
+            :disabled="!item.available"
+            checked-color="var(--sm-primary)"
+            @update:model-value="(v: boolean) => onCheck(item, v)"
+          />
+          <img :src="item.image" alt="" />
+          <div class="info">
+            <h3>{{ text(item.name) }}</h3>
+            <p>{{ text(item.spec) }}</p>
+            <p v-if="!item.available" class="warn">{{ reasonText(item) }}</p>
+            <div class="bottom">
+              <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
+              <van-stepper
+                :model-value="item.qty"
+                :max="Math.max(1, item.stock)"
+                min="1"
+                theme="round"
+                button-size="1.75rem"
+                @change="(v: number) => onQty(item, v)"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="rec-wrap">
-      <RecommendFeed :exclude-ids="cartProductIds" />
-    </div>
+      <div class="rec-wrap">
+        <RecommendFeed :exclude-ids="cartProductIds" />
+      </div>
+    </van-pull-refresh>
 
     <div class="submit">
       <van-checkbox v-model="allChecked" checked-color="var(--sm-primary)">
@@ -218,6 +239,10 @@ function reasonText(item: CartItem) {
 </template>
 
 <style scoped>
+.cart-pull {
+  min-height: calc(100vh - var(--sm-tabbar-h) - 4rem);
+  overflow: visible;
+}
 .trust {
   display: flex;
   justify-content: space-around;
