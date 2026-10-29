@@ -83,6 +83,9 @@ defineExpose({ reload: load })
 </template>
 
 <style scoped>
+.camp-rail {
+  padding-bottom: 0.125rem;
+}
 .section-title {
   display: flex;
   align-items: center;
@@ -107,7 +110,7 @@ defineExpose({ reload: load })
   gap: 0.75rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 0 0.875rem;
+  padding: 0 0.875rem 0.375rem;
   -webkit-overflow-scrolling: touch;
 }
 .rail :deep(.card) {
