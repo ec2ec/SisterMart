@@ -33,7 +33,12 @@ import DistributionView from '../views/DistributionView.vue'
 import SeckillView from '../views/SeckillView.vue'
 import ReviewsView from '../views/ReviewsView.vue'
 import HomeBannersView from '../views/HomeBannersView.vue'
+import HomeCampaignsView from '../views/HomeCampaignsView.vue'
+import HomeLayoutView from '../views/HomeLayoutView.vue'
+import HomeMarqueeView from '../views/HomeMarqueeView.vue'
 import HomePopupsView from '../views/HomePopupsView.vue'
+import HomeShowcasesView from '../views/HomeShowcasesView.vue'
+import HomeSloganView from '../views/HomeSloganView.vue'
 import ReleasesView from '../views/ReleasesView.vue'
 
 export const router = createRouter({
@@ -63,11 +68,19 @@ export const router = createRouter({
         { path: '/customers/members/:id', component: MemberDetailView, meta: { title: '會員詳情' } },
         { path: '/customers/levels', component: LevelsView, meta: { title: '會員等級' } },
         { path: '/cms/articles', component: ArticlesView, meta: { title: '文章' } },
-        { path: '/cms/home', component: HomeBannersView, meta: { title: '首頁運營' } },
-        { path: '/cms/home-popups', component: HomePopupsView, meta: { title: '首頁遮罩' } },
         { path: '/cms/messages', component: MessagesView, meta: { title: '系統消息' } },
         { path: '/cms/notify-outbox', component: NotifyOutboxView, meta: { title: '發送流水' } },
         { path: '/cms/newsletter', component: NewsletterView, meta: { title: '訂閱名單' } },
+        /** 首頁運營（從原 /cms/home 拆分） */
+        { path: '/home-ops/layout', component: HomeLayoutView, meta: { title: '首頁佈局' } },
+        { path: '/home-ops/banners', component: HomeBannersView, meta: { title: '輪播廣告' } },
+        { path: '/home-ops/marquee', component: HomeMarqueeView, meta: { title: '廣告字幕' } },
+        { path: '/home-ops/slogan', component: HomeSloganView, meta: { title: '頁腳標語' } },
+        { path: '/home-ops/campaigns', component: HomeCampaignsView, meta: { title: '活動專區' } },
+        { path: '/home-ops/showcases', component: HomeShowcasesView, meta: { title: '商品櫥窗' } },
+        { path: '/home-ops/popups', component: HomePopupsView, meta: { title: '首頁遮罩' } },
+        { path: '/cms/home', redirect: '/home-ops/layout' },
+        { path: '/cms/home-popups', redirect: '/home-ops/popups' },
         { path: '/marketing/coupons', component: CouponsView, meta: { title: '優惠券' } },
         { path: '/marketing/points', component: PointsView, meta: { title: '積分' } },
         {

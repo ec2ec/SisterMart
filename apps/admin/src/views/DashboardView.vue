@@ -206,7 +206,7 @@ onMounted(refresh)
             售後
           </n-button>
           <n-button size="tiny" quaternary @click="go('/catalog/products/new')">新建商品</n-button>
-          <n-button size="tiny" quaternary @click="go('/cms/home')">首頁運營</n-button>
+          <n-button size="tiny" quaternary @click="go('/home-ops/layout')">首頁運營</n-button>
           <n-button size="tiny" quaternary @click="go('/marketing/seckill')">秒殺</n-button>
           <n-button size="tiny" quaternary @click="go('/cms/articles')">文章</n-button>
           <n-button size="tiny" quaternary @click="go('/customers/members')">會員</n-button>
