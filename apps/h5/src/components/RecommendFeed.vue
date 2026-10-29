@@ -171,7 +171,7 @@ defineExpose({ reload: onRefresh })
         :disabled="busy"
         @click="onRefresh"
       >
-        <van-icon name="replay" :class="{ spinning: busy && !initial }" />
+        <van-icon name="replay" :class="{ spinning: busy }" />
       </button>
     </div>
     <div v-if="showSkeleton" class="grid" aria-hidden="true">
@@ -208,8 +208,7 @@ defineExpose({ reload: onRefresh })
 .rec-hd {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.15rem;
   padding: 0.5rem 0.75rem 0.25rem;
 }
 .rec-title {
