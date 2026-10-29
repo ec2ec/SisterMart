@@ -3,54 +3,22 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
+import RecommendFeed from '../components/RecommendFeed.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import { api } from '../api/client'
-import { fetchHomeRecommendations, type ProductCard as Card } from '../api/catalog'
+import type { ProductCard as Card } from '../api/catalog'
 import { goLogin } from '../composables/useAuth'
 import { hydrateFavorites, isLoggedIn } from '../composables/useFavorites'
 
 type Row = Card & { favorited_at?: string; invalid?: boolean }
 
-const REC_LIMIT = 30
-
 const { t } = useI18n()
 const router = useRouter()
 const items = ref<Row[]>([])
 const loaded = ref(false)
-const recItems = ref<Card[]>([])
-const recBusy = ref(false)
 
 const isEmpty = computed(() => loaded.value && items.value.length === 0)
-const showRec = computed(() => recBusy.value || recItems.value.length > 0)
-
-async function loadRecs() {
-  recBusy.value = true
-  try {
-    // 隨機偏移 + 服務端頁內 shuffle，每次進入推薦不同
-    const offset = Math.floor(Math.random() * 500)
-    const data = await fetchHomeRecommendations('hot', REC_LIMIT, offset)
-    const favIds = new Set(items.value.map((p) => p.id))
-    // 略過已在心願清單的商品，再補足至最多 30
-    const filtered = (data.items || []).filter((p) => !favIds.has(p.id))
-    if (filtered.length >= REC_LIMIT || !favIds.size) {
-      recItems.value = filtered.slice(0, REC_LIMIT)
-    } else {
-      const more = await fetchHomeRecommendations('hot', REC_LIMIT, offset + REC_LIMIT)
-      const seen = new Set(filtered.map((p) => p.id))
-      for (const p of more.items || []) {
-        if (favIds.has(p.id) || seen.has(p.id)) continue
-        filtered.push(p)
-        seen.add(p.id)
-        if (filtered.length >= REC_LIMIT) break
-      }
-      recItems.value = filtered.slice(0, REC_LIMIT)
-    }
-  } catch {
-    recItems.value = []
-  } finally {
-    recBusy.value = false
-  }
-}
+const favIds = computed(() => items.value.map((p) => p.id))
 
 async function load() {
   if (!isLoggedIn()) {
@@ -66,7 +34,6 @@ async function load() {
   } finally {
     loaded.value = true
   }
-  void loadRecs()
 }
 
 onMounted(load)
@@ -88,21 +55,7 @@ onMounted(load)
       </div>
     </div>
 
-    <section v-if="loaded && showRec" class="rec">
-      <h3 class="rec-title">{{ t('account.wishlistRecommend') }}</h3>
-      <div v-if="recBusy && !recItems.length" class="grid" aria-hidden="true">
-        <div v-for="n in 6" :key="`sk-${n}`" class="sk-card">
-          <div class="sk-media sk-pulse" />
-          <div class="sk-meta">
-            <span class="sk-line sk-pulse" />
-            <span class="sk-line sk-pulse sk-short" />
-          </div>
-        </div>
-      </div>
-      <div v-else class="grid">
-        <ProductCard v-for="p in recItems" :key="`rec-${p.id}`" :product="p" />
-      </div>
-    </section>
+    <RecommendFeed v-if="loaded" :exclude-ids="favIds" />
   </div>
 </template>
 
@@ -132,23 +85,11 @@ onMounted(load)
   line-height: 1.5;
 }
 
-.rec {
-  padding-top: 0.75rem;
-}
-
-.rec-title {
-  margin: 0;
-  padding: 0.5rem 0.75rem 0.25rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--sm-text);
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem 1.5rem;
+  padding: 0.5rem 0.75rem 0.75rem;
   position: relative;
   z-index: 0;
 }
@@ -168,46 +109,5 @@ onMounted(load)
   color: #fff;
   padding: 0.15rem 0.35rem;
   border-radius: 0.2rem;
-}
-
-.sk-card {
-  min-width: 0;
-}
-
-.sk-media {
-  aspect-ratio: 1 / 1;
-  border-radius: 0.625rem;
-  background: #eee;
-}
-
-.sk-meta {
-  padding: 0.5rem 0.125rem 0.25rem;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.sk-line {
-  display: block;
-  height: 0.75rem;
-  border-radius: 0.25rem;
-  background: #eee;
-}
-
-.sk-short {
-  width: 55%;
-}
-
-.sk-pulse {
-  animation: sk-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes sk-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
 }
 </style>

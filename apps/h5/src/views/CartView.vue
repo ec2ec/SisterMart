@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
+import RecommendFeed from '../components/RecommendFeed.vue'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { goLogin } from '../composables/useAuth'
@@ -65,6 +66,9 @@ watch(loggedIn, (v) => {
   }
 })
 
+const cartProductIds = computed(() =>
+  items.value.map((i) => String(i.product_id)).filter(Boolean),
+)
 const checkedCount = computed(() => items.value.filter((i) => i.checked && i.available).length)
 const allChecked = computed({
   get: () => {
@@ -181,6 +185,10 @@ function reasonText(item: CartItem) {
       </div>
     </div>
 
+    <div class="rec-wrap">
+      <RecommendFeed :exclude-ids="cartProductIds" />
+    </div>
+
     <div class="submit">
       <van-checkbox v-model="allChecked" checked-color="var(--sm-primary)">
         {{ t('cart.selectAll', { n: checkedCount }) }}
@@ -232,7 +240,10 @@ function reasonText(item: CartItem) {
   min-width: 4.5rem;
 }
 .list {
-  padding: 0 0.75rem 5.625rem;
+  padding: 0 0.75rem 0.75rem;
+}
+.rec-wrap {
+  padding-bottom: 5.625rem;
 }
 .row {
   display: grid;
@@ -297,6 +308,14 @@ function reasonText(item: CartItem) {
   flex: 1;
   text-align: right;
   font-size: 0.75rem;
+}
+.sum .price {
+  font-size: 1rem;
+}
+.submit-btn {
+  min-width: 7.5rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 .empty {
   text-align: center;

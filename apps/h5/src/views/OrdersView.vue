@@ -2,6 +2,7 @@
 import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import RecommendFeed from '../components/RecommendFeed.vue'
 import SubPageNav from '../components/SubPageNav.vue'
 import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { isOrdersTabName, useOrdersList, type OrdersTabName } from '../composables/useOrdersList'
@@ -115,6 +116,8 @@ watch(
         </div>
       </li>
     </ul>
+
+    <RecommendFeed v-if="isLoggedIn()" />
   </div>
 </template>
 
