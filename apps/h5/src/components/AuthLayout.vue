@@ -153,11 +153,11 @@ function onBackClick() {
   overflow: hidden;
 }
 
-/* 多層 mesh：靜態底 + 流動色塊 + 高光暈 */
+/* 多層 mesh：位移要夠大，否則高模糊下幾乎看不出晃動 */
 .mesh {
   position: absolute;
-  inset: -25%;
-  will-change: transform, filter;
+  inset: -35%;
+  will-change: transform, background-position;
 }
 
 .mesh-base {
@@ -172,60 +172,64 @@ function onBackClick() {
 
 .mesh-flow {
   background:
-    radial-gradient(42% 36% at 22% 28%, rgba(255, 255, 255, 0.95) 0%, transparent 70%),
-    radial-gradient(48% 40% at 72% 22%, rgba(176, 210, 255, 0.85) 0%, transparent 68%),
-    radial-gradient(55% 45% at 58% 62%, rgba(186, 150, 255, 0.75) 0%, transparent 70%),
-    radial-gradient(50% 42% at 28% 78%, rgba(255, 140, 200, 0.7) 0%, transparent 68%),
-    radial-gradient(40% 35% at 86% 70%, rgba(160, 220, 255, 0.65) 0%, transparent 65%);
-  filter: blur(2.25rem);
-  mix-blend-mode: screen;
-  opacity: 0.9;
-  animation: auth-flow 16s ease-in-out infinite alternate;
+    radial-gradient(38% 32% at 20% 25%, rgba(255, 255, 255, 0.98) 0%, transparent 68%),
+    radial-gradient(44% 38% at 78% 18%, rgba(140, 200, 255, 0.95) 0%, transparent 66%),
+    radial-gradient(50% 42% at 55% 58%, rgba(170, 120, 255, 0.9) 0%, transparent 68%),
+    radial-gradient(46% 40% at 22% 78%, rgba(255, 110, 190, 0.88) 0%, transparent 66%),
+    radial-gradient(36% 32% at 88% 72%, rgba(120, 210, 255, 0.85) 0%, transparent 64%);
+  background-size: 140% 140%;
+  background-position: 0% 30%;
+  filter: blur(1.6rem);
+  opacity: 0.95;
+  animation: auth-flow 7s ease-in-out infinite alternate;
 }
 
 .mesh-bloom {
   background:
-    radial-gradient(35% 30% at 40% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 70%),
-    radial-gradient(30% 28% at 65% 48%, rgba(255, 190, 230, 0.55) 0%, transparent 70%),
-    radial-gradient(32% 30% at 48% 70%, rgba(190, 210, 255, 0.5) 0%, transparent 70%);
-  filter: blur(1.75rem);
-  mix-blend-mode: soft-light;
-  opacity: 0.85;
-  animation: auth-bloom 11s ease-in-out infinite alternate;
+    radial-gradient(32% 28% at 38% 32%, rgba(255, 255, 255, 0.95) 0%, transparent 68%),
+    radial-gradient(28% 26% at 68% 46%, rgba(255, 170, 220, 0.75) 0%, transparent 68%),
+    radial-gradient(30% 28% at 46% 72%, rgba(170, 200, 255, 0.7) 0%, transparent 68%);
+  background-size: 160% 160%;
+  background-position: 80% 20%;
+  filter: blur(1.35rem);
+  opacity: 0.9;
+  animation: auth-bloom 5.5s ease-in-out infinite alternate;
 }
 
-/* 流水反射高光（caustic 細帶） */
+/* 流水反射高光：靠 background-position 漂移，比微小平移更明顯 */
 .caustic {
   position: absolute;
-  inset: -40%;
-  opacity: 0.55;
-  mix-blend-mode: soft-light;
+  inset: -50%;
+  opacity: 0.72;
+  mix-blend-mode: overlay;
   background:
     repeating-linear-gradient(
       118deg,
-      transparent 0 1.1rem,
-      rgba(255, 255, 255, 0.08) 1.1rem 1.35rem,
-      transparent 1.35rem 2.6rem,
-      rgba(255, 255, 255, 0.14) 2.6rem 2.85rem,
-      transparent 2.85rem 4.2rem
+      transparent 0 0.85rem,
+      rgba(255, 255, 255, 0.22) 0.85rem 1.15rem,
+      transparent 1.15rem 2.2rem,
+      rgba(255, 255, 255, 0.35) 2.2rem 2.55rem,
+      transparent 2.55rem 3.6rem
     ),
     repeating-linear-gradient(
-      128deg,
-      transparent 0 1.6rem,
-      rgba(220, 240, 255, 0.12) 1.6rem 1.85rem,
-      transparent 1.85rem 3.4rem,
-      rgba(255, 220, 245, 0.1) 3.4rem 3.6rem,
-      transparent 3.6rem 5rem
+      132deg,
+      transparent 0 1.2rem,
+      rgba(210, 235, 255, 0.28) 1.2rem 1.55rem,
+      transparent 1.55rem 2.9rem,
+      rgba(255, 210, 240, 0.22) 2.9rem 3.2rem,
+      transparent 3.2rem 4.4rem
     );
-  filter: blur(0.55rem);
-  transform: rotate(-8deg) scale(1.15);
-  animation: auth-caustic 9s linear infinite;
+  background-size: 220% 220%, 200% 200%;
+  background-position: 0% 0%, 100% 0%;
+  filter: blur(0.35rem);
+  transform: rotate(-10deg) scale(1.2);
+  animation: auth-caustic 4.5s linear infinite;
 }
 
 .grain {
   position: absolute;
   inset: 0;
-  opacity: 0.07;
+  opacity: 0.06;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
@@ -233,33 +237,34 @@ function onBackClick() {
 
 @keyframes auth-flow {
   0% {
-    transform: translate3d(-4%, -2%, 0) scale(1.05) rotate(-2deg);
-  }
-  50% {
-    transform: translate3d(3%, 4%, 0) scale(1.12) rotate(2deg);
+    background-position: 0% 20%;
+    transform: translate3d(-12%, -8%, 0) scale(1.08) rotate(-6deg);
   }
   100% {
-    transform: translate3d(5%, -3%, 0) scale(1.08) rotate(-1deg);
+    background-position: 85% 70%;
+    transform: translate3d(14%, 10%, 0) scale(1.22) rotate(6deg);
   }
 }
 
 @keyframes auth-bloom {
   0% {
-    transform: translate3d(2%, 3%, 0) scale(1.02);
-    opacity: 0.7;
+    background-position: 90% 10%;
+    transform: translate3d(10%, 8%, 0) scale(1.05) rotate(3deg);
+    opacity: 0.75;
   }
   100% {
-    transform: translate3d(-4%, -2%, 0) scale(1.14);
-    opacity: 0.95;
+    background-position: 10% 85%;
+    transform: translate3d(-12%, -10%, 0) scale(1.2) rotate(-4deg);
+    opacity: 1;
   }
 }
 
 @keyframes auth-caustic {
   0% {
-    transform: rotate(-8deg) scale(1.15) translate3d(-6%, 0, 0);
+    background-position: 0% 10%, 100% 0%;
   }
   100% {
-    transform: rotate(-8deg) scale(1.15) translate3d(6%, -4%, 0);
+    background-position: 100% 55%, 0% 70%;
   }
 }
 
