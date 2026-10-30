@@ -282,8 +282,8 @@ function requestReReview() {
             </n-tag>
           </td>
           <td>
-            <n-tag size="small" :type="row.is_hidden ? 'warning' : 'success'">
-              {{ row.is_hidden ? '已隱藏' : '顯示中' }}
+            <n-tag size="small" :type="visibilityTagType(row)">
+              {{ visibilityLabel(row) }}
             </n-tag>
           </td>
           <td>{{ row.reply || row.admin_reply ? '有' : '—' }}</td>
@@ -318,8 +318,8 @@ function requestReReview() {
         <div>{{ current.created_at }}</div>
         <n-space>
           <n-tag size="small" :type="modTagType(modStatus)">{{ modLabel(modStatus) }}</n-tag>
-          <n-tag size="small" :type="isHidden ? 'warning' : 'success'">
-            {{ isHidden ? '已隱藏' : '顯示中' }}
+          <n-tag size="small" :type="visibilityTagType(current)">
+            {{ visibilityLabel(current) }}
           </n-tag>
           <n-tag v-if="current.re_review_requested_at" size="small" type="info">待用戶重評</n-tag>
           <n-tag v-else-if="current.re_reviewed_at" size="small">已重評</n-tag>

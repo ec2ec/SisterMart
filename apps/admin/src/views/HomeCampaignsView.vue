@@ -15,6 +15,7 @@ import {
 } from 'naive-ui'
 import { api, uploadImage } from '../api'
 import { showError } from '../feedback'
+import { assetUrl, toStoredUrl } from '../utils/assetUrl'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
 
@@ -176,7 +177,7 @@ async function onBannerFile(ev: Event) {
   uploading.value = true
   try {
     const data = await uploadImage(file, { preset: 'banner' })
-    form.value.banner_image_url = data.url
+    form.value.banner_image_url = toStoredUrl(data.url)
     message.success('橫幅已上傳')
   } catch (e: unknown) {
     showError(e instanceof Error ? e.message : '橫幅上傳失敗')
@@ -205,7 +206,7 @@ async function save() {
     audience: buildAudience(),
     product_source: form.value.product_source,
     product_badge: form.value.product_badge,
-    banner_image_url: form.value.banner_image_url,
+    banner_image_url: toStoredUrl(form.value.banner_image_url.trim()),
     intro_html: { 'zh-HK': form.value.intro_html_zh, en: form.value.intro_html_en },
     show_on_home: form.value.show_on_home ? 1 : 0,
     home_rail_limit: form.value.home_rail_limit,
@@ -314,7 +315,7 @@ onMounted(load)
             />
             <span v-if="uploading" class="hint-inline">上傳中…</span>
           </n-space>
-          <img v-if="form.banner_image_url" class="banner-preview" :src="form.banner_image_url" alt="" />
+          <img v-if="form.banner_image_url" class="banner-preview" :src="assetUrl(form.banner_image_url)" alt="" />
         </n-space>
       </n-form-item>
       <n-form-item label="介紹（繁）">

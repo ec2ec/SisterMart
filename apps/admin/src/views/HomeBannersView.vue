@@ -15,6 +15,7 @@ import {
 import { api, uploadImage } from '../api'
 import { showError } from '../feedback'
 import { useClientPager } from '../composables/useClientPager'
+import { assetUrl, toStoredUrl } from '../utils/assetUrl'
 
 type Banner = {
   id: number
@@ -81,7 +82,7 @@ function edit(row: Banner) {
 
 async function save() {
   const body = {
-    image_url: form.value.image_url,
+    image_url: toStoredUrl(form.value.image_url.trim()),
     title: { 'zh-HK': form.value.title_zh, en: form.value.title_en },
     link_type: form.value.link_type,
     link_value: form.value.link_value,
@@ -111,7 +112,7 @@ async function onFile(ev: Event) {
   if (!file) return
   try {
     const data = await uploadImage(file, { preset: 'banner' })
-    form.value.image_url = data.url
+    form.value.image_url = toStoredUrl(data.url)
     message.success('圖片已上傳')
   } catch (e: unknown) {
     showError(e instanceof Error ? e.message : '圖片上傳失敗')
@@ -128,7 +129,7 @@ onMounted(load)
     <n-card title="首頁輪播">
       <div v-for="row in paged" :key="row.id" class="row">
         <div class="meta">
-          <img v-if="row.image_url" :src="row.image_url" alt="" />
+          <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
           <div>
             <strong>#{{ row.id }} · {{ row.title['zh-HK'] || '(無標題)' }}</strong>
             <p>{{ row.link_type }} {{ row.link_value }} · sort {{ row.sort_order }} · {{ row.status === 1 ? '啟用' : '停用' }}</p>

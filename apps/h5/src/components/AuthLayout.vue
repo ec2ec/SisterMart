@@ -121,8 +121,8 @@ function onBackClick() {
 }
 
 .auth-top-spacer {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--sm-icon-btn, 2.75rem);
+  height: var(--sm-icon-btn, 2.75rem);
   flex: none;
 }
 
