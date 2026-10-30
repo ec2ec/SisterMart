@@ -179,32 +179,32 @@ function onBackClick() {
 }
 
 .mesh-base {
-  inset: -20%;
-  width: 140%;
-  height: 140%;
+  inset: -25%;
+  width: 150%;
+  height: 150%;
   background:
-    radial-gradient(70% 55% at 18% 12%, #fff8fc 0%, transparent 58%),
-    radial-gradient(65% 50% at 92% 16%, #9ecfff 0%, transparent 52%),
-    radial-gradient(60% 50% at 72% 82%, #b89af5 0%, transparent 55%),
-    radial-gradient(70% 55% at 12% 78%, #ff7ec0 0%, transparent 55%),
-    radial-gradient(55% 45% at 48% 48%, #e8d0ff 0%, transparent 60%),
+    radial-gradient(55% 45% at 12% 10%, #ffffff 0%, transparent 55%),
+    radial-gradient(50% 40% at 95% 12%, #6bb8ff 0%, transparent 50%),
+    radial-gradient(48% 42% at 78% 88%, #a070f0 0%, transparent 52%),
+    radial-gradient(55% 45% at 8% 85%, #ff5aad 0%, transparent 52%),
+    radial-gradient(40% 35% at 45% 45%, #f0c8ff 0%, transparent 55%),
     linear-gradient(155deg, #f7d6e8 0%, #e4d4f6 42%, #cfe4fa 100%);
-  background-size: 140% 140%;
+  background-size: 160% 160%;
   will-change: transform, background-position;
-  animation: auth-base-flow 7s ease-in-out infinite alternate;
+  animation: auth-base-flow 5s ease-in-out infinite alternate;
 }
 
 .mesh-move {
-  inset: -55%;
+  inset: -60%;
   will-change: transform;
 }
 
 .mesh-move-a {
-  animation: auth-drift-a 4.5s ease-in-out infinite alternate;
+  animation: auth-drift-a 3.6s ease-in-out infinite alternate;
 }
 
 .mesh-move-b {
-  animation: auth-drift-b 5.5s ease-in-out infinite alternate;
+  animation: auth-drift-b 4.4s ease-in-out infinite alternate;
 }
 
 .mesh-paint {
@@ -213,79 +213,81 @@ function onBackClick() {
   display: block;
 }
 
+/* 色斑更小、更實，位移才看得見 */
 .mesh-paint-a {
-  filter: blur(1.1rem);
+  filter: blur(0.65rem);
   opacity: 1;
   background:
-    radial-gradient(34% 28% at 18% 22%, rgba(255, 255, 255, 1) 0%, transparent 70%),
-    radial-gradient(40% 34% at 82% 14%, rgba(90, 180, 255, 1) 0%, transparent 68%),
-    radial-gradient(46% 38% at 58% 56%, rgba(150, 80, 255, 0.95) 0%, transparent 70%),
-    radial-gradient(42% 36% at 18% 80%, rgba(255, 70, 170, 0.95) 0%, transparent 68%),
-    radial-gradient(32% 28% at 90% 74%, rgba(60, 200, 255, 0.9) 0%, transparent 66%);
+    radial-gradient(22% 18% at 16% 20%, rgba(255, 255, 255, 1) 0%, transparent 72%),
+    radial-gradient(26% 22% at 84% 12%, rgba(50, 160, 255, 1) 0%, transparent 70%),
+    radial-gradient(30% 26% at 60% 55%, rgba(140, 60, 255, 1) 0%, transparent 72%),
+    radial-gradient(28% 24% at 14% 82%, rgba(255, 40, 150, 1) 0%, transparent 70%),
+    radial-gradient(20% 18% at 92% 76%, rgba(20, 190, 255, 0.95) 0%, transparent 68%);
 }
 
 .mesh-paint-b {
-  filter: blur(0.95rem);
-  opacity: 0.95;
+  filter: blur(0.55rem);
+  opacity: 1;
   background:
-    radial-gradient(28% 24% at 36% 30%, rgba(255, 255, 255, 1) 0%, transparent 70%),
-    radial-gradient(26% 22% at 70% 44%, rgba(255, 130, 200, 0.95) 0%, transparent 70%),
-    radial-gradient(28% 24% at 44% 76%, rgba(130, 180, 255, 0.9) 0%, transparent 70%);
+    radial-gradient(18% 16% at 34% 28%, rgba(255, 255, 255, 1) 0%, transparent 72%),
+    radial-gradient(16% 14% at 72% 42%, rgba(255, 90, 180, 1) 0%, transparent 72%),
+    radial-gradient(18% 16% at 42% 78%, rgba(100, 160, 255, 1) 0%, transparent 72%);
 }
 
 .caustic-move {
-  inset: -70%;
+  inset: -80%;
   will-change: transform;
-  animation: auth-caustic 3.2s linear infinite;
+  animation: auth-caustic 2.4s linear infinite;
 }
 
+/* 銳利水光條帶：低 blur + screen，橫向爬行一目了然 */
 .caustic-paint {
   position: absolute;
   inset: 0;
   display: block;
-  opacity: 0.9;
-  mix-blend-mode: soft-light;
-  filter: blur(0.18rem);
-  transform: rotate(-12deg) scale(1.35);
+  opacity: 0.85;
+  mix-blend-mode: screen;
+  filter: blur(0.06rem);
+  transform: rotate(-14deg) scale(1.4);
   background:
     repeating-linear-gradient(
       118deg,
-      transparent 0 0.55rem,
-      rgba(255, 255, 255, 0.55) 0.55rem 0.95rem,
-      transparent 0.95rem 1.85rem,
-      rgba(255, 255, 255, 0.78) 1.85rem 2.35rem,
-      transparent 2.35rem 3.4rem
+      transparent 0 0.4rem,
+      rgba(255, 255, 255, 0.72) 0.4rem 0.75rem,
+      transparent 0.75rem 1.55rem,
+      rgba(255, 255, 255, 0.95) 1.55rem 2rem,
+      transparent 2rem 3rem
     ),
     repeating-linear-gradient(
-      132deg,
-      transparent 0 0.9rem,
-      rgba(180, 230, 255, 0.55) 0.9rem 1.35rem,
-      transparent 1.35rem 2.5rem,
-      rgba(255, 180, 230, 0.45) 2.5rem 2.95rem,
-      transparent 2.95rem 4.1rem
+      128deg,
+      transparent 0 0.7rem,
+      rgba(160, 220, 255, 0.7) 0.7rem 1.1rem,
+      transparent 1.1rem 2.2rem,
+      rgba(255, 160, 220, 0.55) 2.2rem 2.6rem,
+      transparent 2.6rem 3.7rem
     );
 }
 
 .shimmer-move {
-  inset: -40%;
+  inset: -50%;
   will-change: transform;
-  animation: auth-shimmer 4s ease-in-out infinite alternate;
+  animation: auth-shimmer 2.8s ease-in-out infinite alternate;
 }
 
 .shimmer-paint {
   position: absolute;
   inset: 0;
   display: block;
-  opacity: 0.55;
-  mix-blend-mode: overlay;
-  filter: blur(0.55rem);
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  filter: blur(0.35rem);
   background: linear-gradient(
-    105deg,
+    108deg,
     transparent 0%,
-    transparent 38%,
-    rgba(255, 255, 255, 0.75) 48%,
-    rgba(210, 235, 255, 0.55) 52%,
-    transparent 62%,
+    transparent 42%,
+    rgba(255, 255, 255, 0.95) 49%,
+    rgba(190, 230, 255, 0.75) 52%,
+    transparent 59%,
     transparent 100%
   );
 }
@@ -300,48 +302,48 @@ function onBackClick() {
 
 @keyframes auth-base-flow {
   0% {
-    transform: translate3d(-4%, -3%, 0) scale(1.02);
-    background-position: 0% 20%, 100% 0%, 80% 100%, 0% 100%, 50% 50%, 0% 0%;
+    transform: translate3d(-6%, -5%, 0) scale(1.02);
+    background-position: 0% 30%, 100% 0%, 90% 100%, 0% 100%, 55% 50%, 0% 0%;
   }
   100% {
-    transform: translate3d(4%, 3%, 0) scale(1.08);
-    background-position: 30% 0%, 60% 30%, 40% 70%, 20% 60%, 40% 40%, 100% 100%;
+    transform: translate3d(6%, 5%, 0) scale(1.12);
+    background-position: 40% 0%, 50% 40%, 30% 60%, 25% 50%, 30% 35%, 100% 100%;
   }
 }
 
 @keyframes auth-drift-a {
   0% {
-    transform: translate3d(-22vw, -14vh, 0) scale(1.05) rotate(-9deg);
+    transform: translate3d(-26vw, -16vh, 0) scale(1.04) rotate(-10deg);
   }
   100% {
-    transform: translate3d(20vw, 14vh, 0) scale(1.28) rotate(9deg);
+    transform: translate3d(24vw, 16vh, 0) scale(1.32) rotate(10deg);
   }
 }
 
 @keyframes auth-drift-b {
   0% {
-    transform: translate3d(18vw, 10vh, 0) scale(1.04) rotate(7deg);
+    transform: translate3d(22vw, 12vh, 0) scale(1.03) rotate(8deg);
   }
   100% {
-    transform: translate3d(-20vw, -14vh, 0) scale(1.26) rotate(-8deg);
+    transform: translate3d(-24vw, -16vh, 0) scale(1.3) rotate(-9deg);
   }
 }
 
 @keyframes auth-caustic {
   0% {
-    transform: translate3d(-28vw, 4vh, 0) rotate(-2deg);
+    transform: translate3d(-35vw, 6vh, 0);
   }
   100% {
-    transform: translate3d(28vw, -10vh, 0) rotate(2deg);
+    transform: translate3d(35vw, -12vh, 0);
   }
 }
 
 @keyframes auth-shimmer {
   0% {
-    transform: translate3d(-30%, 8%, 0) skewX(-8deg);
+    transform: translate3d(-40%, 10%, 0) skewX(-10deg);
   }
   100% {
-    transform: translate3d(30%, -8%, 0) skewX(8deg);
+    transform: translate3d(40%, -10%, 0) skewX(10deg);
   }
 }
 
