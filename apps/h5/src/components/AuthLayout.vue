@@ -61,11 +61,11 @@ function onBackClick() {
     </header>
 
     <div class="auth-bg" aria-hidden="true">
-      <span class="orb orb-a" />
-      <span class="orb orb-b" />
-      <span class="orb orb-c" />
-      <span class="grid" />
-      <span class="wave" />
+      <span class="mesh mesh-base" />
+      <span class="mesh mesh-flow" />
+      <span class="mesh mesh-bloom" />
+      <span class="caustic" />
+      <span class="grain" />
     </div>
     <div class="auth-inner">
       <div class="logo">
@@ -86,15 +86,8 @@ function onBackClick() {
   min-height: 100dvh;
   padding: 2.25rem 1.375rem 2.5rem;
   overflow: hidden;
-  /* 參考圖：粉 → lavender → 淺藍 */
-  background: linear-gradient(
-    165deg,
-    #f8d4e4 0%,
-    #f0d8ee 28%,
-    #e4daf6 55%,
-    #d8e8f8 82%,
-    #cfe6f6 100%
-  );
+  /* 底色：粉紫 → 薰衣草 → 青藍（與全息參考圖一致） */
+  background: #e8d4f0;
   color: #1c1c1c;
 }
 
@@ -160,59 +153,122 @@ function onBackClick() {
   overflow: hidden;
 }
 
-.grid {
+/* 多層 mesh：靜態底 + 流動色塊 + 高光暈 */
+.mesh {
   position: absolute;
-  inset: -10%;
-  opacity: 0.22;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
-  background-size: 1.75rem 1.75rem;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, #000 20%, transparent 75%);
+  inset: -25%;
+  will-change: transform, filter;
 }
 
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(2rem);
-  opacity: 0.7;
-}
-
-.orb-a {
-  top: -4rem;
-  right: -3rem;
-  width: 14rem;
-  height: 14rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 182, 212, 0.35) 55%, transparent 70%);
-}
-
-.orb-b {
-  top: 28%;
-  left: -5rem;
-  width: 12rem;
-  height: 12rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(210, 190, 255, 0.4) 50%, transparent 70%);
-}
-
-.orb-c {
-  bottom: 8%;
-  right: -4rem;
-  width: 13rem;
-  height: 13rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(180, 220, 255, 0.45) 50%, transparent 70%);
-}
-
-.wave {
-  position: absolute;
-  left: -10%;
-  right: -10%;
-  bottom: 6%;
-  height: 6rem;
-  opacity: 0.45;
+.mesh-base {
+  inset: 0;
   background:
-    radial-gradient(120% 80% at 10% 80%, transparent 40%, rgba(255, 255, 255, 0.55) 41%, transparent 42%),
-    radial-gradient(100% 70% at 55% 70%, transparent 42%, rgba(255, 255, 255, 0.4) 43%, transparent 44%),
-    radial-gradient(110% 75% at 90% 85%, transparent 40%, rgba(255, 255, 255, 0.5) 41%, transparent 42%);
+    radial-gradient(90% 70% at 12% 8%, #fff6fb 0%, transparent 55%),
+    radial-gradient(80% 60% at 88% 18%, #d4e9ff 0%, transparent 50%),
+    radial-gradient(70% 55% at 70% 78%, #c9b6f5 0%, transparent 55%),
+    radial-gradient(85% 65% at 18% 72%, #f3a8d0 0%, transparent 52%),
+    linear-gradient(155deg, #f7d6e8 0%, #e4d4f6 42%, #cfe4fa 100%);
+}
+
+.mesh-flow {
+  background:
+    radial-gradient(42% 36% at 22% 28%, rgba(255, 255, 255, 0.95) 0%, transparent 70%),
+    radial-gradient(48% 40% at 72% 22%, rgba(176, 210, 255, 0.85) 0%, transparent 68%),
+    radial-gradient(55% 45% at 58% 62%, rgba(186, 150, 255, 0.75) 0%, transparent 70%),
+    radial-gradient(50% 42% at 28% 78%, rgba(255, 140, 200, 0.7) 0%, transparent 68%),
+    radial-gradient(40% 35% at 86% 70%, rgba(160, 220, 255, 0.65) 0%, transparent 65%);
+  filter: blur(2.25rem);
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  animation: auth-flow 16s ease-in-out infinite alternate;
+}
+
+.mesh-bloom {
+  background:
+    radial-gradient(35% 30% at 40% 35%, rgba(255, 255, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(30% 28% at 65% 48%, rgba(255, 190, 230, 0.55) 0%, transparent 70%),
+    radial-gradient(32% 30% at 48% 70%, rgba(190, 210, 255, 0.5) 0%, transparent 70%);
+  filter: blur(1.75rem);
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+  animation: auth-bloom 11s ease-in-out infinite alternate;
+}
+
+/* 流水反射高光（caustic 細帶） */
+.caustic {
+  position: absolute;
+  inset: -40%;
+  opacity: 0.55;
+  mix-blend-mode: soft-light;
+  background:
+    repeating-linear-gradient(
+      118deg,
+      transparent 0 1.1rem,
+      rgba(255, 255, 255, 0.08) 1.1rem 1.35rem,
+      transparent 1.35rem 2.6rem,
+      rgba(255, 255, 255, 0.14) 2.6rem 2.85rem,
+      transparent 2.85rem 4.2rem
+    ),
+    repeating-linear-gradient(
+      128deg,
+      transparent 0 1.6rem,
+      rgba(220, 240, 255, 0.12) 1.6rem 1.85rem,
+      transparent 1.85rem 3.4rem,
+      rgba(255, 220, 245, 0.1) 3.4rem 3.6rem,
+      transparent 3.6rem 5rem
+    );
+  filter: blur(0.55rem);
+  transform: rotate(-8deg) scale(1.15);
+  animation: auth-caustic 9s linear infinite;
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+@keyframes auth-flow {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1.05) rotate(-2deg);
+  }
+  50% {
+    transform: translate3d(3%, 4%, 0) scale(1.12) rotate(2deg);
+  }
+  100% {
+    transform: translate3d(5%, -3%, 0) scale(1.08) rotate(-1deg);
+  }
+}
+
+@keyframes auth-bloom {
+  0% {
+    transform: translate3d(2%, 3%, 0) scale(1.02);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1.14);
+    opacity: 0.95;
+  }
+}
+
+@keyframes auth-caustic {
+  0% {
+    transform: rotate(-8deg) scale(1.15) translate3d(-6%, 0, 0);
+  }
+  100% {
+    transform: rotate(-8deg) scale(1.15) translate3d(6%, -4%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh-flow,
+  .mesh-bloom,
+  .caustic {
+    animation: none;
+  }
 }
 
 .auth-inner {
