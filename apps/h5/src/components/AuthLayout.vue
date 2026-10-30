@@ -61,11 +61,15 @@ function onBackClick() {
     </header>
 
     <div class="auth-bg" aria-hidden="true">
-      <span class="mesh mesh-base" />
-      <span class="mesh mesh-flow" />
-      <span class="mesh mesh-bloom" />
-      <span class="caustic" />
-      <span class="grain" />
+      <div class="mesh mesh-base" />
+      <div class="mesh-move mesh-move-a">
+        <div class="mesh-paint mesh-paint-a" />
+      </div>
+      <div class="mesh-move mesh-move-b">
+        <div class="mesh-paint mesh-paint-b" />
+      </div>
+      <div class="caustic" />
+      <div class="grain" />
     </div>
     <div class="auth-inner">
       <div class="logo">
@@ -153,11 +157,17 @@ function onBackClick() {
   overflow: hidden;
 }
 
-/* 多層 mesh：位移要夠大，否則高模糊下幾乎看不出晃動 */
-.mesh {
+/*
+ * 晃動拆成兩層：外層只做 transform（可合成），內層只做 blur+漸變。
+ * 避免 filter+transform 同元素時部分 WebKit 視覺上「卡死不動」。
+ */
+.mesh,
+.mesh-move,
+.caustic,
+.grain {
+  display: block;
   position: absolute;
-  inset: -35%;
-  will-change: transform, background-position;
+  pointer-events: none;
 }
 
 .mesh-base {
@@ -170,64 +180,74 @@ function onBackClick() {
     linear-gradient(155deg, #f7d6e8 0%, #e4d4f6 42%, #cfe4fa 100%);
 }
 
-.mesh-flow {
+.mesh-move {
+  inset: -40%;
+  will-change: transform;
+}
+
+.mesh-move-a {
+  animation: auth-drift-a 6s ease-in-out infinite alternate;
+}
+
+.mesh-move-b {
+  animation: auth-drift-b 8s ease-in-out infinite alternate;
+}
+
+.mesh-paint {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.mesh-paint-a {
+  filter: blur(1.5rem);
+  opacity: 0.95;
   background:
     radial-gradient(38% 32% at 20% 25%, rgba(255, 255, 255, 0.98) 0%, transparent 68%),
     radial-gradient(44% 38% at 78% 18%, rgba(140, 200, 255, 0.95) 0%, transparent 66%),
     radial-gradient(50% 42% at 55% 58%, rgba(170, 120, 255, 0.9) 0%, transparent 68%),
     radial-gradient(46% 40% at 22% 78%, rgba(255, 110, 190, 0.88) 0%, transparent 66%),
     radial-gradient(36% 32% at 88% 72%, rgba(120, 210, 255, 0.85) 0%, transparent 64%);
-  background-size: 140% 140%;
-  background-position: 0% 30%;
-  filter: blur(1.6rem);
-  opacity: 0.95;
-  animation: auth-flow 7s ease-in-out infinite alternate;
 }
 
-.mesh-bloom {
+.mesh-paint-b {
+  filter: blur(1.25rem);
+  opacity: 0.88;
   background:
     radial-gradient(32% 28% at 38% 32%, rgba(255, 255, 255, 0.95) 0%, transparent 68%),
-    radial-gradient(28% 26% at 68% 46%, rgba(255, 170, 220, 0.75) 0%, transparent 68%),
-    radial-gradient(30% 28% at 46% 72%, rgba(170, 200, 255, 0.7) 0%, transparent 68%);
-  background-size: 160% 160%;
-  background-position: 80% 20%;
-  filter: blur(1.35rem);
-  opacity: 0.9;
-  animation: auth-bloom 5.5s ease-in-out infinite alternate;
+    radial-gradient(28% 26% at 68% 46%, rgba(255, 170, 220, 0.8) 0%, transparent 68%),
+    radial-gradient(30% 28% at 46% 72%, rgba(170, 200, 255, 0.75) 0%, transparent 68%);
 }
 
-/* 流水反射高光：靠 background-position 漂移，比微小平移更明顯 */
+/* 流水反射：大行程 translateX，肉眼可見 */
 .caustic {
-  position: absolute;
-  inset: -50%;
-  opacity: 0.72;
+  inset: -55%;
+  opacity: 0.78;
   mix-blend-mode: overlay;
   background:
     repeating-linear-gradient(
       118deg,
       transparent 0 0.85rem,
-      rgba(255, 255, 255, 0.22) 0.85rem 1.15rem,
-      transparent 1.15rem 2.2rem,
-      rgba(255, 255, 255, 0.35) 2.2rem 2.55rem,
-      transparent 2.55rem 3.6rem
+      rgba(255, 255, 255, 0.28) 0.85rem 1.2rem,
+      transparent 1.2rem 2.3rem,
+      rgba(255, 255, 255, 0.42) 2.3rem 2.7rem,
+      transparent 2.7rem 3.8rem
     ),
     repeating-linear-gradient(
       132deg,
       transparent 0 1.2rem,
-      rgba(210, 235, 255, 0.28) 1.2rem 1.55rem,
-      transparent 1.55rem 2.9rem,
-      rgba(255, 210, 240, 0.22) 2.9rem 3.2rem,
-      transparent 3.2rem 4.4rem
+      rgba(210, 235, 255, 0.32) 1.2rem 1.6rem,
+      transparent 1.6rem 3rem,
+      rgba(255, 210, 240, 0.26) 3rem 3.35rem,
+      transparent 3.35rem 4.6rem
     );
-  background-size: 220% 220%, 200% 200%;
-  background-position: 0% 0%, 100% 0%;
-  filter: blur(0.35rem);
-  transform: rotate(-10deg) scale(1.2);
-  animation: auth-caustic 4.5s linear infinite;
+  filter: blur(0.3rem);
+  transform: rotate(-10deg) scale(1.25);
+  will-change: transform;
+  animation: auth-caustic 5s linear infinite;
 }
 
 .grain {
-  position: absolute;
   inset: 0;
   opacity: 0.06;
   mix-blend-mode: overlay;
@@ -235,42 +255,36 @@ function onBackClick() {
   background-size: 180px 180px;
 }
 
-@keyframes auth-flow {
+@keyframes auth-drift-a {
   0% {
-    background-position: 0% 20%;
-    transform: translate3d(-12%, -8%, 0) scale(1.08) rotate(-6deg);
+    transform: translate3d(-18vw, -10vh, 0) scale(1.08) rotate(-7deg);
   }
   100% {
-    background-position: 85% 70%;
-    transform: translate3d(14%, 10%, 0) scale(1.22) rotate(6deg);
+    transform: translate3d(16vw, 12vh, 0) scale(1.24) rotate(7deg);
   }
 }
 
-@keyframes auth-bloom {
+@keyframes auth-drift-b {
   0% {
-    background-position: 90% 10%;
-    transform: translate3d(10%, 8%, 0) scale(1.05) rotate(3deg);
-    opacity: 0.75;
+    transform: translate3d(14vw, 8vh, 0) scale(1.06) rotate(5deg);
   }
   100% {
-    background-position: 10% 85%;
-    transform: translate3d(-12%, -10%, 0) scale(1.2) rotate(-4deg);
-    opacity: 1;
+    transform: translate3d(-16vw, -12vh, 0) scale(1.2) rotate(-6deg);
   }
 }
 
 @keyframes auth-caustic {
   0% {
-    background-position: 0% 10%, 100% 0%;
+    transform: rotate(-10deg) scale(1.25) translate3d(-20vw, 0, 0);
   }
   100% {
-    background-position: 100% 55%, 0% 70%;
+    transform: rotate(-10deg) scale(1.25) translate3d(20vw, -8vh, 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mesh-flow,
-  .mesh-bloom,
+  .mesh-move-a,
+  .mesh-move-b,
   .caustic {
     animation: none;
   }
