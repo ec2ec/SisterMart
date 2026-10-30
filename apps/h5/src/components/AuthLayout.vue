@@ -68,7 +68,13 @@ function onBackClick() {
       <div class="mesh-move mesh-move-b">
         <div class="mesh-paint mesh-paint-b" />
       </div>
-      <div class="caustic" />
+      <!-- 流水反射：外層 transform、內層 blur，避免 WebKit 合成卡死 -->
+      <div class="caustic-move">
+        <div class="caustic-paint" />
+      </div>
+      <div class="shimmer-move">
+        <div class="shimmer-paint" />
+      </div>
       <div class="grain" />
     </div>
     <div class="auth-inner">
@@ -158,12 +164,14 @@ function onBackClick() {
 }
 
 /*
- * 晃動拆成兩層：外層只做 transform（可合成），內層只做 blur+漸變。
- * 避免 filter+transform 同元素時部分 WebKit 視覺上「卡死不動」。
+ * 晃動一律「外層 transform / 內層 filter+paint」拆開，
+ * 避免 WebKit 在同節點上 filter+transform 視覺卡死。
+ * 色塊對比與行程刻意加大，否則柔色+blur 肉眼幾乎看不出動。
  */
 .mesh,
 .mesh-move,
-.caustic,
+.caustic-move,
+.shimmer-move,
 .grain {
   display: block;
   position: absolute;
@@ -171,26 +179,32 @@ function onBackClick() {
 }
 
 .mesh-base {
-  inset: 0;
+  inset: -20%;
+  width: 140%;
+  height: 140%;
   background:
-    radial-gradient(90% 70% at 12% 8%, #fff6fb 0%, transparent 55%),
-    radial-gradient(80% 60% at 88% 18%, #d4e9ff 0%, transparent 50%),
-    radial-gradient(70% 55% at 70% 78%, #c9b6f5 0%, transparent 55%),
-    radial-gradient(85% 65% at 18% 72%, #f3a8d0 0%, transparent 52%),
+    radial-gradient(70% 55% at 18% 12%, #fff8fc 0%, transparent 58%),
+    radial-gradient(65% 50% at 92% 16%, #9ecfff 0%, transparent 52%),
+    radial-gradient(60% 50% at 72% 82%, #b89af5 0%, transparent 55%),
+    radial-gradient(70% 55% at 12% 78%, #ff7ec0 0%, transparent 55%),
+    radial-gradient(55% 45% at 48% 48%, #e8d0ff 0%, transparent 60%),
     linear-gradient(155deg, #f7d6e8 0%, #e4d4f6 42%, #cfe4fa 100%);
+  background-size: 140% 140%;
+  will-change: transform, background-position;
+  animation: auth-base-flow 7s ease-in-out infinite alternate;
 }
 
 .mesh-move {
-  inset: -40%;
+  inset: -55%;
   will-change: transform;
 }
 
 .mesh-move-a {
-  animation: auth-drift-a 6s ease-in-out infinite alternate;
+  animation: auth-drift-a 4.5s ease-in-out infinite alternate;
 }
 
 .mesh-move-b {
-  animation: auth-drift-b 8s ease-in-out infinite alternate;
+  animation: auth-drift-b 5.5s ease-in-out infinite alternate;
 }
 
 .mesh-paint {
@@ -200,51 +214,80 @@ function onBackClick() {
 }
 
 .mesh-paint-a {
-  filter: blur(1.5rem);
-  opacity: 0.95;
+  filter: blur(1.1rem);
+  opacity: 1;
   background:
-    radial-gradient(38% 32% at 20% 25%, rgba(255, 255, 255, 0.98) 0%, transparent 68%),
-    radial-gradient(44% 38% at 78% 18%, rgba(140, 200, 255, 0.95) 0%, transparent 66%),
-    radial-gradient(50% 42% at 55% 58%, rgba(170, 120, 255, 0.9) 0%, transparent 68%),
-    radial-gradient(46% 40% at 22% 78%, rgba(255, 110, 190, 0.88) 0%, transparent 66%),
-    radial-gradient(36% 32% at 88% 72%, rgba(120, 210, 255, 0.85) 0%, transparent 64%);
+    radial-gradient(34% 28% at 18% 22%, rgba(255, 255, 255, 1) 0%, transparent 70%),
+    radial-gradient(40% 34% at 82% 14%, rgba(90, 180, 255, 1) 0%, transparent 68%),
+    radial-gradient(46% 38% at 58% 56%, rgba(150, 80, 255, 0.95) 0%, transparent 70%),
+    radial-gradient(42% 36% at 18% 80%, rgba(255, 70, 170, 0.95) 0%, transparent 68%),
+    radial-gradient(32% 28% at 90% 74%, rgba(60, 200, 255, 0.9) 0%, transparent 66%);
 }
 
 .mesh-paint-b {
-  filter: blur(1.25rem);
-  opacity: 0.88;
+  filter: blur(0.95rem);
+  opacity: 0.95;
   background:
-    radial-gradient(32% 28% at 38% 32%, rgba(255, 255, 255, 0.95) 0%, transparent 68%),
-    radial-gradient(28% 26% at 68% 46%, rgba(255, 170, 220, 0.8) 0%, transparent 68%),
-    radial-gradient(30% 28% at 46% 72%, rgba(170, 200, 255, 0.75) 0%, transparent 68%);
+    radial-gradient(28% 24% at 36% 30%, rgba(255, 255, 255, 1) 0%, transparent 70%),
+    radial-gradient(26% 22% at 70% 44%, rgba(255, 130, 200, 0.95) 0%, transparent 70%),
+    radial-gradient(28% 24% at 44% 76%, rgba(130, 180, 255, 0.9) 0%, transparent 70%);
 }
 
-/* 流水反射：大行程 translateX，肉眼可見 */
-.caustic {
-  inset: -55%;
-  opacity: 0.78;
-  mix-blend-mode: overlay;
+.caustic-move {
+  inset: -70%;
+  will-change: transform;
+  animation: auth-caustic 3.2s linear infinite;
+}
+
+.caustic-paint {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: 0.9;
+  mix-blend-mode: soft-light;
+  filter: blur(0.18rem);
+  transform: rotate(-12deg) scale(1.35);
   background:
     repeating-linear-gradient(
       118deg,
-      transparent 0 0.85rem,
-      rgba(255, 255, 255, 0.28) 0.85rem 1.2rem,
-      transparent 1.2rem 2.3rem,
-      rgba(255, 255, 255, 0.42) 2.3rem 2.7rem,
-      transparent 2.7rem 3.8rem
+      transparent 0 0.55rem,
+      rgba(255, 255, 255, 0.55) 0.55rem 0.95rem,
+      transparent 0.95rem 1.85rem,
+      rgba(255, 255, 255, 0.78) 1.85rem 2.35rem,
+      transparent 2.35rem 3.4rem
     ),
     repeating-linear-gradient(
       132deg,
-      transparent 0 1.2rem,
-      rgba(210, 235, 255, 0.32) 1.2rem 1.6rem,
-      transparent 1.6rem 3rem,
-      rgba(255, 210, 240, 0.26) 3rem 3.35rem,
-      transparent 3.35rem 4.6rem
+      transparent 0 0.9rem,
+      rgba(180, 230, 255, 0.55) 0.9rem 1.35rem,
+      transparent 1.35rem 2.5rem,
+      rgba(255, 180, 230, 0.45) 2.5rem 2.95rem,
+      transparent 2.95rem 4.1rem
     );
-  filter: blur(0.3rem);
-  transform: rotate(-10deg) scale(1.25);
+}
+
+.shimmer-move {
+  inset: -40%;
   will-change: transform;
-  animation: auth-caustic 5s linear infinite;
+  animation: auth-shimmer 4s ease-in-out infinite alternate;
+}
+
+.shimmer-paint {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: 0.55;
+  mix-blend-mode: overlay;
+  filter: blur(0.55rem);
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 38%,
+    rgba(255, 255, 255, 0.75) 48%,
+    rgba(210, 235, 255, 0.55) 52%,
+    transparent 62%,
+    transparent 100%
+  );
 }
 
 .grain {
@@ -255,37 +298,59 @@ function onBackClick() {
   background-size: 180px 180px;
 }
 
-@keyframes auth-drift-a {
+@keyframes auth-base-flow {
   0% {
-    transform: translate3d(-18vw, -10vh, 0) scale(1.08) rotate(-7deg);
+    transform: translate3d(-4%, -3%, 0) scale(1.02);
+    background-position: 0% 20%, 100% 0%, 80% 100%, 0% 100%, 50% 50%, 0% 0%;
   }
   100% {
-    transform: translate3d(16vw, 12vh, 0) scale(1.24) rotate(7deg);
+    transform: translate3d(4%, 3%, 0) scale(1.08);
+    background-position: 30% 0%, 60% 30%, 40% 70%, 20% 60%, 40% 40%, 100% 100%;
+  }
+}
+
+@keyframes auth-drift-a {
+  0% {
+    transform: translate3d(-22vw, -14vh, 0) scale(1.05) rotate(-9deg);
+  }
+  100% {
+    transform: translate3d(20vw, 14vh, 0) scale(1.28) rotate(9deg);
   }
 }
 
 @keyframes auth-drift-b {
   0% {
-    transform: translate3d(14vw, 8vh, 0) scale(1.06) rotate(5deg);
+    transform: translate3d(18vw, 10vh, 0) scale(1.04) rotate(7deg);
   }
   100% {
-    transform: translate3d(-16vw, -12vh, 0) scale(1.2) rotate(-6deg);
+    transform: translate3d(-20vw, -14vh, 0) scale(1.26) rotate(-8deg);
   }
 }
 
 @keyframes auth-caustic {
   0% {
-    transform: rotate(-10deg) scale(1.25) translate3d(-20vw, 0, 0);
+    transform: translate3d(-28vw, 4vh, 0) rotate(-2deg);
   }
   100% {
-    transform: rotate(-10deg) scale(1.25) translate3d(20vw, -8vh, 0);
+    transform: translate3d(28vw, -10vh, 0) rotate(2deg);
+  }
+}
+
+@keyframes auth-shimmer {
+  0% {
+    transform: translate3d(-30%, 8%, 0) skewX(-8deg);
+  }
+  100% {
+    transform: translate3d(30%, -8%, 0) skewX(8deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mesh-base,
   .mesh-move-a,
   .mesh-move-b,
-  .caustic {
+  .caustic-move,
+  .shimmer-move {
     animation: none;
   }
 }
