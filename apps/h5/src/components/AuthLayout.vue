@@ -61,6 +61,7 @@ function onBackClick() {
     </header>
 
     <div class="auth-bg" aria-hidden="true">
+      <!-- 大色塊 mesh：對齊參考圖粉紫／青藍大漸變；外層 transform、內層 blur -->
       <div class="mesh mesh-base" />
       <div class="mesh-move mesh-move-a">
         <div class="mesh-paint mesh-paint-a" />
@@ -68,12 +69,8 @@ function onBackClick() {
       <div class="mesh-move mesh-move-b">
         <div class="mesh-paint mesh-paint-b" />
       </div>
-      <!-- 流水反射：外層 transform、內層 blur，避免 WebKit 合成卡死 -->
-      <div class="caustic-move">
-        <div class="caustic-paint" />
-      </div>
-      <div class="shimmer-move">
-        <div class="shimmer-paint" />
+      <div class="mesh-move mesh-move-c">
+        <div class="mesh-paint mesh-paint-c" />
       </div>
       <div class="grain" />
     </div>
@@ -96,8 +93,8 @@ function onBackClick() {
   min-height: 100dvh;
   padding: 2.25rem 1.375rem 2.5rem;
   overflow: hidden;
-  /* 底色：粉紫 → 薰衣草 → 青藍（與全息參考圖一致） */
-  background: #e8d4f0;
+  /* 底色：對齊參考圖中段薰衣草紫 */
+  background: #d8c2ec;
   color: #1c1c1c;
 }
 
@@ -164,14 +161,11 @@ function onBackClick() {
 }
 
 /*
- * 晃動一律「外層 transform / 內層 filter+paint」拆開，
- * 避免 WebKit 在同節點上 filter+transform 視覺卡死。
- * 色塊對比與行程刻意加大，否則柔色+blur 肉眼幾乎看不出動。
+ * 參考圖風格：大色塊、長距離漸變（粉紫 → 薰衣草 → 青白），無密條紋。
+ * 晃動 = 大色暈緩慢漂移；外層 transform / 內層 blur 拆開避免 WebKit 卡死。
  */
 .mesh,
 .mesh-move,
-.caustic-move,
-.shimmer-move,
 .grain {
   display: block;
   position: absolute;
@@ -179,32 +173,34 @@ function onBackClick() {
 }
 
 .mesh-base {
-  inset: -25%;
-  width: 150%;
-  height: 150%;
+  inset: -20%;
   background:
-    radial-gradient(55% 45% at 12% 10%, #ffffff 0%, transparent 55%),
-    radial-gradient(50% 40% at 95% 12%, #6bb8ff 0%, transparent 50%),
-    radial-gradient(48% 42% at 78% 88%, #a070f0 0%, transparent 52%),
-    radial-gradient(55% 45% at 8% 85%, #ff5aad 0%, transparent 52%),
-    radial-gradient(40% 35% at 45% 45%, #f0c8ff 0%, transparent 55%),
-    linear-gradient(155deg, #f7d6e8 0%, #e4d4f6 42%, #cfe4fa 100%);
-  background-size: 160% 160%;
-  will-change: transform, background-position;
-  animation: auth-base-flow 5s ease-in-out infinite alternate;
+    /* 對角大 sweep：左上 saturates 紫 → 粉 → 右下青白（貼近參考圖） */
+    linear-gradient(
+      150deg,
+      #b478e0 0%,
+      #d898d0 22%,
+      #c8b0ea 42%,
+      #a8c8f0 68%,
+      #c8e4ff 100%
+    );
 }
 
 .mesh-move {
-  inset: -60%;
+  inset: -50%;
   will-change: transform;
 }
 
 .mesh-move-a {
-  animation: auth-drift-a 3.6s ease-in-out infinite alternate;
+  animation: auth-drift-a 8s ease-in-out infinite alternate;
 }
 
 .mesh-move-b {
-  animation: auth-drift-b 4.4s ease-in-out infinite alternate;
+  animation: auth-drift-b 10s ease-in-out infinite alternate;
+}
+
+.mesh-move-c {
+  animation: auth-drift-c 12s ease-in-out infinite alternate;
 }
 
 .mesh-paint {
@@ -213,146 +209,74 @@ function onBackClick() {
   display: block;
 }
 
-/* 色斑更小、更實，位移才看得見 */
+/* 左上大塊深紫 + 中段桃紅（參考圖主色域） */
 .mesh-paint-a {
-  filter: blur(0.65rem);
+  filter: blur(2.25rem);
   opacity: 1;
   background:
-    radial-gradient(22% 18% at 16% 20%, rgba(255, 255, 255, 1) 0%, transparent 72%),
-    radial-gradient(26% 22% at 84% 12%, rgba(50, 160, 255, 1) 0%, transparent 70%),
-    radial-gradient(30% 26% at 60% 55%, rgba(140, 60, 255, 1) 0%, transparent 72%),
-    radial-gradient(28% 24% at 14% 82%, rgba(255, 40, 150, 1) 0%, transparent 70%),
-    radial-gradient(20% 18% at 92% 76%, rgba(20, 190, 255, 0.95) 0%, transparent 68%);
+    radial-gradient(62% 55% at 12% 8%, rgba(130, 50, 210, 0.95) 0%, transparent 70%),
+    radial-gradient(58% 50% at 38% 32%, rgba(255, 90, 180, 0.78) 0%, transparent 72%),
+    radial-gradient(52% 48% at 5% 48%, rgba(180, 80, 230, 0.65) 0%, transparent 68%);
 }
 
+/* 右下大塊亮青白光暈 */
 .mesh-paint-b {
-  filter: blur(0.55rem);
+  filter: blur(2rem);
   opacity: 1;
   background:
-    radial-gradient(18% 16% at 34% 28%, rgba(255, 255, 255, 1) 0%, transparent 72%),
-    radial-gradient(16% 14% at 72% 42%, rgba(255, 90, 180, 1) 0%, transparent 72%),
-    radial-gradient(18% 16% at 42% 78%, rgba(100, 160, 255, 1) 0%, transparent 72%);
+    radial-gradient(65% 55% at 90% 88%, rgba(110, 200, 255, 0.98) 0%, transparent 70%),
+    radial-gradient(55% 48% at 78% 62%, rgba(255, 255, 255, 0.95) 0%, transparent 72%),
+    radial-gradient(48% 42% at 98% 45%, rgba(140, 210, 255, 0.7) 0%, transparent 68%);
 }
 
-.caustic-move {
-  inset: -80%;
-  will-change: transform;
-  animation: auth-caustic 2.4s linear infinite;
-}
-
-/* 銳利水光條帶：低 blur + screen，橫向爬行一目了然 */
-.caustic-paint {
-  position: absolute;
-  inset: 0;
-  display: block;
-  opacity: 0.85;
-  mix-blend-mode: screen;
-  filter: blur(0.06rem);
-  transform: rotate(-14deg) scale(1.4);
+/* 斜向柔光帶：寬橢圓，模擬流水光影，不是細條紋 */
+.mesh-paint-c {
+  filter: blur(2.5rem);
+  opacity: 0.78;
   background:
-    repeating-linear-gradient(
-      118deg,
-      transparent 0 0.4rem,
-      rgba(255, 255, 255, 0.72) 0.4rem 0.75rem,
-      transparent 0.75rem 1.55rem,
-      rgba(255, 255, 255, 0.95) 1.55rem 2rem,
-      transparent 2rem 3rem
-    ),
-    repeating-linear-gradient(
-      128deg,
-      transparent 0 0.7rem,
-      rgba(160, 220, 255, 0.7) 0.7rem 1.1rem,
-      transparent 1.1rem 2.2rem,
-      rgba(255, 160, 220, 0.55) 2.2rem 2.6rem,
-      transparent 2.6rem 3.7rem
-    );
-}
-
-.shimmer-move {
-  inset: -50%;
-  will-change: transform;
-  animation: auth-shimmer 2.8s ease-in-out infinite alternate;
-}
-
-.shimmer-paint {
-  position: absolute;
-  inset: 0;
-  display: block;
-  opacity: 0.7;
-  mix-blend-mode: screen;
-  filter: blur(0.35rem);
-  background: linear-gradient(
-    108deg,
-    transparent 0%,
-    transparent 42%,
-    rgba(255, 255, 255, 0.95) 49%,
-    rgba(190, 230, 255, 0.75) 52%,
-    transparent 59%,
-    transparent 100%
-  );
+    radial-gradient(85% 32% at 48% 48%, rgba(255, 255, 255, 0.9) 0%, transparent 75%),
+    radial-gradient(45% 60% at 62% 72%, rgba(190, 150, 255, 0.5) 0%, transparent 70%);
 }
 
 .grain {
   inset: 0;
-  opacity: 0.06;
+  opacity: 0.03;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
 }
 
-@keyframes auth-base-flow {
-  0% {
-    transform: translate3d(-6%, -5%, 0) scale(1.02);
-    background-position: 0% 30%, 100% 0%, 90% 100%, 0% 100%, 55% 50%, 0% 0%;
-  }
-  100% {
-    transform: translate3d(6%, 5%, 0) scale(1.12);
-    background-position: 40% 0%, 50% 40%, 30% 60%, 25% 50%, 30% 35%, 100% 100%;
-  }
-}
-
 @keyframes auth-drift-a {
   0% {
-    transform: translate3d(-26vw, -16vh, 0) scale(1.04) rotate(-10deg);
+    transform: translate3d(-14vw, -10vh, 0) scale(1.06) rotate(-5deg);
   }
   100% {
-    transform: translate3d(24vw, 16vh, 0) scale(1.32) rotate(10deg);
+    transform: translate3d(14vw, 12vh, 0) scale(1.2) rotate(5deg);
   }
 }
 
 @keyframes auth-drift-b {
   0% {
-    transform: translate3d(22vw, 12vh, 0) scale(1.03) rotate(8deg);
+    transform: translate3d(12vw, 8vh, 0) scale(1.05) rotate(4deg);
   }
   100% {
-    transform: translate3d(-24vw, -16vh, 0) scale(1.3) rotate(-9deg);
+    transform: translate3d(-14vw, -10vh, 0) scale(1.18) rotate(-5deg);
   }
 }
 
-@keyframes auth-caustic {
+@keyframes auth-drift-c {
   0% {
-    transform: translate3d(-35vw, 6vh, 0);
+    transform: translate3d(-10vw, 5vh, 0) scale(1.1) rotate(-3deg);
   }
   100% {
-    transform: translate3d(35vw, -12vh, 0);
-  }
-}
-
-@keyframes auth-shimmer {
-  0% {
-    transform: translate3d(-40%, 10%, 0) skewX(-10deg);
-  }
-  100% {
-    transform: translate3d(40%, -10%, 0) skewX(10deg);
+    transform: translate3d(11vw, -8vh, 0) scale(1.22) rotate(3deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mesh-base,
   .mesh-move-a,
   .mesh-move-b,
-  .caustic-move,
-  .shimmer-move {
+  .mesh-move-c {
     animation: none;
   }
 }
