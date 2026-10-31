@@ -4,6 +4,7 @@ import ArticlesView from '../views/ArticlesView.vue'
 import AttrsView from '../views/AttrsView.vue'
 import BadgesView from '../views/BadgesView.vue'
 import CategoriesView from '../views/CategoriesView.vue'
+import SuppliersView from '../views/SuppliersView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import ProductEditView from '../views/ProductEditView.vue'
@@ -55,6 +56,7 @@ export const router = createRouter({
         { path: '/catalog/products', component: ProductsView, meta: { title: '商品' } },
         { path: '/catalog/products/:id', component: ProductEditView, meta: { title: '商品編輯' } },
         { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
+        { path: '/catalog/suppliers', component: SuppliersView, meta: { title: '供應商' } },
         { path: '/catalog/badges', component: BadgesView, meta: { title: '角標' } },
         { path: '/catalog/service-tags', component: ServiceTagsView, meta: { title: '服務標籤' } },
         { path: '/catalog/attrs', component: AttrsView, meta: { title: '商品參數' } },

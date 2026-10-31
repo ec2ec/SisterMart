@@ -139,6 +139,7 @@ class CatalogService
     {
         $q = trim((string) ($query['q'] ?? ''));
         $category = trim((string) ($query['category'] ?? ''));
+        $supplierFilter = trim((string) ($query['supplier_id'] ?? $query['supplier'] ?? ''));
         $sort = (string) ($query['sort'] ?? 'default');
         $limit = isset($query['limit']) ? (int) $query['limit'] : 0;
         $offset = isset($query['offset']) ? max(0, (int) $query['offset']) : 0;
@@ -161,6 +162,9 @@ class CatalogService
                 return $empty();
             }
             $builder->whereIn('p.category_id', $ids);
+        }
+        if ($admin && $supplierFilter !== '' && ctype_digit($supplierFilter)) {
+            $builder->where('p.supplier_id', (int) $supplierFilter);
         }
         if ($q !== '') {
             $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%';
@@ -343,6 +347,20 @@ class CatalogService
         if (!Db::name('categories')->where('id', $categoryId)->find()) {
             throw new ApiException('INVALID', '請選擇分類', 422, 42201);
         }
+        $currentSupplierId = null;
+        if ($id) {
+            $existing = Db::name('products')->where('id', $id)->find();
+            if (!$existing) {
+                throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
+            }
+            $currentSupplierId = isset($existing['supplier_id']) ? (int) $existing['supplier_id'] : null;
+        }
+        // 編輯時若未傳 supplier_id，沿用原綁定（永久一品一供）
+        $supplierId = array_key_exists('supplier_id', $body)
+            ? (int) $body['supplier_id']
+            : (int) ($currentSupplierId ?? 0);
+        $supplier = (new SupplierService())->assertBindable($supplierId, $currentSupplierId);
+        $supplierId = $supplier['id'];
         $dup = Db::name('products')->where('code', $code);
         if ($id) {
             $dup->where('id', '<>', $id);
@@ -398,10 +416,11 @@ class CatalogService
 
         $soldBoost = max(0, (int) ($body['sold_boost'] ?? 0));
 
-        Db::transaction(function () use ($body, &$id, $code, $categoryId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost) {
+        Db::transaction(function () use ($body, &$id, $code, $categoryId, $supplierId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost) {
             $data = [
                 'code'        => $code,
                 'category_id' => $categoryId,
+                'supplier_id' => $supplierId,
                 'status'      => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
                 'sold_boost'  => $soldBoost,
                 'cover_url'   => $cover ?: null,
@@ -414,6 +433,7 @@ class CatalogService
                     throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
                 }
                 // sold_count 真實銷售只由訂單加減，後台不可改
+                // supplier_id 永久綁定：assertBindable 已拒換供，此處仍寫入同值保持一致性
                 Db::name('products')->where('id', $id)->update($data);
             } else {
                 $data['sold_count'] = 0;
@@ -711,6 +731,19 @@ class CatalogService
         }
         $image = $this->normalizeStoredMediaUrl($image);
 
+        $supplierId = isset($row['supplier_id']) ? (int) $row['supplier_id'] : 0;
+        $supplierCode = '';
+        $supplierName = '';
+        $supplierStatus = 0;
+        if ($supplierId > 0) {
+            $sup = Db::name('suppliers')->where('id', $supplierId)->find();
+            if ($sup) {
+                $supplierCode = (string) $sup['code'];
+                $supplierName = (string) $sup['name'];
+                $supplierStatus = (int) $sup['status'];
+            }
+        }
+
         return [
             'id'       => (string) $row['code'],
             'db_id'    => (int) $row['id'],
@@ -727,6 +760,10 @@ class CatalogService
             'category' => $cat['code'] ?? '',
             'category_id' => (int) $row['category_id'],
             'category_name' => $categoryName,
+            'supplier_id' => $supplierId > 0 ? $supplierId : null,
+            'supplier_code' => $supplierCode !== '' ? $supplierCode : null,
+            'supplier_name' => $supplierName !== '' ? $supplierName : null,
+            'supplier_status' => $supplierId > 0 ? $supplierStatus : null,
             'badges'   => $badges,
             'badge_items' => $badgeItems,
             'status'   => (int) $row['status'],
