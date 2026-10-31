@@ -242,7 +242,7 @@ onMounted(async () => {
 }
 .table {
   width: 100%;
-  min-width: 1000px;
+  min-width: 900px;
   border-collapse: collapse;
   background: #fff;
 }
