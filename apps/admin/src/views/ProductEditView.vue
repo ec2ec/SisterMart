@@ -24,12 +24,20 @@ import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import { toStoredUrl } from '../utils/assetUrl'
 
 type Cat = { id: number; label: string }
+type SupplierOpt = {
+  id: number
+  code: string
+  name: string
+  status: number
+  type_label?: string
+}
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const isNew = computed(() => route.params.id === 'new')
 const categories = ref<Cat[]>([])
+const suppliers = ref<SupplierOpt[]>([])
 const tags = ref<Array<{ label: string; value: number }>>([])
 const badgeOptions = ref<Array<{ label: string; value: string; color: string }>>([])
 const attrDefs = ref<
@@ -48,6 +56,7 @@ const skus = ref<SkuDraft[]>([])
 const form = ref({
   code: '',
   category_id: null as number | null,
+  supplier_id: null as number | null,
   status: true,
   sold_count: 0,
   sold_boost: 0,
@@ -106,9 +115,24 @@ function defaultSpecs() {
   ]
 }
 
+const supplierOptions = computed(() => {
+  const opts = suppliers.value.map((s) => ({
+    label: `${s.code} · ${s.name}${s.status !== 1 ? '（停用）' : ''}`,
+    value: s.id,
+    disabled: isNew.value && s.status !== 1,
+  }))
+  // 編輯時確保當前綁定仍可顯示（即使不在列表）
+  const cur = form.value.supplier_id
+  if (cur && !opts.some((o) => o.value === cur)) {
+    opts.unshift({ label: `#${cur}`, value: cur, disabled: false })
+  }
+  return opts
+})
+
 onMounted(async () => {
-  const [cats, tagData, badgeData, attrData] = await Promise.all([
+  const [cats, supplierData, tagData, badgeData, attrData] = await Promise.all([
     api<{ items: any[] }>('/api/v1/admin/categories', {}, true),
+    api<{ items: SupplierOpt[] }>('/api/v1/admin/suppliers', {}, true),
     api<{ items: Array<{ id: number; name: { 'zh-HK': string }; status: number }> }>(
       '/api/v1/admin/service-tags?active_only=1',
       {},
@@ -130,6 +154,7 @@ onMounted(async () => {
     }>('/api/v1/admin/attrs?active_only=1', {}, true),
   ])
   categories.value = flattenCats(cats.items)
+  suppliers.value = supplierData.items || []
   tags.value = tagData.items.filter((t) => t.status !== 0).map((t) => ({ label: t.name['zh-HK'], value: t.id }))
   badgeOptions.value = badgeData.items
     .filter((b) => b.status !== 0)
@@ -144,6 +169,8 @@ onMounted(async () => {
     }))
 
   if (isNew.value) {
+    const firstActive = suppliers.value.find((s) => s.status === 1)
+    form.value.supplier_id = firstActive?.id ?? null
     defaultSpecs()
     return
   }
@@ -151,6 +178,7 @@ onMounted(async () => {
   const p = await api<any>(`/api/v1/admin/products/${route.params.id}`, {}, true)
   form.value.code = p.code
   form.value.category_id = p.category_id
+  form.value.supplier_id = p.supplier_id ?? null
   form.value.status = p.status === 1
   form.value.sold_count = Number(p.sold_count ?? 0)
   form.value.sold_boost = Number(p.sold_boost ?? 0)
@@ -200,9 +228,14 @@ async function save() {
   const media = form.value.media
     .map((m) => ({ ...m, url: toStoredUrl(m.url) }))
     .filter((m) => m.url)
+  if (!form.value.supplier_id) {
+    message.error('請選擇供應商')
+    return
+  }
   const body: Record<string, unknown> = {
     code: form.value.code,
     category_id: form.value.category_id,
+    supplier_id: form.value.supplier_id,
     status: form.value.status ? 1 : 0,
     sold_boost: form.value.sold_boost,
     name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
@@ -244,12 +277,22 @@ async function save() {
           :options="categories.map((c) => ({ label: c.label, value: c.id }))"
         />
       </n-form-item>
+      <n-form-item label="供應商">
+        <n-select
+          v-model:value="form.supplier_id"
+          :options="supplierOptions"
+          :disabled="!isNew"
+          filterable
+          placeholder="必選（永久綁定）"
+        />
+        <span v-if="!isNew" class="field-hint">永久綁定，不可更換</span>
+      </n-form-item>
       <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
+    </div>
+    <div class="row-4">
       <n-form-item label="疊加數量">
         <n-input-number v-model:value="form.sold_boost" :min="0" style="width: 100%" />
       </n-form-item>
-    </div>
-    <div class="row-4">
       <n-form-item label="銷售數量">
         <n-input-number :value="form.sold_count" :min="0" disabled style="width: 100%" />
         <span class="field-hint">真實銷售，下單＋／取消退款－，不可改</span>

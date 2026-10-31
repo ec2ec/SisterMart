@@ -32,13 +32,19 @@ type Row = {
   category: string
   category_id: number
   category_name: { 'zh-HK': string; en: string }
+  supplier_id?: number | null
+  supplier_code?: string | null
+  supplier_name?: string | null
+  supplier_status?: number | null
 }
 
 const router = useRouter()
 const rows = ref<Row[]>([])
 const keyword = ref('')
 const categoryId = ref<number | null>(null)
+const supplierId = ref<number | null>(null)
 const categoryOptions = ref<Array<{ label: string; value: number }>>([])
+const supplierOptions = ref<Array<{ label: string; value: number }>>([])
 const loading = ref(false)
 
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
@@ -66,6 +72,13 @@ function categoryLabel(row: Row) {
   return row.category_name?.['zh-HK'] || row.category || '—'
 }
 
+function supplierLabel(row: Row) {
+  if (row.supplier_code || row.supplier_name) {
+    return `${row.supplier_code || ''} ${row.supplier_name || ''}`.trim()
+  }
+  return '—'
+}
+
 async function load() {
   loading.value = true
   try {
@@ -73,6 +86,7 @@ async function load() {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
     if (categoryId.value != null) params.set('category', String(categoryId.value))
+    if (supplierId.value != null) params.set('supplier_id', String(supplierId.value))
     const qs = params.toString()
     const data = await api<{ items: Row[] }>(`/api/v1/admin/products${qs ? `?${qs}` : ''}`, {}, true)
     rows.value = data.items
@@ -93,10 +107,24 @@ watch(keyword, scheduleSearch)
 watch(categoryId, () => {
   void load()
 })
+watch(supplierId, () => {
+  void load()
+})
 
 onMounted(async () => {
-  const cats = await api<{ items: CatNode[] }>('/api/v1/admin/categories', {}, true)
+  const [cats, suppliers] = await Promise.all([
+    api<{ items: CatNode[] }>('/api/v1/admin/categories', {}, true),
+    api<{ items: Array<{ id: number; code: string; name: string; status: number }> }>(
+      '/api/v1/admin/suppliers',
+      {},
+      true,
+    ),
+  ])
   categoryOptions.value = flattenCats(cats.items)
+  supplierOptions.value = (suppliers.items || []).map((s) => ({
+    label: `${s.code} · ${s.name}${s.status !== 1 ? '（停用）' : ''}`,
+    value: s.id,
+  }))
   await load()
 })
 </script>
@@ -119,6 +147,14 @@ onMounted(async () => {
           :options="categoryOptions"
           style="width: 12rem"
         />
+        <n-select
+          v-model:value="supplierId"
+          clearable
+          filterable
+          placeholder="供應商"
+          :options="supplierOptions"
+          style="width: 14rem"
+        />
         <n-button :loading="loading" @click="load">搜索</n-button>
         <n-button type="primary" @click="router.push('/catalog/products/new')">新增商品</n-button>
       </n-space>
@@ -131,6 +167,7 @@ onMounted(async () => {
             <th>代碼</th>
             <th class="col-name">名稱</th>
             <th>分類</th>
+            <th>供應商</th>
             <th>售價起</th>
             <th>銷售數量</th>
             <th>疊加數量</th>
@@ -157,6 +194,7 @@ onMounted(async () => {
               <div class="name-en">{{ row.name.en }}</div>
             </td>
             <td>{{ categoryLabel(row) }}</td>
+            <td>{{ supplierLabel(row) }}</td>
             <td>{{ row.price }}</td>
             <td>{{ row.sold_count ?? 0 }}</td>
             <td>{{ row.sold_boost ?? 0 }}</td>

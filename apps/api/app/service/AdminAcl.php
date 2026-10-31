@@ -84,6 +84,7 @@ class AdminAcl
             '/api/v1/admin/settings' => self::PERM_SETTINGS,
             '/api/v1/admin/tabbar' => self::PERM_SETTINGS,
             '/api/v1/admin/categories' => self::PERM_CATALOG,
+            '/api/v1/admin/suppliers' => self::PERM_CATALOG,
             '/api/v1/admin/products' => self::PERM_CATALOG,
             '/api/v1/admin/badges' => self::PERM_CATALOG,
             '/api/v1/admin/service-tags' => self::PERM_CATALOG,
