@@ -213,6 +213,7 @@ async function create() {
 <style scoped>
 .table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }

@@ -26,14 +26,16 @@ body,
   background: #fff8d6;
 }
 
-/* 通用表格：最小寬度 1000px，超出橫向滾動 */
+/* 通用表格：最小寬度 900px，超出橫向滾動（主列表統一） */
 .table-wrap {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .table-wrap > .table,
-.table-wrap > .tbl {
+.table-wrap > .tbl,
+.table-wrap .table,
+.table-wrap .tbl {
   width: 100%;
-  min-width: 1000px;
+  min-width: 900px;
 }

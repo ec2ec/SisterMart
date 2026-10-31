@@ -126,6 +126,7 @@ async function toggle(row: Row) {
 <style scoped>
 .table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
 }
 th,

@@ -129,10 +129,21 @@ const supplierOptions = computed(() => {
   return opts
 })
 
+/** 編輯頁唯讀展示：簡碼 · 全名（停用標註） */
+const supplierBoundLabel = computed(() => {
+  const id = form.value.supplier_id
+  if (!id) return '—'
+  const fromList = suppliers.value.find((s) => s.id === id)
+  if (fromList) {
+    return `${fromList.code} · ${fromList.name}${fromList.status !== 1 ? '（停用）' : ''}`
+  }
+  const opt = supplierOptions.value.find((o) => o.value === id)
+  return opt?.label || `#${id}`
+})
+
 onMounted(async () => {
-  const [cats, supplierData, tagData, badgeData, attrData] = await Promise.all([
+  const [cats, tagData, badgeData, attrData] = await Promise.all([
     api<{ items: any[] }>('/api/v1/admin/categories', {}, true),
-    api<{ items: SupplierOpt[] }>('/api/v1/admin/suppliers', {}, true),
     api<{ items: Array<{ id: number; name: { 'zh-HK': string }; status: number }> }>(
       '/api/v1/admin/service-tags?active_only=1',
       {},
@@ -154,7 +165,12 @@ onMounted(async () => {
     }>('/api/v1/admin/attrs?active_only=1', {}, true),
   ])
   categories.value = flattenCats(cats.items)
-  suppliers.value = supplierData.items || []
+  try {
+    const supplierData = await api<{ items: SupplierOpt[] }>('/api/v1/admin/suppliers', {}, true)
+    suppliers.value = supplierData.items || []
+  } catch {
+    suppliers.value = []
+  }
   tags.value = tagData.items.filter((t) => t.status !== 0).map((t) => ({ label: t.name['zh-HK'], value: t.id }))
   badgeOptions.value = badgeData.items
     .filter((b) => b.status !== 0)
@@ -179,6 +195,22 @@ onMounted(async () => {
   form.value.code = p.code
   form.value.category_id = p.category_id
   form.value.supplier_id = p.supplier_id ?? null
+  // 若列表尚未含當前供應商，用詳情回填展示名
+  if (
+    form.value.supplier_id &&
+    !suppliers.value.some((s) => s.id === form.value.supplier_id) &&
+    (p.supplier_code || p.supplier_name)
+  ) {
+    suppliers.value = [
+      {
+        id: form.value.supplier_id,
+        code: String(p.supplier_code || `#${form.value.supplier_id}`),
+        name: String(p.supplier_name || ''),
+        status: Number(p.supplier_status ?? 1),
+      },
+      ...suppliers.value,
+    ]
+  }
   form.value.status = p.status === 1
   form.value.sold_count = Number(p.sold_count ?? 0)
   form.value.sold_boost = Number(p.sold_boost ?? 0)
@@ -279,13 +311,16 @@ async function save() {
       </n-form-item>
       <n-form-item label="供應商">
         <n-select
+          v-if="isNew"
           v-model:value="form.supplier_id"
           :options="supplierOptions"
-          :disabled="!isNew"
           filterable
           placeholder="必選（永久綁定）"
         />
-        <span v-if="!isNew" class="field-hint">永久綁定，不可更換</span>
+        <div v-else class="supplier-bound">
+          <div class="supplier-bound-name">{{ supplierBoundLabel }}</div>
+          <span class="field-hint">一品一供，永久綁定；換供請新建商品</span>
+        </div>
       </n-form-item>
       <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>
     </div>
@@ -383,6 +418,16 @@ async function save() {
   margin-top: 0.25rem;
   font-size: 0.75rem;
   color: #888;
+}
+.supplier-bound {
+  min-height: 34px;
+  padding: 0.35rem 0;
+}
+.supplier-bound-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1f1f1f;
+  word-break: break-word;
 }
 .muted {
   color: #8a8378;

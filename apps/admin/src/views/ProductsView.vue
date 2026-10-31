@@ -112,19 +112,21 @@ watch(supplierId, () => {
 })
 
 onMounted(async () => {
-  const [cats, suppliers] = await Promise.all([
-    api<{ items: CatNode[] }>('/api/v1/admin/categories', {}, true),
-    api<{ items: Array<{ id: number; code: string; name: string; status: number }> }>(
+  const cats = await api<{ items: CatNode[] }>('/api/v1/admin/categories', {}, true)
+  categoryOptions.value = flattenCats(cats.items)
+  try {
+    const suppliers = await api<{ items: Array<{ id: number; code: string; name: string; status: number }> }>(
       '/api/v1/admin/suppliers',
       {},
       true,
-    ),
-  ])
-  categoryOptions.value = flattenCats(cats.items)
-  supplierOptions.value = (suppliers.items || []).map((s) => ({
-    label: `${s.code} · ${s.name}${s.status !== 1 ? '（停用）' : ''}`,
-    value: s.id,
-  }))
+    )
+    supplierOptions.value = (suppliers.items || []).map((s) => ({
+      label: `${s.code} · ${s.name}${s.status !== 1 ? '（停用）' : ''}`,
+      value: s.id,
+    }))
+  } catch {
+    supplierOptions.value = []
+  }
   await load()
 })
 </script>
@@ -242,7 +244,7 @@ onMounted(async () => {
 }
 .table {
   width: 100%;
-  min-width: 1000px;
+  min-width: 900px;
   border-collapse: collapse;
   background: #fff;
 }
