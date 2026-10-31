@@ -1,5 +1,9 @@
 # SisterMart — 全站禁止搜索引擎、爬蟲與 AI 抓取
 # Cloudflare Content Signals：search / ai-input / ai-train 一律禁止
+# 例外：Facebook 爬蟲（商業認證／分享預覽）
+
+User-agent: facebookexternalhit
+Allow: /
 
 User-agent: *
 Content-Signal: search=no, ai-input=no, ai-train=no
