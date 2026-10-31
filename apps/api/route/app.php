@@ -240,6 +240,8 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/maintenance', 'admin.ShopSettings/updateMaintenance');
     Route::get('settings/registration', 'admin.ShopSettings/registration');
     Route::put('settings/registration', 'admin.ShopSettings/updateRegistration');
+    Route::get('settings/distribution-access', 'admin.ShopSettings/distributionAccess');
+    Route::put('settings/distribution-access', 'admin.ShopSettings/updateDistributionAccess');
 
     /** 推廣編號補校驗位（僅超管） */
     Route::post('promo-codes/rehash', 'admin.PromoCodes/rehash');

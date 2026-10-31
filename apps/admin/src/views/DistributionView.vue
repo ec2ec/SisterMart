@@ -11,12 +11,14 @@ import {
   NPagination,
   NSelect,
   NSpace,
+  NSwitch,
   NTabPane,
   NTabs,
   NTag,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import MemberPickerDialog, { type MemberPickResult } from '../components/MemberPickerDialog.vue'
 import { useClientPager } from '../composables/useClientPager'
 
 type Withdrawal = {
@@ -117,6 +119,84 @@ const reviewAction = ref<'approve' | 'reject'>('approve')
 const reviewRow = ref<Withdrawal | null>(null)
 const reviewNote = ref('')
 const reviewBusy = ref(false)
+
+type AccessMember = {
+  id: number
+  email: string | null
+  phone: string | null
+  nickname: string | null
+  promo_code: string
+  status: number
+}
+
+const accessWhitelistOnly = ref(true)
+const accessMembers = ref<AccessMember[]>([])
+const accessBusy = ref(false)
+const accessPickerOpen = ref(false)
+const accessExcludeIds = computed(() => accessMembers.value.map((m) => m.id))
+
+function accessMemberLabel(m: AccessMember) {
+  return m.email || m.phone || m.nickname || m.promo_code || `#${m.id}`
+}
+
+function addAccessMember(m: MemberPickResult) {
+  if (accessMembers.value.some((x) => x.id === m.id)) {
+    message.info('該會員已在白名單')
+    return
+  }
+  accessMembers.value = [
+    ...accessMembers.value,
+    {
+      id: m.id,
+      email: m.email,
+      phone: m.phone,
+      nickname: m.nickname,
+      promo_code: m.promo_code || '',
+      status: m.status,
+    },
+  ]
+}
+
+function removeAccessMember(id: number) {
+  accessMembers.value = accessMembers.value.filter((m) => m.id !== id)
+}
+
+async function loadAccess() {
+  const data = await api<{
+    mode: string
+    whitelist_only: boolean
+    members?: AccessMember[]
+  }>('/api/v1/admin/settings/distribution-access', {}, true)
+  accessWhitelistOnly.value = data.whitelist_only !== false && data.mode !== 'open'
+  accessMembers.value = data.members || []
+}
+
+async function saveAccess() {
+  accessBusy.value = true
+  try {
+    await api(
+      '/api/v1/admin/settings/distribution-access',
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          mode: accessWhitelistOnly.value ? 'whitelist' : 'open',
+          member_ids: accessMembers.value.map((m) => m.id),
+        }),
+      },
+      true,
+    )
+    message.success(
+      accessWhitelistOnly.value
+        ? `已開啟白名單（${accessMembers.value.length} 人可進分銷中心）`
+        : '已關閉白名單（全體會員可進分銷中心）',
+    )
+    await loadAccess()
+  } catch (e: any) {
+    showError(e?.message || '保存失敗')
+  } finally {
+    accessBusy.value = false
+  }
+}
 
 const withdrawalsTabLabel = computed(() =>
   pendingCount.value > 0 ? `提現審核（${pendingCount.value}）` : '提現審核',
@@ -254,6 +334,7 @@ async function onTab(name: string | number) {
   if (tab.value === 'ranking') await loadRanking()
   if (tab.value === 'commissions') await loadCommissions()
   if (tab.value === 'products') await loadProducts()
+  if (tab.value === 'access') await loadAccess()
 }
 
 watch([wPage, wPageSize], () => {
@@ -450,7 +531,55 @@ onMounted(() => {
           />
         </div>
       </n-tab-pane>
+
+      <n-tab-pane name="access" tab="入口白名單">
+        <p class="hint">
+          開啟後，H5「分銷中心」入口與相關 API 僅白名單會員可用；直鏈
+          <code>/#/distribution</code> 也會被擋回個人中心。推廣碼綁定／下單計佣不受影響。最多 200 人。
+        </p>
+        <n-space align="center" style="margin-bottom: 0.75rem">
+          <span>僅白名單可進</span>
+          <n-switch v-model:value="accessWhitelistOnly" />
+          <span class="hint" style="margin: 0">
+            {{
+              accessWhitelistOnly
+                ? '已開啟 — 僅下列會員可見入口'
+                : '已關閉 — 全體登錄會員可進'
+            }}
+          </span>
+        </n-space>
+        <n-space align="center" style="margin-bottom: 0.5rem">
+          <n-button type="primary" secondary :disabled="!accessWhitelistOnly" @click="accessPickerOpen = true">
+            搜索加入用戶
+          </n-button>
+          <span class="hint" style="margin: 0">已選 {{ accessMembers.length }} 人</span>
+        </n-space>
+        <div v-if="accessMembers.length" class="access-list">
+          <n-tag
+            v-for="m in accessMembers"
+            :key="m.id"
+            closable
+            type="info"
+            :bordered="false"
+            style="margin: 0 0.35rem 0.35rem 0"
+            @close="removeAccessMember(m.id)"
+          >
+            #{{ m.id }} {{ accessMemberLabel(m) }}
+          </n-tag>
+        </div>
+        <p v-else class="empty">尚未加入用戶</p>
+        <n-button type="primary" :loading="accessBusy" style="margin-top: 0.75rem" @click="saveAccess">
+          保存白名單
+        </n-button>
+      </n-tab-pane>
     </n-tabs>
+
+    <MemberPickerDialog
+      v-model:show="accessPickerOpen"
+      title="搜索加入分銷白名單"
+      :exclude-ids="accessExcludeIds"
+      @select="addAccessMember"
+    />
 
     <n-modal
       v-model:show="reviewOpen"
@@ -571,5 +700,8 @@ onMounted(() => {
 }
 .member-link:hover {
   color: #1060c9;
+}
+.access-list {
+  min-height: 2rem;
 }
 </style>

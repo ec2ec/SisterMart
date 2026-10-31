@@ -1,6 +1,7 @@
 import { api } from '../api/client'
 import {
   clearMaintenanceStatus,
+  distributionAllowed,
   maintenanceEnabled,
   maintenanceLoaded,
   maintenanceStatus,
@@ -9,6 +10,7 @@ import {
 } from './maintenanceState'
 
 export type { MaintenanceStatus }
+export { distributionAllowed }
 
 let inflight: Promise<void> | null = null
 let inflightHasToken = false
@@ -24,6 +26,7 @@ export function useMaintenance() {
         // 帶會員令牌時後端可回 member_bypass（用戶白名單）
         const auth = hasToken ? 'member' : 'none'
         const data = await api<MaintenanceStatus>('/api/v1/shop/status', {}, auth)
+        const dist = data.distribution_access
         setMaintenanceStatus({
           enabled: Boolean(data.enabled),
           member_bypass: Boolean(data.member_bypass),
@@ -32,6 +35,10 @@ export function useMaintenance() {
           starts_at: data.starts_at ?? null,
           ends_at: data.ends_at ?? null,
           registration_enabled: data.registration_enabled,
+          distribution_access: {
+            whitelist_only: dist?.whitelist_only !== false,
+            allowed: Boolean(dist?.allowed),
+          },
         })
       } catch {
         // shop/status 本身在白名單；仍失敗則不擋店
@@ -47,6 +54,7 @@ export function useMaintenance() {
     status: maintenanceStatus,
     enabled: maintenanceEnabled,
     loaded: maintenanceLoaded,
+    distributionAllowed,
     refresh,
   }
 }
