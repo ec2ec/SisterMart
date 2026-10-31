@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { onMounted, reactive, ref } from 'vue'
 import {
   NButton,
@@ -120,7 +121,7 @@ async function create() {
     form.scope = 'all'
     await load()
   } catch (e: any) {
-    message.error(e?.message || '發送失敗')
+    showError(e?.message || '發送失敗')
   } finally {
     busy.value = false
   }

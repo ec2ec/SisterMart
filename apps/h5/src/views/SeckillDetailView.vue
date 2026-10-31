@@ -7,6 +7,7 @@ import { showToast } from 'vant'
 import SubPageNav from '../components/SubPageNav.vue'
 import { fetchSeckillSession, type SeckillProduct, type SeckillSession } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
+import { useRequestBusy } from '../composables/useAuthUi'
 import { isLoggedIn } from '../composables/useSession'
 
 const { t } = useI18n()
@@ -15,6 +16,7 @@ const route = useRoute()
 const router = useRouter()
 const session = ref<SeckillSession | null>(null)
 const product = ref<SeckillProduct | null>(null)
+const { busy: buyBusy, run: runBuy } = useRequestBusy()
 
 onMounted(async () => {
   session.value = await fetchSeckillSession(String(route.params.id))
@@ -32,6 +34,7 @@ onMounted(async () => {
 const live = computed(() => session.value?.status === 'live')
 
 function buy() {
+  if (buyBusy.value) return
   if (!live.value) {
     showToast(t('m7.notStarted'))
     return
@@ -44,12 +47,14 @@ function buy() {
     void goLogin(router, route.fullPath)
     return
   }
-  router.push({
-    name: 'checkout',
-    query: {
-      seckill_item_id: String(product.value.seckill_item_id),
-      qty: '1',
-    },
+  void runBuy(async () => {
+    await router.push({
+      name: 'checkout',
+      query: {
+        seckill_item_id: String(product.value!.seckill_item_id),
+        qty: '1',
+      },
+    })
   })
 }
 </script>
@@ -69,8 +74,10 @@ function buy() {
       <van-button
         class="buy-btn"
         round
+        block
         color="#f75656"
-        :disabled="!live || product.stock <= 0"
+        :loading="buyBusy"
+        :disabled="!live || product.stock <= 0 || buyBusy"
         @click="buy"
       >
         {{ t('pages.buyNow') }}

@@ -14,7 +14,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { orderStatusLabel } from '../utils/orderStatus'
+import { orderStatusLabel, orderStatusTagType } from '../utils/orderStatus'
 import { assetUrl } from '../utils/assetUrl'
 
 type OrderMsg = { id: number; sender: 'seller' | 'buyer'; body: string; created_at: string }
@@ -54,7 +54,8 @@ async function load() {
     return
   }
   try {
-    shipment.value = await api(`/api/v1/admin/orders/${route.params.id}/shipment`, {}, true)
+    // 未發貨時接口返回 null（不再 404），避免全局錯誤彈窗
+    shipment.value = (await api(`/api/v1/admin/orders/${route.params.id}/shipment`, {}, true)) || null
   } catch {
     shipment.value = null
   }
@@ -169,7 +170,11 @@ function goMember(id: number) {
   </n-card>
   <n-card v-else-if="order" :title="`訂單 ${order.order_no}`">
     <n-descriptions label-placement="left" :column="2">
-      <n-descriptions-item label="狀態">{{ orderStatusLabel(order.status) }}</n-descriptions-item>
+      <n-descriptions-item label="狀態">
+        <n-tag size="small" :type="orderStatusTagType(order.status)" :bordered="false">
+          {{ orderStatusLabel(order.status) }}
+        </n-tag>
+      </n-descriptions-item>
       <n-descriptions-item label="實付">{{ order.pay_amount }}</n-descriptions-item>
       <n-descriptions-item label="會員 ID">
         <button

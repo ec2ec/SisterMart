@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -114,13 +115,13 @@ async function load() {
     const data = await api<{ items: Item[] }>('/api/v1/admin/points-mall/items', {}, true)
     const row = (data.items || []).find((it) => it.points_mall_item_id === id)
     if (!row) {
-      message.error('積分商品不存在')
+      showError('積分商品不存在')
       router.replace({ path: '/marketing/points', query: { tab: 'mall' } })
       return
     }
     fillFromItem(row)
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : '加載失敗')
+    showError(e instanceof Error ? e.message : '加載失敗')
   } finally {
     loading.value = false
   }
@@ -182,7 +183,7 @@ async function save() {
     message.success('積分商品已保存')
     router.push({ path: '/marketing/points', query: { tab: 'mall' } })
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : '保存失敗')
+    showError(e instanceof Error ? e.message : '保存失敗')
   } finally {
     saving.value = false
   }

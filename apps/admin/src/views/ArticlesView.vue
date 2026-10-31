@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import {
   NButton,
@@ -96,7 +97,7 @@ async function load() {
   } catch (e: unknown) {
     items.value = []
     loadError.value = e instanceof Error && e.message ? e.message : '載入文章列表失敗'
-    message.error(loadError.value)
+    showError(loadError.value)
   } finally {
     loading.value = false
   }
@@ -142,7 +143,7 @@ async function edit(row: Article) {
     const full = await api<Article>(`/api/v1/admin/articles/${encodeURIComponent(row.code)}`, {}, true)
     applyRow(full)
   } catch (e: unknown) {
-    message.error(e instanceof Error && e.message ? e.message : '載入文章失敗')
+    showError(e instanceof Error && e.message ? e.message : '載入文章失敗')
     applyRow({ ...row, body: row.body || { 'zh-HK': '', en: '' } })
   }
 }
@@ -202,7 +203,7 @@ async function save() {
     const saved = items.value.find((a) => a.code === body.code)
     if (saved) await edit(saved)
   } catch (e: any) {
-    message.error(e?.message || '保存失敗')
+    showError(e?.message || '保存失敗')
   } finally {
     saving.value = false
   }

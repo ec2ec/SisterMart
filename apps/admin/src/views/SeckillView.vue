@@ -20,6 +20,7 @@ import ProductPickerDialog, {
   type ProductPickResult,
   type ProductSku,
 } from '../components/ProductPickerDialog.vue'
+import { showError } from '../feedback'
 
 type Sku = ProductSku
 
@@ -276,7 +277,7 @@ async function save() {
     resetForm()
     await load()
   } catch (e: any) {
-    message.error(e?.message || '保存失敗')
+    showError(e?.message || '保存失敗')
   } finally {
     saving.value = false
   }

@@ -49,10 +49,16 @@ Route::post('api/v1/newsletter/subscribe', 'api.Newsletter/subscribe');
 Route::get('api/v1/products', 'api.Products/index')->middleware(MemberTouch::class);
 Route::get('api/v1/articles/:code', 'api.Articles/read')->middleware(MemberTouch::class);
 Route::get('api/v1/home/banners', 'api.HomeBanners/index')->middleware(MemberTouch::class);
+Route::get('api/v1/home/popups', 'api.HomePopups/index')->middleware(MemberTouch::class);
 Route::get('api/v1/home/ops', 'api.HomeOps/index')->middleware(MemberTouch::class);
 /** M29 首頁商品展示區 */
 Route::get('api/v1/home/sections/:code/products', 'api.HomeSections/products')->middleware(MemberTouch::class);
 Route::get('api/v1/home/sections', 'api.HomeSections/index')->middleware(MemberTouch::class);
+/** M45 首頁版面 + 活動專區 */
+Route::get('api/v1/home/layout', 'api.HomeLayout/index')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code/products', 'api.Campaigns/products')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code/rail', 'api.Campaigns/rail')->middleware(MemberTouch::class);
+Route::get('api/v1/campaigns/:code', 'api.Campaigns/read')->middleware(MemberTouch::class);
 
 /** M6 公開：領券中心列表、等級檔位 */
 Route::get('api/v1/coupons/claimable', 'api.Coupons/claimable')->middleware(MemberTouch::class);
@@ -107,6 +113,7 @@ Route::group('api/v1', function () {
     Route::post('uploads/review-image', 'api.Uploads/reviewImage');
     Route::post('uploads/avatar', 'api.Uploads/avatar');
     Route::post('reviews/:id/follow', 'api.Reviews/follow');
+    Route::post('reviews/:id/rereview', 'api.Reviews/rereview');
     Route::post('reviews', 'api.Reviews/store');
 
     /** M28 收藏 */
@@ -129,6 +136,9 @@ Route::group('api/v1', function () {
 
     /** M27 訂閱狀態（本人） */
     Route::get('newsletter/me', 'api.Newsletter/me');
+
+    /** 首頁遮罩廣告關閉（會員持久化） */
+    Route::post('home/popups/:id/dismiss', 'api.HomePopups/dismiss');
 
     /** M14 簽到 + M13 分銷 + M15 站內消息 */
     Route::get('checkins/calendar', 'api.Checkins/calendar');
@@ -199,6 +209,10 @@ Route::group('api/v1/admin', function () {
     Route::post('home-banners', 'admin.HomeBanners/store');
     Route::put('home-banners/:id', 'admin.HomeBanners/update');
     Route::delete('home-banners/:id', 'admin.HomeBanners/destroy');
+    Route::get('home-popups', 'admin.HomePopups/index');
+    Route::post('home-popups', 'admin.HomePopups/store');
+    Route::put('home-popups/:id', 'admin.HomePopups/update');
+    Route::delete('home-popups/:id', 'admin.HomePopups/destroy');
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
     Route::post('uploads/image', 'admin.Uploads/image');
     Route::get('home-ops', 'admin.HomeOps/read');
@@ -209,6 +223,14 @@ Route::group('api/v1/admin', function () {
     Route::put('home-sections/:id', 'admin.HomeSections/update');
     Route::delete('home-sections/:id', 'admin.HomeSections/destroy');
     Route::put('home-sections/:id/products', 'admin.HomeSections/products');
+    /** M45 首頁版面 + 活動 */
+    Route::get('home-layout', 'admin.HomeLayout/index');
+    Route::put('home-layout/reorder', 'admin.HomeLayout/reorder');
+    Route::put('home-layout/:id', 'admin.HomeLayout/update');
+    Route::get('campaigns', 'admin.Campaigns/index');
+    Route::post('campaigns', 'admin.Campaigns/store');
+    Route::put('campaigns/:id', 'admin.Campaigns/update');
+    Route::delete('campaigns/:id', 'admin.Campaigns/destroy');
 
     Route::get('settings/sold-display', 'admin.ShopSettings/soldDisplay');
     Route::put('settings/sold-display', 'admin.ShopSettings/updateSoldDisplay');
@@ -221,6 +243,10 @@ Route::group('api/v1/admin', function () {
 
     /** 推廣編號補校驗位（僅超管） */
     Route::post('promo-codes/rehash', 'admin.PromoCodes/rehash');
+
+    /** 郵件出站診斷／測試（僅超管） */
+    Route::get('mail/status', 'admin.Mail/status');
+    Route::post('mail/test', 'admin.Mail/test');
 
     /** 窄版發佈通道（僅超管；需 RELEASE_ENABLED + RELEASE_HMAC_SECRET） */
     Route::get('releases/state', 'admin.Releases/state');
@@ -259,12 +285,14 @@ Route::group('api/v1/admin', function () {
     Route::post('reviews/:id/visibility', 'admin.Reviews/visibility');
     Route::post('reviews/:id/reply', 'admin.Reviews/reply');
     Route::post('reviews/:id/moderate', 'admin.Reviews/moderate');
+    Route::post('reviews/:id/request-re-review', 'admin.Reviews/requestReReview');
     Route::get('reviews', 'admin.Reviews/index');
 
     /** M6 營銷與會員資產 */
     Route::get('coupons', 'admin.Coupons/index');
     Route::post('coupons', 'admin.Coupons/store');
     Route::put('coupons/:id', 'admin.Coupons/update');
+    Route::delete('coupons/:id', 'admin.Coupons/destroy');
     Route::get('points/settings', 'admin.Points/settings');
     Route::put('points/settings', 'admin.Points/updateSettings');
     /** M32 積分商城後台 */

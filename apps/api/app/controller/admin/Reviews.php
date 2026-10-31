@@ -43,4 +43,9 @@ class Reviews extends ApiController
     {
         return $this->run(fn () => (new ReviewService())->moderate($id, $this->payload()));
     }
+
+    public function requestReReview(int $id): Response
+    {
+        return $this->run(fn () => (new ReviewService())->adminRequestReReview($id));
+    }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { onMounted, ref } from 'vue'
 import {
   NButton,
@@ -40,7 +41,7 @@ async function save() {
     items.value = [...data.items].sort((a, b) => a.sort - b.sort)
     message.success('底部導航已保存')
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '保存失敗')
+    showError(error instanceof Error ? error.message : '保存失敗')
   } finally {
     loading.value = false
   }

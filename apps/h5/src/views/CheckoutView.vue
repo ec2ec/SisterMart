@@ -25,7 +25,28 @@ const remark = ref('')
 const usePoints = ref(false)
 const useBalance = ref(false)
 const couponGrantId = ref<number | null>(null)
+const showCouponPicker = ref(false)
 const submitting = ref(false)
+
+const unusedCouponCount = computed(() => (quote.value?.coupons || []).length)
+const usableCoupons = computed(() => (quote.value?.coupons || []).filter((x) => x.usable))
+const couponLabel = computed(() => {
+  if (!couponGrantId.value) return t('checkout.noCoupon')
+  const c = usableCoupons.value.find((x) => x.grant_id === couponGrantId.value)
+  if (!c) return t('checkout.noCoupon')
+  return `${text(c.name)} -HK$${Number(c.amount).toFixed(2)}`
+})
+const couponRadio = computed({
+  get: () => couponGrantId.value ?? 0,
+  set: (v: number) => {
+    couponGrantId.value = v > 0 ? v : null
+  },
+})
+
+function pickCoupon(id: number | null) {
+  couponGrantId.value = id
+  showCouponPicker.value = false
+}
 
 const buyNow = reactive({
   active: false,
@@ -173,15 +194,19 @@ async function submit() {
     </section>
 
     <section v-if="quote && !quote.points_mall" class="card">
-      <div class="row">
-        <span>{{ t('checkout.coupon') }}</span>
-        <select v-model="couponGrantId">
-          <option :value="null">{{ t('checkout.noCoupon') }}</option>
-          <option v-for="c in quote.coupons.filter((x) => x.usable)" :key="c.grant_id" :value="c.grant_id">
-            {{ text(c.name) }} -HK${{ c.amount }}
-          </option>
-        </select>
-      </div>
+      <van-cell
+        class="coupon-cell"
+        is-link
+        :value="couponLabel"
+        @click="showCouponPicker = true"
+      >
+        <template #title>
+          <span class="coupon-title-wrap">
+            <span>{{ t('checkout.coupon') }}</span>
+            <span class="coupon-count-plain">({{ unusedCouponCount }})</span>
+          </span>
+        </template>
+      </van-cell>
       <label class="row">
         <span>{{ t('checkout.points', { n: quote.points_available, cap: quote.points_cap_amount.toFixed(2) }) }}</span>
         <van-switch v-model="usePoints" size="1.125rem" />
@@ -196,6 +221,46 @@ async function submit() {
     <section v-else-if="quote" class="card">
       <van-field v-model="remark" :label="t('checkout.remark')" :placeholder="t('checkout.remarkHint')" />
     </section>
+
+    <van-popup
+      v-model:show="showCouponPicker"
+      position="bottom"
+      round
+      closeable
+      close-icon="cross"
+      :style="{ maxHeight: '70%' }"
+    >
+      <div class="coupon-sheet">
+        <div class="coupon-sheet-hd">
+          <strong>{{ t('checkout.myCoupons') }}</strong>
+        </div>
+        <van-radio-group v-model="couponRadio" class="coupon-radios">
+          <van-cell-group :border="false">
+            <van-cell clickable @click="pickCoupon(null)">
+              <template #title>{{ t('checkout.noCoupon') }}</template>
+              <template #right-icon>
+                <van-radio :name="0" checked-color="var(--sm-primary)" />
+              </template>
+            </van-cell>
+            <van-cell
+              v-for="c in usableCoupons"
+              :key="c.grant_id"
+              clickable
+              @click="pickCoupon(c.grant_id)"
+            >
+              <template #title>
+                <div class="coupon-name">{{ text(c.name) }}</div>
+                <div class="coupon-meta">-HK${{ Number(c.amount).toFixed(2) }}</div>
+              </template>
+              <template #right-icon>
+                <van-radio :name="c.grant_id" checked-color="var(--sm-primary)" />
+              </template>
+            </van-cell>
+          </van-cell-group>
+        </van-radio-group>
+        <p v-if="!usableCoupons.length" class="coupon-empty">{{ t('checkout.noCoupon') }}</p>
+      </div>
+    </van-popup>
 
     <section v-if="quote" class="card sum">
       <template v-if="quote.points_mall">
@@ -279,6 +344,60 @@ async function submit() {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+.coupon-cell {
+  padding: 0.5rem 0;
+  background: transparent;
+}
+.coupon-cell :deep(.van-cell__title) {
+  flex: none;
+  color: inherit;
+  font-size: 0.8125rem;
+}
+.coupon-cell :deep(.van-cell__value) {
+  flex: 1;
+  min-width: 0;
+  color: var(--sm-primary);
+  font-size: 0.8125rem;
+}
+.coupon-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.coupon-count-plain {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+.coupon-sheet {
+  padding: 1rem 0 calc(1rem + env(safe-area-inset-bottom, 0rem));
+}
+.coupon-sheet-hd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.25rem 2.5rem 0.75rem 1rem;
+}
+.coupon-sheet-hd strong {
+  font-size: 1rem;
+  text-align: left;
+}
+.coupon-name {
+  font-size: 0.875rem;
+  color: #222;
+}
+.coupon-meta {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: #e11d48;
+  font-weight: 600;
+}
+.coupon-empty {
+  margin: 1rem;
+  text-align: center;
+  color: #999;
   font-size: 0.8125rem;
 }
 .sum p {

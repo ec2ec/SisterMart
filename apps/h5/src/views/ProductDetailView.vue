@@ -14,6 +14,7 @@ import { isFavorite, requestFavorite } from '../composables/useFavorites'
 import { captureRefFromQuery, storedRef } from '../composables/useReferral'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { goLogin } from '../composables/useAuth'
+import { useRequestBusy } from '../composables/useAuthUi'
 import { currentMember, isLoggedIn } from '../composables/useSession'
 import { ApiError } from '../api/client'
 import { buildShareUrl } from '../utils/shareUrl'
@@ -42,6 +43,7 @@ const seckill = ref<{
   seckill_item_id?: number
   sku_id?: number
 }>({ active: false })
+const { busy: cartBusy, run: runCart } = useRequestBusy()
 
 async function load() {
   const id = String(route.params.id || '')
@@ -182,6 +184,7 @@ function requireSku() {
 }
 
 async function addToCart() {
+  if (cartBusy.value) return
   if (seckill.value.active) {
     showToast(t('m7.seckillOnlyBuy'))
     return
@@ -191,28 +194,31 @@ async function addToCart() {
     void goLogin(router, route.fullPath)
     return
   }
-  try {
-    await addCartItem(quote.value.id, 1)
-    void refreshCartBadge()
+  await runCart(async () => {
     try {
-      await showDialog({
-        message: t('pdp.added'),
-        showCancelButton: true,
-        cancelButtonText: t('pdp.continueShop'),
-        confirmButtonText: t('pdp.goCart'),
-        confirmButtonColor: 'var(--sm-primary)',
-      })
-      // 勿先 closeOverlay()（router.back）：與 push 競態會停在上一 Tab（常為首頁）
-      await router.push({ name: 'cart' })
-    } catch {
-      /* 繼續購物：關閉對話框即可 */
+      await addCartItem(quote.value!.id, 1)
+      void refreshCartBadge()
+      try {
+        await showDialog({
+          message: t('pdp.added'),
+          showCancelButton: true,
+          cancelButtonText: t('pdp.continueShop'),
+          confirmButtonText: t('pdp.goCart'),
+          confirmButtonColor: 'var(--sm-primary)',
+        })
+        // 勿先 closeOverlay()（router.back）：與 push 競態會停在上一 Tab（常為首頁）
+        await router.push({ name: 'cart' })
+      } catch {
+        /* 繼續購物：關閉對話框即可 */
+      }
+    } catch (error) {
+      showToast(error instanceof ApiError ? error.message : t('pdp.outOfStock'))
     }
-  } catch (error) {
-    showToast(error instanceof ApiError ? error.message : t('pdp.outOfStock'))
-  }
+  })
 }
 
 function buyNow() {
+  if (cartBusy.value) return
   if (!isLoggedIn()) {
     void goLogin(router, route.fullPath)
     return
@@ -269,6 +275,7 @@ async function share() {
       ref="gallerySwipe"
       class="gallery"
       :initial-swipe="0"
+      :duration="250"
       :show-indicators="false"
       :loop="gallery.length > 1"
       @change="onGalleryChange"
@@ -339,12 +346,6 @@ async function share() {
           <div class="rev-head">
             <strong>{{ r.author }}</strong>
             <span class="rev-stars">{{ '★'.repeat(r.stars) }}{{ '☆'.repeat(Math.max(0, 5 - r.stars)) }}</span>
-            <span
-              v-if="r.is_mine && r.moderation_status && r.moderation_status !== 'approved'"
-              class="rev-mod"
-            >
-              {{ r.moderation_status === 'rejected' ? t('pdp.reviewRejected') : t('pdp.reviewPending') }}
-            </span>
           </div>
           <p class="copy">{{ typeof r.body === 'string' ? r.body : text(r.body) }}</p>
           <div v-if="r.images?.length" class="rev-imgs">
@@ -386,32 +387,33 @@ async function share() {
 
     <div class="buybar">
       <div class="buybar-icons">
-        <button type="button" class="ico" :aria-label="t('pdp.fav')" @click="toggleFav">
+        <button type="button" class="sm-icon-btn" :aria-label="t('pdp.fav')" @click="toggleFav">
           <van-icon :name="liked ? 'like' : 'like-o'" size="1.25rem" />
         </button>
-        <button type="button" class="ico" :aria-label="t('pdp.share')" @click="share">
+        <button type="button" class="sm-icon-btn" :aria-label="t('pdp.share')" @click="share">
           <van-icon name="guide-o" size="1.25rem" />
         </button>
       </div>
       <div class="buybar-actions" :class="{ seckill: seckill.active }">
-        <button
+        <van-button
           v-if="!seckill.active"
-          type="button"
           class="ghost"
-          :disabled="stock <= 0"
+          round
+          :disabled="stock <= 0 || cartBusy"
+          :loading="cartBusy"
           @click="addToCart"
         >
           {{ t('pages.addToCart') }}
-        </button>
-        <button
-          type="button"
+        </van-button>
+        <van-button
           class="buy"
-          :class="{ seckill: seckill.active }"
-          :disabled="stock <= 0"
+          round
+          :color="seckill.active ? '#f75656' : 'var(--sm-primary)'"
+          :disabled="stock <= 0 || cartBusy"
           @click="buyNow"
         >
           {{ t('pages.buyNow') }}
-        </button>
+        </van-button>
       </div>
     </div>
 
@@ -720,7 +722,7 @@ h2 {
 .buybar-icons {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.125rem;
   flex-shrink: 0;
 }
 .buybar-actions {
@@ -735,44 +737,19 @@ h2 {
 .buybar-actions.seckill {
   flex: 0 0 auto;
 }
-.ico {
-  border: 0;
-  background: transparent;
-  color: var(--sm-text);
-  width: 2.25rem;
-  height: 2.25rem;
-  display: grid;
-  place-items: center;
-  padding: 0;
-}
-.ghost,
-.buy {
-  border: 0;
-  border-radius: 0.375rem;
-  height: 2.25rem;
-  font-size: 0.8125rem;
-  min-width: 6.5rem;
-  padding: 0 0.875rem;
-}
-.buybar-actions:not(.seckill) .ghost,
-.buybar-actions:not(.seckill) .buy {
+.buybar-actions :deep(.van-button) {
+  height: var(--van-button-default-height);
   flex: 1;
   max-width: 9rem;
 }
-.ghost {
-  background: #efeae3;
-  color: var(--sm-text);
-}
-.buy {
-  background: var(--sm-primary);
-  color: #fff;
-}
-.buy.seckill {
-  background: #f75656;
+.buybar-actions.seckill :deep(.van-button) {
+  flex: 0 0 auto;
   min-width: 8.5rem;
+  max-width: none;
 }
-.ghost:disabled,
-.buy:disabled {
-  opacity: 0.45;
+.buybar-actions :deep(.ghost.van-button) {
+  background: #efeae3;
+  border-color: #efeae3;
+  color: var(--sm-text);
 }
 </style>

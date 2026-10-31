@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError, showWarningDialog } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
@@ -31,6 +32,11 @@ type Row = {
   moderation_status?: string
   created_at: string
   order_id?: number
+  re_review_requested_at?: string | null
+  re_reviewed_at?: string | null
+  can_request_re_review?: boolean
+  within_re_review_window?: boolean
+  re_review_days?: number
 }
 
 const route = useRoute()
@@ -84,6 +90,23 @@ function modLabel(s?: string) {
   return '待審核'
 }
 
+/** 前台實際可見性：僅「已通過且未手動隱藏」才算顯示中 */
+function isFrontVisible(row: { is_hidden?: number; moderation_status?: string }) {
+  return Number(row.is_hidden || 0) !== 1 && (row.moderation_status || 'pending') === 'approved'
+}
+
+function visibilityLabel(row: { is_hidden?: number; moderation_status?: string }) {
+  if (Number(row.is_hidden || 0) === 1) return '已隱藏'
+  if ((row.moderation_status || 'pending') !== 'approved') return '未展示'
+  return '顯示中'
+}
+
+function visibilityTagType(row: { is_hidden?: number; moderation_status?: string }): 'warning' | 'success' | 'default' {
+  if (Number(row.is_hidden || 0) === 1) return 'warning'
+  if (!isFrontVisible(row)) return 'default'
+  return 'success'
+}
+
 async function load() {
   const qs = new URLSearchParams()
   if (hiddenFilter.value !== '') qs.set('is_hidden', hiddenFilter.value)
@@ -103,7 +126,17 @@ async function openDetail(row: Row) {
   show.value = true
 }
 
-async function toggleHidden() {
+function confirmAction(title: string, content: string, run: () => Promise<void>) {
+  showWarningDialog({
+    title,
+    content,
+    positiveText: '確認',
+    negativeText: '取消',
+    onPositiveClick: () => run(),
+  })
+}
+
+async function doToggleHidden() {
   if (!current.value) return
   busy.value = true
   try {
@@ -116,13 +149,22 @@ async function toggleHidden() {
     message.success(next ? '已隱藏（前台不顯示）' : '已恢復顯示')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '操作失敗')
+    showError(e?.message || '操作失敗')
   } finally {
     busy.value = false
   }
 }
 
-async function setModeration(status: 'approved' | 'rejected') {
+function toggleHidden() {
+  if (!current.value || busy.value) return
+  confirmAction(
+    isHidden.value ? '恢復顯示' : '隱藏評價',
+    isHidden.value ? '是否確認恢復顯示此評價？' : '是否確認隱藏此評價？前台將不再展示。',
+    doToggleHidden,
+  )
+}
+
+async function doSetModeration(status: 'approved' | 'rejected') {
   if (!current.value) return
   busy.value = true
   try {
@@ -134,18 +176,23 @@ async function setModeration(status: 'approved' | 'rejected') {
     message.success(status === 'approved' ? '已通過審核' : '已拒絕')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '審核失敗')
+    showError(e?.message || '審核失敗')
   } finally {
     busy.value = false
   }
 }
 
-async function saveReply() {
+function setModeration(status: 'approved' | 'rejected') {
+  if (!current.value || busy.value) return
+  confirmAction(
+    status === 'approved' ? '通過審核' : '拒絕評價',
+    status === 'approved' ? '是否確認通過此評價？' : '是否確認拒絕此評價？',
+    () => doSetModeration(status),
+  )
+}
+
+async function doSaveReply() {
   if (!current.value) return
-  if (!replyText.value.trim()) {
-    message.warning('請填寫商家回覆')
-    return
-  }
   busy.value = true
   try {
     current.value = await api<Row>(
@@ -156,10 +203,42 @@ async function saveReply() {
     message.success('回覆已保存')
     await load()
   } catch (e: any) {
-    message.error(e?.message || '保存失敗')
+    showError(e?.message || '保存失敗')
   } finally {
     busy.value = false
   }
+}
+
+function saveReply() {
+  if (!current.value || busy.value) return
+  if (!replyText.value.trim()) {
+    message.warning('請填寫商家回覆')
+    return
+  }
+  confirmAction('保存回覆', '是否確認保存商家回覆？', doSaveReply)
+}
+
+async function doRequestReReview() {
+  if (!current.value) return
+  busy.value = true
+  try {
+    current.value = await api<Row>(
+      `/api/v1/admin/reviews/${current.value.id}/request-re-review`,
+      { method: 'POST', body: '{}' },
+      true,
+    )
+    message.success('已發起重評，用戶可在訂單中重新評價')
+    await load()
+  } catch (e: any) {
+    showError(e?.message || '發起重評失敗')
+  } finally {
+    busy.value = false
+  }
+}
+
+function requestReReview() {
+  if (!current.value || busy.value) return
+  confirmAction('發起重評', '是否確認發起重新評價？用戶可在訂單詳情中重新提交評價。', doRequestReReview)
 }
 </script>
 
@@ -203,8 +282,8 @@ async function saveReply() {
             </n-tag>
           </td>
           <td>
-            <n-tag size="small" :type="row.is_hidden ? 'warning' : 'success'">
-              {{ row.is_hidden ? '已隱藏' : '顯示中' }}
+            <n-tag size="small" :type="visibilityTagType(row)">
+              {{ visibilityLabel(row) }}
             </n-tag>
           </td>
           <td>{{ row.reply || row.admin_reply ? '有' : '—' }}</td>
@@ -229,20 +308,26 @@ async function saveReply() {
     preset="card"
     title="評價管理"
     style="width: min(36rem, 96vw)"
-    :mask-closable="!busy"
+    :mask-closable="false"
     :closable="!busy"
     :auto-focus="false"
-  >
+   :close-on-esc="false">
     <n-space v-if="current" vertical size="large">
       <div class="meta">
         <div>{{ current.product_code }} · {{ current.author }} · {{ current.stars }}★</div>
         <div>{{ current.created_at }}</div>
         <n-space>
           <n-tag size="small" :type="modTagType(modStatus)">{{ modLabel(modStatus) }}</n-tag>
-          <n-tag size="small" :type="isHidden ? 'warning' : 'success'">
-            {{ isHidden ? '已隱藏' : '顯示中' }}
+          <n-tag size="small" :type="visibilityTagType(current)">
+            {{ visibilityLabel(current) }}
           </n-tag>
+          <n-tag v-if="current.re_review_requested_at" size="small" type="info">待用戶重評</n-tag>
+          <n-tag v-else-if="current.re_reviewed_at" size="small">已重評</n-tag>
         </n-space>
+        <p v-if="current.re_review_requested_at" class="hint">
+          已於 {{ current.re_review_requested_at }} 發起重評（首評起 {{ current.re_review_days || 30 }} 天內有效）
+        </p>
+        <p v-else-if="current.re_reviewed_at" class="hint">用戶已於 {{ current.re_reviewed_at }} 完成重評</p>
       </div>
       <div>
         <strong>主評</strong>
@@ -286,7 +371,25 @@ async function saveReply() {
         </n-button>
         <n-button type="primary" secondary :loading="busy" @click="saveReply">保存回覆</n-button>
         <n-button :loading="busy" @click="toggleHidden">{{ isHidden ? '恢復顯示' : '隱藏評價' }}</n-button>
+        <n-button
+          v-if="current.can_request_re_review"
+          type="info"
+          secondary
+          :loading="busy"
+          @click="requestReReview"
+        >
+          發起重評
+        </n-button>
       </n-space>
+      <p
+        v-if="!current.can_request_re_review && !current.re_review_requested_at && !current.re_reviewed_at && current.within_re_review_window === false"
+        class="hint"
+      >
+        已超過 {{ current.re_review_days || 30 }} 天，無法再發起重評
+      </p>
+      <p v-else-if="current.re_reviewed_at && !current.can_request_re_review" class="hint">
+        用戶已完成重評，不可再次發起
+      </p>
     </n-space>
   </n-modal>
 </template>
@@ -334,5 +437,10 @@ td {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+.hint {
+  margin: 0.35rem 0 0;
+  color: #8a8378;
+  font-size: 0.75rem;
 }
 </style>

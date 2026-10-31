@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref } from 'vue'
 import {
   NButton,
@@ -103,7 +104,7 @@ async function load() {
       items.value = []
       state.value = null
     } else {
-      message.error(e instanceof Error ? e.message : '加載失敗')
+      showError(e instanceof Error ? e.message : '加載失敗')
     }
   } finally {
     loading.value = false
@@ -120,7 +121,7 @@ async function onFile(ev: Event) {
   input.value = ''
   if (!file) return
   if (!/\.(tar|tar\.gz|tgz)$/i.test(file.name)) {
-    message.error('請上傳 pnpm release pack 產出的 .tar 包')
+    showError('請上傳 pnpm release pack 產出的 .tar 包')
     return
   }
   uploading.value = true
@@ -167,7 +168,7 @@ async function onFile(ev: Event) {
     message.success('上傳完成，簽名校驗通過')
     await load()
   } catch (e) {
-    message.error(e instanceof Error ? e.message : '上傳失敗')
+    showError(e instanceof Error ? e.message : '上傳失敗')
   } finally {
     uploading.value = false
   }
@@ -181,6 +182,8 @@ async function sha256Hex(data: Uint8Array): Promise<string> {
 
 function publish(row: ReleaseRow) {
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認發佈',
     content: `將備份當前站點後覆蓋白名單路徑${row.has_migrate ? '，並執行 migrate.sql' : ''}。\n版本：${row.version || row.id}\n${row.title || ''}`,
     positiveText: '發佈',
@@ -191,7 +194,7 @@ function publish(row: ReleaseRow) {
         message.success('發佈完成')
         await load()
       } catch (e) {
-        message.error(e instanceof Error ? e.message : '發佈失敗')
+        showError(e instanceof Error ? e.message : '發佈失敗')
         await load()
       }
     },
@@ -203,6 +206,8 @@ function rollback() {
   if (!snap) return
   const withDb = rollbackDb.value
   dialog.error({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認回退',
     content: withDb
       ? `將還原快照 ${snap} 的文件與數據庫。數據庫還原會覆蓋發佈後的新數據。請確認輸入已理解風險。`
@@ -225,7 +230,7 @@ function rollback() {
         message.success('已回退')
         await load()
       } catch (e) {
-        message.error(e instanceof Error ? e.message : '回退失敗')
+        showError(e instanceof Error ? e.message : '回退失敗')
         await load()
       }
     },
@@ -234,6 +239,8 @@ function rollback() {
 
 async function remove(row: ReleaseRow) {
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '刪除待發佈包',
     content: row.id,
     positiveText: '刪除',
@@ -375,7 +382,7 @@ onMounted(load)
       <n-text v-else depth="3">暫無記錄</n-text>
     </n-card>
 
-    <n-modal v-model:show="detailOpen" preset="card" style="max-width: 640px" :title="detailRow?.id || '日誌'">
+    <n-modal v-model:show="detailOpen" preset="card" style="max-width: 640px" :title="detailRow?.id || '日誌'" :mask-closable="false" :close-on-esc="false">
       <pre class="log">{{ detailLog }}</pre>
     </n-modal>
   </n-space>

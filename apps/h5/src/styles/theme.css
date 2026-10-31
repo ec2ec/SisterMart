@@ -24,6 +24,11 @@ html {
   --sm-tabbar-pad-y: 0.5rem;
   /* 頁面底部避讓 = 欄高 + 上下 padding；safe-area 另加（見 .page） */
   --sm-tabbar-h: 4.125rem;
+  /* 觸控／CTA 標準（勿對元素做 scale 縮小） */
+  --sm-tap-min: 2.75rem;
+  --sm-icon-btn: 2.75rem;
+  --sm-press-overlay: 0.14;
+  --sm-cta-radius: 999px;
   --van-primary-color: var(--sm-primary);
   --van-tabbar-height: 3.125rem;
   --van-tabbar-item-font-size: 0.75rem;
@@ -82,6 +87,92 @@ body,
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/*
+ * 觸控基底：取消 iOS 灰閃、touch-action；長按不出現選字／系統菜單。
+ * 不對按下做 scale 縮小。變色僅：van-button 遮罩、.sm-pressable／.sm-icon-btn 背景。
+ * iOS :active 見 main.ts touchstart。
+ */
+.page,
+.app-header,
+.van-tabbar,
+.van-nav-bar,
+.van-popup,
+button,
+[role='button'],
+[role='link'],
+a,
+.van-button,
+.van-tabbar-item,
+.van-cell,
+.sm-pressable,
+.sm-icon-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 表單／可複製正文仍允許選取 */
+input,
+textarea,
+[contenteditable='true'],
+.van-field__control,
+.allow-select,
+.article .body,
+.rich {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* 可選按壓：僅背景變色，即時出現（無 transition） */
+.sm-pressable:active:not(:disabled) {
+  background-color: rgba(22, 22, 43, 0.06);
+}
+
+/*
+ * Vant Button：按壓縮罩即時顯示。
+ * 官方 transition: opacity .2s 會讓按下感覺「慢慢出來」，關掉。
+ */
+.van-button {
+  transition: none;
+}
+
+.van-button::before {
+  transition: none !important;
+}
+
+.van-button:active:not(.van-button--disabled):not(.van-button--loading)::before {
+  opacity: var(--sm-press-overlay) !important;
+}
+
+/* 圖標熱區 ≥ --sm-icon-btn；按下僅底色，即時 */
+.sm-icon-btn {
+  box-sizing: border-box;
+  flex: none;
+  width: var(--sm-icon-btn);
+  height: var(--sm-icon-btn);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.sm-icon-btn:active:not(:disabled) {
+  background-color: rgba(22, 22, 43, 0.08);
+}
+
+.sm-icon-btn:disabled {
+  opacity: 0.45;
 }
 
 /* 圖標按鈕：Vant 圖標統一粗體（覆蓋 vant-icon 默認 normal） */

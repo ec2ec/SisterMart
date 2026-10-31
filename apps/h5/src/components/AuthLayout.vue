@@ -39,7 +39,7 @@ function onBackClick() {
       <button
         v-if="showBack"
         type="button"
-        class="auth-icon-btn"
+        class="sm-icon-btn auth-icon-btn"
         :aria-label="t('pages.back')"
         @click="onBackClick"
       >
@@ -49,7 +49,7 @@ function onBackClick() {
       <button
         v-if="showLocale"
         type="button"
-        class="auth-lang"
+        class="auth-lang sm-pressable"
         :title="nextLocaleLabel"
         :aria-label="nextLocaleLabel"
         @click="toggleLocale"
@@ -61,11 +61,18 @@ function onBackClick() {
     </header>
 
     <div class="auth-bg" aria-hidden="true">
-      <span class="orb orb-a" />
-      <span class="orb orb-b" />
-      <span class="orb orb-c" />
-      <span class="grid" />
-      <span class="wave" />
+      <!-- 大色塊 mesh：對齊參考圖粉紫／青藍大漸變；外層 transform、內層 blur -->
+      <div class="mesh mesh-base" />
+      <div class="mesh-move mesh-move-a">
+        <div class="mesh-paint mesh-paint-a" />
+      </div>
+      <div class="mesh-move mesh-move-b">
+        <div class="mesh-paint mesh-paint-b" />
+      </div>
+      <div class="mesh-move mesh-move-c">
+        <div class="mesh-paint mesh-paint-c" />
+      </div>
+      <div class="grain" />
     </div>
     <div class="auth-inner">
       <div class="logo">
@@ -86,15 +93,8 @@ function onBackClick() {
   min-height: 100dvh;
   padding: 2.25rem 1.375rem 2.5rem;
   overflow: hidden;
-  /* 參考圖：粉 → lavender → 淺藍 */
-  background: linear-gradient(
-    165deg,
-    #f8d4e4 0%,
-    #f0d8ee 28%,
-    #e4daf6 55%,
-    #d8e8f8 82%,
-    #cfe6f6 100%
-  );
+  /* 底色：對齊參考圖中段薰衣草紫 */
+  background: #d8c2ec;
   color: #1c1c1c;
 }
 
@@ -121,22 +121,14 @@ function onBackClick() {
 }
 
 .auth-top-spacer {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--sm-icon-btn, 2.75rem);
+  height: var(--sm-icon-btn, 2.75rem);
   flex: none;
 }
 
 .auth-icon-btn {
-  flex: none;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 0;
-  padding: 0;
-  border-radius: 50%;
   background: rgba(255, 255, 255, 0.55);
   color: #14141f;
-  display: grid;
-  place-items: center;
   box-shadow: 0 0.15rem 0.5rem rgba(80, 50, 100, 0.1);
 }
 
@@ -168,59 +160,125 @@ function onBackClick() {
   overflow: hidden;
 }
 
-.grid {
+/*
+ * 參考圖風格：大色塊、長距離漸變（粉紫 → 薰衣草 → 青白），無密條紋。
+ * 晃動 = 大色暈緩慢漂移；外層 transform / 內層 blur 拆開避免 WebKit 卡死。
+ */
+.mesh,
+.mesh-move,
+.grain {
+  display: block;
   position: absolute;
-  inset: -10%;
-  opacity: 0.22;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
-  background-size: 1.75rem 1.75rem;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, #000 20%, transparent 75%);
+  pointer-events: none;
 }
 
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(2rem);
-  opacity: 0.7;
-}
-
-.orb-a {
-  top: -4rem;
-  right: -3rem;
-  width: 14rem;
-  height: 14rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 182, 212, 0.35) 55%, transparent 70%);
-}
-
-.orb-b {
-  top: 28%;
-  left: -5rem;
-  width: 12rem;
-  height: 12rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(210, 190, 255, 0.4) 50%, transparent 70%);
-}
-
-.orb-c {
-  bottom: 8%;
-  right: -4rem;
-  width: 13rem;
-  height: 13rem;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(180, 220, 255, 0.45) 50%, transparent 70%);
-}
-
-.wave {
-  position: absolute;
-  left: -10%;
-  right: -10%;
-  bottom: 6%;
-  height: 6rem;
-  opacity: 0.45;
+.mesh-base {
+  inset: -20%;
   background:
-    radial-gradient(120% 80% at 10% 80%, transparent 40%, rgba(255, 255, 255, 0.55) 41%, transparent 42%),
-    radial-gradient(100% 70% at 55% 70%, transparent 42%, rgba(255, 255, 255, 0.4) 43%, transparent 44%),
-    radial-gradient(110% 75% at 90% 85%, transparent 40%, rgba(255, 255, 255, 0.5) 41%, transparent 42%);
+    /* 對角大 sweep：左上 saturates 紫 → 粉 → 右下青白（貼近參考圖） */
+    linear-gradient(
+      150deg,
+      #b478e0 0%,
+      #d898d0 22%,
+      #c8b0ea 42%,
+      #a8c8f0 68%,
+      #c8e4ff 100%
+    );
+}
+
+.mesh-move {
+  inset: -50%;
+  will-change: transform;
+}
+
+.mesh-move-a {
+  animation: auth-drift-a 8s ease-in-out infinite alternate;
+}
+
+.mesh-move-b {
+  animation: auth-drift-b 10s ease-in-out infinite alternate;
+}
+
+.mesh-move-c {
+  animation: auth-drift-c 12s ease-in-out infinite alternate;
+}
+
+.mesh-paint {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* 左上大塊深紫 + 中段桃紅（參考圖主色域） */
+.mesh-paint-a {
+  filter: blur(2.25rem);
+  opacity: 1;
+  background:
+    radial-gradient(62% 55% at 12% 8%, rgba(130, 50, 210, 0.95) 0%, transparent 70%),
+    radial-gradient(58% 50% at 38% 32%, rgba(255, 90, 180, 0.78) 0%, transparent 72%),
+    radial-gradient(52% 48% at 5% 48%, rgba(180, 80, 230, 0.65) 0%, transparent 68%);
+}
+
+/* 右下大塊亮青白光暈 */
+.mesh-paint-b {
+  filter: blur(2rem);
+  opacity: 1;
+  background:
+    radial-gradient(65% 55% at 90% 88%, rgba(110, 200, 255, 0.98) 0%, transparent 70%),
+    radial-gradient(55% 48% at 78% 62%, rgba(255, 255, 255, 0.95) 0%, transparent 72%),
+    radial-gradient(48% 42% at 98% 45%, rgba(140, 210, 255, 0.7) 0%, transparent 68%);
+}
+
+/* 斜向柔光帶：寬橢圓，模擬流水光影，不是細條紋 */
+.mesh-paint-c {
+  filter: blur(2.5rem);
+  opacity: 0.78;
+  background:
+    radial-gradient(85% 32% at 48% 48%, rgba(255, 255, 255, 0.9) 0%, transparent 75%),
+    radial-gradient(45% 60% at 62% 72%, rgba(190, 150, 255, 0.5) 0%, transparent 70%);
+}
+
+.grain {
+  inset: 0;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+@keyframes auth-drift-a {
+  0% {
+    transform: translate3d(-14vw, -10vh, 0) scale(1.06) rotate(-5deg);
+  }
+  100% {
+    transform: translate3d(14vw, 12vh, 0) scale(1.2) rotate(5deg);
+  }
+}
+
+@keyframes auth-drift-b {
+  0% {
+    transform: translate3d(12vw, 8vh, 0) scale(1.05) rotate(4deg);
+  }
+  100% {
+    transform: translate3d(-14vw, -10vh, 0) scale(1.18) rotate(-5deg);
+  }
+}
+
+@keyframes auth-drift-c {
+  0% {
+    transform: translate3d(-10vw, 5vh, 0) scale(1.1) rotate(-3deg);
+  }
+  100% {
+    transform: translate3d(11vw, -8vh, 0) scale(1.22) rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh-move-a,
+  .mesh-move-b,
+  .mesh-move-c {
+    animation: none;
+  }
 }
 
 .auth-inner {

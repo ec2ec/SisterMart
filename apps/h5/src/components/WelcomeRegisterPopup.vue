@@ -3,6 +3,7 @@ import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api/client'
 import { consumeJustRegistered, peekJustRegistered } from '../composables/useAuthUi'
+import { welcomeOverlayOpen } from '../composables/useHomePopupGate'
 import { assetUrl } from '../utils/assetUrl'
 
 const { t, locale } = useI18n()
@@ -33,12 +34,17 @@ async function maybeShow() {
     consumeJustRegistered()
     html.value = content
     show.value = true
+    welcomeOverlayOpen.value = true
   } catch {
     /* 歡迎失敗不擋首頁；保留 flag 下次再試 */
   } finally {
     checking = false
   }
 }
+
+watch(show, (v) => {
+  if (!v) welcomeOverlayOpen.value = false
+})
 
 onMounted(() => {
   void maybeShow()

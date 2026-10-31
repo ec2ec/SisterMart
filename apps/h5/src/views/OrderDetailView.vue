@@ -285,13 +285,6 @@ async function sendChat() {
     <section v-if="reviewedItems.length" class="card reviews">
       <h3 class="sec-title">{{ t('orders.sectionReviews') }}</h3>
       <div v-for="item in reviewedItems" :key="item.id" class="rev-block">
-        <div class="rev-product">
-          <img :src="assetUrl(item.image)" alt="" />
-          <div>
-            <strong>{{ text(item.name) }}</strong>
-            <p v-if="text(item.spec)">{{ text(item.spec) }}</p>
-          </div>
-        </div>
         <div class="rev-head">
           <span class="rev-stars" aria-hidden="true">
             {{ '★'.repeat(item.review!.stars) }}{{ '☆'.repeat(Math.max(0, 5 - item.review!.stars)) }}
@@ -300,9 +293,7 @@ async function sendChat() {
             v-if="item.review!.moderation_status && item.review!.moderation_status !== 'approved'"
             class="rev-mod"
           >
-            {{
-              item.review!.moderation_status === 'rejected' ? t('review.rejected') : t('review.pending')
-            }}
+            {{ t('review.publishing') }}
           </span>
         </div>
         <p v-if="item.review!.body" class="rev-body">{{ item.review!.body }}</p>
@@ -323,9 +314,25 @@ async function sendChat() {
         <p v-if="item.review!.reply" class="rev-reply">
           <em>{{ t('review.replyLabel') }}</em>{{ item.review!.reply }}
         </p>
-        <div v-if="item.can_follow" class="item-actions">
+        <div v-if="item.can_re_review || item.can_follow" class="rev-actions">
           <van-button
-            size="mini"
+            v-if="item.can_re_review"
+            class="rev-action-btn"
+            plain
+            round
+            @click="
+              router.push({
+                name: 'order-review',
+                params: { id: order.id },
+                query: { item: String(item.id), mode: 'rereview' },
+              })
+            "
+          >
+            {{ t('review.goRereview') }}
+          </van-button>
+          <van-button
+            v-else-if="item.can_follow"
+            class="rev-action-btn"
             plain
             round
             @click="
@@ -376,7 +383,6 @@ async function sendChat() {
       <van-button
         v-if="order.status === 'pending_payment'"
         type="primary"
-        color="var(--sm-primary)"
         round
         @click="router.push({ name: 'payment', params: { id: order.id } })"
       >
@@ -390,7 +396,12 @@ async function sendChat() {
       >
         {{ t('fulfill.logistics') }}
       </van-button>
-      <van-button v-if="order.status === 'pending_receipt'" type="primary" color="var(--sm-primary)" round @click="onConfirm">
+      <van-button
+        v-if="order.status === 'pending_receipt'"
+        type="primary"
+        round
+        @click="onConfirm"
+      >
         {{ t('fulfill.confirm') }}
       </van-button>
       <van-button
@@ -404,7 +415,6 @@ async function sendChat() {
       <van-button
         v-if="order.needs_review"
         type="primary"
-        color="var(--sm-primary)"
         round
         @click="
           router.push({
@@ -430,7 +440,6 @@ async function sendChat() {
       />
       <van-button
         type="primary"
-        color="var(--sm-primary)"
         block
         round
         :loading="chatBusy"
@@ -444,20 +453,30 @@ async function sendChat() {
 </template>
 
 <style scoped>
-/* 配色對齊帳戶頁：深紫漸變底 + 白卡片（僅本頁，不改 Tab） */
+/* 配色對齊「我的」頁：粉 → lavender → 淺藍漸變底 + 白卡片 */
 .order-detail {
   --od-accent: #7d5bb6;
   --od-accent-soft: #b794f6;
-  --od-ink: #111111;
-  --od-muted: #757575;
+  --od-ink: #14141f;
+  --od-muted: #3a3540;
   --od-line: #eee8f5;
   --od-card: #ffffff;
+  --od-card-shadow: 0 0.25rem 0.9rem rgba(160, 130, 210, 0.22);
+  --od-primary-btn: linear-gradient(100deg, #b14f9a 0%, #de7ab8 45%, #f3a9d0 100%);
   min-height: 100%;
   padding-bottom: 1.25rem;
   background:
-    radial-gradient(ellipse 80% 50% at 85% -5%, rgba(183, 148, 246, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 10% 8%, rgba(125, 91, 182, 0.4) 0%, transparent 50%),
-    linear-gradient(165deg, #4a2d7a 0%, #2a1848 42%, #1a0f2e 72%, #120a22 100%);
+    radial-gradient(circle at 92% -4%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 182, 212, 0.28) 42%, transparent 68%),
+    radial-gradient(circle at -8% 32%, rgba(255, 255, 255, 0.45) 0%, rgba(210, 190, 255, 0.28) 45%, transparent 70%),
+    radial-gradient(circle at 108% 88%, rgba(255, 255, 255, 0.4) 0%, rgba(180, 220, 255, 0.32) 48%, transparent 72%),
+    linear-gradient(
+      165deg,
+      #f46ca9 10%,
+      #f0d8ee 28%,
+      #e4daf6 55%,
+      #7dbaf7 82%,
+      #407cfb 100%
+    );
   color: var(--od-ink);
 }
 
@@ -471,7 +490,7 @@ async function sendChat() {
 .order-detail :deep(.van-nav-bar__title),
 .order-detail :deep(.van-nav-bar .van-icon),
 .order-detail :deep(.van-nav-bar__text) {
-  color: #fff;
+  color: var(--od-ink);
 }
 
 .card {
@@ -479,7 +498,7 @@ async function sendChat() {
   padding: 0.9rem 0.875rem;
   background: var(--od-card);
   border-radius: 1rem;
-  box-shadow: 0 0.35rem 1.1rem rgba(18, 10, 34, 0.18);
+  box-shadow: var(--od-card-shadow);
 }
 .sec-title {
   margin: 0 0 0.7rem;
@@ -500,15 +519,14 @@ async function sendChat() {
 .order-no {
   margin: 0;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--od-muted);
 }
 .status {
   margin: 0.35rem 0 0;
   font-size: 1.35rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--od-ink);
   letter-spacing: -0.02em;
-  text-shadow: 0 0.1rem 0.45rem rgba(0, 0, 0, 0.25);
 }
 .ship-line {
   margin: 0;
@@ -574,32 +592,6 @@ async function sendChat() {
   padding-bottom: 0;
   border-bottom: 0;
 }
-.rev-product {
-  display: grid;
-  grid-template-columns: 2.75rem minmax(0, 1fr);
-  gap: 0.55rem;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-.rev-product img {
-  width: 2.75rem;
-  height: 2.75rem;
-  object-fit: cover;
-  border-radius: 0.4rem;
-  background: #f3eef9;
-}
-.rev-product strong {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--od-ink);
-}
-.rev-product p {
-  margin: 0.15rem 0 0;
-  font-size: 0.75rem;
-  color: var(--od-muted);
-}
 .rev-head {
   display: flex;
   flex-wrap: wrap;
@@ -655,6 +647,14 @@ async function sendChat() {
   object-fit: cover;
   border-radius: 0.35rem;
   background: #f3eef9;
+}
+.rev-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+.rev-action-btn {
+  min-width: 5.5rem;
 }
 .meta {
   min-width: 0;
@@ -826,13 +826,15 @@ async function sendChat() {
 .actions .van-button {
   flex: 1 1 calc(50% - 0.5rem);
 }
-.order-detail .actions :deep(.van-button--primary) {
-  background: linear-gradient(100deg, #4a2d7a 0%, #7d5bb6 55%, #a78bfa 100%);
+/* 主按鈕統一：確認收貨同款暖紫玫紅漸變；plain 附按鈕保持原樣 */
+.order-detail :deep(.van-button--primary:not(.van-button--plain)) {
+  background: var(--od-primary-btn);
   border: 0;
+  color: #fff;
 }
 .order-detail .actions :deep(.van-button--plain) {
   background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(160, 130, 210, 0.35);
   color: var(--od-ink);
 }
 .order-detail .chat-btn.van-button--plain {

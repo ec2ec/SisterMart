@@ -136,16 +136,72 @@ export async function fetchHomeBanners() {
   return data.items
 }
 
-export type HomeMarquee = {
+export type HomePopup = {
+  id: number
+  image_url: string
+  title: Localized
+  link_type: string
+  link_value: string
+  frequency: 'once' | 'daily' | 'always' | string
+  targets?: string[]
+  image_scale?: number
+  starts_at?: string | null
+  ends_at?: string | null
+  sort_order: number
+  status: number
+}
+
+export type HomePopupsPayload = {
+  items: HomePopup[]
+  daily_max: number
+  daily_shown: number | null
+  daily_remaining: number | null
+}
+
+export async function fetchHomePopups(auth: 'member' | 'none' = 'none') {
+  return api<HomePopupsPayload>('/api/v1/home/popups', {}, auth)
+}
+
+export async function dismissHomePopup(id: number) {
+  return api<{ popup_id: number; dismissed: boolean }>(
+    `/api/v1/home/popups/${id}/dismiss`,
+    { method: 'POST', body: '{}' },
+    'member',
+  )
+}
+
+export type HomeMarqueeItem = {
+  code: string
+  title?: Localized
   text: Localized
   link_type: string
   link_value: string
   status: number
   enabled: boolean
-} | null
+  show_on_home?: number
+  sort_order?: number
+}
+
+export type HomeMarquee = HomeMarqueeItem | null
+
+export type HomeImageAdItem = {
+  code: string
+  title: Localized
+  image_url: string
+  link_type: string
+  link_value: string
+  status: number
+  enabled: boolean
+  show_on_home?: number
+  sort_order?: number
+}
 
 export type HomeOps = {
   marquee: HomeMarquee
+  /** 全部已啟用字幕（可多條） */
+  marquees?: HomeMarqueeItem[]
+  /** 全部已啟用圖片廣告 */
+  image_ads?: HomeImageAdItem[]
   footer_slogan: Localized
 }
 
@@ -202,6 +258,67 @@ export async function fetchHomeSectionProducts(code: string) {
     items: ProductCard[]
     sold_display_mode: string
   }>(`/api/v1/home/sections/${encodeURIComponent(code)}/products`)
+}
+
+/** M45 首頁版面模組 */
+export type HomeLayoutModule = {
+  id: number
+  module_key: string
+  module_type: string
+  ref_type: string | null
+  ref_code: string | null
+  title: Localized
+  enabled: number
+  sort_order: number
+  config: { rail_limit?: number } | null
+  campaign?: CampaignSummary
+  /** text_marquee 佈局附帶的字幕內容 */
+  marquee?: HomeMarqueeItem
+  /** image_block 佈局附帶的圖片廣告 */
+  image_ad?: HomeImageAdItem
+}
+
+export type CampaignSummary = {
+  id: number
+  code: string
+  title: Localized
+  banner_image_url: string
+  intro_html: Localized
+  home_rail_limit: number
+  show_on_home: number
+  audience: Record<string, unknown>
+}
+
+export async function fetchHomeLayout() {
+  const data = await api<{ items: HomeLayoutModule[] }>('/api/v1/home/layout')
+  return data.items
+}
+
+export async function fetchCampaign(code: string) {
+  return api<{ campaign: CampaignSummary }>(`/api/v1/campaigns/${encodeURIComponent(code)}`)
+}
+
+export async function fetchCampaignRail(code: string) {
+  return api<{
+    campaign: CampaignSummary
+    items: ProductCard[]
+    limit: number
+  }>(`/api/v1/campaigns/${encodeURIComponent(code)}/rail`)
+}
+
+export async function fetchCampaignProducts(code: string, offset = 0, limit = 30) {
+  const qs = new URLSearchParams({
+    offset: String(Math.max(0, offset)),
+    limit: String(Math.max(1, Math.min(60, limit))),
+  })
+  return api<{
+    campaign: CampaignSummary
+    items: ProductCard[]
+    total: number
+    offset: number
+    limit: number
+    next_offset: number | null
+  }>(`/api/v1/campaigns/${encodeURIComponent(code)}/products?${qs}`)
 }
 
 export function skuKey(selected: Record<string, string>, groups: SpecGroup[]) {

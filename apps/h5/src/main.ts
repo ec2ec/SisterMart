@@ -79,6 +79,10 @@ const app = createApp(App)
 app.use(router)
 app.use(i18n)
 document.documentElement.lang = String(i18n.global.locale.value)
+
+// iOS Safari：無 touchstart 監聽時 button/:active 常不生效，導致按壓變色看不到
+document.addEventListener('touchstart', () => {}, { passive: true })
+
 if (isLoggedIn()) {
   void hydrateFavorites()
 } else {

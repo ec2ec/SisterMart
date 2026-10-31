@@ -2,12 +2,14 @@
 import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import { ApiError } from '../api/client'
 import { checkAllCart, deleteCartItems, fetchCart, patchCartItem, type CartItem } from '../api/trade'
+import RecommendFeed from '../components/RecommendFeed.vue'
 import { refreshCartBadge } from '../composables/useCartBadge'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { goLogin } from '../composables/useAuth'
+import { useRequestBusy } from '../composables/useAuthUi'
 import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
 
@@ -17,8 +19,10 @@ const { t } = useI18n()
 const { text } = useLocaleText()
 const router = useRouter()
 const items = ref<CartItem[]>([])
-const managing = ref(false)
 const loading = ref(false)
+/** 下拉刷新購物車商品（不刷新底部推薦） */
+const pulling = ref(false)
+const { busy: actionBusy, run: runAction } = useRequestBusy()
 const SCROLL_KEY = 'cart'
 
 async function load() {
@@ -42,6 +46,14 @@ async function load() {
   }
 }
 
+async function onPullRefresh() {
+  try {
+    await load()
+  } finally {
+    pulling.value = false
+  }
+}
+
 onMounted(load)
 onDeactivated(() => saveRouteScroll(SCROLL_KEY))
 let cartFirstActivate = true
@@ -57,12 +69,12 @@ onActivated(() => {
 
 /** 退出登錄後 keep-alive 實例仍在：立刻清空列表，避免串號 */
 watch(loggedIn, (v) => {
-  if (!v) {
-    items.value = []
-    managing.value = false
-  }
+  if (!v) items.value = []
 })
 
+const cartProductIds = computed(() =>
+  items.value.map((i) => String(i.product_id)).filter(Boolean),
+)
 const checkedCount = computed(() => items.value.filter((i) => i.checked && i.available).length)
 const allChecked = computed({
   get: () => {
@@ -80,8 +92,28 @@ const total = computed(() =>
 )
 
 async function onQty(item: CartItem, qty: number) {
+  if (qty < 1) return
   await patchCartItem(item.id, { qty })
   await load()
+}
+
+/** 數量為 1 時再按減號：確認後移除商品 */
+async function onQtyOverlimit(item: CartItem, type: string) {
+  if (type !== 'minus' || item.qty !== 1 || actionBusy.value) return
+  try {
+    await showConfirmDialog({
+      title: t('cart.removeConfirm'),
+      confirmButtonText: t('cart.delete'),
+      confirmButtonColor: '#c45c26',
+      cancelButtonText: t('checkout.cancelForm'),
+    })
+  } catch {
+    return
+  }
+  await runAction(async () => {
+    await deleteCartItems([item.id])
+    await load()
+  })
 }
 
 async function onCheck(item: CartItem, checked: boolean) {
@@ -91,6 +123,7 @@ async function onCheck(item: CartItem, checked: boolean) {
 }
 
 function checkout() {
+  if (actionBusy.value) return
   if (!isLoggedIn()) {
     void goLogin(router, '/cart')
     return
@@ -102,94 +135,107 @@ function checkout() {
   router.push({ name: 'checkout' })
 }
 
-async function removeChecked() {
-  const ids = items.value.filter((i) => i.checked).map((i) => i.id)
-  if (!ids.length) return
-  await deleteCartItems(ids)
-  managing.value = false
-  await load()
-}
-
 function reasonText(item: CartItem) {
+  if (item.invalid_message) return item.invalid_message
   if (item.invalid_reason === 'off_sale') return t('cart.invalidOff')
   if (item.invalid_reason === 'out_of_stock') return t('cart.invalidStock')
   if (item.invalid_reason === 'qty_exceed') return t('cart.invalidQty')
+  if (item.invalid_reason === 'campaign_exclusive') return t('cart.invalidCampaign')
   return ''
 }
 </script>
 
 <template>
   <div class="page">
-    <div class="trust">
-      <span>{{ t('cart.trust1') }}</span>
-      <span>{{ t('cart.trust2') }}</span>
-      <span>{{ t('cart.trust3') }}</span>
-    </div>
+    <van-pull-refresh
+      v-model="pulling"
+      class="cart-pull"
+      :head-height="80"
+      :pull-distance="80"
+      :pulling-text="t('home.refreshPulling')"
+      :loosing-text="t('home.refreshLoose')"
+      :loading-text="t('home.refreshLoading')"
+      @refresh="onPullRefresh"
+    >
+      <div class="trust">
+        <span>{{ t('cart.trust1') }}</span>
+        <span>{{ t('cart.trust2') }}</span>
+        <span>{{ t('cart.trust3') }}</span>
+      </div>
 
-    <div class="toolbar">
-      <h1>{{ t('cart.items', { n: items.length }) }}</h1>
-      <button type="button" class="manage" @click="managing = !managing">
-        {{ managing ? t('cart.done') : t('cart.manage') }}
-      </button>
-    </div>
+      <div class="toolbar">
+        <h1>{{ t('cart.items', { n: items.length }) }}</h1>
+      </div>
 
-    <p v-if="!loggedIn" class="empty">
-      <button type="button" @click="goLogin(router, '/cart')">{{ t('auth.login') }}</button>
-    </p>
-    <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
+      <p v-if="!loggedIn" class="empty">
+        <van-button round type="primary" color="var(--sm-primary)" @click="goLogin(router, '/cart')">
+          {{ t('auth.login') }}
+        </van-button>
+      </p>
+      <p v-else-if="!items.length && !loading" class="empty">{{ t('cart.empty') }}</p>
 
-    <div v-else class="list">
-      <div v-for="item in items" :key="item.id" class="row" :class="{ bad: !item.available }">
-        <van-checkbox
-          :model-value="item.checked"
-          :disabled="!item.available"
-          checked-color="var(--sm-primary)"
-          @update:model-value="(v: boolean) => onCheck(item, v)"
-        />
-        <img :src="item.image" alt="" />
-        <div class="info">
-          <h3>{{ text(item.name) }}</h3>
-          <p>{{ text(item.spec) }}</p>
-          <p v-if="!item.available" class="warn">{{ reasonText(item) }}</p>
-          <div class="bottom">
-            <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
-            <van-stepper
-              :model-value="item.qty"
-              :max="Math.max(1, item.stock)"
-              min="1"
-              theme="round"
-              button-size="1.375rem"
-              @change="(v: number) => onQty(item, v)"
-            />
+      <div v-else class="list">
+        <div v-for="item in items" :key="item.id" class="row" :class="{ bad: !item.available }">
+          <van-checkbox
+            :model-value="item.checked"
+            :disabled="!item.available"
+            checked-color="var(--sm-primary)"
+            @update:model-value="(v: boolean) => onCheck(item, v)"
+          />
+          <img :src="item.image" alt="" />
+          <div class="info">
+            <h3>{{ text(item.name) }}</h3>
+            <p>{{ text(item.spec) }}</p>
+            <p v-if="!item.available" class="warn">{{ reasonText(item) }}</p>
+            <div class="bottom">
+              <span class="price">HK$ {{ item.price.toFixed(2) }}</span>
+              <van-stepper
+                :model-value="item.qty"
+                :max="Math.max(1, item.stock)"
+                :min="1"
+                theme="round"
+                button-size="1.75rem"
+                @change="(v: number) => onQty(item, v)"
+                @overlimit="(type: string) => onQtyOverlimit(item, type)"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div class="rec-wrap">
+        <RecommendFeed :exclude-ids="cartProductIds" />
+      </div>
+    </van-pull-refresh>
 
     <div class="submit">
       <van-checkbox v-model="allChecked" checked-color="var(--sm-primary)">
         {{ t('cart.selectAll', { n: checkedCount }) }}
       </van-checkbox>
       <div class="sum">
-        <template v-if="!managing">
-          <span>{{ t('cart.total') }}</span>
-          <strong class="price">HK$ {{ total.toFixed(2) }}</strong>
-        </template>
+        <span>{{ t('cart.total') }}</span>
+        <strong class="price">HK$ {{ total.toFixed(2) }}</strong>
       </div>
       <van-button
+        class="submit-btn"
         type="primary"
         round
         color="var(--sm-primary)"
-        :disabled="managing ? checkedCount === 0 && !items.some((i) => i.checked) : checkedCount === 0"
-        @click="managing ? removeChecked() : checkout()"
+        :loading="actionBusy"
+        :disabled="actionBusy || checkedCount === 0"
+        @click="checkout"
       >
-        {{ managing ? t('cart.delete') : t('cart.checkout') }}
+        {{ t('cart.checkout') }}
       </van-button>
     </div>
   </div>
 </template>
 
 <style scoped>
+.cart-pull {
+  min-height: calc(100vh - var(--sm-tabbar-h) - 4rem);
+  overflow: visible;
+}
 .trust {
   display: flex;
   justify-content: space-around;
@@ -201,22 +247,17 @@ function reasonText(item: CartItem) {
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0.75rem 1rem;
 }
 .toolbar h1 {
   margin: 0;
   font-size: 1rem;
 }
-.manage {
-  border: 0.0625rem solid #ddd;
-  background: #fff;
-  border-radius: 62.4375rem;
-  padding: 0.25rem 0.875rem;
-  font-size: 0.75rem;
-}
 .list {
-  padding: 0 0.75rem 5.625rem;
+  padding: 0 0.75rem 0.75rem;
+}
+.rec-wrap {
+  padding-bottom: 5.625rem;
 }
 .row {
   display: grid;
@@ -281,6 +322,14 @@ function reasonText(item: CartItem) {
   flex: 1;
   text-align: right;
   font-size: 0.75rem;
+}
+.sum .price {
+  font-size: 1rem;
+}
+.submit-btn {
+  min-width: 7.5rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 .empty {
   text-align: center;

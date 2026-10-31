@@ -159,7 +159,7 @@ function finishSwipe(dir: -1 | 1) {
       skipTransition.value = false
       animating.value = false
     })
-  }, 220)
+  }, 110)
 }
 
 function onEnd(event: TouchEvent) {
@@ -193,7 +193,7 @@ function onEnd(event: TouchEvent) {
     if (animTimer) window.clearTimeout(animTimer)
     animTimer = window.setTimeout(() => {
       animating.value = false
-    }, 220)
+    }, 110)
   }
 
   if (moved < 12) {
@@ -213,7 +213,7 @@ const trackStyle = computed(() => {
     width: `${Math.max(1, props.images.length) * w}px`,
     transform: `translate3d(${x}px, 0, 0)`,
     transition:
-      skipTransition.value || follow ? 'none' : 'transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1)',
+      skipTransition.value || follow ? 'none' : 'transform 0.11s cubic-bezier(0.25, 0.8, 0.25, 1)',
   }
 })
 

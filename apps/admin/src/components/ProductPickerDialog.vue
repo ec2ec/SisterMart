@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, ref, watch } from 'vue'
 import {
   NButton,
@@ -127,7 +128,7 @@ async function load() {
     rows.value = data.items || []
     searched.value = true
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : '搜索失敗')
+    showError(e instanceof Error ? e.message : '搜索失敗')
   } finally {
     loading.value = false
   }
@@ -194,7 +195,7 @@ async function pickProduct(row: ListRow) {
     skuId.value = skus[0].id
     step.value = 'sku'
   } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : '加載商品失敗')
+    showError(e instanceof Error ? e.message : '加載商品失敗')
   } finally {
     picking.value = false
   }
@@ -233,7 +234,7 @@ function skuLabel(s: ProductSku) {
     :title="title"
     style="width: min(52rem, 96vw)"
     :mask-closable="false"
-  >
+   :close-on-esc="false">
     <template v-if="step === 'list'">
       <n-space style="margin-bottom: 0.75rem">
         <n-input

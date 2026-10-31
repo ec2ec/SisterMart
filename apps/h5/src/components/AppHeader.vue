@@ -66,22 +66,20 @@ function onBack() {
     <button
       v-if="showBack"
       type="button"
-      class="back-btn"
+      class="sm-icon-btn back-btn"
       :aria-label="t('pages.back')"
       @click="onBack"
     >
       <van-icon name="arrow-left" size="1.125rem" />
     </button>
-    <div
+    <button
       v-else-if="showLogo"
-      class="logo"
-      role="button"
-      tabindex="0"
+      type="button"
+      class="logo sm-pressable"
       @click="toggleLocale"
-      @keydown.enter="toggleLocale"
     >
       <span class="logo-sister">{{ t('brandSister') }}</span><span class="logo-mart">{{ t('brandMart') }}</span>
-    </div>
+    </button>
     <van-search
       class="search"
       shape="round"
@@ -96,7 +94,7 @@ function onBack() {
         :show-zero="false"
       >
         <button
-          class="action-btn"
+          class="sm-icon-btn action-btn"
           type="button"
           :aria-label="t('pages.wishlist')"
           @click="goWishlist"
@@ -108,7 +106,12 @@ function onBack() {
         :content="loggedIn && unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : ''"
         :show-zero="false"
       >
-        <button class="action-btn" type="button" :aria-label="t('pages.messages')" @click="goMessages">
+        <button
+          class="sm-icon-btn action-btn"
+          type="button"
+          :aria-label="t('pages.messages')"
+          @click="goMessages"
+        >
           <van-icon name="envelop-o" size="1.125rem" color="var(--sm-primary)" />
         </button>
       </van-badge>
@@ -140,30 +143,31 @@ function onBack() {
   color: #111;
 }
 
+/* 圓鈕外框與搜索框同高，視覺協調（覆蓋全局 .sm-icon-btn 2.75rem） */
+.back-btn,
+.action-btn {
+  width: var(--van-search-input-height);
+  height: var(--van-search-input-height);
+}
+
 .back-btn {
-  flex: 0 0 auto;
-  width: var(--van-search-input-height, 34px);
-  height: var(--van-search-input-height, 34px);
-  border: 0;
-  border-radius: 50%;
   background: #f2f3f5;
-  display: grid;
-  place-items: center;
-  padding: 0;
   color: var(--sm-text);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .logo {
   flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.5rem;
   font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  cursor: pointer;
   line-height: 1;
   user-select: none;
+  color: inherit;
 }
 
 .logo-sister {
@@ -202,19 +206,10 @@ function onBack() {
   flex: 0 0 auto;
 }
 
-/* 與商品卡願望鈕同圓形樣式；邊長對齊搜索框高度；底色與搜索框一致 */
+/* 熱區用 .sm-icon-btn；底色與搜索框一致 */
 .action-btn {
-  width: var(--van-search-input-height, 34px);
-  height: var(--van-search-input-height, 34px);
-  border: 0;
-  border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
-  display: grid;
-  place-items: center;
   box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.12);
-  padding: 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .solid .action-btn {

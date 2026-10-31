@@ -18,7 +18,8 @@ import {
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 import { formatRelativeZh } from '../utils/relativeTime'
-import { orderStatusLabel } from '../utils/orderStatus'
+import { orderStatusLabel, orderStatusTagType } from '../utils/orderStatus'
+import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 type Member = {
   id: number
@@ -70,6 +71,7 @@ type LogRow = {
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
+const { rowAttrs } = useTableRowSelect()
 
 const loading = ref(true)
 const loadError = ref('')
@@ -251,11 +253,15 @@ function activeLabel(at?: string | null) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in recentOrders" :key="row.id">
+          <tr v-for="row in recentOrders" :key="row.id" v-bind="rowAttrs(row.id)">
             <td>{{ row.order_no }}</td>
             <td>{{ row.title || '-' }}</td>
             <td>{{ row.pay_amount }}</td>
-            <td><n-tag size="small">{{ orderStatusLabel(row.status) }}</n-tag></td>
+            <td>
+              <n-tag size="small" :type="orderStatusTagType(row.status)" :bordered="false">
+                {{ orderStatusLabel(row.status) }}
+              </n-tag>
+            </td>
             <td>{{ row.created_at }}</td>
             <td>
               <n-button size="tiny" @click="router.push(`/sales/orders/${row.id}`)">詳情</n-button>
@@ -325,7 +331,7 @@ function activeLabel(at?: string | null) {
       </n-card>
     </div>
 
-    <n-modal v-model:show="showAdjust" preset="card" title="調整會員資產" style="width: 28rem">
+    <n-modal v-model:show="showAdjust" preset="card" title="調整會員資產" style="width: 28rem" :mask-closable="false" :close-on-esc="false">
       <p>會員 #{{ member.id }} · {{ accountLabel }}</p>
       <n-form label-placement="left" label-width="6rem">
         <n-form-item label="積分變動"><n-input-number v-model:value="adjust.points_delta" /></n-form-item>

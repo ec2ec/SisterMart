@@ -31,15 +31,22 @@ const html = shallowRef('')
 let syncing = false
 
 const toolbarConfig: Partial<IToolbarConfig> = {
-  // 簡潔模式再收斂常用項
+  // 簡潔模式常用項 + 字號／對齊
   toolbarKeys: [
     'bold',
     'italic',
     'underline',
     'through',
     '|',
+    'fontSize',
+    '|',
     'bulletedList',
     'numberedList',
+    '|',
+    'justifyLeft',
+    'justifyCenter',
+    'justifyRight',
+    'justifyJustify',
     '|',
     'color',
     'bgColor',
@@ -55,6 +62,22 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 const editorConfig = computed<Partial<IEditorConfig>>(() => ({
   placeholder: props.placeholder,
   MENU_CONF: {
+    fontSize: {
+      fontSizeList: [
+        '12px',
+        '13px',
+        '14px',
+        '15px',
+        '16px',
+        '18px',
+        '20px',
+        '24px',
+        '28px',
+        '32px',
+        '36px',
+        '48px',
+      ],
+    },
     uploadImage: {
       allowedFileTypes: ['image/*'],
       maxFileSize: 5 * 1024 * 1024,

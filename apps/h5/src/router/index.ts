@@ -6,6 +6,7 @@ import AccountView from '../views/AccountView.vue'
 import SearchView from '../views/SearchView.vue'
 import ProductDetailView from '../views/ProductDetailView.vue'
 import ProductListView from '../views/ProductListView.vue'
+import CampaignView from '../views/CampaignView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ForgotView from '../views/ForgotView.vue'
@@ -67,6 +68,7 @@ export const router = createRouter({
     { path: '/search', name: 'search', component: SearchView },
     { path: '/product/:id', name: 'product-detail', component: ProductDetailView, meta: { overlay: true } },
     { path: '/products', name: 'product-list', component: ProductListView },
+    { path: '/campaign/:code', name: 'campaign', component: CampaignView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
     { path: '/forgot', name: 'forgot', component: ForgotView },

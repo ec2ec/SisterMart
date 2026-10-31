@@ -4,16 +4,22 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
+import CampaignRail from '../components/CampaignRail.vue'
 import ProductCard from '../components/ProductCard.vue'
+import HomePopupOverlay from '../components/HomePopupOverlay.vue'
 import WelcomeRegisterPopup from '../components/WelcomeRegisterPopup.vue'
 import { banners as mockBanners } from '../mock/data'
 import {
   fetchHomeBanners,
+  fetchHomeLayout,
   fetchHomeOps,
   fetchHomeRecommendations,
   fetchHomeSections,
   type HomeBanner,
+  type HomeImageAdItem,
+  type HomeLayoutModule,
   type HomeMarquee,
+  type HomeMarqueeItem,
   type HomeRecTab,
   type HomeSection,
   type ProductCard as Card,
@@ -75,18 +81,59 @@ const banners = ref<HomeBanner[]>(
   })),
 )
 const marquee = ref<HomeMarquee>(null)
+const marquees = ref<HomeMarqueeItem[]>([])
+const imageAds = ref<HomeImageAdItem[]>([])
 const opsLoaded = ref(false)
 const sections = ref<HomeSection[]>([])
+const campaignRailRefs = ref<Record<string, InstanceType<typeof CampaignRail> | null>>({})
 // A = display buffer (module-scoped inside useHomeCatalog); refresh writes B then A = B
 const { products, categories, refresh } = useHomeCatalog()
 
-const promoText = computed(() => {
-  if (marquee.value?.enabled) {
-    const loc = String(locale.value || 'zh-HK')
-    return loc.startsWith('en') ? marquee.value.text.en || marquee.value.text['zh-HK'] : marquee.value.text['zh-HK'] || marquee.value.text.en
+const DEFAULT_LAYOUT: HomeLayoutModule[] = [
+  { id: 1, module_key: 'banner_swipe', module_type: 'banner_swipe', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 10, config: null },
+  { id: 2, module_key: 'marquee:default', module_type: 'text_marquee', ref_type: 'marquee', ref_code: 'default', title: { 'zh-HK': '首頁字幕', en: 'Home marquee' }, enabled: 1, sort_order: 20, config: null },
+  { id: 3, module_key: 'category_row', module_type: 'category_row', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 30, config: null },
+  { id: 4, module_key: 'campaign:newcomer', module_type: 'campaign_rail', ref_type: 'campaign', ref_code: 'newcomer', title: { 'zh-HK': '新人專區', en: 'Newcomer Zone' }, enabled: 1, sort_order: 40, config: { rail_limit: 10 } },
+  { id: 5, module_key: 'seckill_rail', module_type: 'seckill_rail', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 50, config: null },
+  { id: 6, module_key: 'recommend_feed', module_type: 'recommend_feed', ref_type: null, ref_code: null, title: { 'zh-HK': '', en: '' }, enabled: 1, sort_order: 900, config: null },
+]
+/** 後台可配置首頁模組順序；首屏先用默認，拉取後覆蓋 */
+const layoutModules = ref<HomeLayoutModule[]>(DEFAULT_LAYOUT.slice())
+
+function sectionByCode(code: string | null | undefined) {
+  if (!code) return null
+  return sections.value.find((s) => s.code === code) || null
+}
+
+function setCampaignRailRef(key: string, el: unknown) {
+  campaignRailRefs.value[key] = (el as InstanceType<typeof CampaignRail> | null) || null
+}
+
+function marqueeForModule(mod: HomeLayoutModule): HomeMarqueeItem | null {
+  if (mod.marquee?.enabled) return mod.marquee
+  const code = mod.ref_code
+  if (code) {
+    const hit = marquees.value.find((m) => m.code === code && m.enabled)
+    if (hit) return hit
   }
-  return t('home.promo')
-})
+  if (marquee.value?.enabled) return marquee.value
+  return null
+}
+
+function imageAdForModule(mod: HomeLayoutModule): HomeImageAdItem | null {
+  if (mod.image_ad?.enabled && mod.image_ad.image_url) return mod.image_ad
+  const code = mod.ref_code
+  if (!code) return null
+  return imageAds.value.find((a) => a.code === code && a.enabled && a.image_url) || null
+}
+
+function marqueeTextOf(item: HomeMarqueeItem | null) {
+  if (!item?.enabled) return t('home.promo')
+  const loc = String(locale.value || 'zh-HK')
+  return loc.startsWith('en')
+    ? item.text.en || item.text['zh-HK']
+    : item.text['zh-HK'] || item.text.en
+}
 
 async function loadSubscribeStatus() {
   if (!isLoggedIn()) {
@@ -176,6 +223,12 @@ async function loadOps() {
   try {
     const ops = await fetchHomeOps()
     marquee.value = ops.marquee
+    marquees.value = ops.marquees?.length
+      ? ops.marquees
+      : ops.marquee
+        ? [ops.marquee]
+        : []
+    imageAds.value = ops.image_ads?.length ? ops.image_ads : []
   } catch {
     /* 保留現有 */
   } finally {
@@ -190,6 +243,15 @@ async function loadSections() {
     /* 保留現有 */
   } finally {
     sectionsInitial.value = false
+  }
+}
+
+async function loadLayout() {
+  try {
+    const items = await fetchHomeLayout()
+    layoutModules.value = items.length ? items : DEFAULT_LAYOUT.slice()
+  } catch {
+    /* 保留默認／現有 */
   }
 }
 
@@ -208,6 +270,8 @@ async function onPullRefresh() {
       loadBanners(),
       loadOps(),
       loadSections(),
+      loadLayout(),
+      ...Object.values(campaignRailRefs.value).map((r) => r?.reload?.() ?? Promise.resolve()),
     ])
     if (results.some((r) => r.status === 'fulfilled')) {
       lastRefreshAt = Date.now()
@@ -260,6 +324,7 @@ onMounted(() => {
   void loadBanners()
   void loadOps()
   void loadSections()
+  void loadLayout()
 })
 
 onDeactivated(() => {
@@ -326,9 +391,14 @@ function onBannerClick(b: HomeBanner) {
   onLink(b.link_type, b.link_value)
 }
 
-function onPromoClick() {
-  if (!marquee.value?.enabled) return
-  onLink(marquee.value.link_type, marquee.value.link_value)
+function onPromoClick(item: HomeMarqueeItem | null) {
+  if (!item?.enabled) return
+  onLink(item.link_type, item.link_value)
+}
+
+function onImageAdClick(item: HomeImageAdItem | null) {
+  if (!item?.enabled) return
+  onLink(item.link_type, item.link_value)
 }
 
 /** 首頁秒殺橫滑：取當前場次商品（最多 4），價為秒殺價 */
@@ -502,164 +572,215 @@ const tabLabel = (tab: HomeRecTab) => {
     <van-pull-refresh
       v-model="pulling"
       class="home-pull"
+      :head-height="100"
+      :pull-distance="100"
       :pulling-text="t('home.refreshPulling')"
       :loosing-text="t('home.refreshLoose')"
       :loading-text="t('home.refreshLoading')"
       @refresh="onPullRefresh"
     >
-      <section class="hero-wrap">
-        <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
-          <van-swipe-item v-for="b in banners" :key="b.id">
-            <button type="button" class="hero-item" @click="onBannerClick(b)">
-              <img :src="b.image_url" :alt="text(b.title) || ''" />
-            </button>
-          </van-swipe-item>
-        </van-swipe>
-      </section>
+      <template v-for="mod in layoutModules" :key="mod.module_key">
+        <section v-if="mod.module_type === 'banner_swipe'" class="hero-wrap">
+          <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
+            <van-swipe-item v-for="b in banners" :key="b.id">
+              <button type="button" class="hero-item" @click="onBannerClick(b)">
+                <img :src="b.image_url" :alt="text(b.title) || ''" />
+              </button>
+            </van-swipe-item>
+          </van-swipe>
+        </section>
 
-      <button
-        v-if="!opsLoaded || marquee?.enabled"
-        type="button"
-        class="promo"
-        :class="{ clickable: !!marquee?.enabled && marquee.link_type !== 'none' }"
-        @click="onPromoClick"
-      >
-        {{ promoText }}
-      </button>
+        <button
+          v-else-if="mod.module_type === 'text_marquee' && (!opsLoaded || marqueeForModule(mod))"
+          type="button"
+          class="promo"
+          :class="{
+            clickable:
+              !!marqueeForModule(mod)?.enabled && marqueeForModule(mod)!.link_type !== 'none',
+          }"
+          @click="onPromoClick(marqueeForModule(mod))"
+        >
+          {{ marqueeTextOf(marqueeForModule(mod)) }}
+        </button>
 
-      <section v-if="showCatsSkeleton || homeCategories.length" class="cats">
-        <div class="section-title">
-          <button type="button" class="section-title-btn" @click="goCategory">
-            <h2>{{ t('home.categories') }}</h2>
-          </button>
-          <button type="button" class="more" @click="goCategory">
-            {{ t('account.more') }}
-          </button>
-        </div>
-        <div v-if="showCatsSkeleton" class="cats-row" aria-hidden="true">
-          <div v-for="n in 4" :key="`sk-cat-${n}`" class="sk-cat">
-            <span class="sk-circle sk-pulse" />
-            <span class="sk-line sk-pulse" />
-          </div>
-        </div>
-        <div v-else class="cats-row">
-          <button v-for="c in homeCategories" :key="c.id" type="button" @click="goList(c.code)">
+        <section
+          v-else-if="mod.module_type === 'image_block' && (!opsLoaded || imageAdForModule(mod))"
+          class="image-ad"
+        >
+          <button
+            v-if="imageAdForModule(mod)"
+            type="button"
+            class="image-ad-btn"
+            :class="{ clickable: imageAdForModule(mod)!.link_type !== 'none' }"
+            @click="onImageAdClick(imageAdForModule(mod))"
+          >
             <img
-              v-if="c.icon"
-              :src="c.icon"
-              :alt="text(c.name)"
-              @error="onCatImgError($event)"
+              :src="assetUrl(imageAdForModule(mod)!.image_url)"
+              :alt="text(imageAdForModule(mod)!.title) || ''"
             />
-            <span v-else class="ph" />
-            <span class="cat-name">{{ text(c.name) }}</span>
           </button>
-        </div>
-      </section>
+        </section>
 
-      <section v-if="showFlashSkeleton" class="flash flash--sk" aria-hidden="true">
-        <div class="section-title">
-          <span class="sk-line sk-pulse sk-title" />
-          <span class="sk-line sk-pulse sk-more" />
-        </div>
-        <div class="flash-row">
-          <div v-for="n in 2" :key="`sk-flash-${n}`" class="sk-card">
-            <div class="sk-media sk-pulse" />
-            <div class="sk-meta">
-              <span class="sk-line sk-pulse" />
-              <span class="sk-line sk-pulse sk-short" />
-            </div>
-          </div>
-        </div>
-      </section>
-      <section v-else-if="flashSession || flashVisible.length" class="flash">
-        <div class="section-title">
-          <h2>{{ t('home.flashSale') }}</h2>
-          <button type="button" class="more" @click="router.push({ name: 'seckill' })">{{ t('account.more') }}</button>
-          <div class="count" :title="flashClock">
-            <span class="clock">{{ flashClock }}</span>
-          </div>
-        </div>
-        <p class="flash-hint">{{ flashHint }}</p>
-        <div class="flash-row">
-          <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
-        </div>
-      </section>
-
-      <section v-if="showSectionsSkeleton" class="showcase" aria-hidden="true">
-        <div class="section-title">
-          <span class="sk-line sk-pulse sk-title" />
-          <span class="sk-line sk-pulse sk-more" />
-        </div>
-        <div class="grid">
-          <div v-for="m in 4" :key="`sk-sec-card-${m}`" class="sk-card">
-            <div class="sk-media sk-pulse" />
-            <div class="sk-meta">
-              <span class="sk-line sk-pulse" />
-              <span class="sk-line sk-pulse sk-short" />
-            </div>
-          </div>
-        </div>
-      </section>
-      <template v-else>
-        <section v-for="sec in sections" :key="sec.id" class="showcase">
+        <section
+          v-else-if="mod.module_type === 'category_row' && (showCatsSkeleton || homeCategories.length)"
+          class="cats"
+        >
           <div class="section-title">
-            <h2>{{ text(sec.title) }}</h2>
-            <button
-              v-if="sec.view_all_type !== 'none'"
-              type="button"
-              class="more"
-              @click="onSectionViewAll(sec)"
-            >
-              {{ t('home.viewAll') }}
+            <button type="button" class="section-title-btn sm-pressable" @click="goCategory">
+              <h2>{{ t('home.categories') }}</h2>
+            </button>
+            <button type="button" class="more sm-pressable" @click="goCategory">
+              {{ t('account.more') }}
             </button>
           </div>
-          <div class="grid">
-            <ProductCard v-for="p in sec.items" :key="p.id" :product="p" />
+          <div v-if="showCatsSkeleton" class="cats-row" aria-hidden="true">
+            <div v-for="n in 4" :key="`sk-cat-${n}`" class="sk-cat">
+              <span class="sk-circle sk-pulse" />
+              <span class="sk-line sk-pulse" />
+            </div>
+          </div>
+          <div v-else class="cats-row">
+            <button
+              v-for="c in homeCategories"
+              :key="c.id"
+              type="button"
+              class="sm-pressable"
+              @click="goList(c.code)"
+            >
+              <img
+                v-if="c.icon"
+                :src="c.icon"
+                :alt="text(c.name)"
+                @error="onCatImgError($event)"
+              />
+              <span v-else class="ph" />
+              <span class="cat-name">{{ text(c.name) }}</span>
+            </button>
           </div>
         </section>
-      </template>
 
-      <section class="feed">
-        <div class="tabs">
-          <button
-            v-for="(tab, i) in feedTabs"
-            :key="tab"
-            type="button"
-            :class="{ on: feedTab === i }"
-            @click="feedTab = i"
-          >
-            {{ tabLabel(tab) }}
-          </button>
-        </div>
-        <div v-if="showFeedSkeleton" class="grid" aria-hidden="true">
-          <div v-for="n in 6" :key="`sk-feed-${n}`" class="sk-card">
-            <div class="sk-media sk-pulse" />
-            <div class="sk-meta">
-              <span class="sk-line sk-pulse" />
-              <span class="sk-line sk-pulse sk-short" />
+        <CampaignRail
+          v-else-if="mod.module_type === 'campaign_rail' && mod.ref_code"
+          :ref="(el) => setCampaignRailRef(mod.module_key, el)"
+          :code="mod.ref_code"
+          :title="mod.title"
+          :rail-limit="mod.config?.rail_limit || 10"
+        />
+
+        <template v-else-if="mod.module_type === 'seckill_rail'">
+          <section v-if="showFlashSkeleton" class="flash flash--sk" aria-hidden="true">
+            <div class="section-title">
+              <span class="sk-line sk-pulse sk-title" />
+              <span class="sk-line sk-pulse sk-more" />
+            </div>
+            <div class="flash-row">
+              <div v-for="n in 2" :key="`sk-flash-${n}`" class="sk-card">
+                <div class="sk-media sk-pulse" />
+                <div class="sk-meta">
+                  <span class="sk-line sk-pulse" />
+                  <span class="sk-line sk-pulse sk-short" />
+                </div>
+              </div>
+            </div>
+          </section>
+          <section v-else-if="flashSession || flashVisible.length" class="flash">
+            <div class="section-title">
+              <h2>{{ t('home.flashSale') }}</h2>
+              <button type="button" class="more sm-pressable" @click="router.push({ name: 'seckill' })">
+                {{ t('account.more') }}
+              </button>
+              <div class="count" :title="flashClock">
+                <span class="clock">{{ flashClock }}</span>
+              </div>
+            </div>
+            <p class="flash-hint">{{ flashHint }}</p>
+            <div class="flash-row">
+              <ProductCard v-for="p in flashVisible" :key="p.id" :product="p" />
+            </div>
+          </section>
+        </template>
+
+        <template v-else-if="mod.module_type === 'product_showcase'">
+          <section v-if="showSectionsSkeleton" class="showcase" aria-hidden="true">
+            <div class="section-title">
+              <span class="sk-line sk-pulse sk-title" />
+              <span class="sk-line sk-pulse sk-more" />
+            </div>
+            <div class="grid">
+              <div v-for="m in 4" :key="`sk-sec-${mod.module_key}-${m}`" class="sk-card">
+                <div class="sk-media sk-pulse" />
+                <div class="sk-meta">
+                  <span class="sk-line sk-pulse" />
+                  <span class="sk-line sk-pulse sk-short" />
+                </div>
+              </div>
+            </div>
+          </section>
+          <section v-else-if="sectionByCode(mod.ref_code)" class="showcase">
+            <div class="section-title">
+              <h2>{{ text(sectionByCode(mod.ref_code)!.title) }}</h2>
+              <button
+                v-if="sectionByCode(mod.ref_code)!.view_all_type !== 'none'"
+                type="button"
+                class="more sm-pressable"
+                @click="onSectionViewAll(sectionByCode(mod.ref_code)!)"
+              >
+                {{ t('home.viewAll') }}
+              </button>
+            </div>
+            <div class="grid">
+              <ProductCard
+                v-for="p in sectionByCode(mod.ref_code)!.items"
+                :key="p.id"
+                :product="p"
+              />
+            </div>
+          </section>
+        </template>
+
+        <section v-else-if="mod.module_type === 'recommend_feed'" class="feed">
+          <div class="tabs">
+            <button
+              v-for="(tab, i) in feedTabs"
+              :key="tab"
+              type="button"
+              class="sm-pressable"
+              :class="{ on: feedTab === i }"
+              @click="feedTab = i"
+            >
+              {{ tabLabel(tab) }}
+            </button>
+          </div>
+          <div v-if="showFeedSkeleton" class="grid" aria-hidden="true">
+            <div v-for="n in 6" :key="`sk-feed-${n}`" class="sk-card">
+              <div class="sk-media sk-pulse" />
+              <div class="sk-meta">
+                <span class="sk-line sk-pulse" />
+                <span class="sk-line sk-pulse sk-short" />
+              </div>
             </div>
           </div>
-        </div>
-        <van-list
-          v-else
-          v-model:loading="feedLoading"
-          v-model:error="feedError"
-          :finished="feedFinished"
-          :loading-text="t('home.feedLoading')"
-          :error-text="t('home.feedLoadFail')"
-          :immediate-check="false"
-          @load="onFeedLoad"
-        >
-          <div class="grid">
-            <ProductCard
-              v-for="(p, idx) in feedItems"
-              :key="`${p.id}-${idx}`"
-              :product="p"
-            />
-          </div>
-          <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
-        </van-list>
-      </section>
+          <van-list
+            v-else
+            v-model:loading="feedLoading"
+            v-model:error="feedError"
+            :finished="feedFinished"
+            :loading-text="t('home.feedLoading')"
+            :error-text="t('home.feedLoadFail')"
+            :immediate-check="false"
+            @load="onFeedLoad"
+          >
+            <div class="grid">
+              <ProductCard
+                v-for="(p, idx) in feedItems"
+                :key="`${p.id}-${idx}`"
+                :product="p"
+              />
+            </div>
+            <p v-if="!feedBusy && !feedItems.length" class="feed-empty">{{ t('home.feedEmpty') }}</p>
+          </van-list>
+        </section>
+      </template>
 
       <section v-if="showSubscribe" class="subscribe">
         <h2>{{ t('home.subscribeTitle') }}</h2>
@@ -679,6 +800,7 @@ const tabLabel = (tab: HomeRecTab) => {
     />
 
     <WelcomeRegisterPopup />
+    <HomePopupOverlay />
   </div>
 </template>
 
@@ -716,7 +838,7 @@ const tabLabel = (tab: HomeRecTab) => {
   width: 100%;
   margin: 0;
   border: 0;
-  text-align: left;
+  text-align: center;
   padding: 0.625rem 0.875rem;
   background: var(--sm-promo-bg);
   color: var(--sm-text);
@@ -725,6 +847,26 @@ const tabLabel = (tab: HomeRecTab) => {
 }
 .promo.clickable {
   cursor: pointer;
+}
+.image-ad {
+  width: 100%;
+}
+.image-ad-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.image-ad-btn.clickable {
+  cursor: pointer;
+}
+.image-ad-btn img {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: top;
 }
 .section-title {
   display: flex;
@@ -808,14 +950,14 @@ const tabLabel = (tab: HomeRecTab) => {
   border-radius: 0.5rem;
 }
 .cats {
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
 }
 .cats-row {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 0 0.875rem 0.75rem;
+  padding: 0 0.875rem 0.375rem;
   -webkit-overflow-scrolling: touch;
 }
 .cats-row button {

@@ -41,11 +41,24 @@ export const adminMenus: AdminMenu[] = [
     ],
   },
   {
+    label: '首頁運營',
+    key: 'home-ops',
+    children: [
+      { label: '首頁佈局', key: '/home-ops/layout', path: '/home-ops/layout' },
+      { label: '輪播廣告', key: '/home-ops/banners', path: '/home-ops/banners' },
+      { label: '廣告字幕', key: '/home-ops/marquee', path: '/home-ops/marquee' },
+      { label: '圖片廣告', key: '/home-ops/image-ads', path: '/home-ops/image-ads' },
+      { label: '頁腳標語', key: '/home-ops/slogan', path: '/home-ops/slogan' },
+      { label: '活動專區', key: '/home-ops/campaigns', path: '/home-ops/campaigns' },
+      { label: '商品櫥窗', key: '/home-ops/showcases', path: '/home-ops/showcases' },
+      { label: '首頁遮罩', key: '/home-ops/popups', path: '/home-ops/popups' },
+    ],
+  },
+  {
     label: '內容',
     key: 'cms',
     children: [
       { label: '文章', key: '/cms/articles', path: '/cms/articles' },
-      { label: '首頁運營', key: '/cms/home', path: '/cms/home' },
       { label: '系統消息', key: '/cms/messages', path: '/cms/messages' },
       { label: '發送流水', key: '/cms/notify-outbox', path: '/cms/notify-outbox' },
       { label: '訂閱名單', key: '/cms/newsletter', path: '/cms/newsletter' },

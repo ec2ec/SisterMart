@@ -8,6 +8,7 @@ import {
   createReview,
   fetchOrder,
   followReview,
+  rereviewReview,
   uploadReviewImage,
   type Order,
 } from '../api/trade'
@@ -36,11 +37,27 @@ const submitting = ref(false)
 
 const itemId = computed(() => Number(route.query.item || 0) || null)
 const item = computed(() => (order.value?.items || []).find((i) => i.id === itemId.value) || null)
-const isFollow = computed(() => Boolean(item.value?.reviewed && item.value?.can_follow))
+const isRereview = computed(
+  () => route.query.mode === 'rereview' || Boolean(item.value?.can_re_review && !item.value?.can_review),
+)
+const isFollow = computed(
+  () => Boolean(item.value?.reviewed && item.value?.can_follow) && !isRereview.value,
+)
+const pageTitle = computed(() => {
+  if (isRereview.value) return t('review.rereviewTitle')
+  if (isFollow.value) return t('review.followTitle')
+  return t('review.title')
+})
 /** 1–5 星對應評級描述（與電商常見綜合評分文案一致） */
 const starLabel = computed(() => {
   const n = Math.min(5, Math.max(1, Math.round(stars.value) || 5))
   return t(`review.starLabel${n}`)
+})
+const canSubmit = computed(() => {
+  if (!item.value) return false
+  if (isRereview.value) return Boolean(item.value.can_re_review && item.value.review_id)
+  if (isFollow.value) return Boolean(item.value.can_follow)
+  return Boolean(item.value.can_review)
 })
 
 async function load() {
@@ -53,12 +70,25 @@ async function load() {
     showToast(t('review.itemMissing'))
     return
   }
-  if (!item.value.can_review && !item.value.can_follow) {
+  if (isRereview.value && item.value.review) {
+    stars.value = item.value.review.stars || 5
+    body.value = item.value.review.body || ''
+    fileList.value = (item.value.review.images || []).map((url, i) => ({
+      url: assetUrl(url),
+      status: 'done' as const,
+      remoteUrl: url,
+      message: '',
+      isImage: true,
+      deletable: true,
+      uid: Date.now() + i,
+    })) as UploaderFileListItem[]
+  }
+  if (!canSubmit.value) {
     showToast(t('review.notEligible'))
   }
 }
 
-watch(() => [route.params.id, route.query.item], load, { immediate: true })
+watch(() => [route.params.id, route.query.item, route.query.mode], load, { immediate: true })
 
 async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListItem[]) {
   const list = Array.isArray(entryOrList) ? entryOrList : [entryOrList]
@@ -87,7 +117,7 @@ async function afterRead(entryOrList: UploaderFileListItem | UploaderFileListIte
 }
 
 async function submit() {
-  if (!order.value || !item.value) return
+  if (!order.value || !item.value || !canSubmit.value) return
   submitting.value = true
   try {
     if (isFollow.value && item.value.review_id) {
@@ -105,17 +135,30 @@ async function submit() {
       const images = fileList.value
         .map((f) => (f as UploaderFileListItem & { remoteUrl?: string }).remoteUrl || '')
         .filter(Boolean)
-      if (!item.value.id) {
-        showToast(t('review.itemMissing'))
-        return
+      if (isRereview.value) {
+        if (!item.value.review_id) {
+          showToast(t('review.itemMissing'))
+          return
+        }
+        await rereviewReview(item.value.review_id, {
+          stars: stars.value,
+          body: body.value.trim(),
+          images,
+        })
+        showToast(t('review.rereviewDone'))
+      } else {
+        if (!item.value.id) {
+          showToast(t('review.itemMissing'))
+          return
+        }
+        await createReview({
+          order_item_id: item.value.id,
+          stars: stars.value,
+          body: body.value.trim(),
+          images,
+        })
+        showToast(t('review.done'))
       }
-      await createReview({
-        order_item_id: item.value.id,
-        stars: stars.value,
-        body: body.value.trim(),
-        images,
-      })
-      showToast(t('review.done'))
     }
     router.replace({ name: 'order-detail', params: { id: order.value.id } })
   } catch (error) {
@@ -130,7 +173,7 @@ async function submit() {
 
 <template>
   <div class="page">
-    <SubPageNav :title="isFollow ? t('review.followTitle') : t('review.title')" />
+    <SubPageNav :title="pageTitle" />
     <section v-if="item" class="card">
       <div class="line">
         <img v-if="item.image" :src="item.image" alt="" />
@@ -195,7 +238,7 @@ async function submit() {
         block
         round
         :loading="submitting"
-        :disabled="!item.can_review && !item.can_follow"
+        :disabled="!canSubmit"
         style="margin-top: 1rem"
         @click="submit"
       >

@@ -61,16 +61,14 @@ function openEmail() {
     <h2 class="title">{{ t('account.support') }}</h2>
     <p class="lead">{{ t('account.supportLead') }}</p>
 
-    <button type="button" class="btn wa" @click="openWhatsapp">
-      <van-icon name="chat-o" size="1.25rem" />
-      <span>{{ t('account.supportWhatsapp') }}</span>
-    </button>
+    <van-button block round color="#25d366" icon="chat-o" @click="openWhatsapp">
+      {{ t('account.supportWhatsapp') }}
+    </van-button>
     <p class="hours">{{ t('account.supportHours') }}</p>
 
-    <button type="button" class="btn mail" @click="openEmail">
-      <van-icon name="envelop-o" size="1.25rem" />
-      <span>{{ t('account.supportEmail') }}</span>
-    </button>
+    <van-button class="mail" block round color="#3d3560" icon="envelop-o" @click="openEmail">
+      {{ t('account.supportEmail') }}
+    </van-button>
   </van-popup>
 </template>
 
@@ -87,32 +85,15 @@ function openEmail() {
   text-align: center;
   line-height: 1.45;
 }
-.btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  border: 0;
-  border-radius: 0.75rem;
-  padding: 0.875rem 1rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #fff;
-}
-.btn.wa {
-  background: #25d366;
-}
-.btn.mail {
-  margin-top: 0.75rem;
-  background: #3d3560;
-}
 .hours {
-  margin: 0.5rem 0 0;
+  margin: 0.5rem 0 0.75rem;
   padding: 0 0.25rem;
   font-size: 0.75rem;
   line-height: 1.45;
   color: #888;
   text-align: center;
+}
+.mail {
+  margin-top: 0;
 }
 </style>

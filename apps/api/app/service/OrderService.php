@@ -866,6 +866,7 @@ class OrderService
                 'review_id' => null,
                 'can_review' => false,
                 'can_follow' => false,
+                'can_re_review' => false,
                 'reviewed' => false,
                 'review' => null,
             ];
@@ -894,6 +895,7 @@ class OrderService
                 'review_id' => $flags['review_id'],
                 'can_review' => $flags['can_review'],
                 'can_follow' => $flags['can_follow'],
+                'can_re_review' => (bool) ($flags['can_re_review'] ?? false),
                 'reviewed' => $flags['reviewed'],
                 'review' => $flags['review'] ?? null,
                 'can_aftersale' => $canAftersale,

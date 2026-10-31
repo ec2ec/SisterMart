@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showError } from '../feedback'
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   NButton,
@@ -148,6 +149,8 @@ function removeGroup(idx: number) {
   const g = groupModel.value[idx]
   const label = g?.name?.['zh-HK'] || g?.code || `#${idx + 1}`
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認刪除規格組',
     content: `確定刪除規格組「${label}」及其全部選項？刪後請重新生成 SKU。`,
     positiveText: '刪除',
@@ -172,6 +175,8 @@ function removeOption(gIdx: number, oIdx: number) {
   const o = groupModel.value[gIdx]?.options?.[oIdx]
   const label = o?.name?.['zh-HK'] || o?.code || `#${oIdx + 1}`
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認刪除選項',
     content: `確定刪除選項「${label}」？刪後請重新生成 SKU。`,
     positiveText: '刪除',
@@ -194,12 +199,12 @@ function normalizeGroups(): SpecGroupDraft[] | null {
     const g = groupModel.value[gi]
     const gcode = ensureSpecCode(g.code, g.name['zh-HK'], g.name.en, `g${gi + 1}`)
     if (used.has(gcode)) {
-      message.error(`規格組代碼重複：${gcode}`)
+      showError(`規格組代碼重複：${gcode}`)
       return null
     }
     used.add(gcode)
     if (!g.name['zh-HK'].trim() || !g.name.en.trim()) {
-      message.error('請填寫規格組中英文名稱')
+      showError('請填寫規格組中英文名稱')
       return null
     }
     const oUsed = new Set<string>()
@@ -208,12 +213,12 @@ function normalizeGroups(): SpecGroupDraft[] | null {
       const o = g.options[oi]
       const ocode = ensureSpecCode(o.code, o.name['zh-HK'], o.name.en, `o${oi + 1}`)
       if (oUsed.has(ocode)) {
-        message.error(`選項代碼重複：${gcode}:${ocode}`)
+        showError(`選項代碼重複：${gcode}:${ocode}`)
         return null
       }
       oUsed.add(ocode)
       if (!o.name['zh-HK'].trim() || !o.name.en.trim()) {
-        message.error('請填寫選項中英文名稱')
+        showError('請填寫選項中英文名稱')
         return null
       }
       options.push({
@@ -264,7 +269,7 @@ function generateSkus() {
   }
   const combos = cartesian(groups)
   if (combos.length > MAX_SKUS) {
-    message.error(`組合共 ${combos.length} 個，超過上限 ${MAX_SKUS}，請減少選項`)
+    showError(`組合共 ${combos.length} 個，超過上限 ${MAX_SKUS}，請減少選項`)
     return
   }
   groupModel.value = groups
@@ -346,6 +351,8 @@ function removeSku(idx: number) {
   const s = skuModel.value[idx]
   const label = skuLabel(s) || s?.code || `#${idx + 1}`
   dialog.warning({
+    maskClosable: false,
+    closeOnEsc: false,
     title: '確認刪除 SKU',
     content: `確定刪除 SKU「${label}」？`,
     positiveText: '刪除',
@@ -365,11 +372,11 @@ function prepareForSave(): { groups: SpecGroupDraft[]; skus: SkuDraft[] } | null
   const groups = normalizeGroups()
   if (!groups) return null
   if (!skuModel.value.length) {
-    message.error('請至少配置一個 SKU')
+    showError('請至少配置一個 SKU')
     return null
   }
   if (skuModel.value.length > MAX_SKUS) {
-    message.error(`SKU 最多 ${MAX_SKUS} 個`)
+    showError(`SKU 最多 ${MAX_SKUS} 個`)
     return null
   }
   const validRefs = new Set<string>()
@@ -381,13 +388,13 @@ function prepareForSave(): { groups: SpecGroupDraft[]; skus: SkuDraft[] } | null
   for (const s of skuModel.value) {
     const code = ensureSpecCode(s.code, skuLabel(s), s.code, 'sku')
     if (codes.has(code)) {
-      message.error(`SKU 代碼重複：${code}`)
+      showError(`SKU 代碼重複：${code}`)
       return null
     }
     codes.add(code)
     const refs = (s.option_refs || []).filter((r) => validRefs.has(r))
     if (refs.length !== groups.length) {
-      message.error(`SKU「${code}」規格引用不完整，請重新生成 SKU`)
+      showError(`SKU「${code}」規格引用不完整，請重新生成 SKU`)
       return null
     }
     skus.push({

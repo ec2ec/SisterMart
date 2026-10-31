@@ -107,10 +107,12 @@ class NotifyOutboxService
             return;
         }
         $status = (string) $row['status'];
+        $err = (string) ($row['error_message'] ?? '');
+        $smtpish = str_starts_with($err, 'smtp:') || (new MailService())->diagnostics()['smtp_configured'];
         $provider = match ($status) {
             'mock' => 'mock',
-            'sent', 'failed', 'queued' => 'php_mail',
-            default => 'php_mail',
+            'sent', 'failed', 'queued' => $smtpish ? 'ses_smtp' : 'php_mail',
+            default => $smtpish ? 'ses_smtp' : 'php_mail',
         };
         $this->updateStatus(
             $notifyId,

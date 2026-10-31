@@ -17,6 +17,8 @@ export type CartItem = {
   checked: boolean
   available: boolean
   invalid_reason: string
+  /** 活動專屬等動態文案（後端直出） */
+  invalid_message?: string
 }
 
 export type Address = {
@@ -136,6 +138,7 @@ export type Order = {
     review_id?: number | null
     can_review?: boolean
     can_follow?: boolean
+    can_re_review?: boolean
     reviewed?: boolean
     review?: {
       id: number
@@ -148,6 +151,8 @@ export type Order = {
       replied_at?: string | null
       created_at?: string | null
       moderation_status?: string
+      re_review_requested_at?: string | null
+      re_reviewed_at?: string | null
     } | null
     can_aftersale?: boolean
     has_open_aftersale?: boolean
@@ -347,4 +352,12 @@ export function createReview(body: { order_item_id: number; stars: number; body:
 
 export function followReview(id: number, body: string) {
   return api<ProductReview>(`/api/v1/reviews/${id}/follow`, { method: 'POST', body: JSON.stringify({ body }) }, 'member')
+}
+
+export function rereviewReview(id: number, body: { stars: number; body: string; images?: string[] }) {
+  return api<ProductReview>(
+    `/api/v1/reviews/${id}/rereview`,
+    { method: 'POST', body: JSON.stringify(body) },
+    'member',
+  )
 }

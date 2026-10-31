@@ -65,7 +65,7 @@ function backHome() {
     </div>
 
     <header class="nav">
-      <button type="button" class="back" aria-label="back" @click="router.back()">
+      <button type="button" class="sm-icon-btn back" aria-label="back" @click="router.back()">
         <van-icon name="arrow-left" size="1.25rem" />
       </button>
       <h1 class="nav-title">{{ t('pay.resultTitle') }}</h1>
@@ -87,8 +87,12 @@ function backHome() {
       </p>
 
       <div class="actions" :class="{ in: ready }">
-        <button type="button" class="btn primary" @click="viewOrder">{{ t('pay.viewOrder') }}</button>
-        <button type="button" class="btn ghost" @click="backHome">{{ t('pay.backHome') }}</button>
+        <van-button block round type="primary" color="var(--sm-primary)" @click="viewOrder">
+          {{ t('pay.viewOrder') }}
+        </van-button>
+        <van-button block round plain hairline type="primary" @click="backHome">
+          {{ t('pay.backHome') }}
+        </van-button>
       </div>
     </main>
   </div>
@@ -220,12 +224,6 @@ function backHome() {
 }
 
 .back {
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 0;
-  background: transparent;
   color: var(--pay-ink);
 }
 
@@ -387,38 +385,5 @@ function backHome() {
 .actions.in {
   opacity: 1;
   transform: none;
-}
-
-.btn {
-  appearance: none;
-  border: 0;
-  border-radius: 999px;
-  height: 3rem;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
-}
-
-.btn:active {
-  transform: scale(0.98);
-}
-
-.btn.primary {
-  color: #fff;
-  background: linear-gradient(180deg, #2a2a3d 0%, #151522 100%);
-  box-shadow: 0 0.45rem 1.1rem rgba(20, 20, 40, 0.28);
-}
-
-.btn.ghost {
-  color: var(--pay-ink);
-  background: #fff;
-  box-shadow:
-    inset 0 0 0 1px rgba(200, 190, 210, 0.7),
-    0 0.25rem 0.75rem rgba(80, 50, 120, 0.08);
 }
 </style>

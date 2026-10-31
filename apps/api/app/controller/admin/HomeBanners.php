@@ -6,6 +6,7 @@ namespace app\controller\admin;
 
 use app\controller\ApiController;
 use app\service\HomeBannerService;
+use app\service\ImageUploadService;
 use app\support\ApiException;
 use think\Response;
 
@@ -31,6 +32,9 @@ class HomeBanners extends ApiController
         return $this->run(fn () => (new HomeBannerService())->delete($id));
     }
 
+    /**
+     * 兼容舊路徑 POST /uploads/banner；底層改走 ImageUploadService（與 /uploads/image 一致）。
+     */
     public function upload(): Response
     {
         return $this->run(function () {
@@ -38,25 +42,14 @@ class HomeBanners extends ApiController
             if (!$file) {
                 throw new ApiException('INVALID', '請選擇圖片', 422, 42201);
             }
-            $size = (int) $file->getSize();
-            if ($size <= 0 || $size > 2 * 1024 * 1024) {
-                throw new ApiException('INVALID', '單張圖片不可超過 2MB', 422, 42289);
-            }
-            $mime = (string) ($file->getMime() ?: '');
-            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-            if (!isset($allowed[$mime])) {
-                throw new ApiException('INVALID', '僅支持 JPG / PNG / WebP', 422, 42290);
-            }
-            $ext = $allowed[$mime];
-            $relDir = 'banner/' . date('Ymd');
-            $root = app()->getRootPath() . 'public/storage/' . $relDir;
-            if (!is_dir($root) && !mkdir($root, 0775, true) && !is_dir($root)) {
-                throw new ApiException('SERVER', '無法建立上傳目錄', 500, 50001);
-            }
-            $name = bin2hex(random_bytes(8)) . '.' . $ext;
-            $file->move($root, $name);
+            $admin = app('sistermart.admin') ?? [];
+            $adminId = (int) ($admin['id'] ?? 0);
+            $svc = new ImageUploadService();
+            $opts = $svc->optionsFromRequest(['preset' => 'banner'], 'banner');
+            $opts['bucket'] = 'banner';
+            $opts['owner_id'] = $adminId > 0 ? $adminId : 'shared';
 
-            return ['url' => '/storage/' . $relDir . '/' . $name];
+            return $svc->store($file, $opts);
         }, 201);
     }
 }

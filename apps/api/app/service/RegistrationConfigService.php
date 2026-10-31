@@ -204,7 +204,7 @@ class RegistrationConfigService
                     'member_id' => $memberId,
                     'status' => 'unused',
                     'order_id' => null,
-                    'expires_at' => $coupon['ends_at'] ?: null,
+                    'expires_at' => CouponService::expiresAtAfterClaim($coupon, $now),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
