@@ -6,6 +6,7 @@ namespace app\controller\admin;
 
 use app\controller\ApiController;
 use app\service\CatalogService;
+use app\service\DistributionAccessService;
 use app\service\MaintenanceService;
 use app\service\RegistrationConfigService;
 use app\service\ShopSettingsService;
@@ -53,5 +54,15 @@ class ShopSettings extends ApiController
     public function updateRegistration(): Response
     {
         return $this->run(fn () => (new RegistrationConfigService())->save($this->payload()));
+    }
+
+    public function distributionAccess(): Response
+    {
+        return $this->run(fn () => (new DistributionAccessService())->get());
+    }
+
+    public function updateDistributionAccess(): Response
+    {
+        return $this->run(fn () => (new DistributionAccessService())->save($this->payload()));
     }
 }

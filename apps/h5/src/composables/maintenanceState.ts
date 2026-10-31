@@ -1,5 +1,10 @@
 import { computed, ref } from 'vue'
 
+export type DistributionAccessFlag = {
+  whitelist_only?: boolean
+  allowed?: boolean
+}
+
 export type MaintenanceStatus = {
   enabled: boolean
   /** 當前登錄會員在用戶白名單內，不蓋維護頁 */
@@ -10,6 +15,8 @@ export type MaintenanceStatus = {
   ends_at: string | null
   /** 是否開放註冊；缺省視為開放 */
   registration_enabled?: boolean
+  /** 分銷中心入口：白名單閘控 */
+  distribution_access?: DistributionAccessFlag
 }
 
 const emptyStatus = (): MaintenanceStatus => ({
@@ -19,6 +26,7 @@ const emptyStatus = (): MaintenanceStatus => ({
   message: { 'zh-HK': '', en: '' },
   starts_at: null,
   ends_at: null,
+  distribution_access: { whitelist_only: true, allowed: false },
 })
 
 /** 模組級狀態：供 App / useMaintenance / api 攔截器共用，避免循環依賴 */
@@ -28,6 +36,13 @@ export const maintenanceLoaded = ref(false)
 export const maintenanceEnabled = computed(
   () => Boolean(maintenanceStatus.value?.enabled) && !maintenanceStatus.value?.member_bypass,
 )
+
+/** 當前會員是否可進分銷中心（缺省保守：不允許） */
+export const distributionAllowed = computed(() => {
+  const flag = maintenanceStatus.value?.distribution_access
+  if (!flag) return false
+  return Boolean(flag.allowed)
+})
 
 function asLocalized(raw: unknown, fallback = ''): { 'zh-HK': string; en: string } {
   if (raw && typeof raw === 'object') {
@@ -61,6 +76,7 @@ export function applyMaintenanceFromDetails(details: unknown) {
       d.starts_at === undefined ? prev.starts_at : d.starts_at ? String(d.starts_at) : null,
     ends_at: d.ends_at === undefined ? prev.ends_at : d.ends_at ? String(d.ends_at) : null,
     registration_enabled: prev.registration_enabled,
+    distribution_access: prev.distribution_access,
   }
   maintenanceLoaded.value = true
 }

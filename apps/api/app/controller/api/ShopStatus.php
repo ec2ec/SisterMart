@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace app\controller\api;
 
 use app\controller\ApiController;
+use app\service\DistributionAccessService;
 use app\service\MaintenanceService;
 use app\service\RegistrationConfigService;
 use app\service\TokenService;
@@ -31,8 +32,9 @@ class ShopStatus extends ApiController
 
             $maintenance = (new MaintenanceService())->publicStatus($memberId);
             $registration = (new RegistrationConfigService())->publicStatus();
+            $distribution = (new DistributionAccessService())->publicFlag($memberId);
 
-            return array_merge($maintenance, $registration, [
+            return array_merge($maintenance, $registration, $distribution, [
                 'cs_whatsapp' => TradeSettings::csWhatsapp(),
                 'cs_email' => TradeSettings::csEmail(),
             ]);

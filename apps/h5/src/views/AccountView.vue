@@ -22,6 +22,7 @@ import {
   type Member,
 } from '../composables/useSession'
 import { goLogin } from '../composables/useAuth'
+import { distributionAllowed, useMaintenance } from '../composables/useMaintenance'
 import { APP_VERSION } from '../config/appVersion'
 import { toggleLocale } from '../i18n'
 import { assetUrl } from '../utils/assetUrl'
@@ -116,17 +117,17 @@ async function refreshCheckinStreak() {
 async function refreshAccount() {
   syncSessionFromStorage()
   if (!loggedIn.value) {
-    await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
+    await Promise.all([refreshOrderCounts(), refreshCheckinStreak(), refreshShopStatus()])
     return
   }
   try {
     const data = await api<Member>('/api/v1/members/me', {}, 'member')
     setSession(token(), data)
-    await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
+    await Promise.all([refreshOrderCounts(), refreshCheckinStreak(), refreshShopStatus()])
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       clearSession()
-      await Promise.all([refreshOrderCounts(), refreshCheckinStreak()])
+      await Promise.all([refreshOrderCounts(), refreshCheckinStreak(), refreshShopStatus()])
     }
   }
 }
@@ -193,6 +194,13 @@ const services = [
   { key: 'messageCenter', icon: 'chat-o', route: 'messages' },
 ] as const
 
+const { refresh: refreshShopStatus } = useMaintenance()
+
+/** 分銷中心僅白名單會員可見 */
+const visibleServices = computed(() =>
+  services.filter((s) => s.key !== 'affiliate' || distributionAllowed.value),
+)
+
 const spentDisplay = computed(() => {
   if (!loggedIn.value) {
     return t('account.spent', { n: guestDash }).replace(/★+\s*/g, '')
@@ -239,6 +247,10 @@ function requireAuth(redirect: string): boolean {
 function goService(route: string) {
   if (!route) {
     showToast(t('pages.coming'))
+    return
+  }
+  if (route === 'distribution' && !distributionAllowed.value) {
+    showToast(t('account.affiliateDenied'))
     return
   }
   const path = routePaths[route] || `/${route}`
@@ -377,7 +389,7 @@ function goOrders(tab?: string) {
 
     <section class="card services">
       <button
-        v-for="s in services"
+        v-for="s in visibleServices"
         :key="s.key"
         type="button"
         class="sm-pressable"

@@ -44,6 +44,7 @@ import DistPosterView from '../views/DistPosterView.vue'
 import DistRankingView from '../views/DistRankingView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import { isAuthRouteName } from '../composables/useAuth'
+import { distributionAllowed, useMaintenance } from '../composables/useMaintenance'
 import { loggedInAuthBouncePath, rememberLastTabName } from '../composables/useNavBack'
 import { captureRefFromQuery } from '../composables/useReferral'
 import {
@@ -125,7 +126,12 @@ export const router = createRouter({
   },
 })
 
-router.beforeEach((to, from) => {
+function isDistributionRoute(name: unknown): boolean {
+  const n = String(name || '')
+  return n === 'distribution' || n.startsWith('dist-')
+}
+
+router.beforeEach(async (to, from) => {
   captureRefFromQuery(to.query.ref)
   rememberTabScrollBeforeOverlay(Boolean(to.meta.overlay), Boolean(from.meta.overlay), from.name)
   if (isTabRouteName(from.name)) rememberLastTabName(from.name)
@@ -134,5 +140,14 @@ router.beforeEach((to, from) => {
   // 已登錄不應停在登錄／註冊／找回（含業務頁返回鍵退回認證頁）
   if (isAuthRouteName(to.name) && localStorage.getItem('sm_token')) {
     return { path: loggedInAuthBouncePath(), replace: true }
+  }
+
+  // 分銷中心僅白名單：直鏈 /distribution* 也擋
+  if (isDistributionRoute(to.name)) {
+    const { refresh } = useMaintenance()
+    await refresh()
+    if (!distributionAllowed.value) {
+      return { name: 'account', replace: true }
+    }
   }
 })
