@@ -163,6 +163,7 @@ onMounted(load)
 }
 .table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   background: #fff;
 }
