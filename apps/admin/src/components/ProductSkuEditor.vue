@@ -24,6 +24,7 @@ export type SkuDraft = {
   compare_at: number
   agent_price: number
   cost_price: number
+  supplier_sku: string
   stock: number
   image?: string | null
   status?: number
@@ -121,6 +122,7 @@ function ensureDefaults() {
         compare_at: 0,
         agent_price: 0,
         cost_price: 0,
+        supplier_sku: '',
         stock: 0,
         image: null,
         status: 1,
@@ -280,6 +282,7 @@ function generateSkus() {
       return {
         ...old,
         code: old.code || c.code,
+        supplier_sku: old.supplier_sku ?? '',
         option_refs: c.refs,
         status: old.status ?? 1,
       }
@@ -290,6 +293,7 @@ function generateSkus() {
       compare_at: 0,
       agent_price: 0,
       cost_price: 0,
+      supplier_sku: '',
       stock: 0,
       image: null,
       status: 1,
@@ -397,12 +401,18 @@ function prepareForSave(): { groups: SpecGroupDraft[]; skus: SkuDraft[] } | null
       showError(`SKU「${code}」規格引用不完整，請重新生成 SKU`)
       return null
     }
+    const supplierSku = String(s.supplier_sku || '').trim()
+    if (supplierSku.length > 64) {
+      showError(`供應商編碼過長（最多 64 字）：${skuLabel(s) || code}`)
+      return null
+    }
     skus.push({
       code,
       price: Number(s.price || 0),
       compare_at: Number(s.compare_at || 0),
       agent_price: Number(s.agent_price || 0),
       cost_price: Number(s.cost_price || 0),
+      supplier_sku: supplierSku,
       stock: Math.max(0, Number(s.stock || 0)),
       image: s.image || null,
       status: s.status === 0 ? 0 : 1,
@@ -511,6 +521,7 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
             <th class="col-combo">規格組合</th>
             <th class="col-refs">規格引用</th>
             <th>SKU 代碼</th>
+            <th>供應商編碼</th>
             <th>售價</th>
             <th>劃線價</th>
             <th>代理價</th>
@@ -530,6 +541,15 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
             </td>
             <td>
               <n-input v-model:value="s.code" placeholder="代碼" size="small" style="width: 7.5rem" />
+            </td>
+            <td>
+              <n-input
+                v-model:value="s.supplier_sku"
+                placeholder="供應商編碼"
+                size="small"
+                maxlength="64"
+                style="width: 8rem"
+              />
             </td>
             <td>
               <n-input-number v-model:value="s.price" size="small" :show-button="false" style="width: 5.5rem" />
