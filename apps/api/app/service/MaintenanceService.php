@@ -25,6 +25,7 @@ class MaintenanceService
         '/api/v1/media',
         '/api/v1/files',
         '/api/v1/payment-callbacks',
+        '/api/v1/whatsapp/webhook',
         '/api/v1/jobs',
         '/api/v1/member-sessions',
         '/api/v1/verification-codes',
