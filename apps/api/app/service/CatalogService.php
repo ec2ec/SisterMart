@@ -555,6 +555,7 @@ class CatalogService
                 }
             }
 
+            $this->ensureSupplierSkuColumn();
             foreach (array_values($skus) as $sku) {
                 $scode = trim((string) ($sku['code'] ?? ''));
                 if ($scode === '') {
@@ -933,6 +934,7 @@ class CatalogService
             ];
         }
 
+        $this->ensureSupplierSkuColumn();
         $skuQ = Db::name('skus')->where('product_id', $row['id']);
         if (!$admin) {
             $skuQ->where('status', 1);
@@ -1010,4 +1012,31 @@ class CatalogService
             'reviews'         => (new ReviewService())->listForProduct((int) $row['id'], $viewerMemberId),
         ]);
     }
+
+    /** Ensure skus.supplier_sku exists (VPS may lag behind migrate). */
+    private function ensureSupplierSkuColumn(): void
+    {
+        static $ready = false;
+        if ($ready) {
+            return;
+        }
+        $prefix = (string) config('database.connections.mysql.prefix', '');
+        $table = $prefix . 'skus';
+        try {
+            $rows = Db::query(
+                "SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'supplier_sku'",
+                [$table],
+            );
+            if ((int) ($rows[0]['c'] ?? 0) === 0) {
+                Db::execute(
+                    "ALTER TABLE `{$table}` ADD COLUMN `supplier_sku` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'supplier product code' AFTER `cost_price`"
+                );
+            }
+            $ready = true;
+        } catch (\Throwable $e) {
+            $ready = true;
+        }
+    }
+
 }
