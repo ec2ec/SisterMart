@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS skus (
   compare_at DECIMAL(12,2) NOT NULL DEFAULT 0,
   agent_price DECIMAL(12,2) NOT NULL DEFAULT 0,
   cost_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+  supplier_sku VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'supplier product code',
   stock INT NOT NULL DEFAULT 0,
   image_url VARCHAR(255) NULL,
   status TINYINT NOT NULL DEFAULT 1,

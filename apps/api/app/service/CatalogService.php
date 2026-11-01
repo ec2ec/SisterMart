@@ -560,6 +560,10 @@ class CatalogService
                 if ($scode === '') {
                     throw new ApiException('INVALID', 'SKU 代碼不能為空', 422, 42201);
                 }
+                $supplierSku = trim((string) ($sku['supplier_sku'] ?? ''));
+                if (mb_strlen($supplierSku) > 64) {
+                    throw new ApiException('INVALID', '供應商 SKU 編碼不能超過 64 字', 422, 42201);
+                }
                 $sid = (int) Db::name('skus')->insertGetId([
                     'product_id' => $id,
                     'code'       => $scode,
@@ -567,6 +571,7 @@ class CatalogService
                     'compare_at' => round((float) ($sku['compare_at'] ?? 0), 2),
                     'agent_price' => round((float) ($sku['agent_price'] ?? 0), 2),
                     'cost_price' => round((float) ($sku['cost_price'] ?? 0), 2),
+                    'supplier_sku' => $supplierSku,
                     'stock'      => max(0, (int) ($sku['stock'] ?? 0)),
                     'image_url'  => trim((string) ($sku['image'] ?? '')) ?: null,
                     'status'     => (int) ($sku['status'] ?? 1) === 0 ? 0 : 1,
@@ -970,7 +975,8 @@ class CatalogService
             ];
             if ($admin) {
                 $skuRow['agent_price'] = (float) ($sku['agent_price'] ?? 0);
-                $skuBag['cost_price'] = (float) ($sku['cost_price'] ?? 0);
+                $skuRow['cost_price'] = (float) ($sku['cost_price'] ?? 0);
+                $skuRow['supplier_sku'] = (string) ($sku['supplier_sku'] ?? '');
             }
             $skusOut[] = $skuRow;
         }
