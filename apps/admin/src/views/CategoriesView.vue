@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { NButton, NCard, NFormItem, NInput, NInputNumber, NSelect, NSpace, NSwitch, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl } from '../utils/assetUrl'
+import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import SceneImageField from '../components/SceneImageField.vue'
 
 type Cat = {
   id: number
@@ -75,7 +76,7 @@ async function save() {
   const body = {
     code: form.value.code,
     parent_id: form.value.parent_id || null,
-    icon: form.value.icon,
+    icon: toStoredUrl(form.value.icon.trim()),
     sort: form.value.sort,
     status: form.value.status ? 1 : 0,
     name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
@@ -163,7 +164,15 @@ onMounted(load)
       </n-form-item>
       <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
       <n-form-item label="英文名稱"><n-input v-model:value="form.name_en" /></n-form-item>
-      <n-form-item label="圖標 URL"><n-input v-model:value="form.icon" placeholder="可留空" /></n-form-item>
+      <n-form-item label="圖標">
+        <SceneImageField
+          v-model="form.icon"
+          scene="catalog.category"
+          placeholder="可留空；上傳或從素材庫選擇"
+          delete-title="移除圖標"
+          delete-content="確定移除此分類圖標？保存後才會生效。"
+        />
+      </n-form-item>
       <n-form-item label="排序"><n-input-number v-model:value="form.sort" /></n-form-item>
       <n-form-item label="啟用"><n-switch v-model:value="form.status" /></n-form-item>
       <n-space>

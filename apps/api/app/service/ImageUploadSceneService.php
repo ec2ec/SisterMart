@@ -299,6 +299,36 @@ class ImageUploadSceneService
         throw new ApiException('INVALID', '圖片路徑與場景不符', 422, 42201);
     }
 
+    /**
+     * 後台素材庫：只列該場景分桶裡已上傳的圖。不含會員頭像／評價／售後。
+     *
+     * @return array{scene: string, items: list<array{url: string, bytes: int}>, total: int, page: int, page_size: int}
+     */
+    public function library(string $scene, int $page, int $pageSize): array
+    {
+        if (!isset(self::SCENES[$scene]) || str_starts_with($scene, 'member.')) {
+            throw new ApiException('INVALID', '素材庫只收後台圖片場景', 422, 42201);
+        }
+        $page = max(1, $page);
+        $pageSize = max(1, min(60, $pageSize));
+        $bucket = trim((string) $this->resolved($scene)['bucket'], '/');
+        $files = $this->bucketFiles($bucket);
+        $total = count($files);
+        $slice = array_slice($files, ($page - 1) * $pageSize, $pageSize);
+        $items = [];
+        foreach ($slice as $row) {
+            $items[] = ['url' => $row['url'], 'bytes' => $row['bytes']];
+        }
+
+        return [
+            'scene' => $scene,
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $pageSize,
+        ];
+    }
+
     public function assertMemberUrl(string $scene, int $memberId, string $url): string
     {
         $storage = $this->assertUrl($scene, $url);
@@ -411,6 +441,64 @@ class ImageUploadSceneService
         }
 
         return null;
+    }
+
+    /**
+     * @return list<array{url: string, bytes: int, mtime: int}>
+     */
+    private function bucketFiles(string $bucket): array
+    {
+        $storageRoot = rtrim(str_replace('\\', '/', app()->getRootPath()), '/') . '/public/storage';
+        $bucketRoot = $storageRoot . '/' . $bucket;
+        if (!is_dir($bucketRoot)) {
+            return [];
+        }
+        $realStorage = realpath($storageRoot);
+        $realBucket = realpath($bucketRoot);
+        if ($realStorage === false || $realBucket === false) {
+            return [];
+        }
+        $realStorage = str_replace('\\', '/', $realStorage);
+        $realBucket = str_replace('\\', '/', $realBucket);
+        if (!str_starts_with($realBucket . '/', $realStorage . '/')) {
+            return [];
+        }
+
+        $rows = [];
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($bucketRoot, \FilesystemIterator::SKIP_DOTS),
+        );
+        foreach ($it as $file) {
+            if (!$file instanceof \SplFileInfo || !$file->isFile()) {
+                continue;
+            }
+            $ext = strtolower($file->getExtension());
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+                continue;
+            }
+            $realFile = $file->getRealPath();
+            if ($realFile === false) {
+                continue;
+            }
+            $realFile = str_replace('\\', '/', $realFile);
+            if (!str_starts_with($realFile, $realBucket . '/')) {
+                continue;
+            }
+            $rel = substr($realFile, strlen($realStorage));
+            $rows[] = [
+                'url' => '/storage' . $rel,
+                'bytes' => (int) $file->getSize(),
+                'mtime' => (int) $file->getMTime(),
+            ];
+            if (count($rows) >= 2000) {
+                break;
+            }
+        }
+        usort($rows, static function (array $a, array $b): int {
+            return $b['mtime'] <=> $a['mtime'] ?: strcmp($a['url'], $b['url']);
+        });
+
+        return $rows;
     }
 
     private function clampInt(mixed $value, int $min, int $max, int $fallback): int

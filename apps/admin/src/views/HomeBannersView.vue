@@ -12,10 +12,10 @@ import {
   useMessage,
   NPagination,
 } from 'naive-ui'
-import { api, uploadImage } from '../api'
-import { showError } from '../feedback'
+import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import SceneImageField from '../components/SceneImageField.vue'
 
 type Banner = {
   id: number
@@ -106,21 +106,6 @@ async function remove(id: number) {
   await load()
 }
 
-async function onFile(ev: Event) {
-  const input = ev.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  try {
-    const data = await uploadImage(file, { scene: 'marketing.banner' })
-    form.value.image_url = toStoredUrl(data.url)
-    message.success('圖片已上傳')
-  } catch (e: unknown) {
-    showError(e instanceof Error ? e.message : '圖片上傳失敗')
-  } finally {
-    input.value = ''
-  }
-}
-
 onMounted(load)
 </script>
 
@@ -151,11 +136,8 @@ onMounted(load)
       </div>
     </n-card>
     <n-card :title="form.id ? `編輯 #${form.id}` : '新增輪播'">
-      <n-form-item label="圖片 URL">
-        <n-input v-model:value="form.image_url" placeholder="/mock/home-banner-1.png" />
-      </n-form-item>
-      <n-form-item label="上傳">
-        <input type="file" accept="image/jpeg,image/png,image/webp" @change="onFile" />
+      <n-form-item label="圖片">
+        <SceneImageField v-model="form.image_url" scene="marketing.banner" placeholder="/mock/home-banner-1.png 或上傳" />
       </n-form-item>
       <n-form-item label="繁中標題"><n-input v-model:value="form.title_zh" /></n-form-item>
       <n-form-item label="英文標題"><n-input v-model:value="form.title_en" /></n-form-item>

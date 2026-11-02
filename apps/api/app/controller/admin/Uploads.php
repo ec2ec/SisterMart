@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace app\controller\admin;
 
 use app\controller\ApiController;
+use app\service\ImageUploadSceneService;
 use app\service\ImageUploadService;
 use app\support\ApiException;
 use think\Response;
@@ -40,5 +41,17 @@ class Uploads extends ApiController
 
             return (new ImageUploadService())->store($file, $opts);
         }, 201);
+    }
+
+    /** GET /api/v1/admin/uploads/library?scene=&page=&page_size= */
+    public function library(): Response
+    {
+        return $this->run(function () {
+            $scene = trim((string) $this->request->get('scene', ''));
+            $page = (int) $this->request->get('page', 1);
+            $pageSize = (int) $this->request->get('page_size', 24);
+
+            return (new ImageUploadSceneService())->library($scene, $page, $pageSize);
+        });
     }
 }

@@ -13,9 +13,9 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui'
-import { api, uploadImage } from '../api'
-import { showError } from '../feedback'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { api } from '../api'
+import { toStoredUrl } from '../utils/assetUrl'
+import SceneImageField from '../components/SceneImageField.vue'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
 
@@ -52,8 +52,6 @@ const items = ref<Campaign[]>([])
 const badges = ref<Badge[]>([])
 const form = ref(emptyForm())
 const pickerShow = ref(false)
-const uploading = ref(false)
-
 const sources = [
   { label: '按角標自動', value: 'badge' },
   { label: '手工選品', value: 'manual' },
@@ -168,23 +166,6 @@ function onPicked(result: ProductPickResult) {
 
 function removeManual(index: number) {
   form.value.manual_products.splice(index, 1)
-}
-
-async function onBannerFile(ev: Event) {
-  const input = ev.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  uploading.value = true
-  try {
-    const data = await uploadImage(file, { scene: 'marketing.campaign' })
-    form.value.banner_image_url = toStoredUrl(data.url)
-    message.success('橫幅已上傳')
-  } catch (e: unknown) {
-    showError(e instanceof Error ? e.message : '橫幅上傳失敗')
-  } finally {
-    uploading.value = false
-    input.value = ''
-  }
 }
 
 async function save() {
@@ -304,19 +285,7 @@ onMounted(load)
       </n-form-item>
 
       <n-form-item label="落地頁橫幅">
-        <n-space vertical style="width: 100%">
-          <n-input v-model:value="form.banner_image_url" placeholder="圖片 URL 或下方上傳" />
-          <n-space align="center">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              :disabled="uploading"
-              @change="onBannerFile"
-            />
-            <span v-if="uploading" class="hint-inline">上傳中…</span>
-          </n-space>
-          <img v-if="form.banner_image_url" class="banner-preview" :src="assetUrl(form.banner_image_url)" alt="" />
-        </n-space>
+        <SceneImageField v-model="form.banner_image_url" scene="marketing.campaign" placeholder="圖片 URL 或上傳" />
       </n-form-item>
       <n-form-item label="介紹（繁）">
         <WangSimpleEditor
@@ -389,13 +358,5 @@ onMounted(load)
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-}
-.banner-preview {
-  max-width: 22rem;
-  max-height: 8rem;
-  object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  background: #fafafa;
 }
 </style>

@@ -444,6 +444,7 @@ function removeCoupon(row: Coupon) {
           <ProductMediaGallery
             v-model="createBgMedia"
             scene="marketing.coupon"
+            library
             :max="1"
             :hint="bgGalleryHint"
             :delete-title="bgDeleteTitle"
@@ -514,6 +515,7 @@ function removeCoupon(row: Coupon) {
           <ProductMediaGallery
             v-model="editBgMedia"
             scene="marketing.coupon"
+            library
             :max="1"
             :hint="bgGalleryHint"
             :delete-title="bgDeleteTitle"
