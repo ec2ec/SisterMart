@@ -49,6 +49,15 @@ pnpm release pack -- --skip-build --migrate path.sql
 
 產出：`releases/sistermart-release-<stamp>.tar`（含 `package.zip` + `manifest.json` + 可選 `migrate.sql`）。
 
+**發佈完成後請立刻刪除本機壓縮包**（勿堆積、勿提交 git）：
+
+```bash
+bash scripts/deploy/cleanup-release-artifacts.sh
+# 等同：rm -f releases/sistermart-release-*.tar releases/sistermart-vps-root.zip
+```
+
+`releases/*.zip` / `*.tar` / `*.tgz` 已在 `.gitignore`；`releases/sql-*`、`vps-hotfix`、`vps-spa` 等說明與 SQL 目錄保留。
+
 ## 後台
 
 設置 → **發佈通道**（僅超管）：上傳 `.tar` → 狀態 `ready` → 發佈 → 必要時「回退上一快照」。

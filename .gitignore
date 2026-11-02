@@ -65,4 +65,8 @@ apps/admin/dist/
 
 # Deploy backups (local)
 backups/
+# 發佈產物僅臨時使用：打完包／發佈完成後應刪除，勿提交
 releases/*.zip
+releases/*.tar
+releases/*.tgz
+releases/*.tar.gz
