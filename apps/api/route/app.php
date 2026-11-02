@@ -79,6 +79,9 @@ Route::post('api/v1/payment-callbacks/:channel', 'api.PaymentCallbacks/store');
 Route::get('api/v1/whatsapp/webhook', 'api.WhatsAppWebhook/verify');
 Route::post('api/v1/whatsapp/webhook', 'api.WhatsAppWebhook/receive');
 
+/** Resend 郵件 Webhook（送達／退信；Svix 簽名；無會員令牌） */
+Route::post('api/v1/resend/webhook', 'api.ResendWebhook/receive');
+
 Route::group('api/v1', function () {
     Route::get('members/me/level', 'api.Assets/level');
     Route::get('members/me', 'api.Members/me');
