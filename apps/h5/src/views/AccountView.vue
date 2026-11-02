@@ -438,7 +438,7 @@ function goOrders(tab?: string) {
 </template>
 
 <style scoped>
-/* 配色對齊登錄頁 AuthLayout：粉 → lavender → 淺藍（不改底欄 Tab） */
+/* 粉 → lavender → 淺藍（登錄／註冊 AuthLayout 共用同一套；不改底欄 Tab） */
 .account-page {
   --ac-accent: var(--sm-brand-sister);
   --ac-ink: #14141f;

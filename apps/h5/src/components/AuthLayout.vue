@@ -60,20 +60,6 @@ function onBackClick() {
       <span v-else class="auth-top-spacer" aria-hidden="true" />
     </header>
 
-    <div class="auth-bg" aria-hidden="true">
-      <!-- 大色塊 mesh：對齊參考圖粉紫／青藍大漸變；外層 transform、內層 blur -->
-      <div class="mesh mesh-base" />
-      <div class="mesh-move mesh-move-a">
-        <div class="mesh-paint mesh-paint-a" />
-      </div>
-      <div class="mesh-move mesh-move-b">
-        <div class="mesh-paint mesh-paint-b" />
-      </div>
-      <div class="mesh-move mesh-move-c">
-        <div class="mesh-paint mesh-paint-c" />
-      </div>
-      <div class="grain" />
-    </div>
     <div class="auth-inner">
       <div class="logo">
         <span class="sister">{{ t('brandSister') }}</span><span class="mart">{{ t('brandMart') }}</span>
@@ -93,8 +79,19 @@ function onBackClick() {
   min-height: 100dvh;
   padding: 2.25rem 1.375rem 2.5rem;
   overflow: hidden;
-  /* 底色：對齊參考圖中段薰衣草紫 */
-  background: #d8c2ec;
+  /* 與「我的」頁 AccountView 同一套粉 → lavender → 淺藍漸變 */
+  background:
+    radial-gradient(circle at 92% -4%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 182, 212, 0.28) 42%, transparent 68%),
+    radial-gradient(circle at -8% 32%, rgba(255, 255, 255, 0.45) 0%, rgba(210, 190, 255, 0.28) 45%, transparent 70%),
+    radial-gradient(circle at 108% 88%, rgba(255, 255, 255, 0.4) 0%, rgba(180, 220, 255, 0.32) 48%, transparent 72%),
+    linear-gradient(
+      165deg,
+      #f46ca9 10%,
+      #f0d8ee 28%,
+      #e4daf6 55%,
+      #7dbaf7 82%,
+      #407cfb 100%
+    );
   color: #1c1c1c;
 }
 
@@ -150,135 +147,6 @@ function onBackClick() {
 .auth-lang .flag {
   font-size: 0.95rem;
   line-height: 1;
-}
-
-.auth-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/*
- * 參考圖風格：大色塊、長距離漸變（粉紫 → 薰衣草 → 青白），無密條紋。
- * 晃動 = 大色暈緩慢漂移；外層 transform / 內層 blur 拆開避免 WebKit 卡死。
- */
-.mesh,
-.mesh-move,
-.grain {
-  display: block;
-  position: absolute;
-  pointer-events: none;
-}
-
-.mesh-base {
-  inset: -20%;
-  background:
-    /* 對角大 sweep：左上 saturates 紫 → 粉 → 右下青白（貼近參考圖） */
-    linear-gradient(
-      150deg,
-      #b478e0 0%,
-      #d898d0 22%,
-      #c8b0ea 42%,
-      #a8c8f0 68%,
-      #c8e4ff 100%
-    );
-}
-
-.mesh-move {
-  inset: -50%;
-  will-change: transform;
-}
-
-.mesh-move-a {
-  animation: auth-drift-a 8s ease-in-out infinite alternate;
-}
-
-.mesh-move-b {
-  animation: auth-drift-b 10s ease-in-out infinite alternate;
-}
-
-.mesh-move-c {
-  animation: auth-drift-c 12s ease-in-out infinite alternate;
-}
-
-.mesh-paint {
-  position: absolute;
-  inset: 0;
-  display: block;
-}
-
-/* 左上大塊深紫 + 中段桃紅（參考圖主色域） */
-.mesh-paint-a {
-  filter: blur(2.25rem);
-  opacity: 1;
-  background:
-    radial-gradient(62% 55% at 12% 8%, rgba(130, 50, 210, 0.95) 0%, transparent 70%),
-    radial-gradient(58% 50% at 38% 32%, rgba(255, 90, 180, 0.78) 0%, transparent 72%),
-    radial-gradient(52% 48% at 5% 48%, rgba(180, 80, 230, 0.65) 0%, transparent 68%);
-}
-
-/* 右下大塊亮青白光暈 */
-.mesh-paint-b {
-  filter: blur(2rem);
-  opacity: 1;
-  background:
-    radial-gradient(65% 55% at 90% 88%, rgba(110, 200, 255, 0.98) 0%, transparent 70%),
-    radial-gradient(55% 48% at 78% 62%, rgba(255, 255, 255, 0.95) 0%, transparent 72%),
-    radial-gradient(48% 42% at 98% 45%, rgba(140, 210, 255, 0.7) 0%, transparent 68%);
-}
-
-/* 斜向柔光帶：寬橢圓，模擬流水光影，不是細條紋 */
-.mesh-paint-c {
-  filter: blur(2.5rem);
-  opacity: 0.78;
-  background:
-    radial-gradient(85% 32% at 48% 48%, rgba(255, 255, 255, 0.9) 0%, transparent 75%),
-    radial-gradient(45% 60% at 62% 72%, rgba(190, 150, 255, 0.5) 0%, transparent 70%);
-}
-
-.grain {
-  inset: 0;
-  opacity: 0.03;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-}
-
-@keyframes auth-drift-a {
-  0% {
-    transform: translate3d(-14vw, -10vh, 0) scale(1.06) rotate(-5deg);
-  }
-  100% {
-    transform: translate3d(14vw, 12vh, 0) scale(1.2) rotate(5deg);
-  }
-}
-
-@keyframes auth-drift-b {
-  0% {
-    transform: translate3d(12vw, 8vh, 0) scale(1.05) rotate(4deg);
-  }
-  100% {
-    transform: translate3d(-14vw, -10vh, 0) scale(1.18) rotate(-5deg);
-  }
-}
-
-@keyframes auth-drift-c {
-  0% {
-    transform: translate3d(-10vw, 5vh, 0) scale(1.1) rotate(-3deg);
-  }
-  100% {
-    transform: translate3d(11vw, -8vh, 0) scale(1.22) rotate(3deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mesh-move-a,
-  .mesh-move-b,
-  .mesh-move-c {
-    animation: none;
-  }
 }
 
 .auth-inner {
