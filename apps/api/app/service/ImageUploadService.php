@@ -69,8 +69,24 @@ class ImageUploadService
             @unlink($tmpPath);
         }
 
+        $url = '/storage/' . $relDir . '/' . $outName;
+        $uploader = $this->resolveUploader($options, $scene);
+        try {
+            (new UploadAssetService())->record([
+                'url' => $url,
+                'scene' => $scene,
+                'bytes' => (int) $meta['bytes'],
+                'width' => (int) $meta['width'],
+                'height' => (int) $meta['height'],
+                'uploader_type' => $uploader['uploader_type'],
+                'uploader_id' => $uploader['uploader_id'],
+            ]);
+        } catch (\Throwable) {
+            // 索引寫入失敗不影響圖片本身已落盤。
+        }
+
         return [
-            'url' => '/storage/' . $relDir . '/' . $outName,
+            'url' => $url,
             'width' => $meta['width'],
             'height' => $meta['height'],
             'bytes' => $meta['bytes'],
@@ -79,6 +95,33 @@ class ImageUploadService
             'format' => $meta['format'],
             'scene' => $scene,
             'preset' => (string) ($options['preset'] ?? $scene),
+        ];
+    }
+
+    /**
+     * @param array{scene?: string, preset?: string, owner_id?: int|string, uploader_type?: string, uploader_id?: int} $options
+     * @return array{uploader_type: string, uploader_id: int}
+     */
+    private function resolveUploader(array $options, string $scene): array
+    {
+        $explicit = (string) ($options['uploader_type'] ?? '');
+        if ($explicit === 'member' || $explicit === 'admin') {
+            return [
+                'uploader_type' => $explicit,
+                'uploader_id' => max(0, (int) ($options['uploader_id'] ?? 0)),
+            ];
+        }
+        $owner = (string) ($options['owner_id'] ?? '');
+        if (str_starts_with($scene, 'member.') && preg_match('/(\d+)/', $owner, $match)) {
+            return ['uploader_type' => 'member', 'uploader_id' => (int) $match[1]];
+        }
+        if (preg_match('/^draft-(\d+)$/', $owner, $match)) {
+            return ['uploader_type' => 'admin', 'uploader_id' => (int) $match[1]];
+        }
+
+        return [
+            'uploader_type' => str_starts_with($scene, 'member.') ? 'member' : 'admin',
+            'uploader_id' => 0,
         ];
     }
 

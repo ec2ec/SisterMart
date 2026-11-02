@@ -257,6 +257,7 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/registration', 'admin.ShopSettings/updateRegistration');
     Route::get('settings/distribution-access', 'admin.ShopSettings/distributionAccess');
     Route::put('settings/distribution-access', 'admin.ShopSettings/updateDistributionAccess');
+    Route::get('settings/upload-assets', 'admin.ImageUploadSettings/assets');
     Route::get('settings/image-upload', 'admin.ImageUploadSettings/index');
     Route::put('settings/image-upload', 'admin.ImageUploadSettings/update');
 

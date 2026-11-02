@@ -15,6 +15,7 @@ import SpecsView from '../views/SpecsView.vue'
 import SpecTemplatesView from '../views/SpecTemplatesView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
 import ImageUploadSettingsView from '../views/ImageUploadSettingsView.vue'
+import UploadAssetsView from '../views/UploadAssetsView.vue'
 import RegistrationConfigView from '../views/RegistrationConfigView.vue'
 import MaintenanceView from '../views/MaintenanceView.vue'
 import OrdersView from '../views/OrdersView.vue'
@@ -100,6 +101,7 @@ export const router = createRouter({
         { path: '/settings/registration', component: RegistrationConfigView, meta: { title: '新用戶配置' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
         { path: '/settings/image-upload', component: ImageUploadSettingsView, meta: { title: '圖片上傳配置' } },
+        { path: '/settings/upload-assets', component: UploadAssetsView, meta: { title: '上傳素材概覽' } },
         { path: '/settings/releases', component: ReleasesView, meta: { title: '發佈通道', roles: ['super'] } },
         { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],
