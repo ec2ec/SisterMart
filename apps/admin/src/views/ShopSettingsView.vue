@@ -8,6 +8,7 @@ const mode = ref<'exact' | 'fuzzy'>('fuzzy')
 const form = reactive({
   aftersale_window_days: 30,
   cs_whatsapp: '',
+  cs_email: '',
 })
 
 onMounted(async () => {
@@ -15,10 +16,12 @@ onMounted(async () => {
     sold_display_mode: 'exact' | 'fuzzy'
     aftersale_window_days: number
     cs_whatsapp: string
+    cs_email: string
   }>('/api/v1/admin/settings/shop', {}, true)
   mode.value = data.sold_display_mode
   form.aftersale_window_days = data.aftersale_window_days
   form.cs_whatsapp = data.cs_whatsapp || ''
+  form.cs_email = data.cs_email || ''
 })
 
 async function saveSold() {
@@ -38,6 +41,7 @@ async function saveShop() {
       body: JSON.stringify({
         aftersale_window_days: form.aftersale_window_days,
         cs_whatsapp: form.cs_whatsapp,
+        cs_email: form.cs_email.trim(),
       }),
     },
     true,
@@ -67,6 +71,16 @@ async function saveShop() {
       <label>客服 WhatsApp（E.164，如 85290001234）</label>
       <n-input v-model:value="form.cs_whatsapp" placeholder="85290001234" style="max-width: 20rem" />
     </div>
+    <div class="row">
+      <label>H5 聯絡客服郵箱</label>
+      <n-input
+        v-model:value="form.cs_email"
+        type="text"
+        placeholder="hello@sistermart.hk"
+        style="max-width: 20rem"
+      />
+      <p class="hint">用於會員中心「聯繫客服」發郵件；留空則回退系統 MAIL_FROM／默認郵箱</p>
+    </div>
     <n-button type="primary" @click="saveShop">保存售後與客服</n-button>
   </n-card>
 </template>
@@ -77,5 +91,11 @@ async function saveShop() {
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 1rem;
+}
+.hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #888;
+  line-height: 1.4;
 }
 </style>
