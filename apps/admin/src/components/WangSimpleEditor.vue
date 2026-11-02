@@ -3,12 +3,14 @@
  * 專案富文本標準組件（簡潔模式）。
  * 用戶說「改成富文本」時複用本組件 + uploadImage(preset)，見 .cursor/rules/rich-text-editor.mdc
  */
-import { shallowRef, onBeforeUnmount, watch, computed } from 'vue'
+import { shallowRef, onBeforeUnmount, ref, watch, computed } from 'vue'
+import { NButton } from 'naive-ui'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
 import { uploadImage } from '../api'
 import { assetUrl, toPreviewHtml, toStoredHtml } from '../utils/assetUrl'
+import MediaPickerDialog from './MediaPickerDialog.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -29,6 +31,7 @@ const emit = defineEmits<{ 'update:modelValue': [string] }>()
 
 const editorRef = shallowRef<IDomEditor>()
 const html = shallowRef('')
+const libraryOpen = ref(false)
 let syncing = false
 
 const toolbarConfig: Partial<IToolbarConfig> = {
@@ -108,6 +111,14 @@ function handleCreated(editor: IDomEditor) {
   editorRef.value = editor
 }
 
+function insertFromLibrary(url: string) {
+  const editor = editorRef.value
+  if (!editor) return
+  const src = assetUrl(url).replace(/"/g, '')
+  editor.focus()
+  editor.dangerouslyInsertHtml(`<p><img src="${src}" alt="" /></p>`)
+}
+
 function onChange(editor: IDomEditor) {
   const raw = editor.getHtml()
   // wangEditor 空內容常為 <p><br></p>
@@ -139,6 +150,10 @@ onBeforeUnmount(() => {
       @on-created="handleCreated"
       @on-change="onChange"
     />
+    <div class="we-lib">
+      <n-button text size="tiny" @click="libraryOpen = true">從素材庫插入</n-button>
+    </div>
+    <MediaPickerDialog v-model:show="libraryOpen" :scene="scene" @select="insertFromLibrary" />
   </div>
 </template>
 
@@ -152,6 +167,11 @@ onBeforeUnmount(() => {
 }
 .we-toolbar {
   border-bottom: 1px solid #eee;
+}
+.we-lib {
+  border-top: 1px solid #eee;
+  padding: 0.15rem 0.5rem 0.25rem;
+  text-align: right;
 }
 .we-body {
   background: #fff;

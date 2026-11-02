@@ -260,6 +260,7 @@ onMounted(load)
         <ProductMediaGallery
           v-model="media"
           scene="marketing.popup"
+          library
           :max="1"
           :hint="bgHint"
           :delete-title="bgDeleteTitle"

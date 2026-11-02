@@ -13,9 +13,9 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui'
-import { api, uploadImage } from '../api'
-import { showError } from '../feedback'
+import { api } from '../api'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import SceneImageField from '../components/SceneImageField.vue'
 
 type ImageAdItem = {
   code: string
@@ -33,8 +33,6 @@ const message = useMessage()
 const items = ref<ImageAdItem[]>([])
 const form = ref(emptyForm())
 const saving = ref(false)
-const uploading = ref(false)
-
 const linkTypes = [
   { label: '無跳轉', value: 'none' },
   { label: '商品 code', value: 'product' },
@@ -162,23 +160,6 @@ async function remove(code: string) {
   await load()
 }
 
-async function onFile(ev: Event) {
-  const input = ev.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  uploading.value = true
-  try {
-    const data = await uploadImage(file, { scene: 'marketing.image_ad' })
-    form.value.image_url = toStoredUrl(data.url)
-    message.success('圖片已上傳')
-  } catch (e: unknown) {
-    showError(e instanceof Error ? e.message : '圖片上傳失敗')
-  } finally {
-    uploading.value = false
-    input.value = ''
-  }
-}
-
 onMounted(load)
 </script>
 
@@ -222,11 +203,7 @@ onMounted(load)
         />
       </n-form-item>
       <n-form-item label="圖片">
-        <n-space vertical style="width: 100%">
-          <n-input v-model:value="form.image_url" placeholder="上傳後自動填入，或手動貼 URL" />
-          <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="uploading" @change="onFile" />
-          <img v-if="form.image_url" class="preview" :src="assetUrl(form.image_url)" alt="預覽" />
-        </n-space>
+        <SceneImageField v-model="form.image_url" scene="marketing.image_ad" />
       </n-form-item>
       <n-form-item label="跳轉類型"><n-select v-model:value="form.link_type" :options="linkTypes" /></n-form-item>
       <n-form-item v-if="form.link_type !== 'none'" label="跳轉目標">
@@ -270,17 +247,6 @@ onMounted(load)
   border-radius: 0.25rem;
   background: #f3f3f3;
   flex-shrink: 0;
-}
-.preview {
-  display: block;
-  max-width: min(100%, 22rem);
-  max-height: 10rem;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 0.25rem;
-  border: 1px solid #eee;
-  background: #fafafa;
 }
 .meta-text {
   min-width: 0;

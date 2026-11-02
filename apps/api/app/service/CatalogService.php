@@ -82,11 +82,15 @@ class CatalogService
         if ($dup->find()) {
             throw new ApiException('CODE_TAKEN', '分類代碼已存在', 422, 42202);
         }
+        $icon = trim((string) ($body['icon'] ?? ''));
+        if ($icon !== '') {
+            $icon = (new ImageUploadSceneService())->assertUrl('catalog.category', $icon);
+        }
         $now = date('Y-m-d H:i:s');
         $data = [
             'parent_id'  => $parentId,
             'code'       => $code,
-            'icon'       => trim((string) ($body['icon'] ?? '')) ?: null,
+            'icon'       => $icon !== '' ? $icon : null,
             'sort_order' => (int) ($body['sort'] ?? 0),
             'status'     => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
             'updated_at' => $now,

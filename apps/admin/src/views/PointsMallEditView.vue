@@ -15,6 +15,8 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import ProductPickerDialog, { type ProductPickResult } from '../components/ProductPickerDialog.vue'
+import SceneImageField from '../components/SceneImageField.vue'
+import { toStoredUrl } from '../utils/assetUrl'
 
 type Item = {
   points_mall_item_id: number
@@ -166,7 +168,7 @@ async function save() {
       stock: form.value.stock,
       status: form.value.status ? 1 : 0,
       name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
-      image_url: form.value.image_url,
+      image_url: toStoredUrl(form.value.image_url.trim()),
       detail: { 'zh-HK': form.value.detail_zh, en: form.value.detail_en },
     }
     if (form.value.id) {
@@ -233,8 +235,8 @@ onMounted(load)
         <n-form-item label="英文名" :show-feedback="false">
           <n-input v-model:value="form.name_en" />
         </n-form-item>
-        <n-form-item label="圖片 URL" :show-feedback="false">
-          <n-input v-model:value="form.image_url" placeholder="/storage/..." />
+        <n-form-item class="span-3" label="圖片" :show-feedback="false">
+          <SceneImageField v-model="form.image_url" scene="catalog.product" placeholder="/storage/..." />
         </n-form-item>
 
         <n-form-item label="積分價" :show-feedback="false">

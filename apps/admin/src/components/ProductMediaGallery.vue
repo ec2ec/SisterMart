@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import MediaPickerDialog from './MediaPickerDialog.vue'
 
 export type MediaItem = {
   media_type: string
@@ -16,6 +17,8 @@ const props = withDefaults(
     max?: number
     /** 上傳場景，壓縮跟後台配置 */
     scene?: string
+    /** 從該場景已上傳的圖裡選，不重複上傳 */
+    library?: boolean
     /** 底部提示；空字串隱藏 */
     hint?: string
     deleteTitle?: string
@@ -24,6 +27,7 @@ const props = withDefaults(
   {
     max: 12,
     scene: 'catalog.product',
+    library: false,
     hint: '',
     deleteTitle: '確認刪除圖片',
     deleteContent: '確定從商品圖庫移除此圖？保存商品後才會生效。',
@@ -45,6 +49,7 @@ const message = useMessage()
 const dialog = useDialog()
 const inputRef = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
+const libraryOpen = ref(false)
 
 const items = computed({
   get: () => props.modelValue || [],
@@ -64,6 +69,24 @@ function isVideo(item: MediaItem) {
 function openPicker() {
   if (!canAdd.value || busy.value) return
   inputRef.value?.click()
+}
+
+function openLibrary() {
+  if (busy.value) return
+  libraryOpen.value = true
+}
+
+function onLibrarySelect(url: string) {
+  const item: MediaItem = { media_type: 'image', url: toStoredUrl(url) }
+  if (single.value) {
+    items.value = [item]
+  } else if (items.value.length < props.max) {
+    items.value = [...items.value, item]
+  } else {
+    message.warning(`最多 ${props.max} 張`)
+    return
+  }
+  message.success('已選用素材')
 }
 
 function removeAt(idx: number) {
@@ -152,6 +175,16 @@ async function onFiles(ev: Event) {
           <span class="plus">+</span>
           <span class="add-label">上傳照片</span>
         </button>
+        <button
+          v-if="library && (canAdd || single)"
+          type="button"
+          class="tile add"
+          :disabled="busy"
+          @click="openLibrary"
+        >
+          <span class="plus">▣</span>
+          <span class="add-label">素材庫</span>
+        </button>
 
         <div v-for="(item, idx) in items" :key="`${item.url}-${idx}`" class="tile media">
           <video v-if="isVideo(item)" class="thumb" :src="previewUrl(item.url)" muted />
@@ -183,6 +216,7 @@ async function onFiles(ev: Event) {
       :multiple="!single"
       @change="onFiles"
     />
+    <MediaPickerDialog v-model:show="libraryOpen" :scene="scene" @select="onLibrarySelect" />
   </div>
 </template>
 
