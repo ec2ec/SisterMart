@@ -19,8 +19,9 @@ class MemberAuthService
             throw new ApiException('INVALID', '用途不正確');
         }
 
+        $locale = $this->resolveRequestLocale(isset($body['locale']) ? (string) $body['locale'] : null);
         if ($channel === 'whatsapp') {
-            return $this->sendWhatsapp($purpose, $target);
+            return $this->sendWhatsapp($purpose, $target, $locale);
         }
         if ($channel !== 'email') {
             throw new ApiException('INVALID', '發送渠道不正確');
@@ -41,7 +42,7 @@ class MemberAuthService
             throw new ApiException('ACCOUNT_NOT_FOUND', '找不到這個帳號');
         }
 
-        return $this->issueEmailCode($email, $purpose, $member ? (int) $member['id'] : null, false);
+        return $this->issueEmailCode($email, $purpose, $member ? (int) $member['id'] : null, false, $locale);
     }
 
     public function register(array $body): array
@@ -255,6 +256,7 @@ class MemberAuthService
     {
         $channel = (string) ($body['channel'] ?? '');
         $target = trim((string) ($body['target'] ?? ''));
+        $locale = $this->resolveRequestLocale(isset($body['locale']) ? (string) $body['locale'] : null);
         $member = Db::name('members')->where('id', $memberId)->find();
         if (!$member) {
             throw new ApiException('UNAUTHORIZED', '請先登錄', 401);
@@ -266,7 +268,7 @@ class MemberAuthService
                 throw new ApiException('EMAIL_TAKEN', '這個郵箱已經註冊', 422, 42201);
             }
 
-            return $this->issueEmailCode($email, 'bind_email', $memberId, false);
+            return $this->issueEmailCode($email, 'bind_email', $memberId, false, $locale);
         }
         if ($channel === 'phone') {
             $phone = $this->phone($target);
@@ -279,7 +281,7 @@ class MemberAuthService
                 throw new ApiException('NO_BOUND_EMAIL', '請先綁定郵箱再綁定手機', 422, 42201);
             }
 
-            return $this->issueEmailCode($email, 'bind_phone', $memberId, true);
+            return $this->issueEmailCode($email, 'bind_phone', $memberId, true, $locale);
         }
         throw new ApiException('INVALID', '發送渠道不正確', 422, 42201);
     }
@@ -327,7 +329,7 @@ class MemberAuthService
         return $this->present($member);
     }
 
-    private function sendWhatsapp(string $purpose, string $target): array
+    private function sendWhatsapp(string $purpose, string $target, string $locale = 'zh-HK'): array
     {
         $phone = $this->phone($target);
         $outbox = new NotifyOutboxService();
@@ -379,11 +381,17 @@ class MemberAuthService
             'error_message' => 'WhatsApp stub; fallback to email',
         ]);
 
-        return $this->issueEmailCode((string) $member['email'], $purpose, (int) $member['id'], true);
+        return $this->issueEmailCode((string) $member['email'], $purpose, (int) $member['id'], true, $locale);
     }
 
-    private function issueEmailCode(string $email, string $purpose, ?int $memberId, bool $fallback): array
-    {
+    private function issueEmailCode(
+        string $email,
+        string $purpose,
+        ?int $memberId,
+        bool $fallback,
+        string $locale = 'zh-HK',
+    ): array {
+        $locale = $this->locale($locale);
         $recent = Db::name('verify_codes')
             ->where('target', $email)
             ->where('purpose', $purpose)
@@ -411,16 +419,15 @@ class MemberAuthService
             'used_at'    => null,
             'created_at' => $now,
         ]);
-        Log::info('sistermart verify code ' . $purpose . ' ' . $email . ' ' . $code);
+        Log::info('sistermart verify code ' . $purpose . ' ' . $email . ' ' . $code . ' locale=' . $locale);
+
+        [$subject, $bodyHtml] = $this->otpMailCopy($code, $locale, $fallback);
 
         // 經 MailService 出站並寫入 notify_outbox；預覽會含驗證碼，管理員可見發送結果
         $mailResult = (new MailService())->enqueue(
             $email,
-            'SisterMart 驗證碼',
-            '<p>您的驗證碼是 <strong>' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8')
-                . '</strong>，10 分鐘內有效。'
-                . ($fallback ? '（由 WhatsApp 改發）' : '')
-                . '</p>',
+            $subject,
+            $bodyHtml,
             'otp_' . $purpose,
             $memberId !== null ? (string) $memberId : null,
         );
@@ -533,7 +540,61 @@ class MemberAuthService
 
     private function locale(string $locale): string
     {
-        return $locale === 'en' ? 'en' : 'zh-HK';
+        $locale = trim($locale);
+        if ($locale === 'en' || str_starts_with(strtolower($locale), 'en')) {
+            return 'en';
+        }
+
+        return 'zh-HK';
+    }
+
+    /** 頁面語言：body.locale → X-Locale → Accept-Language → zh-HK */
+    private function resolveRequestLocale(?string $fromBody): string
+    {
+        if ($fromBody !== null && trim($fromBody) !== '') {
+            return $this->locale($fromBody);
+        }
+        try {
+            $req = request();
+            $header = trim((string) ($req->header('X-Locale') ?? $req->header('x-locale') ?? ''));
+            if ($header !== '') {
+                return $this->locale($header);
+            }
+            $al = strtolower(trim((string) ($req->header('Accept-Language') ?? $req->header('accept-language') ?? '')));
+            if ($al !== '') {
+                // 優先匹配 zh；否則 en
+                if (preg_match('/zh(-\w+)?/', $al)) {
+                    return 'zh-HK';
+                }
+                if (preg_match('/\ben\b/', $al) || str_starts_with($al, 'en')) {
+                    return 'en';
+                }
+            }
+        } catch (\Throwable $e) {
+            // CLI / 無請求上下文
+        }
+
+        return 'zh-HK';
+    }
+
+    /** @return array{0: string, 1: string} subject, html */
+    private function otpMailCopy(string $code, string $locale, bool $fallback): array
+    {
+        $safe = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+        if ($locale === 'en') {
+            $subject = 'SisterMart verification code';
+            $extra = $fallback ? ' (Sent by email because WhatsApp was unavailable.)' : '';
+            $html = '<p>Your verification code is <strong>' . $safe
+                . '</strong>. It expires in 10 minutes.' . $extra . '</p>';
+
+            return [$subject, $html];
+        }
+        $subject = 'SisterMart 驗證碼';
+        $extra = $fallback ? '（由 WhatsApp 改發）' : '';
+        $html = '<p>您的驗證碼是 <strong>' . $safe
+            . '</strong>，10 分鐘內有效。' . $extra . '</p>';
+
+        return [$subject, $html];
     }
 
     private function maskEmail(string $email): string

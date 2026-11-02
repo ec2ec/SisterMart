@@ -33,6 +33,11 @@ export async function api<T>(path: string, init: RequestInit = {}, auth: 'member
   if (init.body && !isForm && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
+  // 當前頁面語言：驗證碼郵件等服務端文案跟頁面走（勿 import i18n，避免與 client 循環依賴）
+  if (!headers.has('X-Locale')) {
+    const loc = String(localStorage.getItem('sm_locale') || document.documentElement.lang || 'en')
+    headers.set('X-Locale', loc === 'en' ? 'en' : 'zh-HK')
+  }
   // 有令牌一律帶上（含原先 auth=none 的公開接口）：維護用戶白名單依賴 Bearer
   const token = localStorage.getItem('sm_token')
   if (token || auth === 'member') {
