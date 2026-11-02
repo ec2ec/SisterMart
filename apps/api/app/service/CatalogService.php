@@ -140,6 +140,7 @@ class CatalogService
         $q = trim((string) ($query['q'] ?? ''));
         $category = trim((string) ($query['category'] ?? ''));
         $supplierFilter = trim((string) ($query['supplier_id'] ?? $query['supplier'] ?? ''));
+        $statusFilter = trim((string) ($query['status'] ?? ''));
         $sort = (string) ($query['sort'] ?? 'default');
         $limit = isset($query['limit']) ? (int) $query['limit'] : 0;
         $offset = isset($query['offset']) ? max(0, (int) $query['offset']) : 0;
@@ -155,6 +156,8 @@ class CatalogService
         $builder = Db::name('products')->alias('p');
         if (!$admin) {
             $builder->where('p.status', 1);
+        } elseif ($statusFilter === '0' || $statusFilter === '1') {
+            $builder->where('p.status', (int) $statusFilter);
         }
         if ($category !== '') {
             $ids = $this->categoryScopeIds($category);
@@ -328,6 +331,26 @@ class CatalogService
         }
 
         return $this->presentDetail($row, SoldDisplay::mode(), $viewerMemberId, $admin);
+    }
+
+    /** 後台列表快捷改上架狀態（不改 SKU／圖／供應商） */
+    public function updateProductStatus(int $id, array $body): array
+    {
+        $row = Db::name('products')->where('id', $id)->find();
+        if (!$row) {
+            throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
+        }
+        if (!array_key_exists('status', $body)) {
+            throw new ApiException('INVALID', '缺少 status', 422, 42201);
+        }
+        $status = (int) $body['status'] === 1 ? 1 : 0;
+        Db::name('products')->where('id', $id)->update([
+            'status' => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        $row = Db::name('products')->where('id', $id)->find();
+
+        return $this->presentCard($row, SoldDisplay::mode());
     }
 
     public function saveProduct(array $body, ?int $id = null): array

@@ -30,4 +30,10 @@ class Products extends ApiController
         return $this->run(fn () => (new CatalogService())->saveProduct($this->payload(), $id));
     }
 
+    /** 列表快捷上架／下架（status: 1=上架，0=下架） */
+    public function updateStatus(int $id): Response
+    {
+        return $this->run(fn () => (new CatalogService())->updateProductStatus($id, $this->payload()));
+    }
+
 }

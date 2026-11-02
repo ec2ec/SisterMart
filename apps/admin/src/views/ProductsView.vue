@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NInput, NPagination, NSelect, NSpace, NTag } from 'naive-ui'
+import { NButton, NCard, NInput, NPagination, NSelect, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
+import { showError } from '../feedback'
 import { assetUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
@@ -39,13 +40,21 @@ type Row = {
 }
 
 const router = useRouter()
+const dialog = useDialog()
+const message = useMessage()
 const rows = ref<Row[]>([])
 const keyword = ref('')
 const categoryId = ref<number | null>(null)
-const supplierId = ref<number | null>(null)
+/** 默認只查上架；all = 全部 */
+const statusFilter = ref<'1' | '0' | 'all'>('1')
 const categoryOptions = ref<Array<{ label: string; value: number }>>([])
-const supplierOptions = ref<Array<{ label: string; value: number }>>([])
+const statusOptions: Array<{ label: string; value: '1' | '0' | 'all' }> = [
+  { label: '上架', value: '1' },
+  { label: '下架', value: '0' },
+  { label: '全部', value: 'all' },
+]
 const loading = ref(false)
+const statusBusyId = ref<number | null>(null)
 
 const { page, pageSize, total, paged } = useClientPager(rows, 30)
 const { rowAttrs } = useTableRowSelect()
@@ -86,7 +95,9 @@ async function load() {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
     if (categoryId.value != null) params.set('category', String(categoryId.value))
-    if (supplierId.value != null) params.set('supplier_id', String(supplierId.value))
+    if (statusFilter.value === '0' || statusFilter.value === '1') {
+      params.set('status', statusFilter.value)
+    }
     const qs = params.toString()
     const data = await api<{ items: Row[] }>(`/api/v1/admin/products${qs ? `?${qs}` : ''}`, {}, true)
     rows.value = data.items
@@ -107,26 +118,41 @@ watch(keyword, scheduleSearch)
 watch(categoryId, () => {
   void load()
 })
-watch(supplierId, () => {
+watch(statusFilter, () => {
   void load()
 })
+
+function confirmToggleStatus(row: Row) {
+  const next = row.status === 1 ? 0 : 1
+  const action = next === 1 ? '上架' : '下架'
+  const name = row.name?.['zh-HK'] || row.code
+  dialog.warning({
+    title: `確認是否${action}此商品？`,
+    content: `${name}（${row.code}）將改為「${action}」。`,
+    positiveText: action,
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      statusBusyId.value = row.db_id
+      try {
+        await api(
+          `/api/v1/admin/products/${row.db_id}/status`,
+          { method: 'PUT', body: JSON.stringify({ status: next }) },
+          true,
+        )
+        message.success(`已${action}`)
+        await load()
+      } catch (e) {
+        showError(e instanceof Error ? e.message : `${action}失敗`)
+      } finally {
+        statusBusyId.value = null
+      }
+    },
+  })
+}
 
 onMounted(async () => {
   const cats = await api<{ items: CatNode[] }>('/api/v1/admin/categories', {}, true)
   categoryOptions.value = flattenCats(cats.items)
-  try {
-    const suppliers = await api<{ items: Array<{ id: number; code: string; name: string; status: number }> }>(
-      '/api/v1/admin/suppliers',
-      {},
-      true,
-    )
-    supplierOptions.value = (suppliers.items || []).map((s) => ({
-      label: `${s.code} · ${s.name}${s.status !== 1 ? '（停用）' : ''}`,
-      value: s.id,
-    }))
-  } catch {
-    supplierOptions.value = []
-  }
   await load()
 })
 </script>
@@ -150,12 +176,10 @@ onMounted(async () => {
           style="width: 12rem"
         />
         <n-select
-          v-model:value="supplierId"
-          clearable
-          filterable
-          placeholder="供應商"
-          :options="supplierOptions"
-          style="width: 14rem"
+          v-model:value="statusFilter"
+          placeholder="狀態"
+          :options="statusOptions"
+          style="width: 8rem"
         />
         <n-button :loading="loading" @click="load">搜索</n-button>
         <n-button type="primary" @click="router.push('/catalog/products/new')">新增商品</n-button>
@@ -213,7 +237,17 @@ onMounted(async () => {
               </n-tag>
               <span v-if="!badgeItems(row).length" class="muted">—</span>
             </td>
-            <td>{{ row.status === 1 ? '上架' : '下架' }}</td>
+            <td>
+              <button
+                type="button"
+                class="status-btn"
+                :class="row.status === 1 ? 'on' : 'off'"
+                :disabled="statusBusyId === row.db_id"
+                @click.stop="confirmToggleStatus(row)"
+              >
+                {{ row.status === 1 ? '上架' : '下架' }}
+              </button>
+            </td>
             <td>
               <n-button size="tiny" @click.stop="router.push(`/catalog/products/${row.db_id}`)">編輯</n-button>
             </td>
@@ -290,6 +324,27 @@ td {
 }
 .muted {
   color: #bbb;
+}
+.status-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.status-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.status-btn.on {
+  background: #e8f6ee;
+  color: #1a7f4b;
+}
+.status-btn.off {
+  background: #f3f0ea;
+  color: #8a8378;
 }
 tr.off td {
   color: #b0aaa0;

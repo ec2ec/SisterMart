@@ -188,6 +188,7 @@ Route::group('api/v1/admin', function () {
     Route::post('suppliers', 'admin.Suppliers/store');
 
     Route::get('products/:id', 'admin.Products/read');
+    Route::put('products/:id/status', 'admin.Products/updateStatus');
     Route::put('products/:id', 'admin.Products/update');
     Route::get('products', 'admin.Products/index');
     Route::post('products', 'admin.Products/store');
