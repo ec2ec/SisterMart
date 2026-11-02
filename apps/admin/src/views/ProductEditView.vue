@@ -321,7 +321,6 @@ async function save() {
         />
         <div v-else class="supplier-bound">
           <div class="supplier-bound-name">{{ supplierBoundLabel }}</div>
-          <span class="field-hint">一品一供，永久綁定；換供請新建商品</span>
         </div>
       </n-form-item>
       <n-form-item label="上架"><n-switch v-model:value="form.status" /></n-form-item>

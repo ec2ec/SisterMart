@@ -46,7 +46,7 @@ onMounted(load)
 </script>
 
 <template>
-  <n-card title="規格管理">
+  <n-card title="規格管理/SKU">
     <p class="hint">選擇商品進入商品編輯頁配置規格／SKU（可套用規格模板）。全局模板請到「規格模板」維護。</p>
     <div class="toolbar">
       <n-space>
