@@ -61,7 +61,7 @@ export const router = createRouter({
         { path: '/catalog/service-tags', component: ServiceTagsView, meta: { title: '服務標籤' } },
         { path: '/catalog/attrs', component: AttrsView, meta: { title: '商品參數' } },
         { path: '/catalog/spec-templates', component: SpecTemplatesView, meta: { title: '規格模板' } },
-        { path: '/catalog/specs', component: SpecsView, meta: { title: '規格管理' } },
+        { path: '/catalog/specs', component: SpecsView, meta: { title: '規格管理/SKU' } },
         { path: '/catalog/specs/:id', component: ProductSpecsView, meta: { title: '規格編輯' } },
         { path: '/sales/orders', component: OrdersView, meta: { title: '訂單' } },
         { path: '/sales/orders/:id', component: OrderDetailView, meta: { title: '訂單詳情' } },
