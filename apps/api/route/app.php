@@ -181,6 +181,7 @@ Route::group('api/v1/admin', function () {
     Route::get('categories', 'admin.Categories/index');
     Route::post('categories', 'admin.Categories/store');
     Route::put('categories/:id', 'admin.Categories/update');
+    Route::delete('categories/:id', 'admin.Categories/destroy');
 
     Route::get('suppliers/:id', 'admin.Suppliers/read');
     Route::put('suppliers/:id', 'admin.Suppliers/update');

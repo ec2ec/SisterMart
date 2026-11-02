@@ -24,4 +24,9 @@ class Categories extends ApiController
     {
         return $this->run(fn () => (new CatalogService())->saveCategory($this->payload(), $id));
     }
+
+    public function destroy(int $id): Response
+    {
+        return $this->run(fn () => (new CatalogService())->deleteCategory($id));
+    }
 }
