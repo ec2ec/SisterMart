@@ -207,6 +207,7 @@ class HomeImageAdService
         if ($image === '') {
             throw new ApiException('INVALID', '請上傳圖片廣告圖', 422, 42201);
         }
+        $image = (new ImageUploadSceneService())->assertUrl('marketing.image_ad', $image);
         $titleZh = trim((string) ($body['title_zh'] ?? $body['title']['zh-HK'] ?? ''));
         $titleEn = trim((string) ($body['title_en'] ?? $body['title']['en'] ?? ''));
         if ($titleZh === '' && $titleEn === '') {

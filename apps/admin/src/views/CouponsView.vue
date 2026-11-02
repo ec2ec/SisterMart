@@ -443,6 +443,7 @@ function removeCoupon(row: Coupon) {
         <n-form-item label="背景圖（可選，鋪滿券卡；留空用漸變）">
           <ProductMediaGallery
             v-model="createBgMedia"
+            scene="marketing.coupon"
             :max="1"
             :hint="bgGalleryHint"
             :delete-title="bgDeleteTitle"
@@ -450,10 +451,10 @@ function removeCoupon(row: Coupon) {
           />
         </n-form-item>
         <n-form-item label="使用細則（繁中）">
-          <WangSimpleEditor v-model="form.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="180" />
+          <WangSimpleEditor v-model="form.rules_zh" scene="content.coupon" placeholder="使用細則（繁中）…" :height="180" />
         </n-form-item>
         <n-form-item label="使用細則（英文）">
-          <WangSimpleEditor v-model="form.rules_en" preset="admin" placeholder="Usage rules (EN)…" :height="180" />
+          <WangSimpleEditor v-model="form.rules_en" scene="content.coupon" placeholder="Usage rules (EN)…" :height="180" />
         </n-form-item>
       </n-form>
       <template #footer>
@@ -512,6 +513,7 @@ function removeCoupon(row: Coupon) {
         <n-form-item label="背景圖（可選，鋪滿券卡；留空用漸變）">
           <ProductMediaGallery
             v-model="editBgMedia"
+            scene="marketing.coupon"
             :max="1"
             :hint="bgGalleryHint"
             :delete-title="bgDeleteTitle"
@@ -519,10 +521,10 @@ function removeCoupon(row: Coupon) {
           />
         </n-form-item>
         <n-form-item label="使用細則（繁中）">
-          <WangSimpleEditor v-model="edit.rules_zh" preset="admin" placeholder="使用細則（繁中）…" :height="220" />
+          <WangSimpleEditor v-model="edit.rules_zh" scene="content.coupon" placeholder="使用細則（繁中）…" :height="220" />
         </n-form-item>
         <n-form-item label="使用細則（英文）">
-          <WangSimpleEditor v-model="edit.rules_en" preset="admin" placeholder="Usage rules (EN)…" :height="220" />
+          <WangSimpleEditor v-model="edit.rules_en" scene="content.coupon" placeholder="Usage rules (EN)…" :height="220" />
         </n-form-item>
       </n-form>
       <template #footer>

@@ -23,8 +23,7 @@ class Uploads extends ApiController
             $memberId = (int) app('sistermart.member')['id'];
 
             return (new ImageUploadService())->store($file, [
-                'preset' => 'aftersale',
-                'bucket' => 'aftersale',
+                'scene' => 'member.aftersale',
                 'owner_id' => $memberId,
             ]);
         }, 201);
@@ -40,8 +39,7 @@ class Uploads extends ApiController
             $memberId = (int) app('sistermart.member')['id'];
 
             return (new ImageUploadService())->store($file, [
-                'preset' => 'review',
-                'bucket' => 'review',
+                'scene' => 'member.review',
                 'owner_id' => $memberId,
             ]);
         }, 201);
@@ -71,11 +69,10 @@ class Uploads extends ApiController
             throw new ApiException('INVALID', '請選擇圖片（上傳可能被主機禁用，請換 JPG 再試）', 422, 42201);
         }
 
-        // 上傳上限 5MB；落庫經 avatar preset（最長邊≤1000、≤500KB），再裁正方 512
+        // 壓縮跟 member.avatar 場景配置；再裁正方 512（既有頭像流程）
         $uploader = new ImageUploadService();
         $stored = $uploader->store($file, [
-            'preset' => 'avatar',
-            'bucket' => 'avatar',
+            'scene' => 'member.avatar',
             'owner_id' => $memberId,
         ]);
         $url = (string) $stored['url'];
@@ -181,11 +178,18 @@ class Uploads extends ApiController
 
     private function cropSquare(string $path, int $side): void
     {
-        if (!function_exists('imagecreatefromjpeg') || !function_exists('imagecreatetruecolor')) {
+        if (!function_exists('imagecreatetruecolor')) {
             return;
         }
-        $src = @imagecreatefromjpeg($path);
-        if (!$src) {
+        $info = @getimagesize($path);
+        $type = (int) ($info[2] ?? 0);
+        $src = match ($type) {
+            IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($path) : false,
+            IMAGETYPE_PNG => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : false,
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+            default => false,
+        };
+        if ($src === false) {
             return;
         }
         $w = imagesx($src);
@@ -199,8 +203,21 @@ class Uploads extends ApiController
 
             return;
         }
+        if ($type === IMAGETYPE_PNG || $type === IMAGETYPE_WEBP) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefilledrectangle($dst, 0, 0, $side, $side, $transparent);
+            imagealphablending($dst, true);
+        }
         imagecopyresampled($dst, $src, 0, 0, $sx, $sy, $side, $side, $crop, $crop);
-        imagejpeg($dst, $path, 82);
+        if ($type === IMAGETYPE_PNG && function_exists('imagepng')) {
+            imagepng($dst, $path, 6);
+        } elseif ($type === IMAGETYPE_WEBP && function_exists('imagewebp')) {
+            imagewebp($dst, $path, 82);
+        } else {
+            imagejpeg($dst, $path, 82);
+        }
         imagedestroy($src);
         imagedestroy($dst);
     }

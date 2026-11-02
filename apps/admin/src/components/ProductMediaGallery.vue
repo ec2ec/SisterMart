@@ -14,8 +14,8 @@ const props = withDefaults(
   defineProps<{
     modelValue: MediaItem[]
     max?: number
-    /** 單張上限（字節），UI 文案按 3MB */
-    maxBytes?: number
+    /** 上傳場景，壓縮跟後台配置 */
+    scene?: string
     /** 底部提示；空字串隱藏 */
     hint?: string
     deleteTitle?: string
@@ -23,7 +23,7 @@ const props = withDefaults(
   }>(),
   {
     max: 12,
-    maxBytes: 3 * 1024 * 1024,
+    scene: 'catalog.product',
     hint: '',
     deleteTitle: '確認刪除圖片',
     deleteContent: '確定從商品圖庫移除此圖？保存商品後才會生效。',
@@ -32,7 +32,7 @@ const props = withDefaults(
 
 const hintText = computed(() => {
   if (props.hint !== '') return props.hint
-  return `商品圖片單張大小不能超過 3M，最多可上傳 ${props.max} 張，支持 JPG、PNG、GIF、視頻等格式`
+  return `最多 ${props.max} 張，支持 JPG、PNG、WebP；大小與壓縮見「設置 → 圖片上傳配置」`
 })
 
 const single = computed(() => props.max <= 1)
@@ -108,10 +108,6 @@ async function onFiles(ev: Event) {
   try {
     const added: MediaItem[] = []
     for (const file of picked) {
-      if (file.size > props.maxBytes) {
-        message.warning(`「${file.name}」超過 3M，已跳過`)
-        continue
-      }
       const isVid = /^video\//i.test(file.type) || /\.(mp4|webm|mov)$/i.test(file.name)
       if (isVid) {
         message.warning(`暫不支持視頻直傳：「${file.name}」請先轉為圖片或聯繫後台擴展上傳`)
@@ -122,10 +118,7 @@ async function onFiles(ev: Event) {
         continue
       }
       try {
-        const data = await uploadImage(file, {
-          preset: 'product',
-          max_upload_bytes: props.maxBytes,
-        })
+        const data = await uploadImage(file, { scene: props.scene })
         const url = toStoredUrl(data.url)
         added.push({
           media_type: 'image',

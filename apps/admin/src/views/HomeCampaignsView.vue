@@ -176,7 +176,7 @@ async function onBannerFile(ev: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const data = await uploadImage(file, { preset: 'banner' })
+    const data = await uploadImage(file, { scene: 'marketing.campaign' })
     form.value.banner_image_url = toStoredUrl(data.url)
     message.success('橫幅已上傳')
   } catch (e: unknown) {
@@ -321,7 +321,7 @@ onMounted(load)
       <n-form-item label="介紹（繁）">
         <WangSimpleEditor
           v-model="form.intro_html_zh"
-          preset="admin"
+          scene="content.campaign"
           placeholder="活動介紹（繁中）…"
           :height="200"
         />
@@ -329,7 +329,7 @@ onMounted(load)
       <n-form-item label="介紹（英）">
         <WangSimpleEditor
           v-model="form.intro_html_en"
-          preset="admin"
+          scene="content.campaign"
           placeholder="Campaign intro (EN)…"
           :height="180"
         />

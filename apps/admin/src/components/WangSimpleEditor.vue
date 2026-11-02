@@ -14,12 +14,13 @@ const props = withDefaults(
   defineProps<{
     modelValue: string
     placeholder?: string
-    preset?: 'product' | 'admin' | 'banner'
+    /** 圖片場景，對應設置裡的上傳配置 */
+    scene?: string
     height?: number
   }>(),
   {
     placeholder: '輸入內容…',
-    preset: 'product',
+    scene: 'content.richtext',
     height: 220,
   },
 )
@@ -82,7 +83,7 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
       allowedFileTypes: ['image/*'],
       maxFileSize: 5 * 1024 * 1024,
       async customUpload(file: File, insertFn: (url: string, alt: string, href: string) => void) {
-        const data = await uploadImage(file, { preset: props.preset })
+        const data = await uploadImage(file, { scene: props.scene })
         const preview = assetUrl(data.url)
         // 編輯器內用可訪問 URL；同步時再壓成相對路徑
         insertFn(preview, file.name || '', preview)

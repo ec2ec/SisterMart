@@ -55,29 +55,16 @@ export type ImageUploadResult = {
   bytes: number
   quality: number
   max_edge: number
+  format?: string
+  scene?: string
   preset: string
 }
 
-/** 後台通用圖片上傳（服務端 ImageUploadService 等比壓縮後落地） */
-export async function uploadImage(
-  file: File,
-  options: {
-    preset?: 'admin' | 'banner' | 'product' | 'review' | 'aftersale'
-    max_edge?: number
-    max_bytes?: number
-    max_upload_bytes?: number
-    quality?: number
-    min_quality?: number
-    bucket?: string
-  } = {},
-): Promise<ImageUploadResult> {
+/** 後台圖片上傳。壓縮參數只看「設置 → 圖片上傳配置」，這裡只傳場景。 */
+export async function uploadImage(file: File, options: { scene: string }): Promise<ImageUploadResult> {
   const body = new FormData()
   body.append('file', file)
-  for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && value !== null && value !== '') {
-      body.append(key, String(value))
-    }
-  }
+  body.append('scene', options.scene)
   return api<ImageUploadResult>('/api/v1/admin/uploads/image', { method: 'POST', body }, true)
 }
 

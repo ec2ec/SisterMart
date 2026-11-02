@@ -420,7 +420,7 @@ class CouponService
             throw new ApiException('INVALID', '背景圖 URL 過長', 422, 42277);
         }
 
-        return $url;
+        return (new ImageUploadSceneService())->assertUrl('marketing.coupon', $url);
     }
 
     private function presentCoupon(array $r, bool $admin = false): array

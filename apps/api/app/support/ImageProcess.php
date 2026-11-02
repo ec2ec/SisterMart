@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace app\support;
 
 /**
- * 通用圖片壓縮：等比縮放（最長邊 ≤ max_edge），輸出 JPEG，可配質量與目標體積。
+ * 通用圖片壓縮：等比縮放（最長邊 ≤ max_edge），不裁切。
  *
- * 選項（均可選）：
- * - max_edge      int  最長邊像素，默認 1000
- * - max_bytes     int  目標最大字節，默認 500KB；0=不限體積只壓質量一次
- * - quality       int  初始 JPEG 質量 1–100，默認 85
- * - min_quality   int  質量下限，默認 40
- * - quality_step  int  每次下降步長，默認 8
+ * format:
+ * - jpg  一律 JPEG
+ * - png  一律 PNG
+ * - keep 沿用原圖類型（JPEG / PNG / WebP；其餘按 JPEG）
  */
 final class ImageProcess
 {
@@ -22,9 +20,10 @@ final class ImageProcess
      *   max_bytes?: int,
      *   quality?: int,
      *   min_quality?: int,
-     *   quality_step?: int
+     *   quality_step?: int,
+     *   format?: string
      * } $options
-     * @return array{path: string, width: int, height: int, bytes: int, quality: int, max_edge: int}
+     * @return array{path: string, width: int, height: int, bytes: int, quality: int, max_edge: int, format: string, ext: string}
      */
     public static function compress(string $sourcePath, string $destPath, array $options = []): array
     {
@@ -33,6 +32,7 @@ final class ImageProcess
         $quality = self::clampQuality((int) ($options['quality'] ?? 85));
         $minQuality = self::clampQuality((int) ($options['min_quality'] ?? 40));
         $qualityStep = max(1, (int) ($options['quality_step'] ?? 8));
+        $format = (string) ($options['format'] ?? 'jpg');
         if ($minQuality > $quality) {
             $minQuality = $quality;
         }
@@ -50,6 +50,7 @@ final class ImageProcess
         $srcW = (int) $info[0];
         $srcH = (int) $info[1];
         $type = (int) ($info[2] ?? 0);
+        $outExt = self::outputExt($format, $type);
 
         $src = match ($type) {
             IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($sourcePath) : false,
@@ -64,7 +65,6 @@ final class ImageProcess
             throw new ApiException('INVALID', '不支持的圖片格式，請使用 JPG／PNG／WebP', 422, 42290);
         }
 
-        // 保持比例：僅當最長邊超過 max_edge 時縮小
         $scale = 1.0;
         $long = max($srcW, $srcH);
         if ($long > $maxEdge) {
@@ -78,8 +78,17 @@ final class ImageProcess
             imagedestroy($src);
             throw new ApiException('SERVER', '圖片處理失敗', 500, 50001);
         }
-        $white = imagecolorallocate($dst, 255, 255, 255);
-        imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+        $keepAlpha = $outExt !== 'jpg' && in_array($type, [IMAGETYPE_PNG, IMAGETYPE_WEBP], true);
+        if ($keepAlpha) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $transparent);
+            imagealphablending($dst, true);
+        } else {
+            $white = imagecolorallocate($dst, 255, 255, 255);
+            imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+        }
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
         imagedestroy($src);
 
@@ -92,7 +101,7 @@ final class ImageProcess
         $usedQuality = $quality;
         $bytes = 0;
         do {
-            if (!@imagejpeg($dst, $destPath, $usedQuality)) {
+            if (!self::write($dst, $destPath, $outExt, $usedQuality)) {
                 imagedestroy($dst);
                 throw new ApiException('SERVER', '圖片寫入失敗', 500, 50001);
             }
@@ -105,7 +114,6 @@ final class ImageProcess
 
         imagedestroy($dst);
 
-        // 仍超體積：降低 max_edge 再壓一輪（仍保持比例）
         if ($maxBytes > 0 && $bytes > $maxBytes && max($dstW, $dstH) > 600) {
             return self::compress($destPath, $destPath, [
                 'max_edge' => max(600, (int) floor($maxEdge * 0.75)),
@@ -113,6 +121,7 @@ final class ImageProcess
                 'quality' => $quality,
                 'min_quality' => $minQuality,
                 'quality_step' => $qualityStep,
+                'format' => $outExt === 'jpg' ? 'jpg' : $outExt,
             ]);
         }
         if ($maxBytes > 0 && $bytes > $maxBytes) {
@@ -127,13 +136,13 @@ final class ImageProcess
             'bytes' => $bytes,
             'quality' => $usedQuality,
             'max_edge' => $maxEdge,
+            'format' => $outExt,
+            'ext' => $outExt,
         ];
     }
 
     /**
-     * 兼容舊調用：評價圖默認 1000 / 500KB。
-     *
-     * @return array{path: string, width: int, height: int, bytes: int, quality: int, max_edge: int}
+     * @return array{path: string, width: int, height: int, bytes: int, quality: int, max_edge: int, format: string, ext: string}
      */
     public static function toJpegMax(
         string $sourcePath,
@@ -146,7 +155,57 @@ final class ImageProcess
             'max_edge' => $maxEdge,
             'max_bytes' => $maxBytes,
             'quality' => $quality,
+            'format' => 'jpg',
         ]);
+    }
+
+    public static function resolveOutputExt(string $format, string $sourcePath): string
+    {
+        $info = @getimagesize($sourcePath);
+        $type = (int) ($info[2] ?? 0);
+
+        return self::outputExt($format, $type);
+    }
+
+    private static function outputExt(string $format, int $type): string
+    {
+        if ($format === 'png' || $format === 'webp') {
+            if ($format === 'png' && !function_exists('imagepng')) {
+                throw new ApiException('SERVER', '伺服器 GD 不支持 PNG 輸出', 500, 50002);
+            }
+            if ($format === 'webp' && !function_exists('imagewebp')) {
+                throw new ApiException('SERVER', '伺服器 GD 不支持 WebP 輸出', 500, 50002);
+            }
+
+            return $format === 'webp' ? 'webp' : 'png';
+        }
+        if ($format === 'keep') {
+            if ($type === IMAGETYPE_PNG && function_exists('imagepng')) {
+                return 'png';
+            }
+            if ($type === IMAGETYPE_WEBP && function_exists('imagewebp')) {
+                return 'webp';
+            }
+
+            return 'jpg';
+        }
+
+        return 'jpg';
+    }
+
+    /** @param \GdImage|resource $dst */
+    private static function write($dst, string $destPath, string $ext, int $quality): bool
+    {
+        if ($ext === 'png') {
+            $level = (int) round((100 - self::clampQuality($quality)) * 9 / 99);
+
+            return (bool) @imagepng($dst, $destPath, max(0, min(9, $level)));
+        }
+        if ($ext === 'webp') {
+            return (bool) @imagewebp($dst, $destPath, self::clampQuality($quality));
+        }
+
+        return (bool) @imagejpeg($dst, $destPath, self::clampQuality($quality));
     }
 
     private static function clampQuality(int $q): int

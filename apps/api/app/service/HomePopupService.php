@@ -139,6 +139,7 @@ class HomePopupService
         if ($image === '') {
             throw new ApiException('INVALID', '請上傳背景圖', 422, 42201);
         }
+        $image = (new ImageUploadSceneService())->assertUrl('marketing.popup', $image);
         $linkType = (string) ($body['link_type'] ?? 'none');
         if (!in_array($linkType, self::LINK_TYPES, true)) {
             throw new ApiException('INVALID', '跳轉類型無效', 422, 42201);

@@ -168,7 +168,7 @@ async function onFile(ev: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const data = await uploadImage(file, { preset: 'banner' })
+    const data = await uploadImage(file, { scene: 'marketing.image_ad' })
     form.value.image_url = toStoredUrl(data.url)
     message.success('圖片已上傳')
   } catch (e: unknown) {
