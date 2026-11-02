@@ -257,10 +257,10 @@ onMounted(load)
       <n-form-item label="英文標題"><n-input v-model:value="form.title_en" /></n-form-item>
       <template v-if="editorsReady">
         <n-form-item label="繁中正文">
-          <WangSimpleEditor v-model="form.body_zh" preset="product" placeholder="繁體中文正文" :height="280" />
+          <WangSimpleEditor v-model="form.body_zh" scene="content.article" placeholder="繁體中文正文" :height="280" />
         </n-form-item>
         <n-form-item label="英文正文">
-          <WangSimpleEditor v-model="form.body_en" preset="product" placeholder="English body" :height="240" />
+          <WangSimpleEditor v-model="form.body_en" scene="content.article" placeholder="English body" :height="240" />
         </n-form-item>
       </template>
       <p v-else class="hint">點「編輯」後載入富文本編輯器…</p>

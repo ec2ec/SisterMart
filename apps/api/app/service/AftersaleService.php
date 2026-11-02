@@ -221,8 +221,9 @@ class AftersaleService
             if ($url === '') {
                 continue;
             }
-            $prefix = '/storage/aftersale/' . $memberId . '/';
-            if (!str_starts_with($url, $prefix)) {
+            try {
+                $url = (new ImageUploadSceneService())->assertMemberUrl('member.aftersale', $memberId, $url);
+            } catch (ApiException $e) {
                 throw new ApiException('INVALID', '證據圖片無效', 422, 42287);
             }
             $urls[] = $url;

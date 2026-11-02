@@ -209,14 +209,7 @@ class MemberAuthService
             if ($url === '') {
                 $patch['avatar_url'] = null;
             } else {
-                $prefix = '/storage/avatar/' . $memberId . '/';
-                if (!str_starts_with($url, $prefix)) {
-                    throw new ApiException('INVALID', '頭像路徑無效', 422, 42201);
-                }
-                if (preg_match('#\.\.|[^\w./\-]#', $url)) {
-                    throw new ApiException('INVALID', '頭像路徑無效', 422, 42201);
-                }
-                $patch['avatar_url'] = $url;
+                $patch['avatar_url'] = (new ImageUploadSceneService())->assertMemberUrl('member.avatar', $memberId, $url);
             }
         }
         if (count($patch) === 1) {

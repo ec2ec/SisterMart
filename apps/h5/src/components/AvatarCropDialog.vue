@@ -5,7 +5,7 @@ import { showToast } from 'vant'
 import { cropSquareCover } from '../utils/imageCompress'
 import { H5_IMAGE_MAX_UPLOAD_BYTES } from '../utils/h5ImageUpload'
 
-/** 選圖上限 5MB；落庫由服務端壓至 ≤500KB / 最長邊 ≤1000，再裁正方 */
+/** 選圖客戶端上限 20MB；壓縮與格式跟後台 member.avatar 配置，保存後再裁正方 */
 const MAX_AVATAR_BYTES = H5_IMAGE_MAX_UPLOAD_BYTES
 
 const props = defineProps<{

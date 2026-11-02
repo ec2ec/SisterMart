@@ -345,10 +345,10 @@ async function save() {
       <ProductMediaGallery v-model="form.media" />
     </n-form-item>
     <n-form-item label="繁體中文詳情">
-      <WangSimpleEditor v-model="form.detail_zh" preset="product" placeholder="繁體中文詳情，可上傳圖片" :height="240" />
+      <WangSimpleEditor v-model="form.detail_zh" scene="catalog.product_detail" placeholder="繁體中文詳情，可上傳圖片" :height="240" />
     </n-form-item>
     <n-form-item label="英文詳情">
-      <WangSimpleEditor v-model="form.detail_en" preset="product" placeholder="English detail" :height="240" />
+      <WangSimpleEditor v-model="form.detail_en" scene="catalog.product_detail" placeholder="English detail" :height="240" />
     </n-form-item>
 
     <div class="row-2">

@@ -178,10 +178,10 @@ onMounted(async () => {
       <p class="hint">新用戶註冊成功並進入首頁後彈出展示。支援富文本（圖文、列表、連結）。</p>
       <n-tabs v-model:value="welcomeTab" type="line" animated>
         <n-tab-pane name="zh-HK" tab="繁體中文">
-          <WangSimpleEditor v-model="form.welcome_html_zh" placeholder="歡迎文案（繁中）…" :height="260" preset="admin" />
+          <WangSimpleEditor v-model="form.welcome_html_zh" placeholder="歡迎文案（繁中）…" :height="260" scene="content.welcome" />
         </n-tab-pane>
         <n-tab-pane name="en" tab="English">
-          <WangSimpleEditor v-model="form.welcome_html_en" placeholder="Welcome copy (EN)…" :height="260" preset="admin" />
+          <WangSimpleEditor v-model="form.welcome_html_en" placeholder="Welcome copy (EN)…" :height="260" scene="content.welcome" />
         </n-tab-pane>
       </n-tabs>
     </n-card>

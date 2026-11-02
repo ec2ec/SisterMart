@@ -14,6 +14,7 @@ import ServiceTagsView from '../views/ServiceTagsView.vue'
 import SpecsView from '../views/SpecsView.vue'
 import SpecTemplatesView from '../views/SpecTemplatesView.vue'
 import ShopSettingsView from '../views/ShopSettingsView.vue'
+import ImageUploadSettingsView from '../views/ImageUploadSettingsView.vue'
 import RegistrationConfigView from '../views/RegistrationConfigView.vue'
 import MaintenanceView from '../views/MaintenanceView.vue'
 import OrdersView from '../views/OrdersView.vue'
@@ -98,6 +99,7 @@ export const router = createRouter({
         { path: '/settings/maintenance', component: MaintenanceView, meta: { title: '店鋪維護' } },
         { path: '/settings/registration', component: RegistrationConfigView, meta: { title: '新用戶配置' } },
         { path: '/settings/shop', component: ShopSettingsView, meta: { title: '店鋪參數' } },
+        { path: '/settings/image-upload', component: ImageUploadSettingsView, meta: { title: '圖片上傳配置' } },
         { path: '/settings/releases', component: ReleasesView, meta: { title: '發佈通道', roles: ['super'] } },
         { path: '/settings/admins', component: AdminsView, meta: { title: '管理員與角色', roles: ['super'] } },
       ],

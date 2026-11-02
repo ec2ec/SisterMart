@@ -523,19 +523,17 @@ class ReviewService
     private function normalizeImages(int $memberId, array $images): array
     {
         $out = [];
-        $prefix = '/storage/review/' . $memberId . '/';
+        $scenes = new ImageUploadSceneService();
         foreach ($images as $url) {
             $url = trim((string) $url);
             if ($url === '') {
                 continue;
             }
-            if (!str_starts_with($url, $prefix)) {
+            try {
+                $out[] = $scenes->assertMemberUrl('member.review', $memberId, $url);
+            } catch (ApiException $e) {
                 throw new ApiException('INVALID', '評價圖片無效', 422, 42301);
             }
-            if (preg_match('#\.\.|[^\w./\-]#', $url)) {
-                throw new ApiException('INVALID', '評價圖片無效', 422, 42301);
-            }
-            $out[] = $url;
         }
 
         return $out;

@@ -10,12 +10,11 @@ use app\support\ApiException;
 use think\Response;
 
 /**
- * 後台通用圖片上傳（壓縮參數可配）。
+ * 後台通用圖片上傳。壓縮只讀「圖片上傳配置」，請求不能覆蓋。
  *
  * POST /api/v1/admin/uploads/image
  * multipart: file
- * 可選字段：preset=banner|product|admin|review|aftersale
- *           max_edge / max_bytes / quality / min_quality / bucket
+ * 字段：scene=catalog.product|marketing.banner|...（或舊 preset）
  */
 class Uploads extends ApiController
 {
@@ -28,21 +27,18 @@ class Uploads extends ApiController
             }
             $admin = app('sistermart.admin') ?? [];
             $adminId = (int) ($admin['id'] ?? 0);
-            $svc = new ImageUploadService();
             $input = array_merge($this->request->get(), $this->request->post(), $this->payload());
-            $opts = $svc->optionsFromRequest($input, 'admin');
-            if (empty($opts['bucket'])) {
-                $opts['bucket'] = match ((string) ($opts['preset'] ?? 'admin')) {
-                    'banner' => 'banner',
-                    'product' => 'product',
-                    'review' => 'review',
-                    'aftersale' => 'aftersale',
-                    default => 'admin',
-                };
+            $opts = [
+                'owner_id' => $adminId > 0 ? 'draft-' . $adminId : 'shared',
+            ];
+            $scene = trim((string) ($input['scene'] ?? ''));
+            if ($scene !== '') {
+                $opts['scene'] = $scene;
+            } else {
+                $opts['preset'] = (string) ($input['preset'] ?? 'admin');
             }
-            $opts['owner_id'] = $adminId > 0 ? $adminId : 'shared';
 
-            return $svc->store($file, $opts);
+            return (new ImageUploadService())->store($file, $opts);
         }, 201);
     }
 }

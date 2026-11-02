@@ -44,12 +44,10 @@ class HomeBanners extends ApiController
             }
             $admin = app('sistermart.admin') ?? [];
             $adminId = (int) ($admin['id'] ?? 0);
-            $svc = new ImageUploadService();
-            $opts = $svc->optionsFromRequest(['preset' => 'banner'], 'banner');
-            $opts['bucket'] = 'banner';
-            $opts['owner_id'] = $adminId > 0 ? $adminId : 'shared';
-
-            return $svc->store($file, $opts);
+            return (new ImageUploadService())->store($file, [
+                'scene' => 'marketing.banner',
+                'owner_id' => $adminId > 0 ? 'draft-' . $adminId : 'shared',
+            ]);
         }, 201);
     }
 }

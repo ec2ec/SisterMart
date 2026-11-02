@@ -480,6 +480,9 @@ class CatalogService
                 if ($url === '') {
                     continue;
                 }
+                if (($item['media_type'] ?? 'image') !== 'video') {
+                    $url = (new ImageUploadSceneService())->assertUrl('catalog.product', $url);
+                }
                 Db::name('product_media')->insert([
                     'product_id' => $id,
                     'media_type' => (($item['media_type'] ?? 'image') === 'video') ? 'video' : 'image',

@@ -259,6 +259,7 @@ onMounted(load)
       <n-form-item label="圖片">
         <ProductMediaGallery
           v-model="media"
+          scene="marketing.popup"
           :max="1"
           :hint="bgHint"
           :delete-title="bgDeleteTitle"

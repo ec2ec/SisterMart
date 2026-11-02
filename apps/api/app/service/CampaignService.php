@@ -182,7 +182,9 @@ SQL);
             'audience_json' => json_encode($audience, JSON_UNESCAPED_UNICODE),
             'product_source' => $source,
             'product_badge' => $badge !== '' ? $badge : null,
-            'banner_image_url' => ($u = trim((string) ($body['banner_image_url'] ?? ''))) !== '' ? $u : null,
+            'banner_image_url' => ($u = trim((string) ($body['banner_image_url'] ?? ''))) !== ''
+                ? (new ImageUploadSceneService())->assertUrl('marketing.campaign', $u)
+                : null,
             'intro_html_zh' => (string) ($body['intro_html']['zh-HK'] ?? $body['intro_html_zh'] ?? ''),
             'intro_html_en' => (string) ($body['intro_html']['en'] ?? $body['intro_html_en'] ?? ''),
             'show_on_home' => (int) ($body['show_on_home'] ?? 0) === 1 ? 1 : 0,
