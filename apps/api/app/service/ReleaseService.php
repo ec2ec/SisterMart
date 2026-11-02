@@ -113,9 +113,9 @@ class ReleaseService
     public function list(): array
     {
         $this->assertEnabled();
-        // 列表時一併清理，確保上線後即可把歷史記錄／備份壓到最近 10 條
+        // 列表時一併清理。快照是整站 zip，只留最近 2 份，避免磁碟寫滿後分類保存等寫入全部失敗。
         $this->prunePendingReleases(10);
-        $this->pruneSnapshots(10);
+        $this->pruneSnapshots(2);
         $pending = $this->releasesRoot() . '/pending';
         $items = [];
         if (is_dir($pending)) {
@@ -443,7 +443,7 @@ class ReleaseService
             $this->audit('publish', $adminId, $id, ['snapshot_id' => $snapId]);
             // 僅保留最近 10 條發佈記錄與 10 份備份快照
             $this->prunePendingReleases(10);
-            $this->pruneSnapshots(10);
+            $this->pruneSnapshots(2);
 
             return [
                 'release' => $this->publicMeta($meta),
@@ -999,7 +999,7 @@ class ReleaseService
             'files_format' => 'zip',
         ];
         $this->writeJson($dir . '/meta.json', $meta);
-        $this->pruneSnapshots(10);
+        $this->pruneSnapshots(2);
 
         return $snapId;
     }

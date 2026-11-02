@@ -112,6 +112,41 @@ class CatalogService
         return $this->categoryById($id);
     }
 
+    /**
+     * 分類及其子分類都沒有商品時一併刪除；仍有商品則拒絕。
+     *
+     * @return array{id: int, deleted: true, deleted_count: int}
+     */
+    public function deleteCategory(int $id): array
+    {
+        if (!Db::name('categories')->where('id', $id)->find()) {
+            throw new ApiException('NOT_FOUND', '分類不存在', 404, 40401);
+        }
+        $ids = $this->categoryScopeIds((string) $id);
+        if ($ids === []) {
+            throw new ApiException('NOT_FOUND', '分類不存在', 404, 40401);
+        }
+        $productCount = (int) Db::name('products')->whereIn('category_id', $ids)->count();
+        if ($productCount > 0) {
+            throw new ApiException(
+                'HAS_PRODUCTS',
+                "此分類或其子分類下仍有 {$productCount} 件商品，無法刪除",
+                422,
+                42203,
+            );
+        }
+        Db::transaction(function () use ($ids): void {
+            Db::name('category_i18n')->whereIn('category_id', $ids)->delete();
+            Db::name('categories')->whereIn('id', $ids)->delete();
+        });
+
+        return [
+            'id' => $id,
+            'deleted' => true,
+            'deleted_count' => count($ids),
+        ];
+    }
+
     public function categoryById(int $id): array
     {
         $row = Db::name('categories')->where('id', $id)->find();

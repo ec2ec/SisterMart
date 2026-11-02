@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NFormItem, NInput, NInputNumber, NSelect, NSpace, NSwitch, useMessage } from 'naive-ui'
+import { NButton, NCard, NFormItem, NInput, NInputNumber, NSelect, NSpace, NSwitch, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -16,6 +16,8 @@ type Cat = {
 }
 
 const message = useMessage()
+const dialog = useDialog()
+const deleting = ref(false)
 const items = ref<Cat[]>([])
 const form = ref({
   id: 0,
@@ -88,6 +90,41 @@ async function save() {
   await load()
 }
 
+function confirmDelete() {
+  if (!form.value.id || deleting.value) return
+  const name = form.value.name_zh || form.value.code
+  dialog.warning({
+    title: '確認刪除此分類？',
+    content: `「${name}」及其子分類會一併刪除。若這些分類下仍有商品，將只提示、不會刪除。`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const id = form.value.id
+      deleting.value = true
+      try {
+        const res = await api<{ deleted_count: number }>(
+          `/api/v1/admin/categories/${id}`,
+          { method: 'DELETE' },
+          true,
+          true, // 由下方對話框提示，避免再彈「接口錯誤」
+        )
+        const n = res?.deleted_count ?? 1
+        message.success(n > 1 ? `已刪除 ${n} 個分類` : '分類已刪除')
+        reset()
+        await load()
+      } catch (e) {
+        dialog.error({
+          title: '無法刪除',
+          content: e instanceof Error ? e.message : '刪除失敗',
+          positiveText: '關閉',
+        })
+      } finally {
+        deleting.value = false
+      }
+    },
+  })
+}
+
 onMounted(load)
 </script>
 
@@ -132,6 +169,7 @@ onMounted(load)
       <n-space>
         <n-button type="primary" @click="save">保存</n-button>
         <n-button @click="reset">清空</n-button>
+        <n-button v-if="form.id" type="error" secondary :loading="deleting" @click="confirmDelete">刪除</n-button>
       </n-space>
     </n-card>
   </div>

@@ -22,7 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
+export async function api<T>(path: string, init: RequestInit = {}, auth = false, silent = false): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
@@ -36,13 +36,13 @@ export async function api<T>(path: string, init: RequestInit = {}, auth = false)
     res = await fetch(`${base}${path}`, { ...init, headers })
   } catch (e) {
     const err = new ApiError('NETWORK', e instanceof Error ? e.message : '網絡異常，請稍後再試', 0)
-    showError(err, '網絡異常，請稍後再試', '網絡錯誤')
+    if (!silent) showError(err, '網絡異常，請稍後再試', '網絡錯誤')
     throw err
   }
   const body = (await res.json().catch(() => ({}))) as Envelope<T>
   if (!res.ok || body.code !== 0) {
     const err = new ApiError(body.error?.name || 'HTTP', body.message || '請求失敗', body.code ?? 0)
-    showError(err, '請求失敗', '接口錯誤')
+    if (!silent) showError(err, '請求失敗', '接口錯誤')
     throw err
   }
   return body.data
