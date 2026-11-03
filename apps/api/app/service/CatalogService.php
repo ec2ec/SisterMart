@@ -400,8 +400,9 @@ class CatalogService
         }
         $nameZh = trim((string) ($body['name']['zh-HK'] ?? ''));
         $nameEn = trim((string) ($body['name']['en'] ?? ''));
-        $detailZh = (string) ($body['detail']['zh-HK'] ?? '');
-        $detailEn = (string) ($body['detail']['en'] ?? '');
+        $scenes = new ImageUploadSceneService();
+        $detailZh = $scenes->assertHtml('catalog.product_detail', (string) ($body['detail']['zh-HK'] ?? ''));
+        $detailEn = $scenes->assertHtml('catalog.product_detail', (string) ($body['detail']['en'] ?? ''));
         if ($nameZh === '' || $nameEn === '') {
             throw new ApiException('INVALID', '請填寫雙語商品名稱', 422, 42201);
         }
@@ -461,6 +462,7 @@ class CatalogService
             if (($item['media_type'] ?? 'image') === 'image') {
                 $cover = $this->normalizeStoredMediaUrl(trim((string) ($item['url'] ?? '')));
                 if ($cover !== '') {
+                    $cover = (new ImageUploadSceneService())->assertUrl('catalog.product', $cover);
                     break;
                 }
             }
@@ -603,10 +605,14 @@ class CatalogService
                 }
                 foreach (array_values($group['options'] ?? []) as $oi => $opt) {
                     $ocode = trim((string) ($opt['code'] ?? 'o' . $oi));
+                    $optImage = trim((string) ($opt['image'] ?? ''));
+                    if ($optImage !== '') {
+                        $optImage = (new ImageUploadSceneService())->assertUrl('catalog.product', $optImage);
+                    }
                     $oid = (int) Db::name('spec_options')->insertGetId([
                         'spec_group_id' => $gid,
                         'code'          => $ocode,
-                        'image_url'     => trim((string) ($opt['image'] ?? '')) ?: null,
+                        'image_url'     => $optImage !== '' ? $optImage : null,
                         'sort_order'    => $oi,
                     ]);
                     foreach (['zh-HK', 'en'] as $locale) {
@@ -630,6 +636,10 @@ class CatalogService
                 if (mb_strlen($supplierSku) > 64) {
                     throw new ApiException('INVALID', '供應商 SKU 編碼不能超過 64 字', 422, 42201);
                 }
+                $skuImage = trim((string) ($sku['image'] ?? ''));
+                if ($skuImage !== '') {
+                    $skuImage = (new ImageUploadSceneService())->assertUrl('catalog.product', $skuImage);
+                }
                 $sid = (int) Db::name('skus')->insertGetId([
                     'product_id' => $id,
                     'code'       => $scode,
@@ -639,7 +649,7 @@ class CatalogService
                     'cost_price' => round((float) ($sku['cost_price'] ?? 0), 2),
                     'supplier_sku' => $supplierSku,
                     'stock'      => max(0, (int) ($sku['stock'] ?? 0)),
-                    'image_url'  => trim((string) ($sku['image'] ?? '')) ?: null,
+                    'image_url'  => $skuImage !== '' ? $skuImage : null,
                     'status'     => (int) ($sku['status'] ?? 1) === 0 ? 0 : 1,
                     'created_at' => $now,
                     'updated_at' => $now,

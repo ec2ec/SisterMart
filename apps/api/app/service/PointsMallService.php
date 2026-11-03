@@ -151,6 +151,13 @@ class PointsMallService
         if ($dup->find()) {
             throw new ApiException('INVALID', 'code 已存在', 422, 42201);
         }
+        $scenes = new ImageUploadSceneService();
+        $image = trim((string) ($body['image_url'] ?? $body['image'] ?? ''));
+        if ($image !== '') {
+            $image = $scenes->assertUrl('catalog.product', $image);
+        }
+        $detailZh = $scenes->assertHtml('catalog.product_detail', trim((string) ($body['detail']['zh-HK'] ?? $body['detail_zh'] ?? '')));
+        $detailEn = $scenes->assertHtml('catalog.product_detail', trim((string) ($body['detail']['en'] ?? $body['detail_en'] ?? '')));
         $data = [
             'code' => $code,
             'product_id' => (int) $product['id'],
@@ -159,11 +166,11 @@ class PointsMallService
             'points_cost' => $points,
             'stock' => max(0, $stock),
             'status' => (int) ($body['status'] ?? 1) === 0 ? 0 : 1,
-            'image_url' => trim((string) ($body['image_url'] ?? $body['image'] ?? '')) ?: null,
+            'image_url' => $image !== '' ? $image : null,
             'name_zh' => $nameZh !== '' ? $nameZh : $nameEn,
             'name_en' => $nameEn !== '' ? $nameEn : $nameZh,
-            'detail_zh' => trim((string) ($body['detail']['zh-HK'] ?? $body['detail_zh'] ?? '')) ?: null,
-            'detail_en' => trim((string) ($body['detail']['en'] ?? $body['detail_en'] ?? '')) ?: null,
+            'detail_zh' => $detailZh !== '' ? $detailZh : null,
+            'detail_en' => $detailEn !== '' ? $detailEn : null,
             'updated_at' => $now,
         ];
         if ($id) {

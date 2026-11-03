@@ -104,6 +104,9 @@ class RegistrationConfigService
         if (strlen($welcomeZh) > 200000 || strlen($welcomeEn) > 200000) {
             throw new ApiException('INVALID', '歡迎文案過長', 422, 42201);
         }
+        $scenes = new ImageUploadSceneService();
+        $welcomeZh = $scenes->assertHtml('content.welcome', $welcomeZh);
+        $welcomeEn = $scenes->assertHtml('content.welcome', $welcomeEn);
 
         $payload = [
             'registration_enabled' => $registrationEnabled,

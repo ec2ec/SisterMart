@@ -258,8 +258,8 @@ class CouponService
             'code' => $code,
             'name_zh' => trim((string) ($body['name_zh'] ?? $code)),
             'name_en' => trim((string) ($body['name_en'] ?? $code)),
-            'rules_zh' => (string) ($body['rules_zh'] ?? ''),
-            'rules_en' => (string) ($body['rules_en'] ?? ''),
+            'rules_zh' => (new ImageUploadSceneService())->assertHtml('content.coupon', (string) ($body['rules_zh'] ?? '')),
+            'rules_en' => (new ImageUploadSceneService())->assertHtml('content.coupon', (string) ($body['rules_en'] ?? '')),
             'background_image' => $this->normalizeBackgroundImage($body['background_image'] ?? null),
             'type' => $type,
             'threshold' => round((float) ($body['threshold'] ?? 0), 2),
@@ -309,10 +309,14 @@ class CouponService
             throw new ApiException('NOT_FOUND', '優惠券不存在', 404, 40470);
         }
         $data = [];
+        $scenes = new ImageUploadSceneService();
         foreach (['name_zh', 'name_en', 'rules_zh', 'rules_en', 'type', 'scope'] as $k) {
-            if (array_key_exists($k, $body)) {
-                $data[$k] = $body[$k];
+            if (!array_key_exists($k, $body)) {
+                continue;
             }
+            $data[$k] = in_array($k, ['rules_zh', 'rules_en'], true)
+                ? $scenes->assertHtml('content.coupon', (string) $body[$k])
+                : $body[$k];
         }
         if (array_key_exists('background_image', $body)) {
             $data['background_image'] = $this->normalizeBackgroundImage($body['background_image']);

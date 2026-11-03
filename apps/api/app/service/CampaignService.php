@@ -185,8 +185,8 @@ SQL);
             'banner_image_url' => ($u = trim((string) ($body['banner_image_url'] ?? ''))) !== ''
                 ? (new ImageUploadSceneService())->assertUrl('marketing.campaign', $u)
                 : null,
-            'intro_html_zh' => (string) ($body['intro_html']['zh-HK'] ?? $body['intro_html_zh'] ?? ''),
-            'intro_html_en' => (string) ($body['intro_html']['en'] ?? $body['intro_html_en'] ?? ''),
+            'intro_html_zh' => (new ImageUploadSceneService())->assertHtml('content.campaign', (string) ($body['intro_html']['zh-HK'] ?? $body['intro_html_zh'] ?? '')),
+            'intro_html_en' => (new ImageUploadSceneService())->assertHtml('content.campaign', (string) ($body['intro_html']['en'] ?? $body['intro_html_en'] ?? '')),
             'show_on_home' => (int) ($body['show_on_home'] ?? 0) === 1 ? 1 : 0,
             'home_rail_limit' => max(1, min(30, (int) ($body['home_rail_limit'] ?? 10))),
             'sort_order' => (int) ($body['sort_order'] ?? 0),

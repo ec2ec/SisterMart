@@ -300,6 +300,45 @@ class ImageUploadSceneService
     }
 
     /**
+     * 富文本裡的本站圖片須符合場景；外鏈與 /mock 保留。files 代理會改寫成 /storage/...。
+     */
+    public function assertHtml(string $scene, string $html): string
+    {
+        if ($html === '' || (!str_contains($html, '/storage/') && !str_contains($html, 'path='))) {
+            return $html;
+        }
+        $raws = [];
+        $patterns = [
+            '#https?://[^\s"\'<>]+/storage/[A-Za-z0-9_./\-]+#i',
+            '#/storage/[A-Za-z0-9_./\-]+#',
+            '#https?://[^\s"\'<>]*\?[^\s"\'<>]*path=[^\s"\'<>&]+#i',
+            '#/api/v1/files\?path=[^\s"\'<>&]+#i',
+        ];
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $html, $matches)) {
+                foreach ($matches[0] as $raw) {
+                    $raws[$raw] = strlen($raw);
+                }
+            }
+        }
+        if ($raws === []) {
+            return $html;
+        }
+        arsort($raws);
+        foreach (array_keys($raws) as $raw) {
+            if (!str_contains($html, $raw)) {
+                continue;
+            }
+            $canonical = $this->assertUrl($scene, $raw);
+            if ($canonical !== $raw) {
+                $html = str_replace($raw, $canonical, $html);
+            }
+        }
+
+        return $html;
+    }
+
+    /**
      * 後台素材庫：只列該場景分桶裡已上傳的圖。不含會員頭像／評價／售後。
      *
      * @return array{scene: string, items: list<array{url: string, bytes: int}>, total: int, page: int, page_size: int}
