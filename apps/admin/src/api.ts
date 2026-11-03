@@ -60,7 +60,7 @@ export type ImageUploadResult = {
   preset: string
 }
 
-/** 後台圖片上傳。壓縮參數只看「設置 → 圖片上傳配置」，這裡只傳場景。 */
+/** 後台圖片上傳。壓縮參數只看該場景的當前配置，請求不能覆蓋。 */
 export async function uploadImage(file: File, options: { scene: string }): Promise<ImageUploadResult> {
   const body = new FormData()
   body.append('file', file)

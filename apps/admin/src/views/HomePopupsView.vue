@@ -78,7 +78,6 @@ const targetOptions = [
   { label: '已下過單', value: 'has_order' },
 ]
 
-const bgHint = '遮罩圖單張不超過 3M，僅 1 張'
 const bgDeleteTitle = '確認刪除圖片'
 const bgDeleteContent = '確定移除此遮罩圖？保存後才會生效。'
 
@@ -262,7 +261,6 @@ onMounted(load)
           scene="marketing.popup"
           library
           :max="1"
-          :hint="bgHint"
           :delete-title="bgDeleteTitle"
           :delete-content="bgDeleteContent"
         />
