@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>商品圖庫</title>
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #6f675f;
+      --line: #e4ddd4;
+      --paper: #f6f3ee;
+      --card: #fff;
+      --accent: #9b3bfc;
+      --accent-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 15px/1.5 "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.75rem 1.25rem;
+      background: #16162b;
+      color: #fff;
+    }
+    header h1 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+    header .root {
+      flex: 1;
+      min-width: 0;
+      color: #d9d3ea;
+      font-size: 0.82rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    header button, .bar button, .back {
+      border: 0;
+      border-radius: 0.4rem;
+      background: #fff;
+      color: #16162b;
+      padding: 0.35rem 0.7rem;
+    }
+    header button.ghost { background: transparent; color: #fff; border: 1px solid #4a4568; }
+    main { padding: 1rem 1.25rem 2.5rem; max-width: 1180px; margin: 0 auto; }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .bar input[type="search"], .bar select, .setup input {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 0.4rem;
+      padding: 0.4rem 0.6rem;
+    }
+    .bar input[type="search"] { width: min(22rem, 100%); }
+    .stats { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+    .check { display: flex; gap: 0.35rem; align-items: center; color: var(--muted); font-size: 0.85rem; }
+    section { margin: 0 0 1.4rem; }
+    section h2 {
+      margin: 0 0 0.6rem;
+      font-size: 1rem;
+    }
+    .note { margin: -0.35rem 0 0.6rem; color: #9a5b12; font-size: 0.82rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 0.75rem;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.45rem;
+      border: 1px solid var(--line);
+      border-radius: 0.6rem;
+      background: var(--card);
+      text-align: left;
+    }
+    .card img, .ph {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 0.4rem;
+      background: #ece7e0;
+    }
+    .ph { display: grid; place-items: center; color: var(--muted); font-size: 0.8rem; }
+    .card strong { font-size: 0.92rem; }
+    .meta { color: var(--muted); font-size: 0.78rem; }
+    .badge { color: #9a5b12; }
+    .detail-head { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.8rem; }
+    .detail-head h2 { margin: 0; font-size: 1.25rem; }
+    .crumb { color: var(--muted); font-size: 0.85rem; }
+    dl {
+      display: grid;
+      grid-template-columns: 7rem 1fr;
+      gap: 0.25rem 0.75rem;
+      margin: 0 0 1rem;
+      padding: 0.8rem 1rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.6rem;
+    }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    .photos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.6rem;
+    }
+    .photos button {
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 0.45rem;
+      background: #fff;
+      overflow: hidden;
+    }
+    .photos img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+    .photos span { display: block; padding: 0.25rem 0.4rem 0.4rem; font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+    .empty, .setup {
+      padding: 1.2rem;
+      background: #fff;
+      border: 1px dashed var(--line);
+      border-radius: 0.6rem;
+    }
+    .setup { display: flex; flex-direction: column; align-items: flex-start; gap: 0.55rem; }
+    .setup input { width: min(36rem, 100%); }
+    .err { color: #9f1239; }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      background: rgba(12, 10, 20, 0.92);
+      color: #fff;
+    }
+    .lightbox header { background: transparent; }
+    .lightbox .stage {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      padding: 0.5rem 3rem 1rem;
+    }
+    .lightbox img { max-width: 100%; max-height: calc(100vh - 6rem); object-fit: contain; }
+    .nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2.4rem;
+      height: 2.4rem;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      color: #fff;
+      font-size: 1.3rem;
+    }
+    .nav.prev { left: 0.6rem; }
+    .nav.next { right: 0.6rem; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>商品圖庫</h1>
+    <div class="root" id="rootLabel">正在讀取…</div>
+    <button type="button" id="rescan">重新掃描</button>
+    <button type="button" class="ghost" id="openSetup">設定目錄</button>
+  </header>
+  <main id="app"></main>
+  <script>
+    const app = document.querySelector('#app')
+    const rootLabel = document.querySelector('#rootLabel')
+    let catalog = null
+    let query = ''
+    let category = ''
+    let missingOnly = false
+    let selectedKey = ''
+    let light = -1
+
+    function el(tag, attrs, kids) {
+      const node = document.createElement(tag)
+      for (const [key, value] of Object.entries(attrs || {})) {
+        if (key === 'class') node.className = value
+        else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.slice(2), value)
+        else if (value != null && value !== false) node.setAttribute(key, String(value))
+      }
+      for (const kid of kids || []) node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)))
+      return node
+    }
+    function mediaUrl(kind, path, mtime) {
+      return `${kind}?path=${encodeURIComponent(path)}&v=${mtime || 0}`
+    }
+    function allProducts() {
+      const rows = []
+      for (const cat of catalog?.categories || []) {
+        for (const product of cat.products) rows.push(product)
+      }
+      return rows
+    }
+    function productKey(product) {
+      return `${product.category}/${product.folder}`
+    }
+    function visible(product) {
+      if (category && product.category !== category) return false
+      if (missingOnly && product.has_index) return false
+      const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+      if (!words.length) return true
+      const hay = [
+        product.name,
+        product.folder,
+        product.category,
+        ...product.fields.flatMap((field) => [field.key, field.value]),
+        ...product.images.map((image) => image.name),
+      ].join('\n').toLowerCase()
+      return words.every((word) => hay.includes(word))
+    }
+    function findSelected() {
+      return allProducts().find((product) => productKey(product) === selectedKey) || null
+    }
+
+    function render() {
+      document.querySelectorAll('.lightbox').forEach((node) => node.remove())
+      if (!catalog) return
+      rootLabel.textContent = catalog.root
+      rootLabel.title = catalog.root
+      if (!catalog.root_ok) {
+        app.replaceChildren(setupBox('這個目錄還不存在。請先在電腦上建好文件夾，或改成已有的商品圖目錄。'))
+        return
+      }
+      const tools = ensureTools()
+      const list = document.querySelector('#list')
+      if (selectedKey && findSelected()) {
+        tools.classList.add('hidden')
+        list.replaceChildren()
+        renderDetail(findSelected(), list)
+        return
+      }
+      selectedKey = ''
+      tools.classList.remove('hidden')
+      fillResults(list)
+    }
+
+    function ensureTools() {
+      let tools = document.querySelector('#tools')
+      if (tools && document.querySelector('#list')) {
+        syncCategories(tools.querySelector('select'))
+        return tools
+      }
+      app.replaceChildren()
+      tools = el('div', { id: 'tools', class: 'bar' })
+      const search = el('input', {
+        type: 'search',
+        placeholder: '搜尋名稱、屬性、檔名',
+        value: query,
+        oninput: (event) => { query = event.target.value; fillResults(document.querySelector('#list')) },
+      })
+      const select = el('select', {
+        onchange: (event) => { category = event.target.value; fillResults(document.querySelector('#list')) },
+      })
+      const box = el('label', { class: 'check' }, [
+        el('input', {
+          type: 'checkbox',
+          onchange: (event) => { missingOnly = event.target.checked; fillResults(document.querySelector('#list')) },
+        }),
+        '只看未填 index.txt',
+      ])
+      if (missingOnly) box.querySelector('input').checked = true
+      tools.append(search, select, box, el('span', { id: 'stats', class: 'stats' }, ['']))
+      app.append(tools, el('div', { id: 'list' }))
+      syncCategories(select)
+      return tools
+    }
+
+    function syncCategories(select) {
+      const names = catalog.categories.map((cat) => cat.name)
+      const current = [''].concat(names).join('\n')
+      if (select.dataset.options === current) return
+      select.replaceChildren(el('option', { value: '' }, ['全部分類']))
+      for (const name of names) select.append(el('option', { value: name }, [name]))
+      select.value = names.includes(category) ? category : ''
+      category = select.value
+      select.dataset.options = [''].concat(names).join('\n')
+    }
+
+    function fillResults(list) {
+      const products = allProducts().filter(visible)
+      const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
+      const stats = document.querySelector('#stats')
+      if (stats) stats.textContent = `${products.length} 件商品 · ${imageCount} 張圖`
+      list.replaceChildren()
+      if (!catalog.categories.length) {
+        list.append(el('div', { class: 'empty' }, [
+          '目錄是空的。請在這下面先建分類文件夾，再在分類裡為每件商品建一個文件夾，並放入 index.txt 和圖片。',
+        ]))
+        return
+      }
+      let shown = 0
+      for (const cat of catalog.categories) {
+        const rows = cat.products.filter(visible)
+        if (!rows.length && (query || missingOnly || (category && category !== cat.name))) continue
+        shown += 1
+        const section = el('section')
+        section.append(el('h2', {}, [`${cat.name}（${rows.length}）`]))
+        if (cat.loose_images) {
+          section.append(el('p', { class: 'note' }, [
+            `有 ${cat.loose_images} 張圖直接放在分類文件夾裡，尚未歸入商品。`,
+          ]))
+        }
+        if (!rows.length) section.append(el('p', { class: 'note' }, ['這個分類下還沒有商品文件夾。']))
+        else section.append(grid(rows))
+        list.append(section)
+      }
+      if (!shown) list.append(el('div', { class: 'empty' }, ['沒有符合的商品。']))
+      if (catalog.loose_images) {
+        list.append(el('p', { class: 'note' }, [`根目錄另有 ${catalog.loose_images} 張散圖，未計入任何分類。`]))
+      }
+    }
+
+    function grid(products) {
+      return el('div', { class: 'grid' }, products.map((product) => {
+        const coverImage = product.images.find((image) => image.path === product.cover)
+        const cover = product.cover && !coverImage?.heic
+          ? el('img', {
+              src: mediaUrl('/thumb', product.cover, coverImage?.mtime),
+              alt: product.name,
+              loading: 'lazy',
+            })
+          : el('div', { class: 'ph' }, [coverImage?.heic ? 'HEIC' : '沒有圖片'])
+        const bits = [`${product.images.length} 張`]
+        if (!product.has_index) bits.push('未填說明')
+        return el('button', { class: 'card', type: 'button', onclick: () => openProduct(product) }, [
+          cover,
+          el('strong', {}, [product.name]),
+          el('div', { class: 'meta' + (product.has_index ? '' : ' badge') }, [bits.join(' · ')]),
+        ])
+      }))
+    }
+
+    function openProduct(product) {
+      selectedKey = productKey(product)
+      light = -1
+      render()
+    }
+
+    function renderDetail(product, list) {
+      const head = el('div', { class: 'detail-head' }, [
+        el('button', { class: 'back', type: 'button', onclick: () => { selectedKey = ''; light = -1; render() } }, ['返回']),
+        el('div', {}, [
+          el('div', { class: 'crumb' }, [
+            product.folder === product.name ? product.category : `${product.category} / ${product.folder}`,
+          ]),
+          el('h2', {}, [product.name]),
+        ]),
+      ])
+      list.append(head)
+      if (!product.has_index) {
+        list.append(el('p', { class: 'note' }, ['這個商品文件夾還沒有 index.txt，目前以文件夾名當作商品名。用記事本新增時請存成 UTF-8。']))
+      }
+      if (product.fields.length) {
+        const fields = el('dl')
+        for (const field of product.fields) {
+          fields.append(el('dt', {}, [field.key]), el('dd', {}, [field.value || '—']))
+        }
+        list.append(fields)
+      }
+      if (!product.images.length) {
+        list.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
+        return
+      }
+      list.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
+        type: 'button',
+        onclick: () => openLight(index),
+      }, [
+        image.heic
+          ? el('div', { class: 'ph' }, ['HEIC'])
+          : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
+        el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
+      ]))))
+      if (light >= 0) renderLight(product)
+    }
+
+    function openLight(index) {
+      light = index
+      render()
+    }
+
+    function renderLight(product) {
+      const image = product.images[light]
+      if (!image) return
+      const box = el('div', { class: 'lightbox' })
+      const close = () => { light = -1; render() }
+      box.append(el('header', {}, [
+        el('strong', {}, [image.name]),
+        el('span', { class: 'root' }, [`${light + 1} / ${product.images.length}`]),
+        el('button', { type: 'button', onclick: close }, ['關閉']),
+      ]))
+      const stage = el('div', { class: 'stage' })
+      if (image.heic) stage.append(el('p', {}, ['這張是 HEIC，瀏覽器無法直接顯示。請安裝 pillow-heif 後重新開啟程式。']))
+      else stage.append(el('img', { src: mediaUrl('/image', image.path, image.mtime), alt: image.name }))
+      if (product.images.length > 1) {
+        stage.append(el('button', { class: 'nav prev', type: 'button', onclick: () => step(-1) }, ['‹']))
+        stage.append(el('button', { class: 'nav next', type: 'button', onclick: () => step(1) }, ['›']))
+      }
+      box.append(stage)
+      box.addEventListener('click', (event) => { if (event.target === box || event.target === stage) close() })
+      document.body.append(box)
+    }
+
+    function step(delta) {
+      const product = findSelected()
+      if (!product || product.images.length < 2) return
+      light = (light + delta + product.images.length) % product.images.length
+      render()
+    }
+
+    function setupBox(message) {
+      const input = el('input', { type: 'text', value: catalog.root || '', placeholder: 'D:/SisterMart-PM' })
+      const hint = el('div', { class: 'err' })
+      const save = el('button', { type: 'button', onclick: async () => {
+        hint.textContent = ''
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ root: input.value.trim() }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          hint.textContent = data.error || '無法保存'
+          return
+        }
+        catalog = data
+        selectedKey = ''
+        render()
+      } }, ['使用這個目錄'])
+      return el('div', { class: 'setup' }, [el('p', {}, [message]), input, save, hint])
+    }
+
+    async function load() {
+      try {
+        const response = await fetch('/api/catalog')
+        if (!response.ok) throw new Error('讀取失敗')
+        catalog = await response.json()
+      } catch (err) {
+        rootLabel.textContent = '無法連上本機程式'
+        app.replaceChildren(el('div', { class: 'empty err' }, ['無法讀取商品目錄，請確認程式仍在運行後按重新掃描。']))
+        return
+      }
+      if (selectedKey && !findSelected()) selectedKey = ''
+      render()
+    }
+
+    document.querySelector('#rescan').onclick = load
+    document.querySelector('#openSetup').onclick = () => {
+      selectedKey = ''
+      app.replaceChildren(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
+    }
+    document.addEventListener('keydown', (event) => {
+      if (light < 0) return
+      if (event.key === 'Escape') { event.preventDefault(); light = -1; render() }
+      if (event.key === 'ArrowRight') { event.preventDefault(); step(1) }
+      if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1) }
+    })
+    load()
+  </script>
+</body>
+</html>
