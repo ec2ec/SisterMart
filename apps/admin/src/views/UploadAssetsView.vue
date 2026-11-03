@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NCard } from 'naive-ui'
+import { NButton, NCard, NSpace, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
 import { assetUrl } from '../utils/assetUrl'
 
@@ -27,10 +27,35 @@ type Recent = {
   created_at: string
 }
 
+type Orphan = {
+  id: number
+  path: string
+  label: string
+  bytes: number
+  orphaned_at: string
+  eligible: boolean
+  days_left: number
+}
+
+type ScanResult = {
+  grace_days: number
+  newly_orphaned: number
+  restored: number
+  orphaned_count: number
+  eligible_count: number
+  eligible_bytes: number
+  items: Orphan[]
+}
+
+const message = useMessage()
+const dialog = useDialog()
 const totalCount = ref(0)
 const totalBytes = ref(0)
 const groups = ref<Group[]>([])
 const recent = ref<Recent[]>([])
+const scanning = ref(false)
+const purging = ref(false)
+const scanResult = ref<ScanResult | null>(null)
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`
@@ -43,7 +68,7 @@ function who(row: Recent) {
   return row.uploader_id > 0 ? `${kind} #${row.uploader_id}` : kind
 }
 
-onMounted(async () => {
+async function load() {
   const data = await api<{
     total_count: number
     total_bytes: number
@@ -54,14 +79,54 @@ onMounted(async () => {
   totalBytes.value = data.total_bytes
   groups.value = data.groups
   recent.value = data.recent
-})
+}
+
+async function scan() {
+  scanning.value = true
+  try {
+    scanResult.value = await api<ScanResult>('/api/v1/admin/settings/upload-assets/scan', { method: 'POST' }, true)
+    const row = scanResult.value
+    message.success(`掃描完成：新標未引用 ${row.newly_orphaned}，恢復使用中 ${row.restored}`)
+    await load()
+  } finally {
+    scanning.value = false
+  }
+}
+
+function confirmPurge() {
+  const row = scanResult.value
+  if (!row || row.eligible_count < 1 || purging.value) return
+  dialog.warning({
+    title: '刪除已滿 30 天的未引用圖片？',
+    content: `將刪除 ${row.eligible_count} 張、約 ${formatBytes(row.eligible_bytes)}。仍被使用的圖不會刪。`,
+    positiveText: '刪除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      purging.value = true
+      try {
+        const res = await api<{ deleted_count: number; deleted_bytes: number }>(
+          '/api/v1/admin/settings/upload-assets/purge',
+          { method: 'POST', body: JSON.stringify({ confirm: true }) },
+          true,
+        )
+        message.success(`已刪除 ${res.deleted_count} 張（${formatBytes(res.deleted_bytes)}）`)
+        scanResult.value = null
+        await load()
+      } finally {
+        purging.value = false
+      }
+    },
+  })
+}
+
+onMounted(load)
 </script>
 
 <template>
   <div class="page">
     <n-card title="上傳素材概覽">
       <p class="lead">
-        只統計這個索引上線之後的新上傳，按場景看張數和落盤體積。舊圖仍在原來的目錄，不會搬過來，也不在這張表裡。這裡不能刪除檔案。
+        只統計這個索引上線之後的新上傳。舊圖仍留在原目錄，不會搬過來，也不在這張表裡。未引用的新圖要滿 30 天，並在下方確認後才會刪。
       </p>
       <div class="stats">
         <div>
@@ -93,6 +158,50 @@ onMounted(async () => {
               </td>
               <td>{{ row.count }}</td>
               <td>{{ formatBytes(row.bytes) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </n-card>
+
+    <n-card title="未引用圖片">
+      <p class="lead">
+        掃描商品、分類、廣告、文章、會員等資料裡仍出現的圖片地址。索引中沒被用到的新圖會標成未引用，滿 {{ scanResult?.grace_days ?? 30 }} 天後才能刪。
+      </p>
+      <n-space>
+        <n-button :loading="scanning" @click="scan">掃描未引用</n-button>
+        <n-button
+          type="error"
+          secondary
+          :loading="purging"
+          :disabled="!scanResult || scanResult.eligible_count < 1"
+          @click="confirmPurge"
+        >
+          刪除已滿 30 天的未引用圖片
+        </n-button>
+      </n-space>
+      <p v-if="scanResult" class="scan-note">
+        未引用 {{ scanResult.orphaned_count }} 張，其中可刪除 {{ scanResult.eligible_count }} 張（{{ formatBytes(scanResult.eligible_bytes) }}）。
+      </p>
+      <div v-if="scanResult" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>場景</th>
+              <th>路徑</th>
+              <th>體積</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!scanResult.items.length">
+              <td colspan="4" class="muted">沒有未引用的新圖</td>
+            </tr>
+            <tr v-for="row in scanResult.items" :key="row.id">
+              <td>{{ row.label }}</td>
+              <td class="mono">{{ row.path }}</td>
+              <td>{{ formatBytes(row.bytes) }}</td>
+              <td>{{ row.eligible ? '可刪除' : `還需 ${row.days_left} 天` }}</td>
             </tr>
           </tbody>
         </table>
@@ -193,5 +302,14 @@ td {
   border-radius: 0.25rem;
   background: #f3f0ea;
   display: block;
+}
+.scan-note {
+  margin: 0.75rem 0 0;
+  color: #666;
+  font-size: 0.8125rem;
+}
+.table-wrap + .table-wrap,
+.scan-note + .table-wrap {
+  margin-top: 0.75rem;
 }
 </style>
