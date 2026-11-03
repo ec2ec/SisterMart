@@ -74,7 +74,7 @@ const templateOptions = computed(() =>
 
 const comboCount = computed(() => {
   if (!groupModel.value.length) return 0
-  return groupModel.value.reduce((n, g) => n * Math.max(1, g.options.length), 1)
+  return groupModel.value.reduce((n, g) => n * Math.max(1, g.options?.length || 1), 1)
 })
 
 onMounted(async () => {
@@ -103,18 +103,19 @@ function emptyGroup(i = 1): SpecGroupDraft {
 }
 
 function ensureDefaults() {
-  if (!groupModel.value.length) {
-    groupModel.value = [
-      {
-        code: 'default',
-        name: { 'zh-HK': '款式', en: 'Style' },
-        options: [{ code: 'default', name: { 'zh-HK': '默認', en: 'Default' }, image: null }],
-      },
-    ]
+  let group = groupModel.value[0]
+  if (!group) {
+    group = {
+      code: 'default',
+      name: { 'zh-HK': '款式', en: 'Style' },
+      options: [{ code: 'default', name: { 'zh-HK': '默認', en: 'Default' }, image: null }],
+    }
+    groupModel.value = [group]
   }
   if (!skuModel.value.length) {
-    const g = groupModel.value[0]
-    const o = g.options[0]
+    const g = group
+    const o = g.options?.[0]
+    if (!o) return
     skuModel.value = [
       {
         code: o.code || 'default',

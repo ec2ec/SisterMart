@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { showError } from '../feedback'
 import { computed, onMounted, ref, watch } from 'vue'
-import { NSpin, useDialog, useMessage } from 'naive-ui'
+import { NImage, NImageGroup, NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
 import { describeUpload, loadUploadRequirements } from '../uploadRequirements'
@@ -202,23 +202,31 @@ async function onFiles(ev: Event) {
           <span class="add-label">素材庫</span>
         </button>
 
-        <div v-for="(item, idx) in items" :key="`${item.url}-${idx}`" class="tile media">
-          <video v-if="isVideo(item)" class="thumb" :src="previewUrl(item.url)" muted />
-          <img v-else class="thumb" :src="previewUrl(item.url)" alt="" />
-          <div class="actions" :class="{ 'del-only': single }">
-            <button v-if="!single" type="button" title="左移" :disabled="idx === 0" @click="move(idx, -1)">‹</button>
-            <button
-              v-if="!single"
-              type="button"
-              title="右移"
-              :disabled="idx === items.length - 1"
-              @click="move(idx, 1)"
-            >
-              ›
-            </button>
-            <button type="button" class="del" title="刪除" @click="removeAt(idx)">×</button>
+        <n-image-group>
+          <div v-for="(item, idx) in items" :key="`${item.url}-${idx}`" class="tile media">
+            <video v-if="isVideo(item)" class="thumb" :src="previewUrl(item.url)" muted />
+            <n-image
+              v-else
+              class="thumb"
+              :src="previewUrl(item.url)"
+              object-fit="cover"
+              :img-props="{ alt: `圖片 ${idx + 1}`, title: '點擊放大' }"
+            />
+            <div class="actions" :class="{ 'del-only': single }">
+              <button v-if="!single" type="button" title="左移" :disabled="idx === 0" @click="move(idx, -1)">‹</button>
+              <button
+                v-if="!single"
+                type="button"
+                title="右移"
+                :disabled="idx === items.length - 1"
+                @click="move(idx, 1)"
+              >
+                ›
+              </button>
+              <button type="button" class="del" title="刪除" @click="removeAt(idx)">×</button>
+            </div>
           </div>
-        </div>
+        </n-image-group>
       </div>
     </n-spin>
 
@@ -304,9 +312,22 @@ async function onFiles(ev: Event) {
   display: block;
 }
 
+.tile.media :deep(.n-image) {
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+
+.tile.media :deep(.n-image img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .actions {
   position: absolute;
   inset: auto 0 0 0;
+  z-index: 1;
   display: flex;
   justify-content: stretch;
   background: rgba(0, 0, 0, 0.45);
