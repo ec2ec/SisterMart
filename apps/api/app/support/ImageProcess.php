@@ -78,7 +78,7 @@ final class ImageProcess
             imagedestroy($src);
             throw new ApiException('SERVER', '圖片處理失敗', 500, 50001);
         }
-        $keepAlpha = $outExt !== 'jpg' && in_array($type, [IMAGETYPE_PNG, IMAGETYPE_WEBP], true);
+        $keepAlpha = $outExt !== 'jpg' && self::hasAlpha($src, $type);
         if ($keepAlpha) {
             imagealphablending($dst, false);
             imagesavealpha($dst, true);
@@ -114,19 +114,22 @@ final class ImageProcess
 
         imagedestroy($dst);
 
-        if ($maxBytes > 0 && $bytes > $maxBytes && max($dstW, $dstH) > 600) {
-            return self::compress($destPath, $destPath, [
-                'max_edge' => max(600, (int) floor($maxEdge * 0.75)),
-                'max_bytes' => $maxBytes,
-                'quality' => $quality,
-                'min_quality' => $minQuality,
-                'quality_step' => $qualityStep,
-                'format' => $outExt === 'jpg' ? 'jpg' : $outExt,
-            ]);
-        }
         if ($maxBytes > 0 && $bytes > $maxBytes) {
+            $longNow = max($dstW, $dstH);
+            $nextEdge = max(96, (int) floor($longNow * 0.75));
+            if ($nextEdge < $longNow) {
+                return self::compress($destPath, $destPath, [
+                    'max_edge' => $nextEdge,
+                    'max_bytes' => $maxBytes,
+                    'quality' => $quality,
+                    'min_quality' => $minQuality,
+                    'quality_step' => $qualityStep,
+                    'format' => $outExt,
+                ]);
+            }
             @unlink($destPath);
-            throw new ApiException('INVALID', '圖片壓縮後仍超過限制，請換一張圖', 422, 42289);
+            $kb = max(1, (int) ceil($maxBytes / 1024));
+            throw new ApiException('INVALID', '圖片壓縮後仍超過 ' . $kb . 'KB，請換一張較簡單的圖', 422, 42289);
         }
 
         return [
@@ -191,6 +194,34 @@ final class ImageProcess
         }
 
         return 'jpg';
+    }
+
+    /** @param \GdImage|resource $img */
+    private static function hasAlpha($img, int $type): bool
+    {
+        if (!in_array($type, [IMAGETYPE_PNG, IMAGETYPE_WEBP, IMAGETYPE_GIF], true)) {
+            return false;
+        }
+        if (function_exists('imageistruecolor') && !imageistruecolor($img)) {
+            return imagecolortransparent($img) >= 0;
+        }
+        $w = imagesx($img);
+        $h = imagesy($img);
+        if ($w < 1 || $h < 1) {
+            return false;
+        }
+        $stepX = max(1, intdiv($w, 24));
+        $stepY = max(1, intdiv($h, 24));
+        for ($y = 0; $y < $h; $y += $stepY) {
+            for ($x = 0; $x < $w; $x += $stepX) {
+                $alpha = (imagecolorat($img, $x, $y) >> 24) & 0x7F;
+                if ($alpha > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /** @param \GdImage|resource $dst */

@@ -20,15 +20,10 @@ function errorText(err: unknown, fallback: string) {
 /** 錯誤用彈窗（不可點遮罩／Esc 關閉），避免 toast 一閃被忽略 */
 export function showError(err: unknown, fallback = '操作失敗', title = '操作失敗') {
   const content = errorText(err, fallback)
-  const code =
-    err && typeof err === 'object' && 'businessCode' in err
-      ? String((err as { businessCode?: number }).businessCode ?? '')
-      : ''
-  const key = `${code}:${content}`
   const now = Date.now()
-  // 同一錯誤短時間內只彈一次（api throw + catch 雙重觸發）
-  if (key === lastErrorKey && now - lastErrorAt < 2000) return
-  lastErrorKey = key
+  // 接口層已彈過的錯誤，呼叫端再拿 message 彈一次時內容相同，只留一個框。
+  if (content === lastErrorKey && now - lastErrorAt < 2000) return
+  lastErrorKey = content
   lastErrorAt = now
   dialog.error({
     title,
