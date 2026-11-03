@@ -223,6 +223,7 @@
     .lightbox header { position: relative; }
     .lightbox header strong { font-size: 0.92rem; }
     .lightbox header .close-preview { margin-left: auto; }
+    .lightbox header .count { color: #d9d3ea; font-size: 0.82rem; }
     .zoom-presets {
       position: absolute;
       left: 50%;
@@ -579,10 +580,10 @@
       const close = () => { light = -1; render() }
       box.append(el('header', {}, [
         el('strong', {}, [image.name]),
-        el('span', { class: 'root' }, [`${light + 1} / ${product.images.length}`]),
+        el('span', { class: 'count' }, [`${light + 1} / ${product.images.length}`]),
         el('button', { class: 'close-preview', type: 'button', onclick: close }, ['關閉']),
       ]))
-      const zoomLabel = el('span', { class: 'root' }, [''])
+      const zoomLabel = el('span', { class: 'count' }, [''])
       const stage = el('div', { class: 'stage' })
       if (image.heic) {
         stage.append(el('p', {}, ['這張是 HEIC，瀏覽器無法直接顯示。請安裝 pillow-heif 後重新開啟程式。']))
