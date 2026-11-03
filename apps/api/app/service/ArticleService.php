@@ -72,8 +72,8 @@ class ArticleService
             $id = (int) Db::name('articles')->insertGetId($data);
         }
         $files = new ImageUploadService();
-        $bodyZh = $files->claimDraftHtml($bodyZh, (string) $id, 'article', $id);
-        $bodyEn = $files->claimDraftHtml($bodyEn, (string) $id, 'article', $id);
+        $bodyZh = $files->claimDraftHtml($bodyZh, (string) $id, 'article', $id, 'content.article');
+        $bodyEn = $files->claimDraftHtml($bodyEn, (string) $id, 'article', $id, 'content.article');
         foreach (['zh-HK' => [$titleZh, $bodyZh], 'en' => [$titleEn, $bodyEn]] as $locale => [$title, $text]) {
             $exists = Db::name('article_i18n')->where(['article_id' => $id, 'locale' => $locale])->find();
             if ($exists) {

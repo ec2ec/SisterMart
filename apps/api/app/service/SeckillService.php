@@ -360,7 +360,7 @@ class SeckillService
             }
             if ($files !== null && $itemId > 0) {
                 $image = (string) $payload['image_url'];
-                $claimed = $files->claimDraft($image, 'sk-' . $itemId, 'seckill_item', $itemId);
+                $claimed = $files->claimDraft($image, 'sk-' . $itemId, 'seckill_item', $itemId, 'catalog.product');
                 if ($claimed !== $image) {
                     Db::name('seckill_items')->where('id', $itemId)->update(['image_url' => $claimed]);
                 }

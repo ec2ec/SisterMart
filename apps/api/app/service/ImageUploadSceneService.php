@@ -8,7 +8,7 @@ use app\support\ApiException;
 
 /**
  * 圖片上傳場景：壓縮參數（可後台改）+ 固定分桶路徑。
- * 舊 /storage/{avatar|review|...} 仍允許落庫。仍在使用的舊圖由上傳素材概覽原樣搬入場景目錄。
+ * 舊 /storage/{avatar|review|...} 仍可讀、仍可保存。保存時把草稿、legacy/ 和這些舊前綴複製到實體目錄；素材概覽仍可整批整理還沒保存過的舊圖。
  */
 class ImageUploadSceneService
 {

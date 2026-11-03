@@ -114,7 +114,7 @@ class CatalogService
         }
         if ($icon !== '') {
             $files = new ImageUploadService();
-            $claimed = $files->claimDraft($icon, (string) $id, 'category', $id);
+            $claimed = $files->claimDraft($icon, (string) $id, 'category', $id, 'catalog.category');
             if ($claimed !== $icon) {
                 Db::name('categories')->where('id', $id)->update(['icon' => $claimed, 'updated_at' => $now]);
             }
@@ -515,13 +515,13 @@ class CatalogService
             }
 
             $folder = (string) $id;
-            $detailZh = $files->claimDraftHtml($detailZh, $folder, 'product', $id);
-            $detailEn = $files->claimDraftHtml($detailEn, $folder, 'product', $id);
+            $detailZh = $files->claimDraftHtml($detailZh, $folder, 'product', $id, 'catalog.product_detail');
+            $detailEn = $files->claimDraftHtml($detailEn, $folder, 'product', $id, 'catalog.product_detail');
             foreach ($media as $mi => $item) {
                 if (!is_array($item) || ($item['media_type'] ?? 'image') === 'video') {
                     continue;
                 }
-                $media[$mi]['url'] = $files->claimDraft(trim((string) ($item['url'] ?? '')), $folder, 'product', $id);
+                $media[$mi]['url'] = $files->claimDraft(trim((string) ($item['url'] ?? '')), $folder, 'product', $id, 'catalog.product');
             }
             foreach ($groups as $gi => $group) {
                 if (!is_array($group)) {
@@ -531,14 +531,14 @@ class CatalogService
                     if (!is_array($opt)) {
                         continue;
                     }
-                    $groups[$gi]['options'][$oi]['image'] = $files->claimDraft(trim((string) ($opt['image'] ?? '')), $folder, 'product', $id);
+                    $groups[$gi]['options'][$oi]['image'] = $files->claimDraft(trim((string) ($opt['image'] ?? '')), $folder, 'product', $id, 'catalog.product');
                 }
             }
             foreach ($skus as $si => $sku) {
                 if (!is_array($sku)) {
                     continue;
                 }
-                $skus[$si]['image'] = $files->claimDraft(trim((string) ($sku['image'] ?? '')), $folder, 'product', $id);
+                $skus[$si]['image'] = $files->claimDraft(trim((string) ($sku['image'] ?? '')), $folder, 'product', $id, 'catalog.product');
             }
             $cover = null;
             foreach ($media as $item) {

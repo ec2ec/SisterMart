@@ -184,13 +184,13 @@ class PointsMallService
         $folder = 'pm-' . $id;
         $patch = [];
         if ($image !== '') {
-            $claimedImage = $files->claimDraft($image, $folder, 'points_mall', $id);
+            $claimedImage = $files->claimDraft($image, $folder, 'points_mall', $id, 'catalog.product');
             if ($claimedImage !== $image) {
                 $patch['image_url'] = $claimedImage;
             }
         }
-        $claimedZh = $files->claimDraftHtml($detailZh, $folder, 'points_mall', $id);
-        $claimedEn = $files->claimDraftHtml($detailEn, $folder, 'points_mall', $id);
+        $claimedZh = $files->claimDraftHtml($detailZh, $folder, 'points_mall', $id, 'catalog.product_detail');
+        $claimedEn = $files->claimDraftHtml($detailEn, $folder, 'points_mall', $id, 'catalog.product_detail');
         if ($claimedZh !== $detailZh) {
             $patch['detail_zh'] = $claimedZh !== '' ? $claimedZh : null;
         }

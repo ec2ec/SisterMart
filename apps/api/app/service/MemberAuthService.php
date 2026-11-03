@@ -204,12 +204,14 @@ class MemberAuthService
             }
             $patch['nickname'] = $nick === '' ? null : $nick;
         }
+        $files = new ImageUploadService();
         if (array_key_exists('avatar_url', $body)) {
             $url = trim((string) ($body['avatar_url'] ?? ''));
             if ($url === '') {
                 $patch['avatar_url'] = null;
             } else {
-                $patch['avatar_url'] = (new ImageUploadSceneService())->assertMemberUrl('member.avatar', $memberId, $url);
+                $url = (new ImageUploadSceneService())->assertMemberUrl('member.avatar', $memberId, $url);
+                $patch['avatar_url'] = $files->claimDraft($url, (string) $memberId, 'member', $memberId, 'member.avatar');
             }
         }
         if (count($patch) === 1) {
@@ -235,10 +237,12 @@ class MemberAuthService
             if (array_key_exists('avatar_url', $patch)) {
                 $member['avatar_url'] = $patch['avatar_url'];
             }
+            $files->releaseUnreferencedDrafts();
 
             return $this->present($member);
         }
         Db::name('members')->where('id', $memberId)->update($patch);
+        $files->releaseUnreferencedDrafts();
         $member = Db::name('members')->where('id', $memberId)->find();
 
         return $this->present($member);

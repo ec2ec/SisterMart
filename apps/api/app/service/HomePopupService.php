@@ -187,7 +187,7 @@ class HomePopupService
             $id = (int) Db::name('home_popups')->insertGetId($data);
         }
         $files = new ImageUploadService();
-        $claimed = $files->claimDraft($image, (string) $id, 'popup', $id);
+        $claimed = $files->claimDraft($image, (string) $id, 'popup', $id, 'marketing.popup');
         if ($claimed !== $image) {
             Db::name('home_popups')->where('id', $id)->update(['image_url' => $claimed, 'updated_at' => $now]);
         }

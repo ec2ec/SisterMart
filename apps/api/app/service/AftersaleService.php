@@ -177,7 +177,8 @@ class AftersaleService
             throw new ApiException('INVALID', '請詳細描述你遇到的問題', 422, 42201);
         }
         $reason = mb_substr($description, 0, 128);
-        $evidence = $this->normalizeEvidence($memberId, $body['evidence'] ?? []);
+        $files = new ImageUploadService();
+        $evidence = $this->normalizeEvidence($memberId, $body['evidence'] ?? [], $files);
         $now = date('Y-m-d H:i:s');
         $id = 0;
         Db::transaction(function () use ($memberId, $order, $item, $type, $reason, $description, $amount, $qty, $refundTo, $evidence, $now, &$id) {
@@ -205,16 +206,18 @@ class AftersaleService
             $no = 'AS' . date('Ymd') . str_pad((string) $id, 6, '0', STR_PAD_LEFT);
             Db::name('aftersales')->where('id', $id)->update(['aftersale_no' => $no]);
         });
+        $files->releaseUnreferencedDrafts();
 
         return $this->detail($id, $memberId);
     }
 
     /** @param mixed $raw @return list<string> */
-    private function normalizeEvidence(int $memberId, mixed $raw): array
+    private function normalizeEvidence(int $memberId, mixed $raw, ?ImageUploadService $files = null): array
     {
         if (!is_array($raw)) {
             return [];
         }
+        $files ??= new ImageUploadService();
         $urls = [];
         foreach ($raw as $item) {
             $url = trim((string) $item);
@@ -226,6 +229,7 @@ class AftersaleService
             } catch (ApiException $e) {
                 throw new ApiException('INVALID', '證據圖片無效', 422, 42287);
             }
+            $url = $files->claimDraft($url, (string) $memberId, 'aftersale', $memberId, 'member.aftersale');
             $urls[] = $url;
             if (count($urls) > 3) {
                 throw new ApiException('INVALID', '最多上傳 3 張證據圖片', 422, 42288);

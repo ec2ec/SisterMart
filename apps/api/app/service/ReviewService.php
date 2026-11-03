@@ -366,7 +366,8 @@ class ReviewService
         if (count($images) > 5) {
             throw new ApiException('INVALID', '最多上傳 5 張圖片', 422, 42295);
         }
-        $images = $this->normalizeImages($memberId, $images);
+        $files = new ImageUploadService();
+        $images = $this->normalizeImages($memberId, $images, $files);
 
         $item = Db::name('order_items')->where('id', $orderItemId)->find();
         if (!$item) {
@@ -408,6 +409,7 @@ class ReviewService
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        $files->releaseUnreferencedDrafts();
 
         $row = Db::name('product_reviews')->where('id', $id)->find();
         $member = Db::name('members')->where('id', $memberId)->find();
@@ -469,7 +471,8 @@ class ReviewService
         if (count($images) > 5) {
             throw new ApiException('INVALID', '最多上傳 5 張圖片', 422, 42295);
         }
-        $images = $this->normalizeImages($memberId, $images);
+        $files = new ImageUploadService();
+        $images = $this->normalizeImages($memberId, $images, $files);
 
         $row = Db::name('product_reviews')->where('id', $reviewId)->find();
         if (!$row || (int) $row['member_id'] !== $memberId) {
@@ -493,6 +496,7 @@ class ReviewService
             're_reviewed_at' => $now,
             'updated_at' => $now,
         ]);
+        $files->releaseUnreferencedDrafts();
         self::refreshProductRating((int) $row['product_id']);
 
         $row = Db::name('product_reviews')->where('id', $reviewId)->find();
@@ -520,20 +524,22 @@ class ReviewService
         return false;
     }
 
-    private function normalizeImages(int $memberId, array $images): array
+    private function normalizeImages(int $memberId, array $images, ?ImageUploadService $files = null): array
     {
         $out = [];
         $scenes = new ImageUploadSceneService();
+        $files ??= new ImageUploadService();
         foreach ($images as $url) {
             $url = trim((string) $url);
             if ($url === '') {
                 continue;
             }
             try {
-                $out[] = $scenes->assertMemberUrl('member.review', $memberId, $url);
+                $url = $scenes->assertMemberUrl('member.review', $memberId, $url);
             } catch (ApiException $e) {
                 throw new ApiException('INVALID', '評價圖片無效', 422, 42301);
             }
+            $out[] = $files->claimDraft($url, (string) $memberId, 'review', $memberId, 'member.review');
         }
 
         return $out;

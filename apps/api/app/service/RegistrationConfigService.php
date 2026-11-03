@@ -108,8 +108,8 @@ class RegistrationConfigService
         $welcomeZh = $scenes->assertHtml('content.welcome', $welcomeZh);
         $welcomeEn = $scenes->assertHtml('content.welcome', $welcomeEn);
         $files = new ImageUploadService();
-        $welcomeZh = $files->claimDraftHtml($welcomeZh, 'welcome', 'registration', 0);
-        $welcomeEn = $files->claimDraftHtml($welcomeEn, 'welcome', 'registration', 0);
+        $welcomeZh = $files->claimDraftHtml($welcomeZh, 'welcome', 'registration', 0, 'content.welcome');
+        $welcomeEn = $files->claimDraftHtml($welcomeEn, 'welcome', 'registration', 0, 'content.welcome');
 
         $payload = [
             'registration_enabled' => $registrationEnabled,
