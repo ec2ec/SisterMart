@@ -259,6 +259,7 @@ Route::group('api/v1/admin', function () {
     Route::put('settings/distribution-access', 'admin.ShopSettings/updateDistributionAccess');
     Route::post('settings/upload-assets/scan', 'admin.ImageUploadSettings/scanAssets');
     Route::post('settings/upload-assets/purge', 'admin.ImageUploadSettings/purgeAssets');
+    Route::post('settings/upload-assets/migrate', 'admin.ImageUploadSettings/migrateAssets');
     Route::get('settings/upload-assets', 'admin.ImageUploadSettings/assets');
     Route::get('settings/image-upload', 'admin.ImageUploadSettings/index');
     Route::put('settings/image-upload', 'admin.ImageUploadSettings/update');
