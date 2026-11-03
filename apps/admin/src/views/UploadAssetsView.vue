@@ -55,7 +55,18 @@ const groups = ref<Group[]>([])
 const recent = ref<Recent[]>([])
 const scanning = ref(false)
 const purging = ref(false)
+const migrating = ref(false)
 const scanResult = ref<ScanResult | null>(null)
+
+type MigrateResult = {
+  migrated: number
+  rewritten: number
+  skipped_missing: number
+  skipped: number
+  removed_old: number
+  bytes_copied: number
+  has_more: boolean
+}
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`
@@ -93,6 +104,51 @@ async function scan() {
   }
 }
 
+function confirmMigrate() {
+  if (migrating.value) return
+  dialog.warning({
+    title: '整理仍在使用的舊圖？',
+    content: '把仍被引用的舊目錄圖片原樣複製到對應場景目錄，並改寫地址。不會重新壓縮。沒人再用的舊檔才會刪掉。',
+    positiveText: '開始整理',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      void runMigrate()
+    },
+  })
+}
+
+async function runMigrate() {
+  migrating.value = true
+  const sum = { migrated: 0, rewritten: 0, removed_old: 0, bytes_copied: 0, skipped: 0, skipped_missing: 0 }
+  try {
+    for (let round = 0; round < 500; round++) {
+      const res = await api<MigrateResult>(
+        '/api/v1/admin/settings/upload-assets/migrate',
+        { method: 'POST', body: JSON.stringify({ confirm: true }) },
+        true,
+      )
+      sum.migrated += res.migrated
+      sum.rewritten += res.rewritten
+      sum.removed_old += res.removed_old
+      sum.bytes_copied += res.bytes_copied
+      sum.skipped += res.skipped
+      sum.skipped_missing = res.skipped_missing
+      if (!res.has_more || res.migrated < 1) break
+    }
+    const extra = [
+      sum.removed_old > 0 ? `刪除已無引用的舊檔 ${sum.removed_old}` : '',
+      sum.skipped_missing > 0 ? `找不到檔案 ${sum.skipped_missing}` : '',
+      sum.skipped > 0 ? `略過 ${sum.skipped}` : '',
+    ].filter(Boolean)
+    message.success(
+      `已整理 ${sum.migrated} 張（${formatBytes(sum.bytes_copied)}）${extra.length ? '，' + extra.join('，') : ''}`,
+    )
+    await load()
+  } finally {
+    migrating.value = false
+  }
+}
+
 function confirmPurge() {
   const row = scanResult.value
   if (!row || row.eligible_count < 1 || purging.value) return
@@ -126,7 +182,7 @@ onMounted(load)
   <div class="page">
     <n-card title="上傳素材概覽">
       <p class="lead">
-        只統計這個索引上線之後的新上傳。舊圖仍留在原目錄，不會搬過來，也不在這張表裡。未引用的新圖要滿 30 天，並在下方確認後才會刪。
+        只統計這個索引上線之後的新上傳，以及從舊目錄整理過來的圖。未引用的新圖要滿 30 天，並在下方確認後才會刪。
       </p>
       <div class="stats">
         <div>
@@ -162,6 +218,13 @@ onMounted(load)
           </tbody>
         </table>
       </div>
+    </n-card>
+
+    <n-card title="舊圖整理">
+      <p class="lead">
+        仍被商品、分類、廣告、文章或會員資料引用、但還放在舊目錄的圖片，會原樣複製到對應場景目錄並改寫地址。不會重新壓縮。沒人引用的舊檔不會複製；舊檔要等所有引用都改完才刪。
+      </p>
+      <n-button :loading="migrating" @click="confirmMigrate">整理仍在使用的舊圖</n-button>
     </n-card>
 
     <n-card title="未引用圖片">

@@ -44,4 +44,17 @@ class ImageUploadSettings extends ApiController
             return (new UploadAssetService())->purgeOrphans();
         });
     }
+
+    /** 把仍被引用的舊目錄圖片原樣搬入場景目錄。不重新壓縮。 */
+    public function migrateAssets(): Response
+    {
+        return $this->run(function () {
+            $confirm = $this->payload()['confirm'] ?? false;
+            if ($confirm !== true && $confirm !== 1 && $confirm !== '1') {
+                throw new ApiException('INVALID', '請確認後再整理', 422, 42201);
+            }
+
+            return (new UploadAssetService())->migrateLegacy();
+        });
+    }
 }

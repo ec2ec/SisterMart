@@ -7,11 +7,15 @@ namespace app\service;
 use think\facade\Db;
 
 /**
- * 上傳資產索引。只記新上傳；未引用滿 30 天且經確認後才刪檔。不搬舊圖。
+ * 上傳資產索引。新上傳入索引；未引用滿 30 天且經確認後才刪檔。
+ * 仍被引用的舊目錄圖片可原樣搬入場景目錄（不重新壓縮）。
  */
 class UploadAssetService
 {
     public const GRACE_DAYS = 30;
+
+    /** 每次整理搬遷的檔案上限，避免一次請求超時。 */
+    public const MIGRATE_BATCH = 20;
 
     private static bool $schemaReady = false;
 
@@ -308,6 +312,432 @@ class UploadAssetService
                 }
             }
         }
+    }
+
+    /**
+     * 仍被引用、且還在舊目錄的圖片：按場景各複製一份（不重新壓縮），只改該場景的欄位。
+     * 舊檔要等全庫都不再指向它才刪。未引用的舊檔不複製。每次最多 MIGRATE_BATCH 張。
+     *
+     * @return array{migrated: int, rewritten: int, skipped_missing: int, skipped: int, removed_old: int, bytes_copied: int, has_more: bool}
+     */
+    public function migrateLegacy(): array
+    {
+        $this->ensureSchema();
+        $jobs = [];
+        $seenMissing = [];
+        $skippedMissing = 0;
+        $stoppedEarly = false;
+        foreach ($this->migrateTargets() as $target) {
+            if ($stoppedEarly) {
+                break;
+            }
+            $meta = $this->columnMeta($target['table'], $target['column']);
+            if ($meta === null) {
+                continue;
+            }
+            $table = $this->physical($target['table']);
+            $column = $target['column'];
+            $pk = $target['pk'];
+            $selectPk = [];
+            foreach ($pk as $i => $col) {
+                $selectPk[] = "`{$col}` AS `pk{$i}`";
+            }
+            $sql = 'SELECT ' . implode(', ', $selectPk) . ", `{$column}` AS `v` FROM `{$table}` WHERE `{$column}` LIKE '%/storage/%'";
+            $bind = [];
+            if ($target['filter_column'] !== null) {
+                $sql .= " AND `{$target['filter_column']}` = ?";
+                $bind[] = $target['filter_value'];
+            }
+            $rows = Db::query($sql, $bind);
+            foreach ($rows as $row) {
+                if ($stoppedEarly) {
+                    break;
+                }
+                foreach ($this->extractStoragePaths($this->cellText($row['v'] ?? '')) as $path) {
+                    if (!$this->isLegacyStoragePath($path)) {
+                        continue;
+                    }
+                    $key = $path . "\0" . $target['scene'];
+                    if (isset($jobs[$key])) {
+                        continue;
+                    }
+                    if ($this->absoluteStoredPath($path) === null) {
+                        if (!isset($seenMissing[$path])) {
+                            $seenMissing[$path] = true;
+                            $skippedMissing++;
+                        }
+                        continue;
+                    }
+                    if (count($jobs) >= self::MIGRATE_BATCH) {
+                        $stoppedEarly = true;
+                        break;
+                    }
+                    $jobs[$key] = ['path' => $path, 'scene' => $target['scene']];
+                }
+            }
+        }
+
+        $migrated = 0;
+        $rewritten = 0;
+        $skipped = 0;
+        $bytesCopied = 0;
+        $oldPaths = [];
+        foreach ($jobs as $job) {
+            $copied = $this->copyLegacyIntoScene($job['path'], $job['scene']);
+            if ($copied === null) {
+                $skipped++;
+                continue;
+            }
+            $n = $this->rewriteScenePath($job['scene'], $job['path'], $copied['url']);
+            if ($n < 1) {
+                @unlink($copied['dest']);
+                $skipped++;
+                continue;
+            }
+            try {
+                $this->record([
+                    'url' => $copied['url'],
+                    'scene' => $job['scene'],
+                    'bytes' => $copied['bytes'],
+                    'width' => $copied['width'],
+                    'height' => $copied['height'],
+                    'uploader_type' => 'admin',
+                    'uploader_id' => 0,
+                ]);
+            } catch (\Throwable) {
+                // 索引失敗不回滾已改寫的地址；檔案已在新目錄。
+            }
+            $migrated++;
+            $rewritten += $n;
+            $bytesCopied += $copied['bytes'];
+            $oldPaths[$job['path']] = true;
+        }
+
+        $removed = 0;
+        if ($oldPaths !== []) {
+            $referenced = $this->referencedPaths();
+            $now = date('Y-m-d H:i:s');
+            $index = $this->table();
+            foreach (array_keys($oldPaths) as $old) {
+                if (isset($referenced[$old])) {
+                    continue;
+                }
+                if (!$this->removeStoredFile($old)) {
+                    continue;
+                }
+                $removed++;
+                Db::execute(
+                    "UPDATE `{$index}` SET `status` = 'deleted', `updated_at` = ? WHERE `path` = ? AND `status` <> 'deleted'",
+                    [$now, $old],
+                );
+            }
+        }
+
+        return [
+            'migrated' => $migrated,
+            'rewritten' => $rewritten,
+            'skipped_missing' => $skippedMissing,
+            'skipped' => $skipped,
+            'removed_old' => $removed,
+            'bytes_copied' => $bytesCopied,
+            'has_more' => $stoppedEarly,
+        ];
+    }
+
+    /**
+     * @return list<array{table: string, column: string, pk: list<string>, scene: string, filter_column: ?string, filter_value: ?string}>
+     */
+    private function migrateTargets(): array
+    {
+        $rows = [
+            ['categories', 'icon', ['id'], 'catalog.category'],
+            ['product_media', 'url', ['id'], 'catalog.product'],
+            ['products', 'cover_url', ['id'], 'catalog.product'],
+            ['skus', 'image_url', ['id'], 'catalog.product'],
+            ['spec_options', 'image_url', ['id'], 'catalog.product'],
+            ['order_items', 'image_url', ['id'], 'catalog.product'],
+            ['seckill_items', 'image_url', ['id'], 'catalog.product'],
+            ['points_mall_items', 'image_url', ['id'], 'catalog.product'],
+            ['product_i18n', 'detail', ['product_id', 'locale'], 'catalog.product_detail'],
+            ['points_mall_items', 'detail_zh', ['id'], 'catalog.product_detail'],
+            ['points_mall_items', 'detail_en', ['id'], 'catalog.product_detail'],
+            ['home_banners', 'image_url', ['id'], 'marketing.banner'],
+            ['home_popups', 'image_url', ['id'], 'marketing.popup'],
+            ['campaigns', 'banner_image_url', ['id'], 'marketing.campaign'],
+            ['campaigns', 'intro_html_zh', ['id'], 'content.campaign'],
+            ['campaigns', 'intro_html_en', ['id'], 'content.campaign'],
+            ['coupons', 'background_image', ['id'], 'marketing.coupon'],
+            ['coupons', 'rules_zh', ['id'], 'content.coupon'],
+            ['coupons', 'rules_en', ['id'], 'content.coupon'],
+            ['members', 'avatar_url', ['id'], 'member.avatar'],
+            ['product_reviews', 'images_json', ['id'], 'member.review'],
+            ['aftersales', 'evidence_json', ['id'], 'member.aftersale'],
+            ['article_i18n', 'body', ['article_id', 'locale'], 'content.article'],
+        ];
+        $targets = [];
+        foreach ($rows as [$table, $column, $pk, $scene]) {
+            $targets[] = [
+                'table' => $table,
+                'column' => $column,
+                'pk' => $pk,
+                'scene' => $scene,
+                'filter_column' => null,
+                'filter_value' => null,
+            ];
+        }
+        $targets[] = [
+            'table' => 'shop_settings',
+            'column' => 'setting_value',
+            'pk' => ['setting_key'],
+            'scene' => 'marketing.image_ad',
+            'filter_column' => 'setting_key',
+            'filter_value' => 'home.image_ads',
+        ];
+        $targets[] = [
+            'table' => 'shop_settings',
+            'column' => 'setting_value',
+            'pk' => ['setting_key'],
+            'scene' => 'content.welcome',
+            'filter_column' => 'setting_key',
+            'filter_value' => 'member.registration',
+        ];
+
+        return $targets;
+    }
+
+    private function rewriteScenePath(string $scene, string $old, string $new): int
+    {
+        $updatedRows = 0;
+        foreach ($this->migrateTargets() as $target) {
+            if ($target['scene'] !== $scene) {
+                continue;
+            }
+            $meta = $this->columnMeta($target['table'], $target['column']);
+            if ($meta === null) {
+                continue;
+            }
+            $table = $this->physical($target['table']);
+            $column = $target['column'];
+            $pk = $target['pk'];
+            $selectPk = [];
+            foreach ($pk as $i => $col) {
+                $selectPk[] = "`{$col}` AS `pk{$i}`";
+            }
+            $like = '%' . addcslashes($old, '%_\\') . '%';
+            $sql = 'SELECT ' . implode(', ', $selectPk) . ", `{$column}` AS `v` FROM `{$table}` WHERE `{$column}` LIKE ?";
+            $bind = [$like];
+            if ($target['filter_column'] !== null) {
+                $sql .= " AND `{$target['filter_column']}` = ?";
+                $bind[] = $target['filter_value'];
+            }
+            $rows = Db::query($sql, $bind);
+            foreach ($rows as $row) {
+                $value = $this->cellText($row['v'] ?? '');
+                $next = $this->replaceStorageUrl($value, $old, $new);
+                if ($next === $value) {
+                    continue;
+                }
+                if ($meta['max'] !== null && mb_strlen($next) > $meta['max']) {
+                    continue;
+                }
+                $params = [$next];
+                $where = [];
+                foreach ($pk as $i => $col) {
+                    $where[] = "`{$col}` = ?";
+                    $params[] = $row['pk' . $i];
+                }
+                Db::execute(
+                    "UPDATE `{$table}` SET `{$column}` = ? WHERE " . implode(' AND ', $where),
+                    $params,
+                );
+                $updatedRows++;
+            }
+        }
+
+        return $updatedRows;
+    }
+
+    private function replaceStorageUrl(string $text, string $old, string $new): string
+    {
+        $pattern = '#' . preg_quote($old, '#') . '(?![A-Za-z0-9_./\-])#';
+        $text = preg_replace($pattern, $new, $text) ?? $text;
+        $escapedOld = str_replace('/', '\\/', $old);
+        $escapedNew = str_replace('/', '\\/', $new);
+        if ($escapedOld !== $old && str_contains($text, $escapedOld)) {
+            $text = str_replace($escapedOld, $escapedNew, $text);
+        }
+        $encOld = rawurlencode($old);
+        $encNew = rawurlencode($new);
+        if (str_contains($text, $encOld)) {
+            $text = str_replace($encOld, $encNew, $text);
+        }
+        $encRelOld = rawurlencode(ltrim($old, '/'));
+        $encRelNew = rawurlencode(ltrim($new, '/'));
+        if (str_contains($text, $encRelOld)) {
+            $text = str_replace($encRelOld, $encRelNew, $text);
+        }
+
+        return $text;
+    }
+
+    /** @return array{url: string, dest: string, bytes: int, width: ?int, height: ?int}|null */
+    private function copyLegacyIntoScene(string $url, string $scene): ?array
+    {
+        if (!isset(ImageUploadSceneService::SCENES[$scene])) {
+            return null;
+        }
+        $bucket = trim((string) ImageUploadSceneService::SCENES[$scene]['bucket'], '/');
+        if ($bucket === '' || !preg_match('#^[a-z0-9_\-]+(/[a-z0-9_\-]+)*$#', $bucket)) {
+            return null;
+        }
+        $src = $this->absoluteStoredPath($url);
+        if ($src === null) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($src, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return null;
+        }
+        $bytes = filesize($src);
+        if ($bytes === false || $bytes < 1) {
+            return null;
+        }
+        $storageRoot = rtrim(str_replace('\\', '/', app()->getRootPath()), '/') . '/public/storage';
+        $relDir = $bucket . '/legacy/' . date('Ymd');
+        $dir = $storageRoot . '/' . $relDir;
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return null;
+        }
+        $dest = $dir . '/' . bin2hex(random_bytes(8)) . '.' . $ext;
+        if (!copy($src, $dest)) {
+            return null;
+        }
+        $realStorage = realpath($storageRoot);
+        $realDest = realpath($dest);
+        if ($realStorage === false || $realDest === false) {
+            @unlink($dest);
+
+            return null;
+        }
+        $realStorage = str_replace('\\', '/', $realStorage);
+        $realDest = str_replace('\\', '/', $realDest);
+        $bucketRoot = $realStorage . '/' . $bucket . '/';
+        if (!str_starts_with($realDest, $bucketRoot)) {
+            @unlink($dest);
+
+            return null;
+        }
+        $width = null;
+        $height = null;
+        $info = @getimagesize($dest);
+        if (is_array($info)) {
+            $width = (int) $info[0];
+            $height = (int) $info[1];
+        }
+
+        return [
+            'url' => '/storage/' . $relDir . '/' . basename($dest),
+            'dest' => $realDest,
+            'bytes' => (int) $bytes,
+            'width' => $width,
+            'height' => $height,
+        ];
+    }
+
+    private function isLegacyStoragePath(string $path): bool
+    {
+        if (!str_starts_with($path, '/storage/') || str_contains($path, '..')) {
+            return false;
+        }
+        $rel = substr($path, strlen('/storage/'));
+        foreach (ImageUploadSceneService::SCENES as $def) {
+            $bucket = trim((string) $def['bucket'], '/');
+            if ($bucket !== '' && str_starts_with($rel, $bucket . '/')) {
+                return false;
+            }
+        }
+        $root = explode('/', $rel, 2)[0];
+
+        return in_array($root, ['avatar', 'review', 'aftersale', 'product', 'banner', 'admin', 'content'], true);
+    }
+
+    /** @return list<string> */
+    private function extractStoragePaths(string $text): array
+    {
+        $found = [];
+        $this->collectStoragePaths($text, $found);
+
+        return array_keys($found);
+    }
+
+    private function cellText(mixed $value): string
+    {
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+        }
+
+        return (string) $value;
+    }
+
+    /** @return array{max: ?int}|null */
+    private function columnMeta(string $table, string $column): ?array
+    {
+        static $cache = [];
+        $key = $table . '.' . $column;
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+            return $cache[$key] = null;
+        }
+        $rows = Db::query(
+            "SELECT DATA_TYPE AS t, CHARACTER_MAXIMUM_LENGTH AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$this->physical($table), $column],
+        );
+        if (!$rows) {
+            return $cache[$key] = null;
+        }
+        $type = strtolower((string) ($rows[0]['t'] ?? ''));
+        $max = $rows[0]['n'];
+        $limited = in_array($type, ['char', 'varchar'], true) && $max !== null;
+
+        return $cache[$key] = ['max' => $limited ? (int) $max : null];
+    }
+
+    private function physical(string $table): string
+    {
+        $prefix = (string) (Db::getConnection()->getConfig('prefix') ?: '');
+
+        return $prefix . $table;
+    }
+
+    /** 檔案存在且落在 public/storage 內時回傳真實路徑。 */
+    private function absoluteStoredPath(string $url): ?string
+    {
+        if (!str_starts_with($url, '/storage/') || str_contains($url, '..')) {
+            return null;
+        }
+        $rel = substr($url, strlen('/storage/'));
+        if ($rel === '' || str_contains($rel, '..')) {
+            return null;
+        }
+        $storageRoot = rtrim(str_replace('\\', '/', app()->getRootPath()), '/') . '/public/storage';
+        $full = $storageRoot . '/' . $rel;
+        if (!is_file($full)) {
+            return null;
+        }
+        $realStorage = realpath($storageRoot);
+        $realFile = realpath($full);
+        if ($realStorage === false || $realFile === false) {
+            return null;
+        }
+        $realStorage = str_replace('\\', '/', $realStorage);
+        $realFile = str_replace('\\', '/', $realFile);
+        if (!str_starts_with($realFile, $realStorage . '/')) {
+            return null;
+        }
+
+        return $realFile;
     }
 
     /** 檔案不存在視為已清理。路徑必須落在 public/storage 內。 */
