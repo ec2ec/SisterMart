@@ -8,7 +8,10 @@ import hashlib
 import io
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import threading
 import urllib.parse
 import webbrowser
@@ -152,7 +155,7 @@ def read_product(category: str, folder: Path, root: Path) -> dict:
                 "name": image.name,
                 "path": image_rel,
                 "mtime": stat.st_mtime_ns,
-                "heic": image.suffix.lower() in HEIC_EXT and not HEIC_OK,
+                "heic": image.suffix.lower() in HEIC_EXT and not can_preview_heic(),
             }
         )
     return {
@@ -210,15 +213,50 @@ def scan() -> dict:
     return {
         "root": str(root),
         "root_ok": root.is_dir(),
-        "heic_ok": HEIC_OK,
+        "heic_ok": can_preview_heic(),
         "loose_images": loose,
         "categories": categories,
     }
 
 
+def can_preview_heic() -> bool:
+    return HEIC_OK or shutil.which("sips") is not None
+
+
+def sips_jpeg(src: Path, edge: int, quality: int) -> bytes:
+    sips = shutil.which("sips")
+    if not sips:
+        raise UnidentifiedImageError("HEIC")
+    with tempfile.TemporaryDirectory(prefix="pm-heic-") as tmp:
+        dest = Path(tmp) / "preview.jpg"
+        result = subprocess.run(
+            [
+                sips,
+                "-s",
+                "format",
+                "jpeg",
+                "-s",
+                "formatOptions",
+                str(int(quality)),
+                "-Z",
+                str(int(edge)),
+                str(src),
+                "--out",
+                str(dest),
+            ],
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+        data = dest.read_bytes() if dest.is_file() else b""
+        if result.returncode != 0 or not data.startswith(b"\xff\xd8"):
+            raise UnidentifiedImageError("HEIC")
+        return data
+
+
 def jpeg_bytes(src: Path, edge: int, quality: int) -> bytes:
     if src.suffix.lower() in HEIC_EXT and not HEIC_OK:
-        raise UnidentifiedImageError("HEIC")
+        return sips_jpeg(src, edge, quality)
     with Image.open(src) as raw:
         raw.load()
         oriented = ImageOps.exif_transpose(raw) or raw
@@ -368,13 +406,8 @@ def main() -> None:
     url = f"http://127.0.0.1:{PORT}/"
     print(f"商品圖庫  {url}")
     print(f"目錄      {ROOT}")
-    if not HEIC_OK:
-        if sys.version_info < (3, 9):
-            print("HEIC 預覽未啟用。這台 Mac 的 Python 較舊，請執行:")
-            print('  python3 -m pip install --user --upgrade "pip<24.1"')
-            print('  python3 -m pip install --user "pillow-heif==0.16.0"')
-        else:
-            print("HEIC 預覽未啟用。需要時執行: python3 -m pip install pillow-heif")
+    if not can_preview_heic():
+        print("HEIC 預覽未啟用。需要時執行: python3 -m pip install pillow-heif")
     if not args.no_browser:
         threading.Timer(0.4, lambda: webbrowser.open(url)).start()
     try:
