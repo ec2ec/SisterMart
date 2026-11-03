@@ -61,6 +61,7 @@ class HomeImageAdService
                 (string) $item['code'],
                 'image_ad',
                 0,
+                'marketing.image_ad',
             );
         }
         $this->persistItems($items);

@@ -126,38 +126,41 @@ class ImageUploadService
     }
 
     /**
-     * 把仍在 draft-{管理員} 的圖複製到實體目錄（不重新壓縮）。
+     * 把仍在 draft-{管理員}、或場景桶裡 legacy/、或場景允許的舊前綴的圖，
+     * 複製到實體目錄（不重新壓縮）。
      * 其他實體還引用舊路徑時，舊檔留到 releaseUnreferencedDrafts() 再決定刪不刪。
      */
-    public function claimDraft(string $url, string $folder, string $entityType, int $entityId): string
+    public function claimDraft(string $url, string $folder, string $entityType, int $entityId, ?string $scene = null): string
     {
         $url = trim($url);
         if ($url === '' || !$this->validFolder($folder)) {
             return $url;
         }
         $parsed = $this->parseOwnedUrl($url);
-        if ($parsed === null) {
-            return $url;
-        }
-        if ($parsed['owner'] === $folder) {
-            $this->bindClaimed($url, $parsed['bucket'], $entityType, $entityId);
+        if ($parsed !== null) {
+            if ($parsed['owner'] === $folder) {
+                $this->bindClaimed($url, $parsed['bucket'], $entityType, $entityId, $scene);
 
-            return $url;
-        }
-        if (!preg_match('/^draft-\d+$/', $parsed['owner'])) {
-            return $url;
-        }
-        $dest = '/storage/' . $parsed['bucket'] . '/' . $folder . '/' . $parsed['ymd'] . '/' . $parsed['file'];
-        if (!$this->copyStored($url, $dest)) {
-            return $url;
-        }
-        $this->bindClaimed($dest, $parsed['bucket'], $entityType, $entityId);
-        $this->pendingDrafts[] = $url;
+                return $url;
+            }
+            $movable = preg_match('/^draft-\d+$/', $parsed['owner']) === 1 || $parsed['owner'] === 'legacy';
+            if (!$movable) {
+                return $url;
+            }
+            $dest = '/storage/' . $parsed['bucket'] . '/' . $folder . '/' . $parsed['ymd'] . '/' . $parsed['file'];
 
-        return $dest;
+            return $this->finishClaim($url, $dest, $parsed['bucket'], $entityType, $entityId, $scene);
+        }
+
+        $legacy = $this->legacyDest($url, $scene, $folder);
+        if ($legacy === null) {
+            return $url;
+        }
+
+        return $this->finishClaim($url, $legacy['url'], $legacy['bucket'], $entityType, $entityId, $scene);
     }
 
-    public function claimDraftHtml(string $html, string $folder, string $entityType, int $entityId): string
+    public function claimDraftHtml(string $html, string $folder, string $entityType, int $entityId, ?string $scene = null): string
     {
         if ($html === '' || !str_contains($html, '/storage/')) {
             return $html;
@@ -176,7 +179,7 @@ class ImageUploadService
             if (!str_contains($html, $raw)) {
                 continue;
             }
-            $claimed = $this->claimDraft($raw, $folder, $entityType, $entityId);
+            $claimed = $this->claimDraft($raw, $folder, $entityType, $entityId, $scene);
             if ($claimed !== $raw) {
                 $html = str_replace($raw, $claimed, $html);
             }
@@ -185,7 +188,7 @@ class ImageUploadService
         return $html;
     }
 
-    /** 資料已寫入後呼叫：沒人再指向的 draft 檔才刪。 */
+    /** 資料已寫入後呼叫：沒人再指向的草稿或舊路徑檔才刪。 */
     public function releaseUnreferencedDrafts(): void
     {
         if ($this->pendingDrafts === []) {
@@ -217,15 +220,76 @@ class ImageUploadService
     /** @var list<string> */
     private array $pendingDrafts = [];
 
-    private function bindClaimed(string $url, string $bucket, string $entityType, int $entityId): void
+    private function finishClaim(string $from, string $dest, string $bucket, string $entityType, int $entityId, ?string $scene): string
+    {
+        if ($dest === $from) {
+            $this->bindClaimed($from, $bucket, $entityType, $entityId, $scene);
+
+            return $from;
+        }
+        if (!$this->copyStored($from, $dest)) {
+            return $from;
+        }
+        $this->bindClaimed($dest, $bucket, $entityType, $entityId, $scene);
+        $this->pendingDrafts[] = $from;
+
+        return $dest;
+    }
+
+    /** @return array{url: string, bucket: string}|null */
+    private function legacyDest(string $url, ?string $scene, string $folder): ?array
+    {
+        if ($scene === null || !isset(ImageUploadSceneService::SCENES[$scene])) {
+            return null;
+        }
+        if (!str_starts_with($url, '/storage/') || str_contains($url, '..')) {
+            return null;
+        }
+        $def = ImageUploadSceneService::SCENES[$scene];
+        $bucket = trim((string) $def['bucket'], '/');
+        if ($bucket === '' || str_starts_with($url, '/storage/' . $bucket . '/')) {
+            return null;
+        }
+        $allowed = false;
+        foreach ($def['legacy'] as $prefix) {
+            if (str_starts_with($url, $prefix)) {
+                $allowed = true;
+                break;
+            }
+        }
+        if (!$allowed) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($url, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return null;
+        }
+        $ymd = date('Ymd');
+        if (preg_match('#/(20\d{6})/#', $url, $match)) {
+            $ymd = $match[1];
+        }
+        $name = substr(md5($url), 0, 16) . '.' . $ext;
+
+        return [
+            'bucket' => $bucket,
+            'url' => '/storage/' . $bucket . '/' . $folder . '/' . $ymd . '/' . $name,
+        ];
+    }
+
+    private function bindClaimed(string $url, string $bucket, string $entityType, int $entityId, ?string $scene = null): void
     {
         $full = $this->jailedFile($url);
         $bytes = $full !== null ? (int) (filesize($full) ?: 0) : 0;
-        $scene = 'content.richtext';
-        foreach (ImageUploadSceneService::SCENES as $key => $def) {
-            if (trim((string) $def['bucket'], '/') === $bucket) {
-                $scene = $key;
-                break;
+        $known = $scene !== null && isset(ImageUploadSceneService::SCENES[$scene])
+            ? trim((string) ImageUploadSceneService::SCENES[$scene]['bucket'], '/')
+            : '';
+        if ($known === '' || $known !== $bucket) {
+            $scene = 'content.richtext';
+            foreach (ImageUploadSceneService::SCENES as $key => $def) {
+                if (trim((string) $def['bucket'], '/') === $bucket) {
+                    $scene = $key;
+                    break;
+                }
             }
         }
         try {

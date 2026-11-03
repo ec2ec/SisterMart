@@ -71,7 +71,7 @@ class HomeBannerService
             $id = (int) Db::name('home_banners')->insertGetId($data);
         }
         $files = new ImageUploadService();
-        $claimed = $files->claimDraft($image, (string) $id, 'banner', $id);
+        $claimed = $files->claimDraft($image, (string) $id, 'banner', $id, 'marketing.banner');
         if ($claimed !== $image) {
             Db::name('home_banners')->where('id', $id)->update(['image_url' => $claimed, 'updated_at' => $now]);
         }

@@ -424,7 +424,7 @@ class CouponService
         $patch = [];
         $bg = trim((string) ($row['background_image'] ?? ''));
         if ($bg !== '') {
-            $claimed = $files->claimDraft($bg, $folder, 'coupon', $id);
+            $claimed = $files->claimDraft($bg, $folder, 'coupon', $id, 'marketing.coupon');
             if ($claimed !== $bg) {
                 $patch['background_image'] = $claimed;
             }
@@ -434,7 +434,7 @@ class CouponService
                 continue;
             }
             $html = (string) ($row[$col] ?? '');
-            $claimedHtml = $files->claimDraftHtml($html, $folder, 'coupon', $id);
+            $claimedHtml = $files->claimDraftHtml($html, $folder, 'coupon', $id, 'content.coupon');
             if ($claimedHtml !== $html) {
                 $patch[$col] = $claimedHtml;
             }

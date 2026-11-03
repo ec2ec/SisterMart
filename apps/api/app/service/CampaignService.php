@@ -205,14 +205,14 @@ SQL);
         $patch = [];
         $banner = trim((string) ($data['banner_image_url'] ?? ''));
         if ($banner !== '') {
-            $claimedBanner = $files->claimDraft($banner, $folder, 'campaign', $id);
+            $claimedBanner = $files->claimDraft($banner, $folder, 'campaign', $id, 'marketing.campaign');
             if ($claimedBanner !== $banner) {
                 $patch['banner_image_url'] = $claimedBanner;
             }
         }
         foreach (['intro_html_zh', 'intro_html_en'] as $col) {
             $html = (string) ($data[$col] ?? '');
-            $claimedHtml = $files->claimDraftHtml($html, $folder, 'campaign', $id);
+            $claimedHtml = $files->claimDraftHtml($html, $folder, 'campaign', $id, 'content.campaign');
             if ($claimedHtml !== $html) {
                 $patch[$col] = $claimedHtml;
             }
