@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `upload_assets` (
   `width` INT UNSIGNED NULL,
   `height` INT UNSIGNED NULL,
   `status` VARCHAR(16) NOT NULL DEFAULT 'active',
+  `orphaned_at` DATETIME NULL,
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
   PRIMARY KEY (`id`),
