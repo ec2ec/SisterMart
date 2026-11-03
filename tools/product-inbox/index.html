@@ -34,15 +34,34 @@
       background: #16162b;
       color: #fff;
     }
-    header h1 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+    header button.brand {
+      margin: 0;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 650;
+    }
+    .crumb-nav {
+      min-width: 0;
+      color: #d9d3ea;
+      font-size: 0.92rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .crumb-nav:empty { display: none; }
+    #rescan { margin-left: auto; }
     header .root {
-      flex: 1;
+      flex: 0 1 24rem;
       min-width: 0;
       color: #d9d3ea;
       font-size: 0.82rem;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      text-align: right;
     }
     header button, .bar button, .back {
       border: 0;
@@ -104,7 +123,7 @@
     .detail-head { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.8rem; }
     .detail-body {
       display: grid;
-      grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+      grid-template-columns: minmax(12rem, 16.5rem) minmax(0, 1fr);
       gap: 1rem;
       align-items: stretch;
     }
@@ -122,7 +141,7 @@
     }
     .editor textarea {
       width: 100%;
-      min-height: 22rem;
+      min-height: 29.33rem;
       margin: 0;
       padding: 0.75rem 0.85rem;
       border: 1px solid var(--line);
@@ -201,7 +220,26 @@
       padding: 0.55rem 0.75rem;
       background: transparent;
     }
+    .lightbox header { position: relative; }
     .lightbox header strong { font-size: 0.92rem; }
+    .lightbox header .close-preview { margin-left: auto; }
+    .zoom-presets {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 0.2rem;
+    }
+    .zoom-presets button {
+      border: 0;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: #d9d3ea;
+      padding: 0.15rem 0.45rem;
+      font-size: 0.82rem;
+    }
+    .zoom-presets button.on { background: #fff; color: #16162b; }
     .lightbox .stage {
       position: relative;
       flex: 1;
@@ -247,10 +285,11 @@
 </head>
 <body>
   <header>
-    <h1>商品圖庫</h1>
-    <div class="root" id="rootLabel">正在讀取…</div>
+    <button type="button" class="brand" id="home">商品圖庫</button>
+    <div class="crumb-nav" id="crumbNav"></div>
     <button type="button" id="rescan">重新掃描</button>
     <button type="button" class="ghost" id="openSetup">設定目錄</button>
+    <div class="root" id="rootLabel">正在讀取…</div>
   </header>
   <main id="app"></main>
   <script>
@@ -326,6 +365,8 @@
       if (!catalog) return
       rootLabel.textContent = catalog.root
       rootLabel.title = catalog.root
+      const selected = selectedKey ? findSelected() : null
+      document.querySelector('#crumbNav').textContent = selected ? `${selected.category} / ${selected.folder}` : ''
       if (!catalog.root_ok) {
         app.replaceChildren(setupBox('這個目錄還不存在。請先在電腦上建好文件夾，或改成已有的商品圖目錄。'))
         return
@@ -539,7 +580,7 @@
       box.append(el('header', {}, [
         el('strong', {}, [image.name]),
         el('span', { class: 'root' }, [`${light + 1} / ${product.images.length}`]),
-        el('button', { type: 'button', onclick: close }, ['關閉']),
+        el('button', { class: 'close-preview', type: 'button', onclick: close }, ['關閉']),
       ]))
       const zoomLabel = el('span', { class: 'root' }, [''])
       const stage = el('div', { class: 'stage' })
@@ -554,9 +595,23 @@
         let panY = 0
         let accum = 0
         let drag = null
+        const presets = [50, 100, 200, 300]
+        const presetButtons = presets.map((value) => el('button', {
+          type: 'button',
+          onclick: () => setScale(value),
+        }, [`${value}%`]))
+        const presetBar = el('div', { class: 'zoom-presets' }, presetButtons)
         const apply = () => {
           img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom / 100})`
           zoomLabel.textContent = `${zoom}%`
+          presetButtons.forEach((button, index) => button.classList.toggle('on', presets[index] === zoom))
+        }
+        const setScale = (next) => {
+          zoom = next
+          panX = 0
+          panY = 0
+          accum = 0
+          apply()
         }
         const zoomAt = (next, clientX, clientY) => {
           next = Math.max(20, Math.min(800, next))
@@ -605,6 +660,7 @@
         frame.addEventListener('pointerup', endDrag)
         frame.addEventListener('pointercancel', endDrag)
         stage.append(frame)
+        box.querySelector('header').append(presetBar)
         apply()
       }
       if (product.images.length > 1) {
@@ -660,9 +716,19 @@
       render()
     }
 
+    document.querySelector('#home').onclick = () => {
+      selectedKey = ''
+      light = -1
+      indexDraft = null
+      saveNote = ''
+      render()
+    }
     document.querySelector('#rescan').onclick = load
     document.querySelector('#openSetup').onclick = () => {
       selectedKey = ''
+      light = -1
+      indexDraft = null
+      document.querySelector('#crumbNav').textContent = ''
       app.replaceChildren(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
     }
     document.addEventListener('keydown', (event) => {
