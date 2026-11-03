@@ -18,7 +18,7 @@ from pathlib import Path
 try:
     from PIL import Image, ImageOps, UnidentifiedImageError
 except ImportError:
-    print("請先在這個文件夾執行: py -3 -m pip install -r requirements.txt")
+    print("請先在這個文件夾執行: python3 -m pip install -r requirements.txt")
     sys.exit(1)
 
 try:
@@ -38,7 +38,8 @@ HEIC_EXT = {".heic", ".heif"}
 INDEX_LIMIT = 64 * 1024
 THUMB_LOCK = threading.Lock()
 
-ROOT: Path = Path("D:/SisterMart-PM")
+DEFAULT_ROOT = "/Volumes/Data/SisterMart.VIP/products/raw"
+ROOT: Path = Path(DEFAULT_ROOT)
 PORT = 8765
 
 
@@ -50,7 +51,7 @@ def load_config() -> None:
             data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             data = {}
-    root = os.environ.get("PM_ROOT") or data.get("root") or "D:/SisterMart-PM"
+    root = os.environ.get("PM_ROOT") or data.get("root") or DEFAULT_ROOT
     port = int(os.environ.get("PM_PORT") or data.get("port") or 8765)
     ROOT = Path(str(root))
     PORT = port
@@ -366,7 +367,7 @@ def main() -> None:
     print(f"商品圖庫  {url}")
     print(f"目錄      {ROOT}")
     if not HEIC_OK:
-        print("HEIC 預覽未啟用。需要時執行: py -3 -m pip install pillow-heif")
+        print("HEIC 預覽未啟用。需要時執行: python3 -m pip install pillow-heif")
     if not args.no_browser:
         threading.Timer(0.4, lambda: webbrowser.open(url)).start()
     try:

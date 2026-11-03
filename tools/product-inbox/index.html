@@ -429,7 +429,7 @@
     }
 
     function setupBox(message) {
-      const input = el('input', { type: 'text', value: catalog.root || '', placeholder: 'D:/SisterMart-PM' })
+      const input = el('input', { type: 'text', value: catalog.root || '', placeholder: '/Volumes/Data/SisterMart.VIP/products/raw' })
       const hint = el('div', { class: 'err' })
       const save = el('button', { type: 'button', onclick: async () => {
         hint.textContent = ''
