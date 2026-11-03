@@ -102,6 +102,46 @@
     .meta { color: var(--muted); font-size: 0.78rem; }
     .badge { color: #9a5b12; }
     .detail-head { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.8rem; }
+    .detail-body {
+      display: grid;
+      grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .editor {
+      position: sticky;
+      top: 4.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .editor-label { color: var(--muted); font-size: 0.82rem; }
+    .editor textarea {
+      width: 100%;
+      min-height: 22rem;
+      margin: 0;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 0.6rem;
+      background: #fff;
+      resize: vertical;
+      line-height: 1.55;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.92rem;
+    }
+    .editor .row { display: flex; gap: 0.6rem; align-items: center; }
+    .editor button {
+      border: 0;
+      border-radius: 0.4rem;
+      background: var(--accent);
+      color: var(--accent-ink);
+      padding: 0.4rem 0.9rem;
+    }
+    .saved { color: #3f6b45; font-size: 0.85rem; }
+    @media (max-width: 800px) {
+      .detail-body { grid-template-columns: 1fr; }
+      .editor { position: static; }
+    }
     .detail-head h2 { margin: 0; font-size: 1.25rem; }
     .crumb { color: var(--muted); font-size: 0.85rem; }
     dl {
@@ -191,6 +231,8 @@
     let missingOnly = false
     let selectedKey = ''
     let light = -1
+    let indexDraft = null
+    let saveNote = ''
 
     function el(tag, attrs, kids) {
       const node = document.createElement(tag)
@@ -354,12 +396,14 @@
     function openProduct(product) {
       selectedKey = productKey(product)
       light = -1
+      indexDraft = null
+      saveNote = ''
       render()
     }
 
     function renderDetail(product, list) {
       const head = el('div', { class: 'detail-head' }, [
-        el('button', { class: 'back', type: 'button', onclick: () => { selectedKey = ''; light = -1; render() } }, ['返回']),
+        el('button', { class: 'back', type: 'button', onclick: () => { selectedKey = ''; light = -1; indexDraft = null; render() } }, ['返回']),
         el('div', {}, [
           el('div', { class: 'crumb' }, [
             product.folder === product.name ? product.category : `${product.category} / ${product.folder}`,
@@ -368,30 +412,74 @@
         ]),
       ])
       list.append(head)
-      if (!product.has_index) {
-        list.append(el('p', { class: 'note' }, ['這個商品文件夾還沒有 index.txt，目前以文件夾名當作商品名。用記事本新增時請存成 UTF-8。']))
-      }
-      if (product.fields.length) {
-        const fields = el('dl')
-        for (const field of product.fields) {
-          fields.append(el('dt', {}, [field.key]), el('dd', {}, [field.value || '—']))
-        }
-        list.append(fields)
-      }
+      const body = el('div', { class: 'detail-body' })
+      body.append(indexEditor(product))
+      const photos = el('div')
       if (!product.images.length) {
-        list.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
-        return
+        photos.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
+      } else {
+        photos.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
+          type: 'button',
+          onclick: () => openLight(index),
+        }, [
+          image.heic
+            ? el('div', { class: 'ph' }, ['HEIC'])
+            : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
+          el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
+        ]))))
       }
-      list.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
-        type: 'button',
-        onclick: () => openLight(index),
-      }, [
-        image.heic
-          ? el('div', { class: 'ph' }, ['HEIC'])
-          : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
-        el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
-      ]))))
+      body.append(photos)
+      list.append(body)
       if (light >= 0) renderLight(product)
+    }
+
+    function indexEditor(product) {
+      const hint = el('span', { class: saveNote.startsWith('無法') ? 'err' : 'saved' }, [saveNote])
+      const area = el('textarea', {
+        spellcheck: 'false',
+        placeholder: '名稱：\n英文名：\n售價：\n主圖：\n備註：',
+      })
+      area.value = indexDraft == null ? (product.index_text || '') : indexDraft
+      area.addEventListener('input', () => {
+        indexDraft = area.value
+        saveNote = ''
+        hint.textContent = ''
+      })
+      const save = async () => {
+        saveNote = ''
+        hint.className = 'saved'
+        hint.textContent = '正在保存…'
+        const response = await fetch('/api/index', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: `${product.category}/${product.folder}`, text: area.value }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          saveNote = data.error || '無法保存'
+          hint.className = 'err'
+          hint.textContent = saveNote
+          return
+        }
+        catalog = data
+        indexDraft = null
+        saveNote = '已保存'
+        render()
+      }
+      area.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+          event.preventDefault()
+          save()
+        }
+      })
+      return el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
+        el('div', { class: 'editor-label' }, ['index.txt']),
+        area,
+        el('div', { class: 'row' }, [
+          el('button', { type: 'submit' }, ['保存']),
+          hint,
+        ]),
+      ])
     }
 
     function openLight(index) {

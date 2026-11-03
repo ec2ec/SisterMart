@@ -119,15 +119,73 @@ def field_value(fields: list[dict[str, str]], key: str) -> str:
     return ""
 
 
+def is_appledouble(name: str) -> bool:
+    return name.startswith("._")
+
+
+def is_image_file(path: Path) -> bool:
+    return (
+        path.is_file()
+        and not path.is_symlink()
+        and not is_appledouble(path.name)
+        and path.suffix.lower() in IMAGE_EXT
+    )
+
+
 def list_images(folder: Path) -> list[Path]:
-    files = []
-    for path in folder.iterdir():
-        if path.is_symlink() or not path.is_file():
-            continue
-        if path.suffix.lower() not in IMAGE_EXT:
-            continue
-        files.append(path)
+    files = [path for path in folder.iterdir() if is_image_file(path)]
     return sorted(files, key=lambda p: p.name.casefold())
+
+
+def read_index_text(path: Path) -> str:
+    if not path.is_file() or path.is_symlink():
+        return ""
+    raw = path.read_bytes()[:INDEX_LIMIT]
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    return raw.decode("utf-8", errors="replace")
+
+
+def product_dir(rel: str) -> Path:
+    rel = urllib.parse.unquote(rel or "").replace("\\", "/").replace("\x00", "").strip().strip("/")
+    parts = [part for part in rel.split("/") if part not in {"", "."}]
+    if len(parts) != 2 or any(part == ".." or part.startswith("._") or ":" in part for part in parts):
+        raise PermissionError("路徑不允許")
+    root = ROOT.resolve()
+    category = root / parts[0]
+    folder = category / parts[1]
+    if category.is_symlink() or folder.is_symlink():
+        raise PermissionError("路徑不允許")
+    if not category.is_dir() or not folder.is_dir():
+        raise FileNotFoundError("檔案不存在")
+    resolved = folder.resolve()
+    if resolved.parent != category.resolve() or category.resolve().parent != root:
+        raise PermissionError("路徑不允許")
+    return resolved
+
+
+def write_index(rel: str, text: str) -> None:
+    if not isinstance(text, str) or "\x00" in text:
+        raise ValueError("內容不正確")
+    folder = product_dir(rel)
+    target = folder / "index.txt"
+    if target.is_symlink():
+        raise PermissionError("路徑不允許")
+    data = text.replace("\r\n", "\n").replace("\r", "\n")
+    raw = data.encode("utf-8")
+    if len(raw) > INDEX_LIMIT:
+        raise ValueError("內容超過 64KB")
+    if data.strip() == "":
+        if target.is_file():
+            target.unlink()
+        return
+    tmp = folder / ".index.txt.tmp"
+    try:
+        tmp.write_bytes(raw)
+        tmp.replace(target)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def read_product(category: str, folder: Path, root: Path) -> dict:
@@ -162,7 +220,8 @@ def read_product(category: str, folder: Path, root: Path) -> dict:
         "folder": folder.name,
         "name": field_value(fields, "名稱") or folder.name,
         "category": category,
-        "has_index": (folder / "index.txt").is_file(),
+        "has_index": (folder / "index.txt").is_file() and not (folder / "index.txt").is_symlink(),
+        "index_text": read_index_text(folder / "index.txt"),
         "fields": fields,
         "cover": rel(cover) if cover else "",
         "images": image_rows,
@@ -181,7 +240,7 @@ def scan() -> dict:
         for extra in root_entries:
             if extra.is_symlink():
                 continue
-            if extra.is_file() and extra.suffix.lower() in IMAGE_EXT:
+            if is_image_file(extra):
                 loose += 1
         categories_on_disk = [
             p for p in root_entries if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
@@ -201,7 +260,7 @@ def scan() -> dict:
                         products.append(read_product(cat.name, child, root))
                     except OSError:
                         continue
-                elif child.is_file() and not child.is_symlink() and child.suffix.lower() in IMAGE_EXT:
+                elif is_image_file(child):
                     loose_in_cat += 1
             categories.append(
                 {
@@ -318,15 +377,29 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/api/config":
-            self._json({"error": "找不到"}, 404)
+        if parsed.path == "/api/config":
+            self._post_config()
             return
+        if parsed.path == "/api/index":
+            self._post_index()
+            return
+        self._json({"error": "找不到"}, 404)
+
+    def _read_json(self, limit: int) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
-        if length <= 0 or length > 8192:
-            self._json({"error": "內容不正確"}, 400)
-            return
+        if length <= 0 or length > limit:
+            raise ValueError("內容不正確")
         try:
             body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError("內容不正確") from exc
+        if not isinstance(body, dict):
+            raise ValueError("內容不正確")
+        return body
+
+    def _post_config(self) -> None:
+        try:
+            body = self._read_json(8192)
             root = str(body.get("root") or "").strip()
             if not root:
                 raise ValueError("請填寫商品圖目錄")
@@ -334,14 +407,31 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             self._json({"error": str(exc)}, 400)
             return
-        except json.JSONDecodeError:
-            self._json({"error": "內容不正確"}, 400)
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        self._json(scan())
+
+    def _post_index(self) -> None:
+        try:
+            body = self._read_json(INDEX_LIMIT + 4096)
+            if "text" not in body or not isinstance(body.get("text"), str):
+                raise ValueError("請填寫 index.txt 內容")
+            write_index(str(body.get("path") or ""), body["text"])
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        except FileNotFoundError:
+            self._json({"error": "檔案不存在"}, 404)
             return
         self._json(scan())
 
     def _picture(self, kind: str, rel: str) -> None:
         src = safe_path(rel)
-        if not src.is_file() or src.suffix.lower() not in IMAGE_EXT:
+        if not is_image_file(src):
             raise FileNotFoundError
         edge = 320 if kind == "/thumb" else 1600
         quality = 80 if kind == "/thumb" else 86
