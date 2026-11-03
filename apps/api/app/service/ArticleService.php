@@ -41,8 +41,9 @@ class ArticleService
         }
         $titleZh = trim((string) ($body['title']['zh-HK'] ?? ''));
         $titleEn = trim((string) ($body['title']['en'] ?? ''));
-        $bodyZh = (string) ($body['body']['zh-HK'] ?? '');
-        $bodyEn = (string) ($body['body']['en'] ?? '');
+        $scenes = new ImageUploadSceneService();
+        $bodyZh = $scenes->assertHtml('content.article', (string) ($body['body']['zh-HK'] ?? ''));
+        $bodyEn = $scenes->assertHtml('content.article', (string) ($body['body']['en'] ?? ''));
         if ($titleZh === '' || $titleEn === '') {
             throw new ApiException('INVALID', '請填寫雙語標題', 422, 42201);
         }
