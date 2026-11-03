@@ -18,7 +18,9 @@ from pathlib import Path
 try:
     from PIL import Image, ImageOps, UnidentifiedImageError
 except ImportError:
-    print("請先在這個文件夾執行: python3 -m pip install -r requirements.txt")
+    print("請先在這個文件夾執行這兩行:")
+    print('  python3 -m pip install --user --upgrade "pip<24.1"')
+    print("  python3 -m pip install --user -r requirements.txt")
     sys.exit(1)
 
 try:
@@ -367,7 +369,12 @@ def main() -> None:
     print(f"商品圖庫  {url}")
     print(f"目錄      {ROOT}")
     if not HEIC_OK:
-        print("HEIC 預覽未啟用。需要時執行: python3 -m pip install pillow-heif")
+        if sys.version_info < (3, 9):
+            print("HEIC 預覽未啟用。這台 Mac 的 Python 較舊，請執行:")
+            print('  python3 -m pip install --user --upgrade "pip<24.1"')
+            print('  python3 -m pip install --user "pillow-heif==0.16.0"')
+        else:
+            print("HEIC 預覽未啟用。需要時執行: python3 -m pip install pillow-heif")
     if not args.no_browser:
         threading.Timer(0.4, lambda: webbrowser.open(url)).start()
     try:
