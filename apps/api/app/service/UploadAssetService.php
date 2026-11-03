@@ -253,6 +253,38 @@ class UploadAssetService
     }
 
     /** @return array<string, true> */
+    public function referencedPathSet(): array
+    {
+        return $this->referencedPaths();
+    }
+
+    public function bindClaim(string $path, string $scene, string $entityType, int $entityId, int $bytes): void
+    {
+        $this->record([
+            'url' => $path,
+            'scene' => $scene,
+            'bytes' => max(0, $bytes),
+            'uploader_type' => 'admin',
+            'uploader_id' => 0,
+        ]);
+        $table = $this->table();
+        Db::execute(
+            "UPDATE `{$table}` SET `entity_type` = ?, `entity_id` = ?, `updated_at` = ? WHERE `path` = ?",
+            [$entityType, $entityId > 0 ? $entityId : null, date('Y-m-d H:i:s'), $path],
+        );
+    }
+
+    public function markDeleted(string $path): void
+    {
+        $this->ensureSchema();
+        $table = $this->table();
+        Db::execute(
+            "UPDATE `{$table}` SET `status` = 'deleted', `updated_at` = ? WHERE `path` = ? AND `status` <> 'deleted'",
+            [date('Y-m-d H:i:s'), $path],
+        );
+    }
+
+    /** @return array<string, true> */
     private function referencedPaths(): array
     {
         $cols = Db::query(

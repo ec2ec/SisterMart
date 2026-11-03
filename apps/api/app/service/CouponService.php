@@ -274,6 +274,7 @@ class CouponService
             'scope' => (string) ($body['scope'] ?? 'all'),
             'created_at' => $now,
         ]);
+        $this->claimCouponImages($id);
 
         return $this->presentCoupon(Db::name('coupons')->where('id', $id)->find(), true);
     }
@@ -348,6 +349,7 @@ class CouponService
         if ($data) {
             Db::name('coupons')->where('id', $id)->update($data);
         }
+        $this->claimCouponImages($id);
 
         return $this->presentCoupon(Db::name('coupons')->where('id', $id)->find(), true);
     }
@@ -409,6 +411,38 @@ class CouponService
                 'amount' => (float) $r['amount'],
             ],
         ];
+    }
+
+    private function claimCouponImages(int $id): void
+    {
+        $row = Db::name('coupons')->where('id', $id)->find();
+        if (!$row) {
+            return;
+        }
+        $files = new ImageUploadService();
+        $folder = (string) $id;
+        $patch = [];
+        $bg = trim((string) ($row['background_image'] ?? ''));
+        if ($bg !== '') {
+            $claimed = $files->claimDraft($bg, $folder, 'coupon', $id);
+            if ($claimed !== $bg) {
+                $patch['background_image'] = $claimed;
+            }
+        }
+        foreach (['rules_zh', 'rules_en'] as $col) {
+            if (!array_key_exists($col, $row)) {
+                continue;
+            }
+            $html = (string) ($row[$col] ?? '');
+            $claimedHtml = $files->claimDraftHtml($html, $folder, 'coupon', $id);
+            if ($claimedHtml !== $html) {
+                $patch[$col] = $claimedHtml;
+            }
+        }
+        if ($patch !== []) {
+            Db::name('coupons')->where('id', $id)->update($patch);
+        }
+        $files->releaseUnreferencedDrafts();
     }
 
     private function normalizeBackgroundImage(mixed $raw): ?string

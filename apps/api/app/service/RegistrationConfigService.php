@@ -107,6 +107,9 @@ class RegistrationConfigService
         $scenes = new ImageUploadSceneService();
         $welcomeZh = $scenes->assertHtml('content.welcome', $welcomeZh);
         $welcomeEn = $scenes->assertHtml('content.welcome', $welcomeEn);
+        $files = new ImageUploadService();
+        $welcomeZh = $files->claimDraftHtml($welcomeZh, 'welcome', 'registration', 0);
+        $welcomeEn = $files->claimDraftHtml($welcomeEn, 'welcome', 'registration', 0);
 
         $payload = [
             'registration_enabled' => $registrationEnabled,
@@ -126,6 +129,7 @@ class RegistrationConfigService
             throw new ApiException('INVALID', '配置無法序列化', 422, 42201);
         }
         TradeSettings::set(self::SETTING_KEY, $encoded);
+        $files->releaseUnreferencedDrafts();
 
         return $this->get();
     }

@@ -71,6 +71,9 @@ class ArticleService
             $data['created_at'] = $now;
             $id = (int) Db::name('articles')->insertGetId($data);
         }
+        $files = new ImageUploadService();
+        $bodyZh = $files->claimDraftHtml($bodyZh, (string) $id, 'article', $id);
+        $bodyEn = $files->claimDraftHtml($bodyEn, (string) $id, 'article', $id);
         foreach (['zh-HK' => [$titleZh, $bodyZh], 'en' => [$titleEn, $bodyEn]] as $locale => [$title, $text]) {
             $exists = Db::name('article_i18n')->where(['article_id' => $id, 'locale' => $locale])->find();
             if ($exists) {
@@ -79,6 +82,7 @@ class ArticleService
                 Db::name('article_i18n')->insert(['article_id' => $id, 'locale' => $locale, 'title' => $title, 'body' => $text]);
             }
         }
+        $files->releaseUnreferencedDrafts();
 
         return $this->byCode($code, false);
     }

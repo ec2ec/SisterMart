@@ -200,12 +200,35 @@ SQL);
             $id = (int) Db::name('campaigns')->insertGetId($data);
         }
 
+        $files = new ImageUploadService();
+        $folder = (string) $id;
+        $patch = [];
+        $banner = trim((string) ($data['banner_image_url'] ?? ''));
+        if ($banner !== '') {
+            $claimedBanner = $files->claimDraft($banner, $folder, 'campaign', $id);
+            if ($claimedBanner !== $banner) {
+                $patch['banner_image_url'] = $claimedBanner;
+            }
+        }
+        foreach (['intro_html_zh', 'intro_html_en'] as $col) {
+            $html = (string) ($data[$col] ?? '');
+            $claimedHtml = $files->claimDraftHtml($html, $folder, 'campaign', $id);
+            if ($claimedHtml !== $html) {
+                $patch[$col] = $claimedHtml;
+            }
+        }
+        if ($patch !== []) {
+            $patch['updated_at'] = $now;
+            Db::name('campaigns')->where('id', $id)->update($patch);
+        }
+
         if (array_key_exists('product_ids', $body) || array_key_exists('product_codes', $body)) {
             $this->replaceManualProducts($id, $body);
         }
 
         $row = Db::name('campaigns')->where('id', $id)->find();
         (new HomeLayoutService())->syncCampaignModule($row);
+        $files->releaseUnreferencedDrafts();
 
         return $this->presentAdmin($row);
     }
