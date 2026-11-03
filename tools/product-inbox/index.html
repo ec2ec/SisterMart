@@ -53,17 +53,32 @@
     }
     .crumb-nav:empty { display: none; }
     #rescan { margin-left: auto; }
-    header .root {
-      flex: 0 1 24rem;
-      min-width: 0;
-      color: #d9d3ea;
-      font-size: 0.82rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      text-align: right;
+    header button.info {
+      position: relative;
+      background: transparent;
+      color: #fff;
+      padding: 0.1rem 0.35rem;
+      font-size: 1rem;
+      line-height: 1;
     }
-    header button, .bar button, .back {
+    header button.info .tip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      right: 0;
+      z-index: 6;
+      padding: 0.4rem 0.65rem;
+      border-radius: 0.4rem;
+      background: #fff;
+      color: #16162b;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+    header button.info:hover .tip,
+    header button.info:focus .tip { display: block; }
+    header button, .bar button {
       border: 0;
       border-radius: 0.4rem;
       background: #fff;
@@ -120,7 +135,6 @@
     .card strong { font-size: 0.92rem; }
     .meta { color: var(--muted); font-size: 0.78rem; }
     .badge { color: #9a5b12; }
-    .detail-head { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.8rem; }
     .detail-body {
       display: grid;
       grid-template-columns: minmax(12rem, 16.5rem) minmax(0, 1fr);
@@ -165,8 +179,6 @@
       .detail-body { grid-template-columns: 1fr; }
       .editor { position: static; }
     }
-    .detail-head h2 { margin: 0; font-size: 1.25rem; }
-    .crumb { color: var(--muted); font-size: 0.85rem; }
     dl {
       display: grid;
       grid-template-columns: 7rem 1fr;
@@ -290,12 +302,12 @@
     <div class="crumb-nav" id="crumbNav"></div>
     <button type="button" id="rescan">重新掃描</button>
     <button type="button" class="ghost" id="openSetup">設定目錄</button>
-    <div class="root" id="rootLabel">正在讀取…</div>
+    <button type="button" class="info" id="rootInfo" aria-label="商品圖目錄">ℹ️<span class="tip" id="rootTip">正在讀取…</span></button>
   </header>
   <main id="app"></main>
   <script>
     const app = document.querySelector('#app')
-    const rootLabel = document.querySelector('#rootLabel')
+    const rootTip = document.querySelector('#rootTip')
     let catalog = null
     let query = ''
     let category = ''
@@ -364,8 +376,7 @@
     function render() {
       document.querySelectorAll('.lightbox').forEach((node) => node.remove())
       if (!catalog) return
-      rootLabel.textContent = catalog.root
-      rootLabel.title = catalog.root
+      rootTip.textContent = catalog.root
       const selected = selectedKey ? findSelected() : null
       document.querySelector('#crumbNav').textContent = selected ? `${selected.category} / ${selected.folder}` : ''
       if (!catalog.root_ok) {
@@ -490,16 +501,6 @@
     }
 
     function renderDetail(product, list) {
-      const head = el('div', { class: 'detail-head' }, [
-        el('button', { class: 'back', type: 'button', onclick: () => { selectedKey = ''; light = -1; indexDraft = null; render() } }, ['返回']),
-        el('div', {}, [
-          el('div', { class: 'crumb' }, [
-            product.folder === product.name ? product.category : `${product.category} / ${product.folder}`,
-          ]),
-          el('h2', {}, [product.name]),
-        ]),
-      ])
-      list.append(head)
       const body = el('div', { class: 'detail-body' })
       body.append(indexEditor(product))
       const pane = el('div', { class: 'preview-pane' })
@@ -709,7 +710,7 @@
         if (!response.ok) throw new Error('讀取失敗')
         catalog = await response.json()
       } catch (err) {
-        rootLabel.textContent = '無法連上本機程式'
+        rootTip.textContent = '無法連上本機程式'
         app.replaceChildren(el('div', { class: 'empty err' }, ['無法讀取商品目錄，請確認程式仍在運行後按重新掃描。']))
         return
       }
