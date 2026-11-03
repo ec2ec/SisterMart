@@ -30,7 +30,7 @@ import { useHomeCatalog } from '../composables/useHomeCatalog'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
 import { isLoggedIn, loggedIn, memberState, syncSessionFromStorage } from '../composables/useSession'
-import { assetUrl } from '../utils/assetUrl'
+import { assetUrl, categoryIconSrc } from '../utils/assetUrl'
 
 defineOptions({ name: 'HomeView' })
 
@@ -649,7 +649,7 @@ const tabLabel = (tab: HomeRecTab) => {
             >
               <img
                 v-if="c.icon"
-                :src="c.icon"
+                :src="categoryIconSrc(c.icon)"
                 :alt="text(c.name)"
                 @error="onCatImgError($event)"
               />
