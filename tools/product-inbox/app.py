@@ -100,7 +100,7 @@ def parse_index(path: Path) -> list[dict[str, str]]:
     fields: list[dict[str, str]] = []
     for line in text.splitlines():
         line = line.strip()
-        if not line or line.startswith("#"):
+        if not line or line.startswith("#") or set(line) <= {"-"}:
             continue
         if "：" in line:
             key, value = line.split("：", 1)

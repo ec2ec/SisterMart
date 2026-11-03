@@ -106,7 +106,12 @@
       display: grid;
       grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
       gap: 1rem;
-      align-items: start;
+      align-items: stretch;
+    }
+    .preview-pane {
+      min-height: calc(100vh - 8.5rem);
+      position: sticky;
+      top: 4.2rem;
     }
     .editor {
       position: sticky;
@@ -115,7 +120,6 @@
       flex-direction: column;
       gap: 0.45rem;
     }
-    .editor-label { color: var(--muted); font-size: 0.82rem; }
     .editor textarea {
       width: 100%;
       min-height: 22rem;
@@ -180,21 +184,29 @@
     .setup input { width: min(36rem, 100%); }
     .err { color: #9f1239; }
     .lightbox {
-      position: fixed;
-      inset: 0;
-      z-index: 20;
+      position: relative;
+      height: 100%;
+      min-height: calc(100vh - 8.5rem);
       display: flex;
       flex-direction: column;
-      background: rgba(12, 10, 20, 0.92);
+      overflow: hidden;
+      border-radius: 0.6rem;
+      background: #16162b;
       color: #fff;
     }
-    .lightbox header { background: transparent; }
+    .lightbox header {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.55rem 0.75rem;
+      background: transparent;
+    }
+    .lightbox header strong { font-size: 0.92rem; }
     .lightbox .stage {
       position: relative;
       flex: 1;
       min-height: 0;
       overflow: hidden;
-      padding: 0.5rem 3rem 1rem;
     }
     .zoom-frame {
       width: 100%;
@@ -214,7 +226,7 @@
       user-select: none;
       -webkit-user-drag: none;
     }
-    .lightbox img { max-width: 100%; max-height: calc(100vh - 6rem); object-fit: contain; }
+    .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .nav {
       position: absolute;
       z-index: 2;
@@ -252,6 +264,21 @@
     let light = -1
     let indexDraft = null
     let saveNote = ''
+    const INDEX_TEMPLATE = [
+      '--------',
+      '編碼：',
+      '--------',
+      '名稱：',
+      '英文名：',
+      '--------',
+      '批發價：',
+      '劃線價：',
+      '售價：',
+      '--------',
+      '主圖：',
+      '備註：',
+      '--------',
+    ].join('\n')
 
     function el(tag, attrs, kids) {
       const node = document.createElement(tag)
@@ -433,11 +460,13 @@
       list.append(head)
       const body = el('div', { class: 'detail-body' })
       body.append(indexEditor(product))
-      const photos = el('div')
+      const pane = el('div', { class: 'preview-pane' })
       if (!product.images.length) {
-        photos.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
+        pane.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
+      } else if (light >= 0) {
+        pane.append(renderLight(product))
       } else {
-        photos.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
+        pane.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
           type: 'button',
           onclick: () => openLight(index),
         }, [
@@ -447,18 +476,15 @@
           el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
         ]))))
       }
-      body.append(photos)
+      body.append(pane)
       list.append(body)
-      if (light >= 0) renderLight(product)
     }
 
     function indexEditor(product) {
       const hint = el('span', { class: saveNote.startsWith('無法') ? 'err' : 'saved' }, [saveNote])
-      const area = el('textarea', {
-        spellcheck: 'false',
-        placeholder: '名稱：\n英文名：\n售價：\n主圖：\n備註：',
-      })
-      area.value = indexDraft == null ? (product.index_text || '') : indexDraft
+      const area = el('textarea', { spellcheck: 'false' })
+      const stored = product.index_text || ''
+      area.value = indexDraft == null ? (stored.trim() ? stored : INDEX_TEMPLATE) : indexDraft
       area.addEventListener('input', () => {
         indexDraft = area.value
         saveNote = ''
@@ -492,7 +518,6 @@
         }
       })
       return el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
-        el('div', { class: 'editor-label' }, ['index.txt']),
         area,
         el('div', { class: 'row' }, [
           el('button', { type: 'submit' }, ['保存']),
@@ -518,7 +543,6 @@
       ]))
       const zoomLabel = el('span', { class: 'root' }, [''])
       const stage = el('div', { class: 'stage' })
-      let dragged = false
       if (image.heic) {
         stage.append(el('p', {}, ['這張是 HEIC，瀏覽器無法直接顯示。請安裝 pillow-heif 後重新開啟程式。']))
       } else {
@@ -561,7 +585,6 @@
         }, { passive: false })
         frame.addEventListener('pointerdown', (event) => {
           if (event.button !== 0) return
-          dragged = false
           drag = { id: event.pointerId, x: event.clientX, y: event.clientY, panX, panY }
           frame.classList.add('dragging')
           frame.setPointerCapture(event.pointerId)
@@ -570,7 +593,6 @@
           if (!drag || event.pointerId !== drag.id) return
           const dx = event.clientX - drag.x
           const dy = event.clientY - drag.y
-          if (Math.hypot(dx, dy) > 3) dragged = true
           panX = drag.panX + dx
           panY = drag.panY + dy
           apply()
@@ -590,14 +612,9 @@
         stage.append(el('button', { class: 'nav next', type: 'button', onclick: () => step(1) }, ['›']))
       }
       box.append(stage)
-      box.addEventListener('click', (event) => {
-        if (dragged) { dragged = false; return }
-        if (event.target.closest('.nav, button')) return
-        if (event.target === box || event.target === stage || event.target.closest('.zoom-frame')) close()
-      })
       const head = box.querySelector('header')
       head.insertBefore(zoomLabel, head.querySelector('button'))
-      document.body.append(box)
+      return box
     }
 
     function step(delta) {
@@ -651,6 +668,7 @@
     document.addEventListener('keydown', (event) => {
       if (light < 0) return
       if (event.key === 'Escape') { event.preventDefault(); light = -1; render() }
+      if (event.target.closest('textarea, input')) return
       if (event.key === 'ArrowRight') { event.preventDefault(); step(1) }
       if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1) }
     })
