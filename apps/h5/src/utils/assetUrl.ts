@@ -40,3 +40,13 @@ export function assetUrl(u: string): string {
   const origin = assetOrigin()
   return `${origin}${path}`
 }
+
+/**
+ * 頁面上的分類圖：上傳檔在共享主機沒有 /storage 靜態目錄，必須走 files 代理。
+ * /mock、/products 仍用站點相對路徑，避免被改到 API 主機。
+ */
+export function categoryIconSrc(u: string): string {
+  if (!u) return ''
+  if (u.includes('/storage/') || /\/api\/v1\/files/i.test(u)) return assetUrl(u)
+  return u
+}

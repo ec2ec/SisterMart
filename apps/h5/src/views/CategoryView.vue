@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader.vue'
 import { fetchCategories, type CategoryNode } from '../api/catalog'
 import { restoreRouteScroll, saveRouteScroll } from '../composables/useRouteScroll'
 import { useLocaleText } from '../composables/useLocaleText'
+import { categoryIconSrc } from '../utils/assetUrl'
 
 defineOptions({ name: 'CategoryView' })
 
@@ -95,7 +96,7 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
             </div>
             <div class="grid">
               <button v-for="item in gridItems" :key="item.code" type="button" class="item" @click="openList(item)">
-                <img v-if="item.icon" :src="item.icon" :alt="text(item.name)" />
+                <img v-if="item.icon" :src="categoryIconSrc(item.icon)" :alt="text(item.name)" />
                 <span v-else class="ph" />
                 <span>{{ text(item.name) }}</span>
               </button>
