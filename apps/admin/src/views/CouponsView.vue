@@ -119,7 +119,7 @@ function urlFromMedia(media: MediaItem[]): string | null {
   return u || null
 }
 
-const bgGalleryHint = '背景圖單張不超過 3M，僅可上傳 1 張，支持 JPG、PNG、GIF、WEBP；留空則 H5 使用漸變色'
+const bgGalleryHint = '留空則 H5 使用漸變色。'
 const bgDeleteTitle = '確認刪除背景圖'
 const bgDeleteContent = '確定移除此背景圖？保存後才會生效。'
 

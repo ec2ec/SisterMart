@@ -3,12 +3,13 @@
  * 專案富文本標準組件（簡潔模式）。
  * 用戶說「改成富文本」時複用本組件 + uploadImage(preset)，見 .cursor/rules/rich-text-editor.mdc
  */
-import { shallowRef, onBeforeUnmount, ref, watch, computed } from 'vue'
+import { shallowRef, onBeforeUnmount, onMounted, ref, watch, computed } from 'vue'
 import { NButton } from 'naive-ui'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
 import { uploadImage } from '../api'
+import { describeUpload, loadUploadRequirements, uploadRequirement } from '../uploadRequirements'
 import { assetUrl, toPreviewHtml, toStoredHtml } from '../utils/assetUrl'
 import MediaPickerDialog from './MediaPickerDialog.vue'
 
@@ -16,7 +17,7 @@ const props = withDefaults(
   defineProps<{
     modelValue: string
     placeholder?: string
-    /** 圖片場景，對應設置裡的上傳配置 */
+    /** 圖片場景。插入圖片的限制按該場景當前配置直接顯示 */
     scene?: string
     height?: number
   }>(),
@@ -63,7 +64,20 @@ const toolbarConfig: Partial<IToolbarConfig> = {
   ],
 }
 
-const editorConfig = computed<Partial<IEditorConfig>>(() => ({
+const requirementTick = ref(0)
+const uploadHint = computed(() => {
+  void requirementTick.value
+  return describeUpload(props.scene)
+})
+onMounted(() => {
+  void loadUploadRequirements().then(() => {
+    requirementTick.value += 1
+  })
+})
+
+const editorConfig = computed<Partial<IEditorConfig>>(() => {
+  void requirementTick.value
+  return {
   placeholder: props.placeholder,
   MENU_CONF: {
     fontSize: {
@@ -84,7 +98,7 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
     },
     uploadImage: {
       allowedFileTypes: ['image/*'],
-      maxFileSize: 5 * 1024 * 1024,
+      maxFileSize: Math.round(uploadRequirement(props.scene).max_upload_mb * 1024 * 1024),
       async customUpload(file: File, insertFn: (url: string, alt: string, href: string) => void) {
         const data = await uploadImage(file, { scene: props.scene })
         const preview = assetUrl(data.url)
@@ -93,7 +107,8 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
       },
     },
   },
-}))
+  }
+})
 
 const editorStyle = computed(() => `height: ${props.height}px; overflow-y: hidden;`)
 
@@ -150,6 +165,7 @@ onBeforeUnmount(() => {
       @on-created="handleCreated"
       @on-change="onChange"
     />
+    <p class="we-hint">{{ uploadHint }}</p>
     <div class="we-lib">
       <n-button text size="tiny" @click="libraryOpen = true">從素材庫插入</n-button>
     </div>
@@ -168,8 +184,15 @@ onBeforeUnmount(() => {
 .we-toolbar {
   border-bottom: 1px solid #eee;
 }
+.we-hint {
+  margin: 0;
+  padding: 0.35rem 0.6rem 0;
+  color: #666;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
 .we-lib {
-  border-top: 1px solid #eee;
+  border-top: 1px solid transparent;
   padding: 0.15rem 0.5rem 0.25rem;
   text-align: right;
 }

@@ -43,6 +43,12 @@ class Uploads extends ApiController
         }, 201);
     }
 
+    /** GET /api/v1/admin/uploads/requirements 各場景當前上傳限制（只讀） */
+    public function requirements(): Response
+    {
+        return $this->run(fn () => (new ImageUploadSceneService())->list());
+    }
+
     /** GET /api/v1/admin/uploads/library?scene=&page=&page_size= */
     public function library(): Response
     {

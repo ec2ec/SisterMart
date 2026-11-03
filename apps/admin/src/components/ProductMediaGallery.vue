@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { showError } from '../feedback'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
 import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { describeUpload, loadUploadRequirements } from '../uploadRequirements'
 import MediaPickerDialog from './MediaPickerDialog.vue'
 
 export type MediaItem = {
@@ -15,11 +16,11 @@ const props = withDefaults(
   defineProps<{
     modelValue: MediaItem[]
     max?: number
-    /** 上傳場景，壓縮跟後台配置 */
+    /** 上傳場景。限制按該場景當前配置直接顯示 */
     scene?: string
     /** 從該場景已上傳的圖裡選，不重複上傳 */
     library?: boolean
-    /** 底部提示；空字串隱藏 */
+    /** 限制說明之外的補充，例如留空時的顯示方式 */
     hint?: string
     deleteTitle?: string
     deleteContent?: string
@@ -34,10 +35,25 @@ const props = withDefaults(
   },
 )
 
-const hintText = computed(() => {
-  if (props.hint !== '') return props.hint
-  return `最多 ${props.max} 張，支持 JPG、PNG、WebP；大小與壓縮見「設置 → 圖片上傳配置」`
+const requirementTick = ref(0)
+const requirementText = computed(() => {
+  void requirementTick.value
+  return describeUpload(props.scene, props.max)
 })
+
+onMounted(() => {
+  void loadUploadRequirements().then(() => {
+    requirementTick.value += 1
+  })
+})
+watch(
+  () => props.scene,
+  () => {
+    void loadUploadRequirements().then(() => {
+      requirementTick.value += 1
+    })
+  },
+)
 
 const single = computed(() => props.max <= 1)
 
@@ -206,13 +222,14 @@ async function onFiles(ev: Event) {
       </div>
     </n-spin>
 
-    <p v-if="hintText" class="hint">{{ hintText }}</p>
+    <p v-if="requirementText" class="hint">{{ requirementText }}</p>
+    <p v-if="hint" class="hint">{{ hint }}</p>
 
     <input
       ref="inputRef"
       type="file"
       class="hidden"
-      accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
+      accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
       :multiple="!single"
       @change="onFiles"
     />
@@ -322,7 +339,7 @@ async function onFiles(ev: Event) {
 
 .hint {
   margin: 0.5rem 0 0;
-  color: #888;
+  color: #666;
   font-size: 0.75rem;
   line-height: 1.45;
 }
