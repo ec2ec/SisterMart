@@ -157,7 +157,8 @@ class SeckillService
         }
 
         $id = 0;
-        Db::transaction(function () use ($parsed, $now, &$id) {
+        $files = new ImageUploadService();
+        Db::transaction(function () use ($parsed, $now, &$id, $files) {
             $id = (int) Db::name('seckill_sessions')->insertGetId([
                 'code' => $parsed['code'],
                 'name_zh' => $parsed['name_zh'],
@@ -167,8 +168,9 @@ class SeckillService
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
-            $this->syncItems($id, $parsed['items'], $now, replace: true);
+            $this->syncItems($id, $parsed['items'] ?? [], $now, true, $files);
         });
+        $files->releaseUnreferencedDrafts();
 
         return $this->adminRead($id);
     }
@@ -186,7 +188,8 @@ class SeckillService
         $parsed = $this->parseSessionBody($body, requireCode: false);
         $now = date('Y-m-d H:i:s');
 
-        Db::transaction(function () use ($id, $row, $parsed, $now) {
+        $files = new ImageUploadService();
+        Db::transaction(function () use ($id, $row, $parsed, $now, $files) {
             $patch = ['updated_at' => $now];
             if ($parsed['code'] !== null && $parsed['code'] !== (string) $row['code']) {
                 $dup = Db::name('seckill_sessions')
@@ -217,9 +220,10 @@ class SeckillService
             }
             Db::name('seckill_sessions')->where('id', $id)->update($patch);
             if ($parsed['items'] !== null) {
-                $this->syncItems($id, $parsed['items'], $now, replace: true);
+                $this->syncItems($id, $parsed['items'], $now, true, $files);
             }
         });
+        $files->releaseUnreferencedDrafts();
 
         return $this->adminRead($id);
     }
@@ -289,7 +293,7 @@ class SeckillService
     /**
      * @param list<array<string, mixed>> $items
      */
-    private function syncItems(int $sessionId, array $items, string $now, bool $replace): void
+    private function syncItems(int $sessionId, array $items, string $now, bool $replace, ?ImageUploadService $files = null): void
     {
         $keepIds = [];
         foreach ($items as $raw) {
@@ -351,7 +355,15 @@ class SeckillService
                 $payload['session_id'] = $sessionId;
                 $payload['sold'] = 0;
                 $payload['created_at'] = $now;
-                $keepIds[] = (int) Db::name('seckill_items')->insertGetId($payload);
+                $itemId = (int) Db::name('seckill_items')->insertGetId($payload);
+                $keepIds[] = $itemId;
+            }
+            if ($files !== null && $itemId > 0) {
+                $image = (string) $payload['image_url'];
+                $claimed = $files->claimDraft($image, 'sk-' . $itemId, 'seckill_item', $itemId);
+                if ($claimed !== $image) {
+                    Db::name('seckill_items')->where('id', $itemId)->update(['image_url' => $claimed]);
+                }
             }
         }
         if ($replace) {

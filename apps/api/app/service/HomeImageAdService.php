@@ -54,8 +54,18 @@ class HomeImageAdService
             $seen[$code] = true;
             $items[] = $normalized;
         }
+        $files = new ImageUploadService();
+        foreach ($items as $i => $item) {
+            $items[$i]['image_url'] = $files->claimDraft(
+                (string) $item['image_url'],
+                (string) $item['code'],
+                'image_ad',
+                0,
+            );
+        }
         $this->persistItems($items);
         $this->syncAllLayoutModules($items);
+        $files->releaseUnreferencedDrafts();
 
         return $this->adminList();
     }

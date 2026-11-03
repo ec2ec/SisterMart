@@ -112,6 +112,14 @@ class CatalogService
                 Db::name('category_i18n')->insert(['category_id' => $id, 'locale' => $locale, 'name' => $name]);
             }
         }
+        if ($icon !== '') {
+            $files = new ImageUploadService();
+            $claimed = $files->claimDraft($icon, (string) $id, 'category', $id);
+            if ($claimed !== $icon) {
+                Db::name('categories')->where('id', $id)->update(['icon' => $claimed, 'updated_at' => $now]);
+            }
+            $files->releaseUnreferencedDrafts();
+        }
 
         return $this->categoryById($id);
     }
@@ -479,8 +487,9 @@ class CatalogService
         }
 
         $soldBoost = max(0, (int) ($body['sold_boost'] ?? 0));
+        $files = new ImageUploadService();
 
-        Db::transaction(function () use ($body, &$id, $code, $categoryId, $supplierId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost) {
+        Db::transaction(function () use ($body, &$id, $code, $categoryId, $supplierId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost, $files) {
             $data = [
                 'code'        => $code,
                 'category_id' => $categoryId,
@@ -504,6 +513,45 @@ class CatalogService
                 $data['created_at'] = $now;
                 $id = (int) Db::name('products')->insertGetId($data);
             }
+
+            $folder = (string) $id;
+            $detailZh = $files->claimDraftHtml($detailZh, $folder, 'product', $id);
+            $detailEn = $files->claimDraftHtml($detailEn, $folder, 'product', $id);
+            foreach ($media as $mi => $item) {
+                if (!is_array($item) || ($item['media_type'] ?? 'image') === 'video') {
+                    continue;
+                }
+                $media[$mi]['url'] = $files->claimDraft(trim((string) ($item['url'] ?? '')), $folder, 'product', $id);
+            }
+            foreach ($groups as $gi => $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+                foreach (($group['options'] ?? []) as $oi => $opt) {
+                    if (!is_array($opt)) {
+                        continue;
+                    }
+                    $groups[$gi]['options'][$oi]['image'] = $files->claimDraft(trim((string) ($opt['image'] ?? '')), $folder, 'product', $id);
+                }
+            }
+            foreach ($skus as $si => $sku) {
+                if (!is_array($sku)) {
+                    continue;
+                }
+                $skus[$si]['image'] = $files->claimDraft(trim((string) ($sku['image'] ?? '')), $folder, 'product', $id);
+            }
+            $cover = null;
+            foreach ($media as $item) {
+                if (!is_array($item) || ($item['media_type'] ?? 'image') === 'video') {
+                    continue;
+                }
+                $candidate = trim((string) ($item['url'] ?? ''));
+                if ($candidate !== '') {
+                    $cover = $candidate;
+                    break;
+                }
+            }
+            Db::name('products')->where('id', $id)->update(['cover_url' => $cover ?: null]);
 
             foreach (['zh-HK' => [$nameZh, $detailZh], 'en' => [$nameEn, $detailEn]] as $locale => [$name, $detail]) {
                 $payload = ['name' => $name, 'summary' => (string) ($body['summary'][$locale] ?? ''), 'detail' => $detail];
@@ -664,6 +712,7 @@ class CatalogService
                 }
             }
         });
+        $files->releaseUnreferencedDrafts();
 
         return $this->productDetail((string) $id, true);
     }

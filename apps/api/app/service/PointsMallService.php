@@ -180,6 +180,28 @@ class PointsMallService
             $data['created_at'] = $now;
             $id = (int) Db::name('points_mall_items')->insertGetId($data);
         }
+        $files = new ImageUploadService();
+        $folder = 'pm-' . $id;
+        $patch = [];
+        if ($image !== '') {
+            $claimedImage = $files->claimDraft($image, $folder, 'points_mall', $id);
+            if ($claimedImage !== $image) {
+                $patch['image_url'] = $claimedImage;
+            }
+        }
+        $claimedZh = $files->claimDraftHtml($detailZh, $folder, 'points_mall', $id);
+        $claimedEn = $files->claimDraftHtml($detailEn, $folder, 'points_mall', $id);
+        if ($claimedZh !== $detailZh) {
+            $patch['detail_zh'] = $claimedZh !== '' ? $claimedZh : null;
+        }
+        if ($claimedEn !== $detailEn) {
+            $patch['detail_en'] = $claimedEn !== '' ? $claimedEn : null;
+        }
+        if ($patch !== []) {
+            $patch['updated_at'] = $now;
+            Db::name('points_mall_items')->where('id', $id)->update($patch);
+        }
+        $files->releaseUnreferencedDrafts();
         $row = Db::name('points_mall_items')->where('id', $id)->find();
 
         return $this->presentAdmin($row);

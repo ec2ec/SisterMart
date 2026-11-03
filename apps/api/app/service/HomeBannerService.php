@@ -70,6 +70,12 @@ class HomeBannerService
             $data['created_at'] = $now;
             $id = (int) Db::name('home_banners')->insertGetId($data);
         }
+        $files = new ImageUploadService();
+        $claimed = $files->claimDraft($image, (string) $id, 'banner', $id);
+        if ($claimed !== $image) {
+            Db::name('home_banners')->where('id', $id)->update(['image_url' => $claimed, 'updated_at' => $now]);
+        }
+        $files->releaseUnreferencedDrafts();
         $row = Db::name('home_banners')->where('id', $id)->find();
 
         return $this->present($row);
