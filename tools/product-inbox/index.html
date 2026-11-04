@@ -182,9 +182,21 @@
       padding: 0.5rem 1rem 1.2rem;
     }
     section { margin: 0 0 1.2rem; }
-    section h2 {
+    .section-head {
+      display: block;
+      width: 100%;
       margin: 0 0 0.6rem;
+      border: 0;
+      border-radius: 0.4rem;
+      background: transparent;
+      padding: 0.35rem 0.5rem;
       font-size: 1rem;
+      font-weight: 700;
+      text-align: left;
+    }
+    .section-head.on, .card.on {
+      background: #e4d4ff;
+      color: #5b21b6;
     }
     .note { margin: -0.35rem 0 0.6rem; color: #9a5b12; font-size: 0.82rem; }
     .grid {
@@ -202,6 +214,7 @@
       background: var(--card);
       text-align: left;
     }
+    .card.on { border-color: #c4b5fd; }
     .card img, .ph {
       width: 100%;
       aspect-ratio: 1;
@@ -628,11 +641,11 @@
       }
       ensureTools()
       syncCategoryChoice()
-      fillTree()
-      fillResults()
       homeView.classList.remove('hidden')
-      if (showingDetail()) showDetail(findSelected())
-      else hideDetail()
+      if (showingDetail()) {
+        paintHome()
+        showDetail(findSelected())
+      } else hideDetail()
     }
 
     function ensureTools() {
@@ -643,8 +656,7 @@
         value: query,
         oninput: (event) => {
           query = event.target.value
-          fillTree()
-          fillResults()
+          paintHome()
         },
       })
       const box = el('label', { class: 'check' }, [
@@ -652,8 +664,7 @@
           type: 'checkbox',
           onchange: (event) => {
             missingOnly = event.target.checked
-            fillTree()
-            fillResults()
+            paintHome()
           },
         }),
         '只看未填 index.txt',
@@ -675,9 +686,13 @@
       category = name
       activeNode = name ? `cat:${name}` : ''
       if (name) expanded.add(name)
+      paintHome()
+    }
+
+    function paintHome() {
       fillTree()
       fillResults()
-      revealActiveNode()
+      revealActive()
     }
 
     function fillTree() {
@@ -753,7 +768,7 @@
         const cat = catalog.categories.find((item) => item.name === category)
         const rows = products
         const section = el('section')
-        section.append(el('h2', {}, [`${category}（${rows.length}）`]))
+        section.append(categoryHeading(category, rows.length))
         if (cat?.loose_images) {
           section.append(el('p', { class: 'note' }, [
             `有 ${cat.loose_images} 張圖直接放在分類文件夾裡，尚未歸入商品。`,
@@ -769,7 +784,7 @@
           if (!rows.length && (query || missingOnly)) continue
           shown += 1
           const section = el('section')
-          section.append(el('h2', {}, [`${cat.name}（${rows.length}）`]))
+          section.append(categoryHeading(cat.name, rows.length))
           if (cat.loose_images) {
             section.append(el('p', { class: 'note' }, [
               `有 ${cat.loose_images} 張圖直接放在分類文件夾裡，尚未歸入商品。`,
@@ -786,6 +801,14 @@
       }
     }
 
+    function categoryHeading(name, count) {
+      return el('button', {
+        type: 'button',
+        class: 'section-head' + (activeNode === `cat:${name}` ? ' on' : ''),
+        onclick: () => setCategory(name),
+      }, [`${name}（${count}）`])
+    }
+
     function grid(products) {
       return el('div', { class: 'grid' }, products.map((product) => {
         const coverImage = product.images.find((image) => image.path === product.cover)
@@ -798,7 +821,12 @@
           : el('div', { class: 'ph' }, [coverImage?.heic ? 'HEIC' : '沒有圖片'])
         const bits = [`${product.images.length} 張`]
         if (!product.has_index) bits.push('未填說明')
-        return el('button', { class: 'card', type: 'button', onclick: () => openProduct(product) }, [
+        const on = activeNode === `item:${productKey(product)}`
+        return el('button', {
+          class: 'card' + (on ? ' on' : ''),
+          type: 'button',
+          onclick: () => openProduct(product),
+        }, [
           cover,
           el('strong', {}, [product.name]),
           el('div', { class: 'meta' + (product.has_index ? '' : ' badge') }, [bits.join(' · ')]),
@@ -806,8 +834,17 @@
       }))
     }
 
-    function revealActiveNode() {
-      tree.querySelector('.tree-row.on, .tree-item.on')?.scrollIntoView({ block: 'nearest' })
+    function scrollPaneTo(pane, node) {
+      if (!pane || !node) return
+      const paneRect = pane.getBoundingClientRect()
+      const nodeRect = node.getBoundingClientRect()
+      const delta = (nodeRect.top + nodeRect.height / 2) - (paneRect.top + paneRect.height / 2)
+      pane.scrollTop += delta
+    }
+
+    function revealActive() {
+      scrollPaneTo(tree, tree.querySelector('.tree-row.on, .tree-item.on'))
+      scrollPaneTo(list, list.querySelector('.section-head.on, .card.on'))
     }
 
     function openProduct(product) {
@@ -820,8 +857,7 @@
         category = product.category
         expanded.add(product.category)
       }
-      fillTree()
-      fillResults()
+      paintHome()
       showDetail(product)
     }
 
@@ -833,8 +869,7 @@
       crumbNav.textContent = ''
       detailView.classList.add('hidden')
       detailView.replaceChildren()
-      fillTree()
-      revealActiveNode()
+      paintHome()
     }
 
     function closeContextMenu() {
@@ -870,8 +905,7 @@
       light = -1
       indexDraft = null
       saveNote = ''
-      fillTree()
-      fillResults()
+      paintHome()
       const next = findSelected()
       if (next) showDetail(next)
       else hideDetail()
@@ -1023,8 +1057,7 @@
         catalog = data
         indexDraft = null
         saveNote = '已保存'
-        fillTree()
-        fillResults()
+        paintHome()
         const next = findSelected()
         if (next) showDetail(next)
         else hideDetail()
