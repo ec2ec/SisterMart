@@ -173,7 +173,14 @@
       padding: 0.4rem 0.6rem;
     }
     .bar input[type="search"] { width: min(22rem, 100%); }
-    .stats { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+    .stats {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
     .check { display: flex; gap: 0.35rem; align-items: center; color: var(--muted); font-size: 0.85rem; }
     #list {
       flex: 1 1 auto;
@@ -208,6 +215,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
+      width: 100%;
       padding: 0.45rem;
       border: 1px solid var(--line);
       border-radius: 0.6rem;
@@ -215,6 +223,19 @@
       text-align: left;
     }
     .card.on { border-color: #c4b5fd; }
+    .card-wrap { position: relative; min-width: 0; }
+    .card-wrap.picked .card { border-color: #9b3bfc; }
+    .card-wrap.multi .meta { padding-right: 1.35rem; }
+    .tick {
+      position: absolute;
+      right: 0.4rem;
+      bottom: 0.4rem;
+      z-index: 1;
+      width: 1.05rem;
+      height: 1.05rem;
+      margin: 0;
+      accent-color: #9b3bfc;
+    }
     .card img, .ph {
       width: 100%;
       aspect-ratio: 1;
@@ -563,6 +584,8 @@
     let saveNote = ''
     let expanded = new Set()
     let toolsReady = false
+    let multiOn = false
+    let picked = new Set()
     const FIELD_GROUPS = [
       [{ key: '編碼', en: 'Code' }],
       [
@@ -674,7 +697,22 @@
         '只看未填 index.txt',
       ])
       if (missingOnly) box.querySelector('input').checked = true
-      tools.replaceChildren(search, box, el('span', { id: 'stats', class: 'stats' }, ['']))
+      const multi = el('label', { class: 'check' }, [
+        el('input', {
+          type: 'checkbox',
+          id: 'multiPick',
+          onchange: (event) => {
+            multiOn = event.target.checked
+            if (!multiOn) picked.clear()
+            paintHome()
+          },
+        }),
+        '✅多選',
+      ])
+      tools.replaceChildren(search, box, el('span', { class: 'stats' }, [
+        multi,
+        el('span', { id: 'counts' }, ['']),
+      ]))
       toolsReady = true
     }
 
@@ -734,7 +772,6 @@
             class: 'tree-cat',
             onclick: () => setCategory(cat.name),
           }, [
-            el('span', { class: 'tree-icon' }, ['📁']),
             `${cat.name}（${rows.length}）`,
           ]),
         )
@@ -759,8 +796,8 @@
     function fillResults() {
       const products = allProducts().filter(visible)
       const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
-      const stats = document.querySelector('#stats')
-      if (stats) stats.textContent = `${products.length} 件商品 · ${imageCount} 張圖`
+      const counts = document.querySelector('#counts')
+      if (counts) counts.textContent = `${products.length} 件商品 · ${imageCount} 張圖`
       list.replaceChildren()
       if (!catalog.categories.length) {
         list.append(el('div', { class: 'empty' }, [
@@ -825,17 +862,47 @@
           : el('div', { class: 'ph' }, [coverImage?.heic ? 'HEIC' : '沒有圖片'])
         const bits = [`${product.images.length} 張`]
         if (!product.has_index) bits.push('未填說明')
-        const on = activeNode === `item:${productKey(product)}`
-        return el('button', {
+        const key = productKey(product)
+        const on = activeNode === `item:${key}`
+        const chosen = picked.has(key)
+        const wrap = el('div', {
+          class: 'card-wrap' + (multiOn ? ' multi' : '') + (chosen ? ' picked' : ''),
+        })
+        const button = el('button', {
           class: 'card' + (on ? ' on' : ''),
           type: 'button',
-          onclick: () => openProduct(product),
+          onclick: () => {
+            if (multiOn) togglePick(product)
+            else openProduct(product)
+          },
         }, [
           cover,
           el('strong', {}, [folderLabel(product)]),
           el('div', { class: 'meta' + (product.has_index ? '' : ' badge') }, [bits.join(' · ')]),
         ])
+        wrap.append(button)
+        if (multiOn) {
+          wrap.append(el('input', {
+            class: 'tick',
+            type: 'checkbox',
+            checked: chosen,
+            onclick: (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              togglePick(product)
+            },
+          }))
+        }
+        wrap.addEventListener('contextmenu', (event) => openFolderMenu(event, product))
+        return wrap
       }))
+    }
+
+    function togglePick(product) {
+      const key = productKey(product)
+      if (picked.has(key)) picked.delete(key)
+      else picked.add(key)
+      paintHome()
     }
 
     function scrollPaneTo(pane, node) {
@@ -913,6 +980,76 @@
       const next = findSelected()
       if (next) showDetail(next)
       else hideDetail()
+    }
+
+    async function moveProductsTo(products, to) {
+      closeContextMenu()
+      const response = await fetch('/api/product/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths: products.map(productKey), to }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        showModal({
+          title: '無法移動',
+          body: [el('p', { class: 'err' }, [data.error || '移動失敗'])],
+          actions: [{ label: '關閉', primary: true }],
+        })
+        return
+      }
+      catalog = data.catalog
+      picked.clear()
+      if (!data.moved.length) {
+        paintHome()
+        showModal({
+          title: '沒有移動',
+          body: [el('p', {}, ['這些商品已經在這個分類。'])],
+          actions: [{ label: '關閉', primary: true }],
+        })
+        return
+      }
+      const destName = data.moved[0].to.split('/')[0]
+      expanded.add(destName)
+      category = destName
+      activeNode = data.moved.length === 1 ? `item:${data.moved[0].to}` : `cat:${destName}`
+      paintHome()
+      if (data.failed?.length) {
+        showModal({
+          title: '有商品沒有移走',
+          body: data.failed.map((item) => el('p', { class: 'err' }, [`${item.path || '商品'}：${item.error}`])),
+          actions: [{ label: '關閉', primary: true }],
+        })
+      }
+    }
+
+    function openFolderMenu(event, product) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeContextMenu()
+      const key = productKey(product)
+      const group = multiOn && picked.size > 1 && picked.has(key)
+      const products = group
+        ? allProducts().filter((item) => picked.has(productKey(item)))
+        : [product]
+      const menu = el('div', { class: 'ctx-menu' }, [
+        el('div', { class: 'ctx-title' }, [group ? `已選中 ${products.length} 個商品` : `移動${product.folder}`]),
+        el('button', {
+          type: 'button',
+          onclick: () => moveProductsTo(products, '待整理'),
+        }, ['移到待整理']),
+        el('hr'),
+      ])
+      for (const cat of catalog.categories) {
+        if (cat.name === '待整理') continue
+        if (products.every((item) => item.category === cat.name)) continue
+        menu.append(el('button', {
+          type: 'button',
+          onclick: () => moveProductsTo(products, cat.name),
+        }, [cat.name]))
+      }
+      menu.append(el('hr'))
+      placeMenu(menu, event.clientX, event.clientY)
     }
 
     function openMoveMenu(event, product, image) {

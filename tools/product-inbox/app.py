@@ -247,6 +247,86 @@ def clear_cover_reference(product_rel: str, filename: str) -> None:
     write_index(product_rel, text)
 
 
+def category_dir(name: str, create: bool = False) -> Path:
+    name = urllib.parse.unquote(name or "").replace("\x00", "").strip()
+    if (
+        not name
+        or name in {".", ".."}
+        or "/" in name
+        or "\\" in name
+        or ":" in name
+        or name.startswith(".")
+    ):
+        raise PermissionError("路徑不允許")
+    root = ROOT.resolve()
+    if not root.is_dir():
+        raise ValueError("目錄不存在")
+    category = root / name
+    if category.is_symlink():
+        raise PermissionError("路徑不允許")
+    if category.exists() and not category.is_dir():
+        raise PermissionError("路徑不允許")
+    if not category.exists():
+        if not create:
+            raise FileNotFoundError("檔案不存在")
+        category.mkdir(parents=False, exist_ok=False)
+    resolved = category.resolve()
+    if resolved.parent != root:
+        raise PermissionError("路徑不允許")
+    return resolved
+
+
+def unique_folder_dest(category: Path, name: str) -> Path:
+    dest = category / name
+    if not dest.exists():
+        return dest
+    index = 1
+    while index < 1000:
+        candidate = category / f"{name}_{index}"
+        if not candidate.exists():
+            return candidate
+        index += 1
+    raise OSError("目標分類裡已有太多同名文件夾")
+
+
+def move_products(paths: list, to: str) -> dict:
+    if not isinstance(paths, list) or not paths:
+        raise ValueError("沒有選擇商品")
+    if len(paths) > 200:
+        raise ValueError("一次最多移動 200 個商品")
+    to = urllib.parse.unquote(str(to or "")).replace("\\", "/").strip().strip("/")
+    if to in {"待整理", "inbox", "_inbox"}:
+        dest_cat = category_dir("待整理", create=True)
+    else:
+        dest_cat = category_dir(to, create=False)
+    moved = []
+    skipped = []
+    failed = []
+    seen: set[str] = set()
+    for raw in paths:
+        if not isinstance(raw, str):
+            failed.append({"path": "", "error": "路徑不允許"})
+            continue
+        rel = urllib.parse.unquote(raw).replace("\\", "/").replace("\x00", "").strip().strip("/")
+        if rel in seen:
+            continue
+        seen.add(rel)
+        try:
+            src = product_dir(rel)
+            if src.parent.resolve() == dest_cat.resolve():
+                skipped.append(rel)
+                continue
+            dest = unique_folder_dest(dest_cat, src.name)
+            try:
+                src.rename(dest)
+            except OSError:
+                shutil.move(str(src), str(dest))
+            moved.append({"from": rel, "to": f"{dest_cat.name}/{dest.name}"})
+        except (PermissionError, FileNotFoundError, ValueError, OSError) as exc:
+            failed.append({"path": rel, "error": str(exc) or "無法移動"})
+    return {"moved": moved, "skipped": skipped, "failed": failed, "catalog": scan()}
+
+
 def move_image(src_rel: str, to_rel: str) -> dict:
     src_rel = urllib.parse.unquote(src_rel or "").replace("\\", "/").strip().strip("/")
     to_rel = urllib.parse.unquote(to_rel or "").replace("\\", "/").strip().strip("/")
@@ -644,6 +724,9 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/image/move":
             self._post_image_move()
             return
+        if parsed.path == "/api/product/move":
+            self._post_product_move()
+            return
         self._json({"error": "找不到"}, 404)
 
     def _read_json(self, limit: int) -> dict:
@@ -712,6 +795,28 @@ class Handler(BaseHTTPRequestHandler):
             if not src or not dest:
                 raise ValueError("請選擇要移動的圖片和目標商品")
             result = move_image(src, dest)
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        except FileNotFoundError:
+            self._json({"error": "檔案不存在"}, 404)
+            return
+        except OSError as exc:
+            self._json({"error": f"無法移動：{exc}"}, 500)
+            return
+        self._json(result)
+
+    def _post_product_move(self) -> None:
+        try:
+            body = self._read_json(65536)
+            dest = str(body.get("to") or "").strip()
+            paths = body.get("paths")
+            if not dest:
+                raise ValueError("請選擇目標分類")
+            result = move_products(paths, dest)
         except ValueError as exc:
             self._json({"error": str(exc)}, 400)
             return
