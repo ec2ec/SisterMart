@@ -14,7 +14,6 @@
       --accent: #9b3bfc;
       --accent-ink: #fff;
       --header-h: 3.1rem;
-      --nav-h: 2.7rem;
       --side-w: 16rem;
     }
     * { box-sizing: border-box; }
@@ -93,30 +92,6 @@
       padding: 0.35rem 0.7rem;
     }
     header button.ghost { background: transparent; color: #fff; border: 1px solid #4a4568; }
-    #catNav {
-      flex: 0 0 var(--nav-h);
-      display: flex;
-      gap: 0.35rem;
-      align-items: center;
-      padding: 0 0.85rem;
-      border-bottom: 1px solid var(--line);
-      background: #fff;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-    #catNav button {
-      flex: 0 0 auto;
-      border: 0;
-      border-radius: 0.35rem;
-      background: transparent;
-      color: var(--muted);
-      padding: 0.3rem 0.7rem;
-      white-space: nowrap;
-    }
-    #catNav button.on {
-      background: #16162b;
-      color: #fff;
-    }
     #workspace {
       position: relative;
       flex: 1 1 auto;
@@ -440,7 +415,6 @@
     <button type="button" class="ghost" id="openSetup">設定目錄</button>
     <button type="button" class="info" id="rootInfo" aria-label="商品圖目錄">ℹ️<span class="tip" id="rootTip">正在讀取…</span></button>
   </header>
-  <nav id="catNav" class="hidden" aria-label="分類"></nav>
   <div id="workspace">
     <div id="homeView" class="hidden">
       <aside id="tree"></aside>
@@ -452,7 +426,6 @@
     <div id="detailView" class="hidden"></div>
   </div>
   <script>
-    const catNav = document.querySelector('#catNav')
     const homeView = document.querySelector('#homeView')
     const detailView = document.querySelector('#detailView')
     const tree = document.querySelector('#tree')
@@ -540,7 +513,6 @@
       rootTip.textContent = catalog.root
       document.querySelector('.setup')?.remove()
       if (!catalog.root_ok) {
-        catNav.classList.add('hidden')
         homeView.classList.add('hidden')
         detailView.classList.add('hidden')
         crumbNav.textContent = ''
@@ -549,7 +521,6 @@
       }
       ensureTools()
       syncCategoryChoice()
-      fillNav()
       fillTree()
       fillResults()
       homeView.classList.remove('hidden')
@@ -596,24 +567,8 @@
     function setCategory(name) {
       category = name
       if (name) expanded.add(name)
-      fillNav()
       fillTree()
       fillResults()
-    }
-
-    function fillNav() {
-      catNav.replaceChildren(el('button', {
-        type: 'button',
-        class: category ? '' : 'on',
-        onclick: () => setCategory(''),
-      }, ['全部']))
-      for (const cat of catalog.categories) {
-        catNav.append(el('button', {
-          type: 'button',
-          class: category === cat.name ? 'on' : '',
-          onclick: () => setCategory(cat.name),
-        }, [`${cat.name}（${cat.products.length}）`]))
-      }
     }
 
     function fillTree() {
@@ -622,6 +577,14 @@
         tree.append(el('div', { class: 'empty' }, ['還沒有分類文件夾。']))
         return
       }
+      tree.append(el('button', {
+        type: 'button',
+        class: 'tree-item' + (category ? '' : ' on'),
+        onclick: () => setCategory(''),
+      }, [
+        el('span', { class: 'tree-icon' }, ['📁']),
+        '全部',
+      ]))
       for (const cat of catalog.categories) {
         const open = expanded.has(cat.name)
         const rows = cat.products.filter(matchesQuery)
@@ -743,7 +706,6 @@
         category = product.category
         expanded.add(product.category)
       }
-      fillNav()
       fillTree()
       fillResults()
       showDetail(product)
@@ -757,13 +719,11 @@
       crumbNav.textContent = ''
       detailView.classList.add('hidden')
       detailView.replaceChildren()
-      catNav.classList.remove('hidden')
       fillTree()
     }
 
     function showDetail(product) {
       crumbNav.textContent = `${product.category} / ${product.folder}`
-      catNav.classList.add('hidden')
       detailView.classList.remove('hidden')
       detailView.replaceChildren()
       detailView.append(indexEditor(product))
@@ -872,7 +832,6 @@
         catalog = data
         indexDraft = null
         saveNote = '已保存'
-        fillNav()
         fillTree()
         fillResults()
         const next = findSelected()
@@ -1038,7 +997,6 @@
         catalog = await response.json()
       } catch (err) {
         rootTip.textContent = '無法連上本機程式'
-        catNav.classList.add('hidden')
         homeView.classList.add('hidden')
         detailView.classList.add('hidden')
         document.querySelector('.setup')?.remove()
@@ -1055,7 +1013,6 @@
     document.querySelector('#rescan').onclick = load
     document.querySelector('#openSetup').onclick = () => {
       hideDetail()
-      catNav.classList.add('hidden')
       homeView.classList.add('hidden')
       document.querySelector('.setup')?.remove()
       document.querySelector('#workspace').append(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
