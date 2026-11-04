@@ -250,6 +250,13 @@
     }
     .ph { display: grid; place-items: center; color: var(--muted); font-size: 0.8rem; }
     .card strong { font-size: 0.92rem; overflow-wrap: anywhere; }
+    .card-name {
+      margin-top: -0.15rem;
+      color: var(--ink);
+      font-size: 0.82rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
     .meta { color: var(--muted); font-size: 0.78rem; }
     .badge { color: #9a5b12; }
     #detailView {
@@ -642,6 +649,10 @@
       const code = (product.fields || []).find((field) => field.key === '編碼' && field.value.trim())
       return code ? `${product.folder} - ${code.value.trim()}` : product.folder
     }
+    function productName(product) {
+      const name = (product.fields || []).find((field) => field.key === '名稱' && field.value.trim())
+      return name ? name.value.trim() : ''
+    }
     function matchesQuery(product) {
       if (missingOnly && product.has_index) return false
       const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
@@ -892,6 +903,13 @@
         const wrap = el('div', {
           class: 'card-wrap' + (multiOn ? ' multi' : '') + (chosen ? ' picked' : ''),
         })
+        const lines = [
+          cover,
+          el('strong', {}, [folderLabel(product)]),
+        ]
+        const title = productName(product)
+        if (title) lines.push(el('div', { class: 'card-name' }, [title]))
+        lines.push(el('div', { class: 'meta' + (product.has_index ? '' : ' badge') }, [bits.join(' · ')]))
         const button = el('button', {
           class: 'card' + (on ? ' on' : ''),
           type: 'button',
@@ -899,11 +917,7 @@
             if (multiOn) togglePick(product)
             else openProduct(product)
           },
-        }, [
-          cover,
-          el('strong', {}, [folderLabel(product)]),
-          el('div', { class: 'meta' + (product.has_index ? '' : ' badge') }, [bits.join(' · ')]),
-        ])
+        }, lines)
         wrap.append(button)
         if (multiOn) {
           wrap.append(el('input', {
