@@ -302,6 +302,47 @@
     }
     .photos img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
     .photos span { display: block; padding: 0.25rem 0.4rem 0.4rem; font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+    .ctx-menu {
+      position: fixed;
+      z-index: 50;
+      min-width: 12rem;
+      max-width: min(20rem, calc(100vw - 1rem));
+      max-height: min(70vh, 28rem);
+      overflow: auto;
+      padding: 0.35rem;
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+      background: #fff;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }
+    .ctx-menu .ctx-title {
+      padding: 0.35rem 0.55rem 0.45rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .ctx-menu .ctx-head {
+      padding: 0.35rem 0.55rem 0.15rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 650;
+    }
+    .ctx-menu button {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: inherit;
+      padding: 0.4rem 0.55rem;
+      text-align: left;
+    }
+    .ctx-menu button:hover { background: #efe8ff; }
+    .ctx-menu button.danger { color: #9f1239; }
+    .ctx-menu hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 0.35rem 0.2rem;
+    }
     .empty, .setup {
       padding: 1.2rem;
       background: #fff;
@@ -780,7 +821,79 @@
       fillTree()
     }
 
+    function closeContextMenu() {
+      document.querySelectorAll('.ctx-menu').forEach((node) => node.remove())
+    }
+
+    function placeMenu(menu, clientX, clientY) {
+      document.body.append(menu)
+      const rect = menu.getBoundingClientRect()
+      const x = Math.min(clientX, window.innerWidth - rect.width - 8)
+      const y = Math.min(clientY, window.innerHeight - rect.height - 8)
+      menu.style.left = `${Math.max(8, x)}px`
+      menu.style.top = `${Math.max(8, y)}px`
+    }
+
+    async function moveImageTo(image, to) {
+      closeContextMenu()
+      const response = await fetch('/api/image/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: image.path, to }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        showModal({
+          title: '無法移動',
+          body: [el('p', { class: 'err' }, [data.error || '移動失敗'])],
+          actions: [{ label: '關閉', primary: true }],
+        })
+        return
+      }
+      catalog = data.catalog
+      light = -1
+      indexDraft = null
+      saveNote = ''
+      fillTree()
+      fillResults()
+      const next = findSelected()
+      if (next) showDetail(next)
+      else hideDetail()
+    }
+
+    function openMoveMenu(event, product, image) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeContextMenu()
+      const menu = el('div', { class: 'ctx-menu' }, [
+        el('div', { class: 'ctx-title' }, [`移動 ${image.name}`]),
+        el('button', {
+          type: 'button',
+          onclick: () => moveImageTo(image, '待整理'),
+        }, ['移到待整理']),
+        el('hr'),
+      ])
+      let targets = 0
+      for (const cat of catalog.categories) {
+        const rows = cat.products.filter((item) => productKey(item) !== productKey(product))
+        if (!rows.length) continue
+        menu.append(el('div', { class: 'ctx-head' }, [cat.name]))
+        for (const item of rows) {
+          targets += 1
+          menu.append(el('button', {
+            type: 'button',
+            onclick: () => moveImageTo(image, productKey(item)),
+          }, [item.folder === item.name ? item.folder : `${item.folder}（${item.name}）`]))
+        }
+      }
+      if (!targets) {
+        menu.append(el('div', { class: 'ctx-title' }, ['目前沒有其他商品文件夾可選。']))
+      }
+      placeMenu(menu, event.clientX, event.clientY)
+    }
+
     function showDetail(product) {
+      closeContextMenu()
       crumbNav.textContent = `${product.category} / ${product.folder}`
       detailView.classList.remove('hidden')
       detailView.replaceChildren()
@@ -791,15 +904,19 @@
       } else if (light >= 0) {
         pane.append(renderLight(product))
       } else {
-        pane.append(el('div', { class: 'photos' }, product.images.map((image, index) => el('button', {
-          type: 'button',
-          onclick: () => openLight(index),
-        }, [
-          image.heic
-            ? el('div', { class: 'ph' }, ['HEIC'])
-            : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
-          el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
-        ]))))
+        pane.append(el('div', { class: 'photos' }, product.images.map((image, index) => {
+          const button = el('button', {
+            type: 'button',
+            onclick: () => openLight(index),
+          }, [
+            image.heic
+              ? el('div', { class: 'ph' }, ['HEIC'])
+              : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
+            el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
+          ])
+          button.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
+          return button
+        })))
       }
       detailView.append(pane)
     }
@@ -1008,6 +1125,7 @@
         stage.append(frame)
         box.querySelector('header').append(presetBar)
         apply()
+        frame.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
       }
       if (product.images.length > 1) {
         stage.append(el('button', { class: 'nav prev', type: 'button', onclick: () => step(-1) }, ['‹']))
@@ -1179,16 +1297,26 @@
     }
 
     document.querySelector('#home').onclick = () => {
+      closeContextMenu()
       hideDetail()
     }
     document.querySelector('#rescan').onclick = load
     document.querySelector('#openSetup').onclick = () => {
+      closeContextMenu()
       hideDetail()
       homeView.classList.add('hidden')
       document.querySelector('.setup')?.remove()
       document.querySelector('#workspace').append(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
     }
+    document.addEventListener('pointerdown', (event) => {
+      if (!event.target.closest('.ctx-menu')) closeContextMenu()
+    })
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && document.querySelector('.ctx-menu')) {
+        event.preventDefault()
+        closeContextMenu()
+        return
+      }
       if (!showingDetail()) return
       if (event.key === 'Escape') {
         event.preventDefault()

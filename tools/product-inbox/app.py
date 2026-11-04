@@ -188,6 +188,106 @@ def write_index(rel: str, text: str) -> None:
             tmp.unlink()
 
 
+STAGING_PRODUCT = "待整理/待歸檔"
+
+
+def ensure_product_dir(rel: str) -> Path:
+    rel = urllib.parse.unquote(rel or "").replace("\\", "/").replace("\x00", "").strip().strip("/")
+    parts = [part for part in rel.split("/") if part not in {"", "."}]
+    if len(parts) != 2 or any(part == ".." or part.startswith("._") or ":" in part for part in parts):
+        raise PermissionError("路徑不允許")
+    root = ROOT.resolve()
+    if not root.is_dir():
+        raise ValueError("目錄不存在")
+    category = root / parts[0]
+    folder = category / parts[1]
+    if category.exists() and (category.is_symlink() or not category.is_dir()):
+        raise PermissionError("路徑不允許")
+    if folder.exists() and (folder.is_symlink() or not folder.is_dir()):
+        raise PermissionError("路徑不允許")
+    category.mkdir(parents=False, exist_ok=True)
+    folder.mkdir(parents=False, exist_ok=True)
+    resolved = folder.resolve()
+    if resolved.parent != category.resolve() or category.resolve().parent != root:
+        raise PermissionError("路徑不允許")
+    return resolved
+
+
+def unique_image_dest(folder: Path, name: str) -> Path:
+    dest = folder / name
+    if not dest.exists():
+        return dest
+    stem = Path(name).stem
+    suffix = Path(name).suffix
+    index = 1
+    while True:
+        candidate = folder / f"{stem}_{index}{suffix}"
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def clear_cover_reference(product_rel: str, filename: str) -> None:
+    folder = product_dir(product_rel)
+    index_path = folder / "index.txt"
+    fields = parse_index(index_path)
+    if not fields:
+        return
+    changed = False
+    rows: list[dict[str, str]] = []
+    for field in fields:
+        if field["key"] == "主圖" and field["value"].casefold() == filename.casefold():
+            rows.append({"key": "主圖", "value": ""})
+            changed = True
+        else:
+            rows.append(field)
+    if not changed:
+        return
+    text = "".join(f'{row["key"]}：{row["value"]}\n' for row in rows)
+    write_index(product_rel, text)
+
+
+def move_image(src_rel: str, to_rel: str) -> dict:
+    src_rel = urllib.parse.unquote(src_rel or "").replace("\\", "/").strip().strip("/")
+    to_rel = urllib.parse.unquote(to_rel or "").replace("\\", "/").strip().strip("/")
+    if to_rel in {"待整理", "inbox", "_inbox"}:
+        to_rel = STAGING_PRODUCT
+    src = safe_path(src_rel)
+    if not is_image_file(src):
+        raise FileNotFoundError("檔案不存在")
+    parts = [part for part in src_rel.split("/") if part]
+    if len(parts) != 3:
+        raise ValueError("只能移動商品文件夾裡的圖片")
+    src_product = f"{parts[0]}/{parts[1]}"
+    filename = parts[2]
+    if to_rel == src_product:
+        raise ValueError("已經在這個商品文件夾")
+    if to_rel == STAGING_PRODUCT:
+        dest_folder = ensure_product_dir(to_rel)
+    else:
+        dest_folder = product_dir(to_rel)
+    dest = unique_image_dest(dest_folder, filename)
+    src.rename(dest)
+    sidecar = src.parent / f"._{filename}"
+    if sidecar.is_file() and not sidecar.is_symlink():
+        side_dest = dest_folder / f"._{dest.name}"
+        if side_dest.exists():
+            side_dest = unique_image_dest(dest_folder, f"._{dest.stem}{dest.suffix}")
+        try:
+            sidecar.rename(side_dest)
+        except OSError:
+            pass
+    try:
+        clear_cover_reference(src_product, filename)
+    except (FileNotFoundError, PermissionError, ValueError, OSError):
+        pass
+    return {
+        "from": src_rel,
+        "to": f"{to_rel}/{dest.name}",
+        "catalog": scan(),
+    }
+
+
 def read_product(category: str, folder: Path, root: Path) -> dict:
     fields = parse_index(folder / "index.txt")
     images = list_images(folder)
@@ -541,6 +641,9 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/heic/convert":
             self._post_heic_convert()
             return
+        if parsed.path == "/api/image/move":
+            self._post_image_move()
+            return
         self._json({"error": "找不到"}, 404)
 
     def _read_json(self, limit: int) -> dict:
@@ -598,6 +701,28 @@ class Handler(BaseHTTPRequestHandler):
             return
         except PermissionError as exc:
             self._json({"error": str(exc)}, 403)
+            return
+        self._json(result)
+
+    def _post_image_move(self) -> None:
+        try:
+            body = self._read_json(8192)
+            src = str(body.get("path") or "").strip()
+            dest = str(body.get("to") or "").strip()
+            if not src or not dest:
+                raise ValueError("請選擇要移動的圖片和目標商品")
+            result = move_image(src, dest)
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        except FileNotFoundError:
+            self._json({"error": "檔案不存在"}, 404)
+            return
+        except OSError as exc:
+            self._json({"error": f"無法移動：{exc}"}, 500)
             return
         self._json(result)
 
