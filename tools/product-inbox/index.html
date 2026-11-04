@@ -240,7 +240,7 @@
       inset: 0;
       z-index: 4;
       display: grid;
-      grid-template-columns: minmax(12rem, 16.5rem) minmax(0, 1fr);
+      grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
       gap: 1rem;
       padding: 0.85rem 1rem 1rem;
       background: var(--paper);
@@ -249,25 +249,58 @@
     .editor {
       display: flex;
       flex-direction: column;
-      gap: 0.45rem;
+      gap: 0.55rem;
       min-height: 0;
-    }
-    .editor textarea {
-      flex: 1 1 auto;
-      width: 100%;
-      min-height: 0;
-      margin: 0;
+      overflow: auto;
       padding: 0.75rem 0.85rem;
       border: 1px solid var(--line);
       border-radius: 0.6rem;
       background: #fff;
-      resize: none;
-      line-height: 1.55;
-      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      font-size: 0.92rem;
+    }
+    .editor .fields {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      flex: 1 1 auto;
+    }
+    .editor .group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px dashed var(--line);
+    }
+    .editor .group:last-of-type { border-bottom: 0; padding-bottom: 0; }
+    .editor label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .editor .label-text {
+      display: flex;
+      gap: 0.45rem;
+      align-items: baseline;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .editor .label-text .zh { color: var(--ink); font-weight: 600; }
+    .editor .label-text .en { color: var(--muted); }
+    .editor input, .editor textarea {
+      width: 100%;
+      margin: 0;
+      padding: 0.4rem 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 0.4rem;
+      background: #fff;
+      font: inherit;
+    }
+    .editor textarea {
+      min-height: 4.5rem;
+      resize: vertical;
+      line-height: 1.5;
     }
     .editor .row { display: flex; gap: 0.6rem; align-items: center; }
-    .editor button {
+    .editor .row button {
       border: 0;
       border-radius: 0.4rem;
       background: var(--accent);
@@ -437,21 +470,23 @@
     let saveNote = ''
     let expanded = new Set()
     let toolsReady = false
-    const INDEX_TEMPLATE = [
-      '--------',
-      '編碼：',
-      '--------',
-      '名稱：',
-      '英文名：',
-      '--------',
-      '批發價：',
-      '劃線價：',
-      '售價：',
-      '--------',
-      '主圖：',
-      '備註：',
-      '--------',
-    ].join('\n')
+    const FIELD_GROUPS = [
+      [{ key: '編碼', en: 'Code' }],
+      [
+        { key: '名稱', en: 'Name' },
+        { key: '英文名', en: 'English Name' },
+      ],
+      [
+        { key: '批發價', en: 'Wholesale' },
+        { key: '劃線價', en: 'Compare At' },
+        { key: '售價', en: 'Price' },
+      ],
+      [
+        { key: '主圖', en: 'Cover' },
+        { key: '備註', en: 'Notes', multiline: true },
+      ],
+    ]
+    const FIELD_KEYS = FIELD_GROUPS.flat().map((field) => field.key)
 
     function el(tag, attrs, kids) {
       const node = document.createElement(tag)
@@ -751,24 +786,81 @@
       detailView.append(pane)
     }
 
-    function indexEditor(product) {
-      const hint = el('span', { class: saveNote.startsWith('無法') ? 'err' : 'saved' }, [saveNote])
-      const area = el('textarea', { spellcheck: 'false' })
-      const stored = product.index_text || ''
-      area.value = indexDraft == null ? (stored.trim() ? stored : INDEX_TEMPLATE) : indexDraft
-      area.addEventListener('input', () => {
-        indexDraft = area.value
+    function valuesFromProduct(product) {
+      const values = {}
+      for (const key of FIELD_KEYS) values[key] = ''
+      for (const field of product.fields || []) {
+        if (!field.key) continue
+        if (values[field.key] == null) values[field.key] = field.value || ''
+        else if (!values[field.key] && field.value) values[field.key] = field.value
+      }
+      return values
+    }
+
+    function serializeFields(values) {
+      const lines = []
+      for (const key of FIELD_KEYS) lines.push(`${key}：${values[key] || ''}`)
+      for (const [key, value] of Object.entries(values)) {
+        if (FIELD_KEYS.includes(key)) continue
+        if (!(value || '').trim()) continue
+        lines.push(`${key}：${value}`)
+      }
+      return lines.join('\n') + '\n'
+    }
+
+    function fieldInput(def, values) {
+      const input = def.multiline
+        ? el('textarea', { spellcheck: 'false', rows: '3' })
+        : el('input', { type: 'text', spellcheck: 'false' })
+      input.value = values[def.key] || ''
+      input.dataset.key = def.key
+      input.addEventListener('input', () => {
+        if (!indexDraft) indexDraft = { ...values }
+        indexDraft[def.key] = input.value
         saveNote = ''
-        hint.textContent = ''
+        const hint = document.querySelector('#saveHint')
+        if (hint) hint.textContent = ''
       })
+      return el('label', {}, [
+        el('div', { class: 'label-text' }, [
+          el('span', { class: 'zh' }, [def.key]),
+          el('span', { class: 'en' }, [def.en]),
+        ]),
+        input,
+      ])
+    }
+
+    function indexEditor(product) {
+      const hint = el('span', { id: 'saveHint', class: saveNote.startsWith('無法') ? 'err' : 'saved' }, [saveNote])
+      const values = indexDraft ? { ...indexDraft } : valuesFromProduct(product)
+      const extras = Object.keys(values).filter((key) => !FIELD_KEYS.includes(key))
+      const fields = el('div', { class: 'fields' })
+      for (const group of FIELD_GROUPS) {
+        fields.append(el('div', { class: 'group' }, group.map((def) => fieldInput(def, values))))
+      }
+      if (extras.length) {
+        fields.append(el('div', { class: 'group' }, extras.map((key) => fieldInput({
+          key,
+          en: 'Custom',
+          multiline: key === '備註',
+        }, values))))
+      }
       const save = async () => {
+        const current = {}
+        for (const input of fields.querySelectorAll('input, textarea')) {
+          current[input.dataset.key] = input.value
+        }
+        indexDraft = current
         saveNote = ''
         hint.className = 'saved'
         hint.textContent = '正在保存…'
         const response = await fetch('/api/index', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: `${product.category}/${product.folder}`, text: area.value }),
+          body: JSON.stringify({
+            path: `${product.category}/${product.folder}`,
+            text: serializeFields(current),
+          }),
         })
         const data = await response.json()
         if (!response.ok) {
@@ -787,19 +879,20 @@
         if (next) showDetail(next)
         else hideDetail()
       }
-      area.addEventListener('keydown', (event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-          event.preventDefault()
-          save()
-        }
-      })
-      return el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
-        area,
+      const form = el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
+        fields,
         el('div', { class: 'row' }, [
           el('button', { type: 'submit' }, ['保存']),
           hint,
         ]),
       ])
+      form.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+          event.preventDefault()
+          save()
+        }
+      })
+      return form
     }
 
     function openLight(index) {
