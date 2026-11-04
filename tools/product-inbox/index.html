@@ -442,6 +442,12 @@
       font-size: 0.82rem;
     }
     .zoom-presets button.on { background: #fff; color: #16162b; }
+    .zoom-presets button.turn {
+      margin-left: 0.15rem;
+      padding-inline: 0.35rem;
+      font-size: 1rem;
+      line-height: 1;
+    }
     .lightbox .stage {
       position: relative;
       flex: 1;
@@ -1246,6 +1252,7 @@
         let zoom = 100
         let panX = 0
         let panY = 0
+        let rotation = 0
         let accum = 0
         let drag = null
         const presets = [50, 100, 200, 300]
@@ -1253,9 +1260,23 @@
           type: 'button',
           onclick: () => setScale(value),
         }, [`${value}%`]))
-        const presetBar = el('div', { class: 'zoom-presets' }, presetButtons)
+        const rotateBy = (delta) => {
+          rotation = (rotation + delta + 360) % 360
+          apply()
+        }
+        const turnButtons = [
+          el('button', { class: 'turn', type: 'button', title: '逆時針旋轉', onclick: () => rotateBy(-90) }, ['⤵️']),
+          el('button', { class: 'turn', type: 'button', title: '順時針旋轉', onclick: () => rotateBy(90) }, ['⤴️']),
+        ]
+        const presetBar = el('div', { class: 'zoom-presets' }, [...presetButtons, ...turnButtons])
+        const spin = (x, y, deg) => {
+          const rad = deg * Math.PI / 180
+          const c = Math.cos(rad)
+          const s = Math.sin(rad)
+          return [c * x - s * y, s * x + c * y]
+        }
         const apply = () => {
-          img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom / 100})`
+          img.style.transform = `translate(${panX}px, ${panY}px) rotate(${rotation}deg) scale(${zoom / 100})`
           zoomLabel.textContent = `${zoom}%`
           presetButtons.forEach((button, index) => button.classList.toggle('on', presets[index] === zoom))
         }
@@ -1272,11 +1293,13 @@
           const rect = frame.getBoundingClientRect()
           const cx = clientX - rect.left - rect.width / 2
           const cy = clientY - rect.top - rect.height / 2
-          const localX = (cx - panX) / (zoom / 100)
-          const localY = (cy - panY) / (zoom / 100)
+          const [ux, uy] = spin(cx - panX, cy - panY, -rotation)
+          const localX = ux / (zoom / 100)
+          const localY = uy / (zoom / 100)
           zoom = next
-          panX = cx - localX * (zoom / 100)
-          panY = cy - localY * (zoom / 100)
+          const [rx, ry] = spin(localX * (zoom / 100), localY * (zoom / 100), rotation)
+          panX = cx - rx
+          panY = cy - ry
           apply()
         }
         frame.addEventListener('wheel', (event) => {
