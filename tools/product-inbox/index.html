@@ -710,10 +710,10 @@
           onchange: (event) => {
             multiOn = event.target.checked
             if (!multiOn) picked.clear()
-            paintHome()
+            paintHome(false)
           },
         }),
-        '✅多選',
+        el('span', { id: 'pickLabel' }, ['多選 （已選中 0 個）']),
       ])
       tools.replaceChildren(search, box, el('span', { class: 'stats' }, [
         multi,
@@ -737,10 +737,21 @@
       paintHome()
     }
 
-    function paintHome() {
+    function paintHome(align = true) {
+      const treeTop = tree.scrollTop
+      const listTop = list.scrollTop
       fillTree()
       fillResults()
-      revealActive()
+      if (align) {
+        revealActive()
+        return
+      }
+      const keep = () => {
+        tree.scrollTop = treeTop
+        list.scrollTop = listTop
+      }
+      keep()
+      requestAnimationFrame(keep)
     }
 
     function fillTree() {
@@ -804,6 +815,8 @@
       const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
       const counts = document.querySelector('#counts')
       if (counts) counts.textContent = `${products.length} 件商品 · ${imageCount} 張圖`
+      const pickLabel = document.querySelector('#pickLabel')
+      if (pickLabel) pickLabel.textContent = `多選 （已選中 ${picked.size} 個）`
       list.replaceChildren()
       if (!catalog.categories.length) {
         list.append(el('div', { class: 'empty' }, [
@@ -908,7 +921,7 @@
       const key = productKey(product)
       if (picked.has(key)) picked.delete(key)
       else picked.add(key)
-      paintHome()
+      paintHome(false)
     }
 
     function scrollPaneTo(pane, node) {
