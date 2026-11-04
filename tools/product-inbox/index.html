@@ -401,6 +401,64 @@
     .nav.prev { left: 0.6rem; }
     .nav.next { right: 0.6rem; }
     .hidden { display: none !important; }
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(12, 10, 20, 0.45);
+    }
+    .modal {
+      width: min(36rem, 100%);
+      max-height: min(80vh, 40rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1rem 1.1rem 1rem;
+      border-radius: 0.6rem;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+    }
+    .modal h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+    .modal p {
+      margin: 0;
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    .modal .actions {
+      display: flex;
+      gap: 0.55rem;
+      justify-content: flex-end;
+    }
+    .modal .actions button {
+      border: 0;
+      border-radius: 0.4rem;
+      background: #ece7e0;
+      color: var(--ink);
+      padding: 0.4rem 0.85rem;
+    }
+    .modal .actions button.primary {
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+    .modal pre {
+      margin: 0;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 0.7rem 0.8rem;
+      border-radius: 0.45rem;
+      background: #f4f1ec;
+      color: #2b2622;
+      font: 0.82rem/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     @media (max-width: 800px) {
       #homeView, #detailView { grid-template-columns: 1fr; }
       #tree { max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -990,7 +1048,97 @@
       return el('div', { class: 'setup' }, [el('p', {}, [message]), input, save, hint])
     }
 
+    function closeModal() {
+      document.querySelectorAll('.modal-mask').forEach((node) => node.remove())
+    }
+
+    function showModal({ title, body, actions }) {
+      closeModal()
+      const mask = el('div', { class: 'modal-mask' })
+      const box = el('div', { class: 'modal' }, [
+        el('h3', {}, [title]),
+        ...(Array.isArray(body) ? body : [body]),
+      ])
+      const row = el('div', { class: 'actions' })
+      for (const action of actions || []) {
+        row.append(el('button', {
+          type: 'button',
+          class: action.primary ? 'primary' : '',
+          onclick: async () => {
+            if (action.keepOpen) {
+              await action.onclick?.()
+              return
+            }
+            closeModal()
+            await action.onclick?.()
+          },
+        }, [action.label]))
+      }
+      box.append(row)
+      mask.append(box)
+      mask.addEventListener('click', (event) => {
+        if (event.target === mask) closeModal()
+      })
+      document.body.append(mask)
+      return { mask, box }
+    }
+
+    async function askHeicConvert(count, hiddenCount, convertOk) {
+      return new Promise((resolve) => {
+        const lines = [
+          `掃描發現 ${count} 個 HEIC 文件` + (hiddenCount ? `，另有 ${hiddenCount} 個隱藏 HEIC（._ 開頭）。` : '。'),
+          '是否轉換成 JPG，並刪除原 HEIC 與隱藏 HEIC？',
+        ]
+        if (!convertOk) {
+          lines.push('目前這個環境無法轉換 HEIC，請在 Mac 上操作，或先安裝 pillow-heif。')
+        }
+        showModal({
+          title: '發現 HEIC 文件',
+          body: lines.map((line) => el('p', {}, [line])),
+          actions: [
+            { label: '稍後處理', onclick: () => resolve(false) },
+            {
+              label: convertOk ? '轉換並刪除' : '知道了',
+              primary: true,
+              onclick: () => resolve(Boolean(convertOk)),
+            },
+          ],
+        })
+      })
+    }
+
+    function showHeicLog(result) {
+      const log = el('pre', {}, [(result.logs || []).join('\n')])
+      showModal({
+        title: result.ok ? 'HEIC 轉換完成' : 'HEIC 轉換完成（有失敗項目）',
+        body: [
+          el('p', {}, [
+            `轉換 ${result.converted || 0}，跳過 ${result.skipped || 0}，刪除 ${result.deleted || 0}` +
+            (result.failed ? `，失敗 ${result.failed}` : '') + '。',
+          ]),
+          log,
+        ],
+        actions: [{ label: '關閉', primary: true }],
+      })
+    }
+
+    async function convertHeic() {
+      const response = await fetch('/api/heic/convert', { method: 'POST' })
+      const data = await response.json()
+      if (!response.ok) {
+        showModal({
+          title: '無法轉換',
+          body: [el('p', { class: 'err' }, [data.error || '轉換失敗'])],
+          actions: [{ label: '關閉', primary: true }],
+        })
+        return null
+      }
+      return data
+    }
+
     async function load() {
+      const button = document.querySelector('#rescan')
+      button.disabled = true
       try {
         const response = await fetch('/api/catalog')
         if (!response.ok) throw new Error('讀取失敗')
@@ -1001,10 +1149,33 @@
         detailView.classList.add('hidden')
         document.querySelector('.setup')?.remove()
         document.querySelector('#workspace').append(el('div', { class: 'setup err' }, ['無法讀取商品目錄，請確認程式仍在運行後按重新掃描。']))
+        button.disabled = false
         return
       }
       if (selectedKey && !findSelected()) selectedKey = ''
       render()
+      button.disabled = false
+      const heicCount = catalog.heic_count || 0
+      if (heicCount > 0) {
+        const shouldConvert = await askHeicConvert(
+          heicCount,
+          catalog.heic_hidden_count || 0,
+          catalog.heic_convert_ok,
+        )
+        if (!shouldConvert) return
+        button.disabled = true
+        try {
+          const result = await convertHeic()
+          if (result?.catalog) {
+            catalog = result.catalog
+            if (selectedKey && !findSelected()) selectedKey = ''
+            render()
+          }
+          if (result) showHeicLog(result)
+        } finally {
+          button.disabled = false
+        }
+      }
     }
 
     document.querySelector('#home').onclick = () => {

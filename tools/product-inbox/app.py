@@ -269,10 +269,14 @@ def scan() -> dict:
                     "loose_images": loose_in_cat,
                 }
             )
+    heic_files, heic_hidden = collect_heic(root) if root.is_dir() else ([], [])
     return {
         "root": str(root),
         "root_ok": root.is_dir(),
         "heic_ok": can_preview_heic(),
+        "heic_convert_ok": can_convert_heic(),
+        "heic_count": len(heic_files),
+        "heic_hidden_count": len(heic_hidden),
         "loose_images": loose,
         "categories": categories,
     }
@@ -280,6 +284,157 @@ def scan() -> dict:
 
 def can_preview_heic() -> bool:
     return HEIC_OK or shutil.which("sips") is not None
+
+
+def can_convert_heic() -> bool:
+    return can_preview_heic()
+
+
+def under_root(path: Path, root: Path) -> bool:
+    try:
+        resolved = path.resolve()
+        base = root.resolve()
+    except OSError:
+        return False
+    return resolved == base or base in resolved.parents
+
+
+def collect_heic(root: Path | None = None) -> tuple[list[Path], list[Path]]:
+    base = root or ROOT
+    real: list[Path] = []
+    hidden: list[Path] = []
+    if not base.is_dir():
+        return real, hidden
+    try:
+        paths = list(base.rglob("*"))
+    except OSError:
+        return real, hidden
+    for path in paths:
+        try:
+            if path.is_symlink() or not path.is_file():
+                continue
+            if path.suffix.lower() not in HEIC_EXT:
+                continue
+            if not under_root(path, base):
+                continue
+        except OSError:
+            continue
+        if is_appledouble(path.name):
+            hidden.append(path)
+        else:
+            real.append(path)
+    real.sort(key=lambda p: p.as_posix().casefold())
+    hidden.sort(key=lambda p: p.as_posix().casefold())
+    return real, hidden
+
+
+def heic_rel(path: Path, root: Path | None = None) -> str:
+    base = (root or ROOT).resolve()
+    try:
+        return path.resolve().relative_to(base).as_posix()
+    except ValueError:
+        return path.name
+
+
+def convert_heic_file(src: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if shutil.which("sips"):
+        result = subprocess.run(
+            [
+                "sips",
+                "-s",
+                "format",
+                "jpeg",
+                "-s",
+                "formatOptions",
+                "90",
+                str(src),
+                "--out",
+                str(dest),
+            ],
+            capture_output=True,
+            timeout=120,
+            check=False,
+        )
+        if result.returncode != 0 or not dest.is_file() or dest.stat().st_size <= 0:
+            detail = (result.stderr or result.stdout or b"").decode("utf-8", errors="replace").strip()
+            raise OSError(detail or "sips 轉換失敗")
+        return
+    if not HEIC_OK:
+        raise OSError("這個環境無法轉換 HEIC。請在 Mac 上使用，或安裝 pillow-heif。")
+    with Image.open(src) as raw:
+        raw.load()
+        oriented = ImageOps.exif_transpose(raw) or raw
+        if oriented.mode in {"RGBA", "LA"} or (oriented.mode == "P" and "transparency" in oriented.info):
+            rgba = oriented.convert("RGBA")
+            canvas = Image.new("RGB", rgba.size, (255, 255, 255))
+            canvas.paste(rgba, mask=rgba.getchannel("A"))
+            rgb = canvas
+        else:
+            rgb = oriented.convert("RGB")
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
+        rgb.save(tmp, "JPEG", quality=90)
+        if oriented is not raw:
+            oriented.close()
+        tmp.replace(dest)
+
+
+def convert_all_heic() -> dict:
+    root = ROOT
+    if not root.is_dir():
+        raise ValueError("目錄不存在")
+    if not can_convert_heic():
+        raise ValueError("這個環境無法轉換 HEIC。請在 Mac 上使用系統自帶工具，或安裝 pillow-heif。")
+    real, hidden = collect_heic(root)
+    logs: list[str] = []
+    converted = 0
+    skipped = 0
+    failed = 0
+    deleted = 0
+    logs.append(f"開始轉換，共 {len(real)} 個 HEIC，另有 {len(hidden)} 個隱藏 HEIC。")
+    for src in real:
+        rel = heic_rel(src, root)
+        dest = src.with_suffix(".jpg")
+        try:
+            if dest.exists():
+                logs.append(f"已有 JPG，跳過轉換：{rel}")
+                skipped += 1
+            else:
+                convert_heic_file(src, dest)
+                logs.append(f"已轉換：{rel} → {dest.name}")
+                converted += 1
+            if src.exists():
+                src.unlink()
+                deleted += 1
+                logs.append(f"已刪除：{rel}")
+        except Exception as exc:  # noqa: BLE001 - collect per-file failures for the UI log
+            failed += 1
+            logs.append(f"失敗：{rel}（{exc}）")
+    hidden_deleted = 0
+    for src in hidden:
+        rel = heic_rel(src, root)
+        try:
+            if src.exists():
+                src.unlink()
+                hidden_deleted += 1
+                deleted += 1
+                logs.append(f"已刪除隱藏檔：{rel}")
+        except OSError as exc:
+            failed += 1
+            logs.append(f"隱藏檔刪除失敗：{rel}（{exc}）")
+    logs.append(
+        f"完成。轉換 {converted}，跳過 {skipped}，刪除 {deleted}，失敗 {failed}。"
+    )
+    return {
+        "ok": failed == 0,
+        "converted": converted,
+        "skipped": skipped,
+        "deleted": deleted,
+        "hidden_deleted": hidden_deleted,
+        "failed": failed,
+        "logs": logs,
+        "catalog": scan(),
+    }
 
 
 def sips_jpeg(src: Path, edge: int, quality: int) -> bytes:
@@ -383,6 +538,9 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/index":
             self._post_index()
             return
+        if parsed.path == "/api/heic/convert":
+            self._post_heic_convert()
+            return
         self._json({"error": "找不到"}, 404)
 
     def _read_json(self, limit: int) -> dict:
@@ -428,6 +586,20 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "檔案不存在"}, 404)
             return
         self._json(scan())
+
+    def _post_heic_convert(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 0:
+            self.rfile.read(length)
+        try:
+            result = convert_all_heic()
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        self._json(result)
 
     def _picture(self, kind: str, rel: str) -> None:
         src = safe_path(rel)
