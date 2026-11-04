@@ -182,6 +182,11 @@
       font-size: 0.85rem;
     }
     .check { display: flex; gap: 0.35rem; align-items: center; color: var(--muted); font-size: 0.85rem; }
+    .check:has(#multiPick:checked) {
+      background: #a04fe1;
+      border-radius: 13px;
+      color: #ffffff;
+    }
     #list {
       flex: 1 1 auto;
       min-height: 0;
