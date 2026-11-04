@@ -13,24 +13,31 @@
       --card: #fff;
       --accent: #9b3bfc;
       --accent-ink: #fff;
+      --header-h: 3.1rem;
+      --nav-h: 2.7rem;
+      --side-w: 16rem;
     }
     * { box-sizing: border-box; }
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
       color: var(--ink);
       background: var(--paper);
       font: 15px/1.5 "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
     }
     button, input, select { font: inherit; color: inherit; }
     button { cursor: pointer; }
     header {
-      position: sticky;
-      top: 0;
-      z-index: 5;
+      flex: 0 0 var(--header-h);
       display: flex;
       gap: 0.75rem;
       align-items: center;
-      padding: 0.75rem 1.25rem;
+      padding: 0 1rem;
       background: #16162b;
       color: #fff;
     }
@@ -66,7 +73,7 @@
       position: absolute;
       top: calc(100% + 0.45rem);
       right: 0;
-      z-index: 6;
+      z-index: 20;
       padding: 0.4rem 0.65rem;
       border-radius: 0.4rem;
       background: #fff;
@@ -86,15 +93,102 @@
       padding: 0.35rem 0.7rem;
     }
     header button.ghost { background: transparent; color: #fff; border: 1px solid #4a4568; }
-    main { padding: 1rem 1.25rem 2.5rem; max-width: 1180px; margin: 0 auto; }
+    #catNav {
+      flex: 0 0 var(--nav-h);
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      padding: 0 0.85rem;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    #catNav button {
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: var(--muted);
+      padding: 0.3rem 0.7rem;
+      white-space: nowrap;
+    }
+    #catNav button.on {
+      background: #16162b;
+      color: #fff;
+    }
+    #workspace {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    #homeView {
+      display: grid;
+      grid-template-columns: var(--side-w) minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+    }
+    #tree {
+      min-height: 0;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: #fff;
+      padding: 0.55rem 0.35rem;
+    }
+    .tree-row, .tree-item {
+      display: flex;
+      width: 100%;
+      gap: 0.2rem;
+      align-items: center;
+      border: 0;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: inherit;
+      padding: 0.15rem 0.25rem;
+      text-align: left;
+    }
+    .tree-row.on, .tree-item.on { background: #efe8ff; color: #5b21b6; }
+    .tree-row > .tree-cat {
+      flex: 1;
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      border: 0;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: inherit;
+      padding: 0.2rem 0.35rem;
+      font-weight: 600;
+      text-align: left;
+    }
+    .tree-item { padding: 0.28rem 0.45rem; }
+    .tree-toggle {
+      width: 1.2rem;
+      border: 0;
+      border-radius: 0.3rem;
+      background: transparent;
+      color: var(--muted);
+      padding: 0.2rem 0;
+      font-size: 0.75rem;
+    }
+    .tree-kids { padding-left: 1.1rem; }
+    .tree-kids.collapsed { display: none; }
+    .tree-icon { color: #c4a574; }
+    #homeMain {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
     .bar {
+      flex: 0 0 auto;
       display: flex;
       flex-wrap: wrap;
       gap: 0.6rem;
       align-items: center;
-      margin-bottom: 1rem;
+      padding: 0.7rem 1rem 0.35rem;
     }
-    .bar input[type="search"], .bar select, .setup input {
+    .bar input[type="search"], .setup input {
       border: 1px solid var(--line);
       background: #fff;
       border-radius: 0.4rem;
@@ -103,7 +197,13 @@
     .bar input[type="search"] { width: min(22rem, 100%); }
     .stats { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
     .check { display: flex; gap: 0.35rem; align-items: center; color: var(--muted); font-size: 0.85rem; }
-    section { margin: 0 0 1.4rem; }
+    #list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 0.5rem 1rem 1.2rem;
+    }
+    section { margin: 0 0 1.2rem; }
     section h2 {
       margin: 0 0 0.6rem;
       font-size: 1rem;
@@ -111,7 +211,7 @@
     .note { margin: -0.35rem 0 0.6rem; color: #9a5b12; font-size: 0.82rem; }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
       gap: 0.75rem;
     }
     .card {
@@ -135,33 +235,33 @@
     .card strong { font-size: 0.92rem; }
     .meta { color: var(--muted); font-size: 0.78rem; }
     .badge { color: #9a5b12; }
-    .detail-body {
+    #detailView {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
       display: grid;
       grid-template-columns: minmax(12rem, 16.5rem) minmax(0, 1fr);
       gap: 1rem;
-      align-items: stretch;
-    }
-    .preview-pane {
-      min-height: calc(100vh - 8.5rem);
-      position: sticky;
-      top: 4.2rem;
+      padding: 0.85rem 1rem 1rem;
+      background: var(--paper);
+      overflow: hidden;
     }
     .editor {
-      position: sticky;
-      top: 4.2rem;
       display: flex;
       flex-direction: column;
       gap: 0.45rem;
+      min-height: 0;
     }
     .editor textarea {
+      flex: 1 1 auto;
       width: 100%;
-      min-height: 29.33rem;
+      min-height: 0;
       margin: 0;
       padding: 0.75rem 0.85rem;
       border: 1px solid var(--line);
       border-radius: 0.6rem;
       background: #fff;
-      resize: vertical;
+      resize: none;
       line-height: 1.55;
       font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       font-size: 0.92rem;
@@ -175,22 +275,11 @@
       padding: 0.4rem 0.9rem;
     }
     .saved { color: #3f6b45; font-size: 0.85rem; }
-    @media (max-width: 800px) {
-      .detail-body { grid-template-columns: 1fr; }
-      .editor { position: static; }
+    .preview-pane {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
     }
-    dl {
-      display: grid;
-      grid-template-columns: 7rem 1fr;
-      gap: 0.25rem 0.75rem;
-      margin: 0 0 1rem;
-      padding: 0.8rem 1rem;
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 0.6rem;
-    }
-    dt { color: var(--muted); }
-    dd { margin: 0; }
     .photos {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -211,13 +300,22 @@
       border: 1px dashed var(--line);
       border-radius: 0.6rem;
     }
-    .setup { display: flex; flex-direction: column; align-items: flex-start; gap: 0.55rem; }
+    .setup {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.55rem;
+      margin: 1rem;
+    }
     .setup input { width: min(36rem, 100%); }
     .err { color: #9f1239; }
     .lightbox {
       position: relative;
       height: 100%;
-      min-height: calc(100vh - 8.5rem);
+      min-height: 100%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -226,13 +324,15 @@
       color: #fff;
     }
     .lightbox header {
+      position: relative;
       display: flex;
       gap: 0.75rem;
       align-items: center;
+      flex: 0 0 auto;
       padding: 0.55rem 0.75rem;
       background: transparent;
+      color: #fff;
     }
-    .lightbox header { position: relative; }
     .lightbox header strong { font-size: 0.92rem; }
     .lightbox header .close-preview { margin-left: auto; }
     .lightbox header .count { color: #d9d3ea; font-size: 0.82rem; }
@@ -277,7 +377,6 @@
       user-select: none;
       -webkit-user-drag: none;
     }
-    .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .nav {
       position: absolute;
       z-index: 2;
@@ -294,6 +393,10 @@
     .nav.prev { left: 0.6rem; }
     .nav.next { right: 0.6rem; }
     .hidden { display: none !important; }
+    @media (max-width: 800px) {
+      #homeView, #detailView { grid-template-columns: 1fr; }
+      #tree { max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--line); }
+    }
   </style>
 </head>
 <body>
@@ -304,10 +407,26 @@
     <button type="button" class="ghost" id="openSetup">設定目錄</button>
     <button type="button" class="info" id="rootInfo" aria-label="商品圖目錄">ℹ️<span class="tip" id="rootTip">正在讀取…</span></button>
   </header>
-  <main id="app"></main>
+  <nav id="catNav" class="hidden" aria-label="分類"></nav>
+  <div id="workspace">
+    <div id="homeView" class="hidden">
+      <aside id="tree"></aside>
+      <section id="homeMain">
+        <div id="tools" class="bar"></div>
+        <div id="list"></div>
+      </section>
+    </div>
+    <div id="detailView" class="hidden"></div>
+  </div>
   <script>
-    const app = document.querySelector('#app')
+    const catNav = document.querySelector('#catNav')
+    const homeView = document.querySelector('#homeView')
+    const detailView = document.querySelector('#detailView')
+    const tree = document.querySelector('#tree')
+    const tools = document.querySelector('#tools')
+    const list = document.querySelector('#list')
     const rootTip = document.querySelector('#rootTip')
+    const crumbNav = document.querySelector('#crumbNav')
     let catalog = null
     let query = ''
     let category = ''
@@ -316,6 +435,8 @@
     let light = -1
     let indexDraft = null
     let saveNote = ''
+    let expanded = new Set()
+    let toolsReady = false
     const INDEX_TEMPLATE = [
       '--------',
       '編碼：',
@@ -355,8 +476,7 @@
     function productKey(product) {
       return `${product.category}/${product.folder}`
     }
-    function visible(product) {
-      if (category && product.category !== category) return false
+    function matchesQuery(product) {
       if (missingOnly && product.has_index) return false
       const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
       if (!words.length) return true
@@ -369,76 +489,148 @@
       ].join('\n').toLowerCase()
       return words.every((word) => hay.includes(word))
     }
+    function visible(product) {
+      if (category && product.category !== category) return false
+      return matchesQuery(product)
+    }
     function findSelected() {
       return allProducts().find((product) => productKey(product) === selectedKey) || null
     }
+    function showingDetail() {
+      return Boolean(selectedKey && findSelected())
+    }
 
     function render() {
-      document.querySelectorAll('.lightbox').forEach((node) => node.remove())
       if (!catalog) return
       rootTip.textContent = catalog.root
-      const selected = selectedKey ? findSelected() : null
-      document.querySelector('#crumbNav').textContent = selected ? `${selected.category} / ${selected.folder}` : ''
+      document.querySelector('.setup')?.remove()
       if (!catalog.root_ok) {
-        app.replaceChildren(setupBox('這個目錄還不存在。請先在電腦上建好文件夾，或改成已有的商品圖目錄。'))
+        catNav.classList.add('hidden')
+        homeView.classList.add('hidden')
+        detailView.classList.add('hidden')
+        crumbNav.textContent = ''
+        document.querySelector('#workspace').append(setupBox('這個目錄還不存在。請先在電腦上建好文件夾，或改成已有的商品圖目錄。'))
         return
       }
-      const tools = ensureTools()
-      const list = document.querySelector('#list')
-      if (selectedKey && findSelected()) {
-        tools.classList.add('hidden')
-        list.replaceChildren()
-        renderDetail(findSelected(), list)
-        return
-      }
-      selectedKey = ''
-      tools.classList.remove('hidden')
-      fillResults(list)
+      ensureTools()
+      syncCategoryChoice()
+      fillNav()
+      fillTree()
+      fillResults()
+      homeView.classList.remove('hidden')
+      if (showingDetail()) showDetail(findSelected())
+      else hideDetail()
     }
 
     function ensureTools() {
-      let tools = document.querySelector('#tools')
-      if (tools && document.querySelector('#list')) {
-        syncCategories(tools.querySelector('select'))
-        return tools
-      }
-      app.replaceChildren()
-      tools = el('div', { id: 'tools', class: 'bar' })
+      if (toolsReady) return
       const search = el('input', {
         type: 'search',
         placeholder: '搜尋名稱、屬性、檔名',
         value: query,
-        oninput: (event) => { query = event.target.value; fillResults(document.querySelector('#list')) },
-      })
-      const select = el('select', {
-        onchange: (event) => { category = event.target.value; fillResults(document.querySelector('#list')) },
+        oninput: (event) => {
+          query = event.target.value
+          fillTree()
+          fillResults()
+        },
       })
       const box = el('label', { class: 'check' }, [
         el('input', {
           type: 'checkbox',
-          onchange: (event) => { missingOnly = event.target.checked; fillResults(document.querySelector('#list')) },
+          onchange: (event) => {
+            missingOnly = event.target.checked
+            fillTree()
+            fillResults()
+          },
         }),
         '只看未填 index.txt',
       ])
       if (missingOnly) box.querySelector('input').checked = true
-      tools.append(search, select, box, el('span', { id: 'stats', class: 'stats' }, ['']))
-      app.append(tools, el('div', { id: 'list' }))
-      syncCategories(select)
-      return tools
+      tools.replaceChildren(search, box, el('span', { id: 'stats', class: 'stats' }, ['']))
+      toolsReady = true
     }
 
-    function syncCategories(select) {
+    function syncCategoryChoice() {
       const names = catalog.categories.map((cat) => cat.name)
-      const current = [''].concat(names).join('\n')
-      if (select.dataset.options === current) return
-      select.replaceChildren(el('option', { value: '' }, ['全部分類']))
-      for (const name of names) select.append(el('option', { value: name }, [name]))
-      select.value = names.includes(category) ? category : ''
-      category = select.value
-      select.dataset.options = [''].concat(names).join('\n')
+      if (category && !names.includes(category)) category = ''
+      if (!expanded.size) {
+        for (const name of names) expanded.add(name)
+      }
     }
 
-    function fillResults(list) {
+    function setCategory(name) {
+      category = name
+      if (name) expanded.add(name)
+      fillNav()
+      fillTree()
+      fillResults()
+    }
+
+    function fillNav() {
+      catNav.replaceChildren(el('button', {
+        type: 'button',
+        class: category ? '' : 'on',
+        onclick: () => setCategory(''),
+      }, ['全部']))
+      for (const cat of catalog.categories) {
+        catNav.append(el('button', {
+          type: 'button',
+          class: category === cat.name ? 'on' : '',
+          onclick: () => setCategory(cat.name),
+        }, [`${cat.name}（${cat.products.length}）`]))
+      }
+    }
+
+    function fillTree() {
+      tree.replaceChildren()
+      if (!catalog.categories.length) {
+        tree.append(el('div', { class: 'empty' }, ['還沒有分類文件夾。']))
+        return
+      }
+      for (const cat of catalog.categories) {
+        const open = expanded.has(cat.name)
+        const rows = cat.products.filter(matchesQuery)
+        const group = el('div')
+        const row = el('div', { class: 'tree-row' + (category === cat.name ? ' on' : '') })
+        row.append(
+          el('button', {
+            type: 'button',
+            class: 'tree-toggle',
+            onclick: (event) => {
+              event.stopPropagation()
+              if (expanded.has(cat.name)) expanded.delete(cat.name)
+              else expanded.add(cat.name)
+              fillTree()
+            },
+          }, [open ? '▾' : '▸']),
+          el('button', {
+            type: 'button',
+            class: 'tree-cat',
+            onclick: () => setCategory(cat.name),
+          }, [
+            el('span', { class: 'tree-icon' }, ['📁']),
+            `${cat.name}（${rows.length}）`,
+          ]),
+        )
+        group.append(row)
+        const kids = el('div', { class: 'tree-kids' + (open ? '' : ' collapsed') })
+        for (const product of rows) {
+          kids.append(el('button', {
+            type: 'button',
+            class: 'tree-item' + (productKey(product) === selectedKey ? ' on' : ''),
+            onclick: () => openProduct(product),
+          }, [
+            el('span', { class: 'tree-icon' }, ['📂']),
+            product.folder,
+          ]))
+        }
+        if (!rows.length) kids.append(el('div', { class: 'note' }, ['沒有符合的商品文件夾。']))
+        group.append(kids)
+        tree.append(group)
+      }
+    }
+
+    function fillResults() {
       const products = allProducts().filter(visible)
       const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
       const stats = document.querySelector('#stats')
@@ -450,23 +642,38 @@
         ]))
         return
       }
-      let shown = 0
-      for (const cat of catalog.categories) {
-        const rows = cat.products.filter(visible)
-        if (!rows.length && (query || missingOnly || (category && category !== cat.name))) continue
-        shown += 1
+      if (category) {
+        const cat = catalog.categories.find((item) => item.name === category)
+        const rows = products
         const section = el('section')
-        section.append(el('h2', {}, [`${cat.name}（${rows.length}）`]))
-        if (cat.loose_images) {
+        section.append(el('h2', {}, [`${category}（${rows.length}）`]))
+        if (cat?.loose_images) {
           section.append(el('p', { class: 'note' }, [
             `有 ${cat.loose_images} 張圖直接放在分類文件夾裡，尚未歸入商品。`,
           ]))
         }
-        if (!rows.length) section.append(el('p', { class: 'note' }, ['這個分類下還沒有商品文件夾。']))
+        if (!rows.length) section.append(el('div', { class: 'empty' }, ['這個分類下沒有符合的商品。']))
         else section.append(grid(rows))
         list.append(section)
+      } else {
+        let shown = 0
+        for (const cat of catalog.categories) {
+          const rows = cat.products.filter(visible)
+          if (!rows.length && (query || missingOnly)) continue
+          shown += 1
+          const section = el('section')
+          section.append(el('h2', {}, [`${cat.name}（${rows.length}）`]))
+          if (cat.loose_images) {
+            section.append(el('p', { class: 'note' }, [
+              `有 ${cat.loose_images} 張圖直接放在分類文件夾裡，尚未歸入商品。`,
+            ]))
+          }
+          if (!rows.length) section.append(el('p', { class: 'note' }, ['這個分類下還沒有商品文件夾。']))
+          else section.append(grid(rows))
+          list.append(section)
+        }
+        if (!shown) list.append(el('div', { class: 'empty' }, ['沒有符合的商品。']))
       }
-      if (!shown) list.append(el('div', { class: 'empty' }, ['沒有符合的商品。']))
       if (catalog.loose_images) {
         list.append(el('p', { class: 'note' }, [`根目錄另有 ${catalog.loose_images} 張散圖，未計入任何分類。`]))
       }
@@ -497,12 +704,34 @@
       light = -1
       indexDraft = null
       saveNote = ''
-      render()
+      if (product.category) {
+        category = product.category
+        expanded.add(product.category)
+      }
+      fillNav()
+      fillTree()
+      fillResults()
+      showDetail(product)
     }
 
-    function renderDetail(product, list) {
-      const body = el('div', { class: 'detail-body' })
-      body.append(indexEditor(product))
+    function hideDetail() {
+      selectedKey = ''
+      light = -1
+      indexDraft = null
+      saveNote = ''
+      crumbNav.textContent = ''
+      detailView.classList.add('hidden')
+      detailView.replaceChildren()
+      catNav.classList.remove('hidden')
+      fillTree()
+    }
+
+    function showDetail(product) {
+      crumbNav.textContent = `${product.category} / ${product.folder}`
+      catNav.classList.add('hidden')
+      detailView.classList.remove('hidden')
+      detailView.replaceChildren()
+      detailView.append(indexEditor(product))
       const pane = el('div', { class: 'preview-pane' })
       if (!product.images.length) {
         pane.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
@@ -519,8 +748,7 @@
           el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
         ]))))
       }
-      body.append(pane)
-      list.append(body)
+      detailView.append(pane)
     }
 
     function indexEditor(product) {
@@ -552,7 +780,12 @@
         catalog = data
         indexDraft = null
         saveNote = '已保存'
-        render()
+        fillNav()
+        fillTree()
+        fillResults()
+        const next = findSelected()
+        if (next) showDetail(next)
+        else hideDetail()
       }
       area.addEventListener('keydown', (event) => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
@@ -571,14 +804,15 @@
 
     function openLight(index) {
       light = index
-      render()
+      const product = findSelected()
+      if (product) showDetail(product)
     }
 
     function renderLight(product) {
       const image = product.images[light]
       if (!image) return
       const box = el('div', { class: 'lightbox' })
-      const close = () => { light = -1; render() }
+      const close = () => { light = -1; showDetail(product) }
       box.append(el('header', {}, [
         el('strong', {}, [image.name]),
         el('span', { class: 'count' }, [`${light + 1} / ${product.images.length}`]),
@@ -679,7 +913,7 @@
       const product = findSelected()
       if (!product || product.images.length < 2) return
       light = (light + delta + product.images.length) % product.images.length
-      render()
+      showDetail(product)
     }
 
     function setupBox(message) {
@@ -711,7 +945,11 @@
         catalog = await response.json()
       } catch (err) {
         rootTip.textContent = '無法連上本機程式'
-        app.replaceChildren(el('div', { class: 'empty err' }, ['無法讀取商品目錄，請確認程式仍在運行後按重新掃描。']))
+        catNav.classList.add('hidden')
+        homeView.classList.add('hidden')
+        detailView.classList.add('hidden')
+        document.querySelector('.setup')?.remove()
+        document.querySelector('#workspace').append(el('div', { class: 'setup err' }, ['無法讀取商品目錄，請確認程式仍在運行後按重新掃描。']))
         return
       }
       if (selectedKey && !findSelected()) selectedKey = ''
@@ -719,23 +957,28 @@
     }
 
     document.querySelector('#home').onclick = () => {
-      selectedKey = ''
-      light = -1
-      indexDraft = null
-      saveNote = ''
-      render()
+      hideDetail()
     }
     document.querySelector('#rescan').onclick = load
     document.querySelector('#openSetup').onclick = () => {
-      selectedKey = ''
-      light = -1
-      indexDraft = null
-      document.querySelector('#crumbNav').textContent = ''
-      app.replaceChildren(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
+      hideDetail()
+      catNav.classList.add('hidden')
+      homeView.classList.add('hidden')
+      document.querySelector('.setup')?.remove()
+      document.querySelector('#workspace').append(setupBox('商品圖放在這個目錄。第一層是分類，第二層是每件商品的文件夾。'))
     }
     document.addEventListener('keydown', (event) => {
-      if (light < 0) return
-      if (event.key === 'Escape') { event.preventDefault(); light = -1; render() }
+      if (!showingDetail()) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        if (light >= 0) {
+          light = -1
+          showDetail(findSelected())
+        } else {
+          hideDetail()
+        }
+        return
+      }
       if (event.target.closest('textarea, input')) return
       if (event.key === 'ArrowRight') { event.preventDefault(); step(1) }
       if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1) }
