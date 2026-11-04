@@ -122,7 +122,10 @@
       padding: 0.15rem 0.25rem;
       text-align: left;
     }
-    .tree-row.on, .tree-item.on { background: #efe8ff; color: #5b21b6; }
+    .tree-row.on, .tree-item.on {
+      background: #e4d4ff;
+      color: #5b21b6;
+    }
     .tree-row > .tree-cat {
       flex: 1;
       display: flex;
@@ -286,7 +289,9 @@
     .preview-pane {
       min-width: 0;
       min-height: 0;
-      overflow: auto;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
     .photos {
       display: grid;
@@ -363,8 +368,9 @@
     .err { color: #9f1239; }
     .lightbox {
       position: relative;
-      height: 100%;
-      min-height: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -411,8 +417,9 @@
     .zoom-frame {
       width: 100%;
       height: 100%;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       cursor: grab;
       touch-action: none;
@@ -537,6 +544,7 @@
     let category = ''
     let missingOnly = false
     let selectedKey = ''
+    let activeNode = ''
     let light = -1
     let indexDraft = null
     let saveNote = ''
@@ -665,9 +673,11 @@
 
     function setCategory(name) {
       category = name
+      activeNode = name ? `cat:${name}` : ''
       if (name) expanded.add(name)
       fillTree()
       fillResults()
+      revealActiveNode()
     }
 
     function fillTree() {
@@ -678,7 +688,7 @@
       }
       tree.append(el('button', {
         type: 'button',
-        class: 'tree-item' + (category ? '' : ' on'),
+        class: 'tree-item' + (activeNode === '' ? ' on' : ''),
         onclick: () => setCategory(''),
       }, [
         el('span', { class: 'tree-icon' }, ['📁']),
@@ -688,7 +698,7 @@
         const open = expanded.has(cat.name)
         const rows = cat.products.filter(matchesQuery)
         const group = el('div')
-        const row = el('div', { class: 'tree-row' + (category === cat.name ? ' on' : '') })
+        const row = el('div', { class: 'tree-row' + (activeNode === `cat:${cat.name}` ? ' on' : '') })
         row.append(
           el('button', {
             type: 'button',
@@ -714,7 +724,7 @@
         for (const product of rows) {
           kids.append(el('button', {
             type: 'button',
-            class: 'tree-item' + (productKey(product) === selectedKey ? ' on' : ''),
+            class: 'tree-item' + (activeNode === `item:${productKey(product)}` ? ' on' : ''),
             onclick: () => openProduct(product),
           }, [
             el('span', { class: 'tree-icon' }, ['📂']),
@@ -796,8 +806,13 @@
       }))
     }
 
+    function revealActiveNode() {
+      tree.querySelector('.tree-row.on, .tree-item.on')?.scrollIntoView({ block: 'nearest' })
+    }
+
     function openProduct(product) {
       selectedKey = productKey(product)
+      activeNode = `item:${selectedKey}`
       light = -1
       indexDraft = null
       saveNote = ''
@@ -819,6 +834,7 @@
       detailView.classList.add('hidden')
       detailView.replaceChildren()
       fillTree()
+      revealActiveNode()
     }
 
     function closeContextMenu() {
