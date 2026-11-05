@@ -414,6 +414,14 @@ class CatalogService
         if ($nameZh === '' || $nameEn === '') {
             throw new ApiException('INVALID', '請填寫雙語商品名稱', 422, 42201);
         }
+        // product_i18n.name VARCHAR(191)
+        $nameMax = 191;
+        if (mb_strlen($nameZh) > $nameMax) {
+            throw new ApiException('INVALID', "繁中商品名稱過長（最多 {$nameMax} 字）", 422, 42201);
+        }
+        if (mb_strlen($nameEn) > $nameMax) {
+            throw new ApiException('INVALID', "英文商品名稱過長（最多 {$nameMax} 字）", 422, 42201);
+        }
         $categoryId = (int) ($body['category_id'] ?? 0);
         if (!Db::name('categories')->where('id', $categoryId)->find()) {
             throw new ApiException('INVALID', '請選擇分類', 422, 42201);
