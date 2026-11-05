@@ -33,6 +33,8 @@ const loading = ref(false)
 const error = ref(false)
 const busy = ref(false)
 const initial = ref(true)
+/** 已掃完可推薦集合（含 wrap／去重後無新增）→ 停 van-list，避免少量商品時猛刷 */
+const exhausted = ref(false)
 let seq = 0
 
 const titleText = computed(() => props.title || t('account.wishlistRecommend'))
@@ -43,9 +45,29 @@ const displayItems = computed(() => {
   return items.value.filter((p) => !ex.has(p.id))
 })
 const showSkeleton = computed(() => initial.value && busy.value && !items.value.length)
-const finished = computed(
-  () => total.value === 0 && !busy.value && displayItems.value.length === 0 && !initial.value,
-)
+const finished = computed(() => {
+  if (busy.value) return false
+  if (exhausted.value) return true
+  if (initial.value) return false
+  if (total.value === 0) return true
+  // 已拿到全量唯一商品（再請求只會 wrap 重複）
+  return items.value.length >= total.value
+})
+
+function markExhaustedIfDone(uniqueCount: number, tot: number, wrapped: boolean, added: number) {
+  if (tot <= 0) {
+    exhausted.value = true
+    return
+  }
+  if (uniqueCount >= tot) {
+    exhausted.value = true
+    return
+  }
+  // 服務端 offset 取模往復：本輪無新唯一項即停
+  if (wrapped && added === 0) {
+    exhausted.value = true
+  }
+}
 
 function restoreFromCache(): boolean {
   const cache = getRecommendFeedCache()
@@ -53,6 +75,10 @@ function restoreFromCache(): boolean {
   items.value = cache.items
   offset.value = cache.nextOffset
   total.value = cache.total
+  exhausted.value =
+    cache.exhausted === true ||
+    (cache.total > 0 && cache.items.length >= cache.total) ||
+    cache.total === 0
   initial.value = false
   busy.value = false
   loading.value = false
@@ -64,12 +90,15 @@ async function fetchBatch(pageOffset: number): Promise<{
   batch: Card[]
   nextOffset: number
   total: number
+  wrapped: boolean
 }> {
   const data = await fetchHomeRecommendations('hot', props.pageSize, pageOffset)
+  const batch = data.items || []
   return {
-    batch: data.items || [],
-    nextOffset: Number(data.next_offset ?? pageOffset + (data.items || []).length),
+    batch,
+    nextOffset: Number(data.next_offset ?? pageOffset + batch.length),
     total: Number(data.total || 0),
+    wrapped: Boolean(data.wrapped),
   }
 }
 
@@ -78,48 +107,76 @@ async function loadPage(reset: boolean) {
 
   if (reset) {
     if (restoreFromCache()) return
-    offset.value = Math.floor(Math.random() * 500)
+    offset.value = 0
+    exhausted.value = false
     error.value = false
+  }
+
+  if (exhausted.value) {
+    loading.value = false
+    return
   }
 
   const pageOffset = offset.value
   busy.value = true
   loading.value = true
   try {
-    let { batch, nextOffset, total: tot } = await fetchBatch(pageOffset)
+    let { batch, nextOffset, total: tot, wrapped } = await fetchBatch(pageOffset)
     if (my !== seq) return
     total.value = tot
     offset.value = nextOffset
 
     const seen = new Set(reset ? [] : items.value.map((p) => p.id))
     const merged: Card[] = reset ? [] : items.value.slice()
+    let added = 0
     for (const p of batch) {
       if (seen.has(p.id)) continue
       merged.push(p)
       seen.add(p.id)
+      added++
     }
-    // 本頁排除後展示偏少時再補一頁進緩存
+
+    // 本頁排除後展示偏少時最多再補一頁；仍無新增則不再請求
     const visibleAfter = merged.filter((p) => !excludeSet.value.has(p.id)).length
     const prevVisible = reset
       ? 0
       : items.value.filter((p) => !excludeSet.value.has(p.id)).length
-    if (visibleAfter - prevVisible < props.pageSize && excludeSet.value.size > 0) {
+    if (
+      !exhausted.value &&
+      visibleAfter - prevVisible < Math.min(props.pageSize, Math.max(tot - excludeSet.value.size, 0)) &&
+      excludeSet.value.size > 0 &&
+      merged.length < tot
+    ) {
       const more = await fetchBatch(offset.value)
       if (my !== seq) return
       offset.value = more.nextOffset
       total.value = more.total || total.value
+      tot = total.value
+      wrapped = wrapped || more.wrapped
+      let moreAdded = 0
       for (const p of more.batch) {
         if (seen.has(p.id)) continue
         merged.push(p)
         seen.add(p.id)
+        moreAdded++
+      }
+      added += moreAdded
+      if (more.batch.length === 0 || moreAdded === 0) {
+        markExhaustedIfDone(merged.length, tot, true, 0)
       }
     }
 
     items.value = merged
+    if (batch.length === 0) {
+      exhausted.value = true
+    } else {
+      markExhaustedIfDone(merged.length, tot, wrapped, added)
+    }
     saveRecommendFeedCache({
       items: merged,
       nextOffset: offset.value,
       total: total.value,
+      exhausted: exhausted.value,
       renewTtl: reset,
     })
   } catch {
@@ -136,7 +193,10 @@ async function loadPage(reset: boolean) {
 }
 
 async function onLoad() {
-  if (busy.value) return
+  if (busy.value || exhausted.value || finished.value) {
+    loading.value = false
+    return
+  }
   // 有緩存時首屏已恢復；觸底才追加
   await loadPage(items.value.length === 0)
 }
@@ -152,6 +212,7 @@ function onRefresh() {
   items.value = []
   offset.value = 0
   total.value = 0
+  exhausted.value = false
   initial.value = true
   error.value = false
   void loadPage(true)
