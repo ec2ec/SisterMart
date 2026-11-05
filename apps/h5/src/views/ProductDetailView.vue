@@ -30,6 +30,8 @@ const { closeOverlay } = useTabShell()
 
 const product = ref<ProductDetail | null>(null)
 const related = ref<Card[]>([])
+const loadError = ref('')
+const loading = ref(false)
 const slide = ref(0)
 const gallerySwipe = ref<SwipeInstance>()
 const zooming = ref(false)
@@ -48,31 +50,47 @@ const { busy: cartBusy, run: runCart } = useRequestBusy()
 async function load() {
   const id = String(route.params.id || '')
   captureRefFromQuery(route.query.ref)
-  product.value = await fetchProduct(id)
-  const next: Record<string, string> = {}
-  for (const group of product.value.spec_groups) next[group.id] = group.options[0]?.id || ''
-  selected.value = next
-  slide.value = 0
-  zooming.value = false
-  showAllReviews.value = false
-  const list = await fetchProducts({ category: product.value.category })
-  related.value = list.items.filter((item) => item.id !== product.value?.id).slice(0, 4)
+  loading.value = true
+  loadError.value = ''
+  product.value = null
+  related.value = []
+  seckill.value = { active: false }
   try {
-    const sk = await fetchSeckillProduct(product.value.code || id)
-    seckill.value = {
-      active: Boolean(sk.in_seckill && sk.session_status === 'live'),
-      price: sk.seckill_price,
-      origin: sk.origin_price,
-      ends_at: sk.ends_at,
-      seckill_item_id: sk.seckill_item_id,
-      sku_id: sk.sku_id,
+    product.value = await fetchProduct(id)
+    const next: Record<string, string> = {}
+    for (const group of product.value.spec_groups) next[group.id] = group.options[0]?.id || ''
+    selected.value = next
+    slide.value = 0
+    zooming.value = false
+    showAllReviews.value = false
+    const list = await fetchProducts({ category: product.value.category })
+    related.value = list.items.filter((item) => item.id !== product.value?.id).slice(0, 4)
+    try {
+      const sk = await fetchSeckillProduct(product.value.code || id)
+      seckill.value = {
+        active: Boolean(sk.in_seckill && sk.session_status === 'live'),
+        price: sk.seckill_price,
+        origin: sk.origin_price,
+        ends_at: sk.ends_at,
+        seckill_item_id: sk.seckill_item_id,
+        sku_id: sk.sku_id,
+      }
+    } catch {
+      seckill.value = { active: false }
     }
-  } catch {
-    seckill.value = { active: false }
-  }
-  const refCode = storedRef() || String(route.query.ref || '')
-  if (refCode) {
-    postShareView(refCode, product.value.code || id).catch(() => undefined)
+    const refCode = storedRef() || String(route.query.ref || '')
+    if (refCode) {
+      postShareView(refCode, product.value.code || id).catch(() => undefined)
+    }
+  } catch (e) {
+    product.value = null
+    if (e instanceof ApiError && (e.status === 404 || e.businessCode === 40402 || e.code === 'NOT_FOUND')) {
+      loadError.value = t('pdp.missing')
+    } else {
+      loadError.value = e instanceof Error && e.message ? e.message : t('pdp.loadFail')
+    }
+  } finally {
+    loading.value = false
   }
 }
 
@@ -266,7 +284,11 @@ async function share() {
 
 <template>
   <!-- 勿用全局 .page：其 padding-bottom 為 Tabbar 預留，疊層商詳會在購買欄下留白 -->
-  <div v-if="product" class="pdp">
+  <div v-if="!product" class="pdp pdp-empty">
+    <AppHeader show-back @back="closeOverlay" />
+    <p class="pdp-empty-msg">{{ loadError || (loading ? '' : t('pdp.loadFail')) }}</p>
+  </div>
+  <div v-else class="pdp">
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
     <div class="pdp-scroll">
@@ -751,5 +773,16 @@ h2 {
   background: #efeae3;
   border-color: #efeae3;
   color: var(--sm-text);
+}
+.pdp-empty {
+  min-height: 100%;
+  background: #fff;
+}
+.pdp-empty-msg {
+  margin: 2.5rem 1.25rem 0;
+  text-align: center;
+  color: var(--sm-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 </style>

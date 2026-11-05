@@ -562,6 +562,8 @@ export const messages = {
       copied: '分享連結已複製。',
       swipeHint: '左右滑動切換',
       outOfStock: '此規格暫時無貨。',
+      loadFail: '商品載入失敗，請稍後再試',
+      missing: '商品不存在或已下架',
     },
     pages: {
       search: '搜索',
@@ -1154,6 +1156,8 @@ export const messages = {
       copied: 'Share link copied.',
       swipeHint: 'Swipe to see more photos',
       outOfStock: 'This option is out of stock.',
+      loadFail: 'Could not load this product. Please try again.',
+      missing: 'This product is unavailable.',
     },
     pages: {
       search: 'Search',

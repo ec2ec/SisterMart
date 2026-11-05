@@ -757,9 +757,18 @@ class CatalogService
 
     private function findProduct(string $idOrCode): array
     {
-        $row = ctype_digit($idOrCode)
-            ? Db::name('products')->where('id', (int) $idOrCode)->find()
-            : Db::name('products')->where('code', $idOrCode)->find();
+        $idOrCode = trim($idOrCode);
+        if ($idOrCode === '') {
+            throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
+        }
+        // 純數字可能是 db id，也可能是商品代碼（如 10101）；先按 id，再回退 code
+        $row = null;
+        if (ctype_digit($idOrCode)) {
+            $row = Db::name('products')->where('id', (int) $idOrCode)->find();
+        }
+        if (!$row) {
+            $row = Db::name('products')->where('code', $idOrCode)->find();
+        }
         if (!$row) {
             throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
         }

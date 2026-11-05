@@ -43,9 +43,7 @@ class BrowseHistoryService
     public function touchByCode(int $memberId, string $idOrCode): void
     {
         $this->ensureSchema();
-        $row = ctype_digit($idOrCode)
-            ? Db::name('products')->where('id', (int) $idOrCode)->find()
-            : Db::name('products')->where('code', $idOrCode)->find();
+        $row = $this->resolveProduct($idOrCode);
         if (!$row) {
             return;
         }
@@ -103,9 +101,7 @@ class BrowseHistoryService
     public function remove(int $memberId, string $idOrCode): array
     {
         $this->ensureSchema();
-        $row = ctype_digit($idOrCode)
-            ? Db::name('products')->where('id', (int) $idOrCode)->find()
-            : Db::name('products')->where('code', $idOrCode)->find();
+        $row = $this->resolveProduct($idOrCode);
         if (!$row) {
             throw new ApiException('NOT_FOUND', '商品不存在', 404, 40402);
         }
@@ -114,6 +110,24 @@ class BrowseHistoryService
             ->delete();
 
         return ['removed' => true];
+    }
+
+    /** @return array<string,mixed>|null */
+    private function resolveProduct(string $idOrCode): ?array
+    {
+        $idOrCode = trim($idOrCode);
+        if ($idOrCode === '') {
+            return null;
+        }
+        $row = null;
+        if (ctype_digit($idOrCode)) {
+            $row = Db::name('products')->where('id', (int) $idOrCode)->find();
+        }
+        if (!$row) {
+            $row = Db::name('products')->where('code', $idOrCode)->find();
+        }
+
+        return $row ?: null;
     }
 
     /**
