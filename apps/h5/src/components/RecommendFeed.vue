@@ -25,7 +25,7 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
-/** 緩存中的原始列表（未按頁面排除） */
+/** 展示列表（已按 exclude 過濾；往復時允許同一 id 再次出現） */
 const items = ref<Card[]>([])
 const offset = ref(0)
 const total = ref(0)
@@ -33,40 +33,26 @@ const loading = ref(false)
 const error = ref(false)
 const busy = ref(false)
 const initial = ref(true)
-/** 已掃完可推薦集合（含 wrap／去重後無新增）→ 停 van-list，避免少量商品時猛刷 */
-const exhausted = ref(false)
+/**
+ * 僅在「目錄為空」或「排除後永遠加不出可見卡」（高度永遠撐不起）時停。
+ * 有可見商品時保持往復：append 撐高列表後 van-list 不會死刷。
+ */
+const noVisibleLeft = ref(false)
 let seq = 0
 
 const titleText = computed(() => props.title || t('account.wishlistRecommend'))
 const excludeSet = computed(() => new Set(props.excludeIds || []))
-const displayItems = computed(() => {
-  const ex = excludeSet.value
-  if (!ex.size) return items.value
-  return items.value.filter((p) => !ex.has(p.id))
-})
 const showSkeleton = computed(() => initial.value && busy.value && !items.value.length)
-const finished = computed(() => {
-  if (busy.value) return false
-  if (exhausted.value) return true
-  if (initial.value) return false
-  if (total.value === 0) return true
-  // 已拿到全量唯一商品（再請求只會 wrap 重複）
-  return items.value.length >= total.value
-})
+const finished = computed(
+  () =>
+    noVisibleLeft.value ||
+    (total.value === 0 && !busy.value && items.value.length === 0 && !initial.value),
+)
 
-function markExhaustedIfDone(uniqueCount: number, tot: number, wrapped: boolean, added: number) {
-  if (tot <= 0) {
-    exhausted.value = true
-    return
-  }
-  if (uniqueCount >= tot) {
-    exhausted.value = true
-    return
-  }
-  // 服務端 offset 取模往復：本輪無新唯一項即停
-  if (wrapped && added === 0) {
-    exhausted.value = true
-  }
+function filterVisible(batch: Card[]): Card[] {
+  const ex = excludeSet.value
+  if (!ex.size) return batch.slice()
+  return batch.filter((p) => !ex.has(p.id))
 }
 
 function restoreFromCache(): boolean {
@@ -75,10 +61,7 @@ function restoreFromCache(): boolean {
   items.value = cache.items
   offset.value = cache.nextOffset
   total.value = cache.total
-  exhausted.value =
-    cache.exhausted === true ||
-    (cache.total > 0 && cache.items.length >= cache.total) ||
-    cache.total === 0
+  noVisibleLeft.value = cache.noVisibleLeft === true
   initial.value = false
   busy.value = false
   loading.value = false
@@ -90,7 +73,6 @@ async function fetchBatch(pageOffset: number): Promise<{
   batch: Card[]
   nextOffset: number
   total: number
-  wrapped: boolean
 }> {
   const data = await fetchHomeRecommendations('hot', props.pageSize, pageOffset)
   const batch = data.items || []
@@ -98,7 +80,6 @@ async function fetchBatch(pageOffset: number): Promise<{
     batch,
     nextOffset: Number(data.next_offset ?? pageOffset + batch.length),
     total: Number(data.total || 0),
-    wrapped: Boolean(data.wrapped),
   }
 }
 
@@ -108,11 +89,11 @@ async function loadPage(reset: boolean) {
   if (reset) {
     if (restoreFromCache()) return
     offset.value = 0
-    exhausted.value = false
+    noVisibleLeft.value = false
     error.value = false
   }
 
-  if (exhausted.value) {
+  if (noVisibleLeft.value) {
     loading.value = false
     return
   }
@@ -121,62 +102,39 @@ async function loadPage(reset: boolean) {
   busy.value = true
   loading.value = true
   try {
-    let { batch, nextOffset, total: tot, wrapped } = await fetchBatch(pageOffset)
+    let { batch, nextOffset, total: tot } = await fetchBatch(pageOffset)
     if (my !== seq) return
     total.value = tot
     offset.value = nextOffset
 
-    const seen = new Set(reset ? [] : items.value.map((p) => p.id))
-    const merged: Card[] = reset ? [] : items.value.slice()
-    let added = 0
-    for (const p of batch) {
-      if (seen.has(p.id)) continue
-      merged.push(p)
-      seen.add(p.id)
-      added++
-    }
-
-    // 本頁排除後展示偏少時最多再補一頁；仍無新增則不再請求
-    const visibleAfter = merged.filter((p) => !excludeSet.value.has(p.id)).length
-    const prevVisible = reset
-      ? 0
-      : items.value.filter((p) => !excludeSet.value.has(p.id)).length
-    if (
-      !exhausted.value &&
-      visibleAfter - prevVisible < Math.min(props.pageSize, Math.max(tot - excludeSet.value.size, 0)) &&
-      excludeSet.value.size > 0 &&
-      merged.length < tot
-    ) {
+    let visible = filterVisible(batch)
+    // 排除過多時再補一頁，儘量讓首屏／本輪有可見卡
+    if (visible.length < props.pageSize && excludeSet.value.size > 0 && tot > 0) {
       const more = await fetchBatch(offset.value)
       if (my !== seq) return
       offset.value = more.nextOffset
       total.value = more.total || total.value
       tot = total.value
-      wrapped = wrapped || more.wrapped
-      let moreAdded = 0
-      for (const p of more.batch) {
-        if (seen.has(p.id)) continue
-        merged.push(p)
-        seen.add(p.id)
-        moreAdded++
-      }
-      added += moreAdded
-      if (more.batch.length === 0 || moreAdded === 0) {
-        markExhaustedIfDone(merged.length, tot, true, 0)
-      }
+      visible = visible.concat(filterVisible(more.batch))
     }
 
-    items.value = merged
-    if (batch.length === 0) {
-      exhausted.value = true
+    if (tot === 0 || batch.length === 0) {
+      noVisibleLeft.value = true
+      if (reset) items.value = []
+    } else if (visible.length === 0) {
+      // 本輪加不出可見卡（例如購物車已含全部商品）→ 停，避免高度不增長死刷
+      noVisibleLeft.value = true
+      if (reset) items.value = []
     } else {
-      markExhaustedIfDone(merged.length, tot, wrapped, added)
+      // 往復：允許同一 id 再次 append，列表變高後 van-list 自然停止連觸底
+      items.value = reset ? visible : items.value.concat(visible)
     }
+
     saveRecommendFeedCache({
-      items: merged,
+      items: items.value,
       nextOffset: offset.value,
       total: total.value,
-      exhausted: exhausted.value,
+      noVisibleLeft: noVisibleLeft.value,
       renewTtl: reset,
     })
   } catch {
@@ -193,11 +151,10 @@ async function loadPage(reset: boolean) {
 }
 
 async function onLoad() {
-  if (busy.value || exhausted.value || finished.value) {
+  if (busy.value || finished.value) {
     loading.value = false
     return
   }
-  // 有緩存時首屏已恢復；觸底才追加
   await loadPage(items.value.length === 0)
 }
 
@@ -212,7 +169,7 @@ function onRefresh() {
   items.value = []
   offset.value = 0
   total.value = 0
-  exhausted.value = false
+  noVisibleLeft.value = false
   initial.value = true
   error.value = false
   void loadPage(true)
@@ -255,9 +212,9 @@ defineExpose({ reload: onRefresh })
       @load="onLoad"
     >
       <div class="grid">
-        <ProductCard v-for="(p, idx) in displayItems" :key="`${p.id}-${idx}`" :product="p" />
+        <ProductCard v-for="(p, idx) in items" :key="`${p.id}-${idx}`" :product="p" />
       </div>
-      <p v-if="!busy && !displayItems.length" class="rec-empty">{{ t('home.feedEmpty') }}</p>
+      <p v-if="!busy && !items.length" class="rec-empty">{{ t('home.feedEmpty') }}</p>
     </van-list>
   </section>
 </template>
