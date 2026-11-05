@@ -1,4 +1,4 @@
-/** 規格／選項代碼：優先保留已有；否則從名稱抽拉丁字符，失敗則用 fallback */
+/** 規格／選項／SKU 代碼：優先保留已有；否則從名稱抽拉丁字符，失敗則用 fallback */
 export function ensureSpecCode(raw: string, nameZh: string, nameEn: string, fallback: string): string {
   const existing = normalizeCode(raw)
   if (existing) return existing
@@ -9,13 +9,17 @@ export function ensureSpecCode(raw: string, nameZh: string, nameEn: string, fall
   return normalizeCode(fallback) || 'x'
 }
 
+/**
+ * 正規化代碼：小寫、空白變底線、去掉非法字符。
+ * 保留開頭數字（如 10045S1 → 10045s1），只去掉開頭的符號。
+ */
 export function normalizeCode(input: string): string {
   return String(input || '')
     .trim()
     .toLowerCase()
     .replace(/[\s　]+/g, '_')
     .replace(/[^a-z0-9_\-]+/g, '')
-    .replace(/^[^a-z]+/, '')
+    .replace(/^[^a-z0-9]+/, '')
     .slice(0, 48)
 }
 
