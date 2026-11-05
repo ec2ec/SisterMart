@@ -176,7 +176,7 @@ async function submit() {
     <SubPageNav :title="pageTitle" />
     <section v-if="item" class="card">
       <div class="line">
-        <img v-if="item.image" :src="item.image" alt="" />
+        <img v-if="item.image" :src="assetUrl(item.image)" alt="" />
         <div>
           <h3>{{ text(item.name) }}</h3>
           <p>{{ text(item.spec) }}</p>

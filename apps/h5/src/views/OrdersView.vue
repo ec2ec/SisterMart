@@ -8,6 +8,7 @@ import { badgeText, useOrderCounts } from '../composables/useOrderCounts'
 import { isOrdersTabName, useOrdersList, type OrdersTabName } from '../composables/useOrdersList'
 import { goLogin } from '../composables/useAuth'
 import { isLoggedIn } from '../composables/useSession'
+import { assetUrl } from '../utils/assetUrl'
 
 defineOptions({ name: 'OrdersView' })
 
@@ -100,7 +101,7 @@ watch(
         @click="router.push({ name: 'order-detail', params: { id: o.id } })"
       >
         <div class="thumb">
-          <img v-if="o.cover" :src="o.cover" alt="" />
+          <img v-if="o.cover" :src="assetUrl(o.cover)" alt="" />
           <span v-else class="ph" />
         </div>
         <div class="meta">

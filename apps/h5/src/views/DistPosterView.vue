@@ -6,6 +6,7 @@ import SubPageNav from '../components/SubPageNav.vue'
 import { fetchPoster } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
 import { buildShareUrl } from '../utils/shareUrl'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -29,7 +30,7 @@ const posterLink = computed(() => (poster.value ? buildShareUrl(poster.value.qr_
   <div class="page">
     <SubPageNav :title="t('m7.poster')" />
     <div class="poster" v-if="poster">
-      <img :src="poster.image" alt="" />
+      <img :src="assetUrl(poster.image)" alt="" />
       <h2>{{ text(poster.name) }}</h2>
       <p>HK$ {{ poster.price }}</p>
       <div class="qr">{{ posterLink }}</div>

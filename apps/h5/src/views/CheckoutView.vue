@@ -10,6 +10,7 @@ import { useLocaleText } from '../composables/useLocaleText'
 import { goLogin } from '../composables/useAuth'
 import { isLoggedIn } from '../composables/useSession'
 import { formatHkAddressLine, type HkLocale } from '../data/hkDistricts'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t, locale } = useI18n()
 const { text } = useLocaleText()
@@ -183,7 +184,7 @@ async function submit() {
 
     <section v-if="quote" class="card">
       <div v-for="item in quote.items" :key="item.sku_id" class="line">
-        <img :src="item.image" alt="" />
+        <img :src="assetUrl(item.image)" alt="" />
         <div>
           <h3>{{ text(item.name) }}</h3>
           <p>{{ text(item.spec) }} × {{ item.qty }}</p>

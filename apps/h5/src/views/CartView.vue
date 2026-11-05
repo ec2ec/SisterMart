@@ -12,6 +12,7 @@ import { goLogin } from '../composables/useAuth'
 import { useRequestBusy } from '../composables/useAuthUi'
 import { isLoggedIn, loggedIn, syncSessionFromStorage } from '../composables/useSession'
 import { useLocaleText } from '../composables/useLocaleText'
+import { assetUrl } from '../utils/assetUrl'
 
 defineOptions({ name: 'CartView' })
 
@@ -182,7 +183,7 @@ function reasonText(item: CartItem) {
             checked-color="var(--sm-primary)"
             @update:model-value="(v: boolean) => onCheck(item, v)"
           />
-          <img :src="item.image" alt="" />
+          <img :src="assetUrl(item.image)" alt="" />
           <div class="info">
             <h3>{{ text(item.name) }}</h3>
             <p>{{ text(item.spec) }}</p>
