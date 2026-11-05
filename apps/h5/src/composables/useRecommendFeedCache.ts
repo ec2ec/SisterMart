@@ -1,13 +1,15 @@
 import type { ProductCard as Card } from '../api/catalog'
 
 const TTL_MS = 15 * 60 * 1000
-const STORAGE_KEY = 'sm_recommend_feed_v1'
+/** v2：丟棄舊緩存裡失控的 nextOffset（曾隨機 0–500 且 finished 永不為真） */
+const STORAGE_KEY = 'sm_recommend_feed_v2'
 
 export type RecommendFeedCache = {
   expiresAt: number
   items: Card[]
   nextOffset: number
   total: number
+  exhausted?: boolean
 }
 
 function readStorage(): RecommendFeedCache | null {
@@ -51,21 +53,25 @@ export function getRecommendFeedCache(): RecommendFeedCache | null {
   return cur
 }
 
-export function saveRecommendFeedCache( partial: {
+export function saveRecommendFeedCache(partial: {
   items: Card[]
   nextOffset: number
   total: number
+  exhausted?: boolean
   /** 是否刷新過期時間（首次寫入／整表重拉） */
   renewTtl?: boolean
 }) {
   const prev = getRecommendFeedCache()
-  const expiresAt =
-    partial.renewTtl || !prev ? Date.now() + TTL_MS : prev.expiresAt
+  const expiresAt = partial.renewTtl || !prev ? Date.now() + TTL_MS : prev.expiresAt
   memory = {
     expiresAt,
     items: partial.items,
     nextOffset: partial.nextOffset,
     total: partial.total,
+    exhausted:
+      partial.exhausted === true ||
+      (partial.total > 0 && partial.items.length >= partial.total) ||
+      partial.total === 0,
   }
   writeStorage(memory)
 }
@@ -73,6 +79,11 @@ export function saveRecommendFeedCache( partial: {
 export function clearRecommendFeedCache() {
   memory = null
   writeStorage(null)
+  try {
+    sessionStorage.removeItem('sm_recommend_feed_v1')
+  } catch {
+    /* ignore */
+  }
 }
 
 export const RECOMMEND_FEED_TTL_MS = TTL_MS
