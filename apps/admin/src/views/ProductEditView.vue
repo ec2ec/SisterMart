@@ -32,6 +32,9 @@ type SupplierOpt = {
   type_label?: string
 }
 
+/** 與 product_i18n.name VARCHAR(191) 一致 */
+const PRODUCT_NAME_MAX = 191
+
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
@@ -266,13 +269,27 @@ async function save() {
     message.error('請選擇供應商')
     return
   }
+  const nameZh = form.value.name_zh.trim()
+  const nameEn = form.value.name_en.trim()
+  if (!nameZh || !nameEn) {
+    message.error('請填寫雙語商品名稱')
+    return
+  }
+  if (nameZh.length > PRODUCT_NAME_MAX) {
+    message.error(`繁中商品名稱過長（最多 ${PRODUCT_NAME_MAX} 字）`)
+    return
+  }
+  if (nameEn.length > PRODUCT_NAME_MAX) {
+    message.error(`英文商品名稱過長（最多 ${PRODUCT_NAME_MAX} 字）`)
+    return
+  }
   const body: Record<string, unknown> = {
     code: form.value.code,
     category_id: form.value.category_id,
     supplier_id: form.value.supplier_id,
     status: form.value.status ? 1 : 0,
     sold_boost: form.value.sold_boost,
-    name: { 'zh-HK': form.value.name_zh, en: form.value.name_en },
+    name: { 'zh-HK': nameZh, en: nameEn },
     detail: { 'zh-HK': form.value.detail_zh, en: form.value.detail_en },
     badges: form.value.badges,
     service_tag_ids: form.value.service_tag_ids,
@@ -339,8 +356,22 @@ async function save() {
       </n-form-item>
     </div>
 
-    <n-form-item label="繁中名稱"><n-input v-model:value="form.name_zh" /></n-form-item>
-    <n-form-item label="英文名稱"><n-input v-model:value="form.name_en" /></n-form-item>
+    <n-form-item label="繁中名稱">
+      <n-input
+        v-model:value="form.name_zh"
+        :maxlength="PRODUCT_NAME_MAX"
+        show-count
+        placeholder="最多 191 字"
+      />
+    </n-form-item>
+    <n-form-item label="英文名稱">
+      <n-input
+        v-model:value="form.name_en"
+        :maxlength="PRODUCT_NAME_MAX"
+        show-count
+        placeholder="Max 191 characters"
+      />
+    </n-form-item>
     <n-form-item label="商品主圖">
       <ProductMediaGallery v-model="form.media" />
     </n-form-item>
