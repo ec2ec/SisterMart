@@ -204,6 +204,68 @@ def write_index(rel: str, text: str) -> None:
 
 INBOX_NAME = "_待整理_"
 INBOX_ALIASES = {INBOX_NAME, "待整理", "inbox", "_inbox"}
+STATUS_COLOR_FILE = ".status-color"
+STATUS_COLORS = {
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "teal",
+    "blue",
+    "purple",
+    "pink",
+    "brown",
+    "gray",
+}
+
+
+def read_status_color(folder: Path) -> str:
+    path = folder / STATUS_COLOR_FILE
+    if not path.is_file() or path.is_symlink():
+        return ""
+    try:
+        value = path.read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return ""
+    return value if value in STATUS_COLORS else ""
+
+
+def write_status_color(rel: str, color: str) -> dict:
+    color = (color or "").strip().lower()
+    if color and color not in STATUS_COLORS:
+        raise ValueError("顏色不正確")
+    folder = product_dir(rel)
+    if folder.parent.name == INBOX_NAME:
+        raise ValueError("_待整理_裡的商品不能設狀態色")
+    path = folder / STATUS_COLOR_FILE
+    if not color:
+        if path.is_file() and not path.is_symlink():
+            path.unlink()
+        elif path.exists():
+            raise PermissionError("路徑不允許")
+        return {"path": "/".join(folder.relative_to(ROOT.resolve()).parts), "color": ""}
+    tmp = folder / ".status-color.tmp"
+    try:
+        tmp.write_text(color + "\n", encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+    return {"path": "/".join(folder.relative_to(ROOT.resolve()).parts), "color": color}
+
+
+def set_status_colors(paths: object, color: str) -> dict:
+    if not isinstance(paths, list) or not paths:
+        raise ValueError("請選擇商品文件夾")
+    moved = []
+    failed = []
+    for raw in paths:
+        rel = str(raw or "").strip().replace("\\", "/")
+        try:
+            moved.append(write_status_color(rel, color))
+        except (ValueError, PermissionError, FileNotFoundError, OSError) as exc:
+            failed.append({"path": rel, "error": str(exc)})
+    return {"updated": moved, "failed": failed, "catalog": scan()}
 
 
 def ensure_product_dir(rel: str) -> Path:
@@ -560,6 +622,7 @@ def read_product(category: str, folder: Path, root: Path) -> dict:
         "fields": fields,
         "cover": rel(cover) if cover else "",
         "images": image_rows,
+        "status_color": read_status_color(folder),
     }
 
 
@@ -908,6 +971,9 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/product/move":
             self._post_product_move()
             return
+        if parsed.path == "/api/product/status-color":
+            self._post_product_status_color()
+            return
         if parsed.path == "/api/inbox/archive":
             self._post_inbox_archive()
             return
@@ -1012,6 +1078,24 @@ class Handler(BaseHTTPRequestHandler):
             return
         except OSError as exc:
             self._json({"error": f"無法移動：{exc}"}, 500)
+            return
+        self._json(result)
+
+    def _post_product_status_color(self) -> None:
+        try:
+            body = self._read_json(65536)
+            result = set_status_colors(body.get("paths"), str(body.get("color") or ""))
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        except FileNotFoundError:
+            self._json({"error": "檔案不存在"}, 404)
+            return
+        except OSError as exc:
+            self._json({"error": f"無法設置：{exc}"}, 500)
             return
         self._json(result)
 
