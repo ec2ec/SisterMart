@@ -612,7 +612,7 @@ const tabLabel = (tab: HomeRecTab) => {
           <van-swipe class="hero" :autoplay="4000" indicator-color="var(--sm-primary)">
             <van-swipe-item v-for="b in banners" :key="b.id">
               <button type="button" class="hero-item" @click="onBannerClick(b)">
-                <img :src="b.image_url" :alt="text(b.title) || ''" />
+                <img :src="assetUrl(b.image_url)" :alt="text(b.title) || ''" />
               </button>
             </van-swipe-item>
           </van-swipe>

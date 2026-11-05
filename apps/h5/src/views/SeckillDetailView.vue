@@ -9,6 +9,7 @@ import { fetchSeckillSession, type SeckillProduct, type SeckillSession } from '.
 import { useLocaleText } from '../composables/useLocaleText'
 import { useRequestBusy } from '../composables/useAuthUi'
 import { isLoggedIn } from '../composables/useSession'
+import { assetUrl } from '../utils/assetUrl'
 
 const { t } = useI18n()
 const { text } = useLocaleText()
@@ -62,7 +63,7 @@ function buy() {
 <template>
   <div class="page" v-if="session && product">
     <SubPageNav :title="text(session.name)" />
-    <img class="hero" :src="product.image" alt="" />
+    <img class="hero" :src="assetUrl(product.image)" alt="" />
     <section class="info">
       <p class="badge">{{ live ? t('m7.live') : t('m7.upcoming') }} · {{ session.ends_at }}</p>
       <h1>{{ text(product.name) }}</h1>

@@ -151,7 +151,7 @@ async function submit() {
               :value="item.id"
               :disabled="!item.can_aftersale"
             />
-            <img :src="item.image" alt="" />
+            <img :src="assetUrl(item.image)" alt="" />
             <span>
               {{ text(item.name) }} × {{ item.qty }}
               <small v-if="item.has_open_aftersale">（{{ t('fulfill.itemBusy') }}）</small>
