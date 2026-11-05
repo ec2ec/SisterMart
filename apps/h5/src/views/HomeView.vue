@@ -156,13 +156,11 @@ async function loadSubscribeStatus() {
   }
 }
 
-/** 推薦流已掃完唯一集合（少量商品時不可再靠 offset 取模狂刷） */
-const feedExhausted = ref(false)
-
 /**
  * 加載一頁推薦。reset=true 時從 offset 0 重拉並替換列表。
  * 服務端：有序切片後頁內 shuffle；offset 越界後取模往復。
- * 客戶端：去重後若已覆蓋 total 或 wrap 無新增，則停止觸底請求。
+ * 客戶端：允許同一商品再次 append（key 用 id-index）；列表變高後 van-list 不再連觸底。
+ * 僅目錄為空時 finished。
  */
 async function loadFeed(reset = false) {
   const tab = feedTabs[feedTab.value] || 'new'
@@ -170,11 +168,6 @@ async function loadFeed(reset = false) {
   if (reset) {
     feedOffset.value = 0
     feedError.value = false
-    feedExhausted.value = false
-  }
-  if (feedExhausted.value) {
-    feedLoading.value = false
-    return
   }
   const offset = reset ? 0 : feedOffset.value
   feedBusy.value = true
@@ -183,23 +176,11 @@ async function loadFeed(reset = false) {
   try {
     const data = await fetchHomeRecommendations(tab, FEED_PAGE, offset)
     if (seq !== feedSeq) return
-    const batch = data.items || []
-    const tot = Number(data.total || 0)
-    feedTotal.value = tot
-    feedOffset.value = Number(data.next_offset ?? offset + batch.length)
-    const seen = new Set(reset ? [] : feedItems.value.map((p) => p.id))
-    const merged = reset ? [] : feedItems.value.slice()
-    let added = 0
-    for (const p of batch) {
-      if (seen.has(p.id)) continue
-      merged.push(p)
-      seen.add(p.id)
-      added++
-    }
-    feedItems.value = merged
-    if (tot === 0 || batch.length === 0 || merged.length >= tot || (data.wrapped && added === 0)) {
-      feedExhausted.value = true
-    }
+    const items = data.items || []
+    feedTotal.value = Number(data.total || 0)
+    feedOffset.value = Number(data.next_offset ?? offset + items.length)
+    // 往復時允許重複 id，否則少數據去重後高度不增長 → van-list 死刷
+    feedItems.value = reset ? items : feedItems.value.concat(items)
   } catch {
     if (seq !== feedSeq) return
     feedError.value = true
@@ -212,7 +193,6 @@ async function loadFeed(reset = false) {
       feedItems.value = local
       feedOffset.value = local.length
       feedTotal.value = local.length
-      feedExhausted.value = true
     }
   } finally {
     if (seq === feedSeq) {
@@ -224,19 +204,14 @@ async function loadFeed(reset = false) {
 }
 
 async function onFeedLoad() {
-  if (feedBusy.value || feedExhausted.value) {
-    feedLoading.value = false
-    return
-  }
+  // 有貨時 finished 恒 false：往復由服務端 offset 取模；append 撐高後自動停止連觸底
+  if (feedBusy.value) return
   await loadFeed(false)
 }
 
-const feedFinished = computed(() => {
-  if (feedBusy.value) return false
-  if (feedExhausted.value) return true
-  if (feedTotal.value === 0) return !feedInitial.value
-  return feedItems.value.length >= feedTotal.value
-})
+const feedFinished = computed(
+  () => feedTotal.value === 0 && !feedBusy.value && feedItems.value.length === 0,
+)
 
 async function loadBanners() {
   try {
