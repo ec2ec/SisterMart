@@ -799,11 +799,43 @@
       for (const cat of catalog.categories) {
         if (cat.inbox) {
           const images = filteredInbox(cat)
-          tree.append(el('button', {
+          const rows = (cat.products || []).filter(matchesQuery)
+          const open = expanded.has(cat.name)
+          const group = el('div')
+          const row = el('div', { class: 'tree-row' + (activeNode === `cat:${cat.name}` ? ' on' : '') })
+          const toggle = rows.length
+            ? el('button', {
+                type: 'button',
+                class: 'tree-toggle',
+                onclick: (event) => {
+                  event.stopPropagation()
+                  if (expanded.has(cat.name)) expanded.delete(cat.name)
+                  else expanded.add(cat.name)
+                  fillTree()
+                },
+              }, [open ? '▾' : '▸'])
+            : el('span', { class: 'tree-toggle' }, [''])
+          row.append(toggle, el('button', {
             type: 'button',
-            class: 'tree-item' + (activeNode === `cat:${cat.name}` ? ' on' : ''),
+            class: 'tree-cat',
             onclick: () => setCategory(cat.name),
           }, [`${cat.name}（${images.length}）`]))
+          group.append(row)
+          if (rows.length) {
+            const kids = el('div', { class: 'tree-kids' + (open ? '' : ' collapsed') })
+            for (const product of rows) {
+              kids.append(el('button', {
+                type: 'button',
+                class: 'tree-item' + (activeNode === `item:${productKey(product)}` ? ' on' : ''),
+                onclick: () => openProduct(product),
+              }, [
+                el('span', { class: 'tree-icon' }, ['📂']),
+                product.folder,
+              ]))
+            }
+            group.append(kids)
+          }
+          tree.append(group)
           continue
         }
         const open = expanded.has(cat.name)
@@ -1012,13 +1044,13 @@
       }
       const images = filteredInbox(cat)
       const counts = document.querySelector('#counts')
-      if (counts) counts.textContent = `${images.length} 張未歸檔圖片 · 已選 ${inboxPicked.size} 張`
+      if (counts) counts.textContent = `${images.length} 張待整理圖片 · 已選 ${inboxPicked.size} 張`
       const pickLabel = document.querySelector('#pickLabel')
       if (pickLabel) pickLabel.textContent = `多選 （已選中 ${picked.size} 個）`
       list.classList.add('inbox-mode')
       const photos = el('div', { class: 'inbox-photos' })
       if (!images.length) {
-        photos.append(el('div', { class: 'empty' }, ['未歸檔裡還沒有圖片。把散圖直接放進這個文件夾，再按重新掃描。']))
+        photos.append(el('div', { class: 'empty' }, ['_待整理_裡還沒有圖片。把散圖直接放進這個文件夾，再按重新掃描。']))
       } else {
         photos.append(el('div', { class: 'grid' }, images.map((image) => {
           const chosen = inboxPicked.has(image.path)
@@ -1091,6 +1123,7 @@
         let shown = 0
         for (const cat of catalog.categories) {
           const rows = cat.products.filter(visible)
+          if (cat.inbox && !rows.length) continue
           if (!rows.length && (query || missingOnly)) continue
           shown += 1
           const section = el('section')
@@ -1308,13 +1341,12 @@
         el('div', { class: 'ctx-title' }, [group ? `已選中 ${products.length} 個商品` : `移動${product.folder}`]),
         el('button', {
           type: 'button',
-          onclick: () => moveProductsTo(products, '待整理'),
-        }, ['移到待整理']),
+          onclick: () => moveProductsTo(products, '_待整理_'),
+        }, ['移到_待整理_']),
         el('hr'),
       ])
       for (const cat of catalog.categories) {
         if (cat.inbox) continue
-        if (cat.name === '待整理') continue
         if (products.every((item) => item.category === cat.name)) continue
         menu.append(el('button', {
           type: 'button',
@@ -1333,8 +1365,8 @@
         el('div', { class: 'ctx-title' }, [`移動 ${image.name}`]),
         el('button', {
           type: 'button',
-          onclick: () => moveImageTo(image, '待整理'),
-        }, ['移到待整理']),
+          onclick: () => moveImageTo(image, '_待整理_'),
+        }, ['移到_待整理_']),
         el('hr'),
       ])
       let targets = 0

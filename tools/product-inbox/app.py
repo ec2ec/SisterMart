@@ -202,8 +202,8 @@ def write_index(rel: str, text: str) -> None:
             tmp.unlink()
 
 
-INBOX_NAME = "未歸檔"
-STAGING_PRODUCT = "待整理/待歸檔"
+INBOX_NAME = "_待整理_"
+INBOX_ALIASES = {INBOX_NAME, "待整理", "inbox", "_inbox"}
 
 
 def ensure_product_dir(rel: str) -> Path:
@@ -310,10 +310,8 @@ def move_products(paths: list, to: str) -> dict:
     if len(paths) > 200:
         raise ValueError("一次最多移動 200 個商品")
     to = urllib.parse.unquote(str(to or "")).replace("\\", "/").strip().strip("/")
-    if to == INBOX_NAME:
-        raise ValueError("不能把商品文件夾移入未歸檔")
-    if to in {"待整理", "inbox", "_inbox"}:
-        dest_cat = category_dir("待整理", create=True)
+    if to in INBOX_ALIASES:
+        dest_cat = category_dir(INBOX_NAME, create=True)
     else:
         dest_cat = category_dir(to, create=False)
     moved = []
@@ -379,12 +377,12 @@ def inbox_image_path(rel: str) -> Path:
     rel = urllib.parse.unquote(rel or "").replace("\\", "/").replace("\x00", "").strip().strip("/")
     parts = [part for part in rel.split("/") if part not in {"", "."}]
     if len(parts) != 2 or parts[0] != INBOX_NAME:
-        raise PermissionError("只能歸檔未歸檔裡的圖片")
+        raise PermissionError("只能歸檔_待整理_裡的圖片")
     path = safe_path(rel)
     root = ROOT.resolve()
     inbox = (root / INBOX_NAME).resolve()
     if path.parent.resolve() != inbox or not is_image_file(path):
-        raise PermissionError("只能歸檔未歸檔裡的圖片")
+        raise PermissionError("只能歸檔_待整理_裡的圖片")
     return path
 
 
@@ -478,8 +476,6 @@ def archive_inbox(paths: list, category: str, folder: str, text: str, merge: boo
 def move_image(src_rel: str, to_rel: str) -> dict:
     src_rel = urllib.parse.unquote(src_rel or "").replace("\\", "/").strip().strip("/")
     to_rel = urllib.parse.unquote(to_rel or "").replace("\\", "/").strip().strip("/")
-    if to_rel in {"待整理", "inbox", "_inbox"}:
-        to_rel = STAGING_PRODUCT
     src = safe_path(src_rel)
     if not is_image_file(src):
         raise FileNotFoundError("檔案不存在")
@@ -488,12 +484,23 @@ def move_image(src_rel: str, to_rel: str) -> dict:
         raise ValueError("只能移動商品文件夾裡的圖片")
     src_product = f"{parts[0]}/{parts[1]}"
     filename = parts[2]
+    if to_rel in INBOX_ALIASES:
+        dest_folder = category_dir(INBOX_NAME, create=True)
+        if src.parent.resolve() == dest_folder.resolve():
+            raise ValueError("已經在_待整理_")
+        dest = move_file_into(src, dest_folder)
+        try:
+            clear_cover_reference(src_product, filename)
+        except (FileNotFoundError, PermissionError, ValueError, OSError):
+            pass
+        return {
+            "from": src_rel,
+            "to": f"{INBOX_NAME}/{dest.name}",
+            "catalog": scan(),
+        }
     if to_rel == src_product:
         raise ValueError("已經在這個商品文件夾")
-    if to_rel == STAGING_PRODUCT:
-        dest_folder = ensure_product_dir(to_rel)
-    else:
-        dest_folder = product_dir(to_rel)
+    dest_folder = product_dir(to_rel)
     dest = unique_image_dest(dest_folder, filename)
     src.rename(dest)
     sidecar = src.parent / f"._{filename}"
@@ -581,16 +588,23 @@ def scan() -> dict:
                 children = []
             if cat.name == INBOX_NAME:
                 images = []
+                products = []
                 for child in children:
-                    if child.name.startswith(".") or child.is_symlink() or not is_image_file(child):
+                    if child.name.startswith(".") or child.is_symlink():
                         continue
-                    record = image_record(child, root)
-                    if record:
-                        images.append(record)
+                    if child.is_dir():
+                        try:
+                            products.append(read_product(cat.name, child, root))
+                        except OSError:
+                            continue
+                    elif is_image_file(child):
+                        record = image_record(child, root)
+                        if record:
+                            images.append(record)
                 inbox_row = {
                     "name": INBOX_NAME,
                     "inbox": True,
-                    "products": [],
+                    "products": products,
                     "images": images,
                     "loose_images": 0,
                 }
