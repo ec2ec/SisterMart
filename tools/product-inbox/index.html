@@ -383,6 +383,19 @@
       height: 100%;
       display: flex;
       flex-direction: column;
+      overflow: auto;
+    }
+    .photos-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      min-height: 0;
+    }
+    .photos-block .photos-title {
+      margin: 0.35rem 0 0;
+      padding: 0.15rem 0.1rem;
+      font-size: 0.92rem;
+      font-weight: 700;
     }
     .photos {
       display: grid;
@@ -740,6 +753,24 @@
     function productName(product) {
       const name = (product.fields || []).find((field) => field.key === '名稱' && field.value.trim())
       return name ? name.value.trim() : ''
+    }
+    function productImages(product) {
+      return product.images || []
+    }
+    function productOkImages(product) {
+      return product.ok_images || []
+    }
+    function allProductImages(product) {
+      return [...productImages(product), ...productOkImages(product)]
+    }
+    function imageCountLabel(product) {
+      const n = productImages(product).length
+      if (!product.has_ok_dir) return `${n} 張`
+      return `${n} 張 / ${productOkImages(product).length} 張`
+    }
+    function findCoverImage(product) {
+      const all = allProductImages(product)
+      return all.find((image) => image.path === product.cover) || null
     }
     function statusColorHex(id) {
       return STATUS_COLORS.find((item) => item.id === id)?.hex || ''
@@ -1188,7 +1219,7 @@
       }
       list.classList.remove('inbox-mode')
       const products = allProducts().filter(visible)
-      const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
+      const imageCount = products.reduce((sum, product) => sum + allProductImages(product).length, 0)
       const counts = document.querySelector('#counts')
       if (counts) counts.textContent = `${products.length} 件商品 · ${imageCount} 張圖`
       const pickLabel = document.querySelector('#pickLabel')
@@ -1248,7 +1279,7 @@
 
     function grid(products) {
       return el('div', { class: 'grid' }, products.map((product) => {
-        const coverImage = product.images.find((image) => image.path === product.cover)
+        const coverImage = findCoverImage(product)
         const cover = product.cover && !coverImage?.heic
           ? el('img', {
               src: mediaUrl('/thumb', product.cover, coverImage?.mtime),
@@ -1259,7 +1290,7 @@
         const coverWrap = el('div', { class: 'cover-wrap' }, [cover])
         const coverDot = statusDot(product.status_color)
         if (coverDot) coverWrap.append(coverDot)
-        const bits = [`${product.images.length} 張`]
+        const bits = [imageCountLabel(product)]
         if (!product.has_index) bits.push('未填說明')
         const key = productKey(product)
         const on = activeNode === `item:${key}`
@@ -1512,6 +1543,7 @@
     function openMoveMenu(event, product, image) {
       event.preventDefault()
       event.stopPropagation()
+      if (image?.ok) return
       closeContextMenu()
       const menu = el('div', { class: 'ctx-menu' }, [
         el('div', { class: 'ctx-title' }, [`移動 ${image.name}`]),
@@ -1540,6 +1572,27 @@
       placeMenu(menu, event.clientX, event.clientY)
     }
 
+    function photoButton(product, image, index, movable) {
+      const button = el('button', {
+        type: 'button',
+        onclick: () => openLight(index),
+      }, [
+        image.heic
+          ? el('div', { class: 'ph' }, ['HEIC'])
+          : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
+        el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
+      ])
+      if (movable) {
+        button.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
+      } else {
+        button.addEventListener('contextmenu', (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+        })
+      }
+      return button
+    }
+
     function showDetail(product) {
       closeContextMenu()
       crumbNav.textContent = `${product.category} / ${product.folder}`
@@ -1547,24 +1600,31 @@
       detailView.replaceChildren()
       detailView.append(indexEditor(product))
       const pane = el('div', { class: 'preview-pane' })
-      if (!product.images.length) {
+      const rootImages = productImages(product)
+      const okImages = productOkImages(product)
+      const all = allProductImages(product)
+      if (!all.length) {
         pane.append(el('div', { class: 'empty' }, ['這個文件夾裡還沒有圖片。把新照片直接放進來，再按重新掃描。']))
       } else if (light >= 0) {
         pane.append(renderLight(product))
       } else {
-        pane.append(el('div', { class: 'photos' }, product.images.map((image, index) => {
-          const button = el('button', {
-            type: 'button',
-            onclick: () => openLight(index),
-          }, [
-            image.heic
-              ? el('div', { class: 'ph' }, ['HEIC'])
-              : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
-            el('span', {}, [image.heic ? `${image.name}（無法預覽）` : image.name]),
-          ])
-          button.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
-          return button
-        })))
+        const stack = el('div', { class: 'photos-block' })
+        if (rootImages.length) {
+          stack.append(el('div', { class: 'photos' }, rootImages.map((image, index) => (
+            photoButton(product, image, index, true)
+          ))))
+        }
+        if (product.has_ok_dir) {
+          stack.append(el('h2', { class: 'photos-title' }, [`已處理（ok）${okImages.length ? ` · ${okImages.length}` : ''}`]))
+          if (okImages.length) {
+            stack.append(el('div', { class: 'photos' }, okImages.map((image, index) => (
+              photoButton(product, image, rootImages.length + index, false)
+            ))))
+          } else {
+            stack.append(el('div', { class: 'note' }, ['ok 目錄裡還沒有圖片。']))
+          }
+        }
+        pane.append(stack)
       }
       detailView.append(pane)
     }
@@ -1683,13 +1743,15 @@
     }
 
     function renderLight(product) {
-      const image = product.images[light]
+      const gallery = allProductImages(product)
+      const image = gallery[light]
       if (!image) return
       const box = el('div', { class: 'lightbox' })
       const close = () => { light = -1; showDetail(product) }
+      const title = image.ok ? `${image.name}（ok）` : image.name
       box.append(el('header', {}, [
-        el('strong', {}, [image.name]),
-        el('span', { class: 'count' }, [`${light + 1} / ${product.images.length}`]),
+        el('strong', {}, [title]),
+        el('span', { class: 'count' }, [`${light + 1} / ${gallery.length}`]),
         el('button', { class: 'close-preview', type: 'button', onclick: close }, ['關閉']),
       ]))
       const zoomLabel = el('span', { class: 'count' }, [''])
@@ -1789,9 +1851,16 @@
         stage.append(frame)
         box.querySelector('header').append(presetBar)
         apply()
-        frame.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
+        if (image.ok) {
+          frame.addEventListener('contextmenu', (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+          })
+        } else {
+          frame.addEventListener('contextmenu', (event) => openMoveMenu(event, product, image))
+        }
       }
-      if (product.images.length > 1) {
+      if (gallery.length > 1) {
         stage.append(el('button', { class: 'nav prev', type: 'button', onclick: () => step(-1) }, ['‹']))
         stage.append(el('button', { class: 'nav next', type: 'button', onclick: () => step(1) }, ['›']))
       }
@@ -1803,8 +1872,9 @@
 
     function step(delta) {
       const product = findSelected()
-      if (!product || product.images.length < 2) return
-      light = (light + delta + product.images.length) % product.images.length
+      const gallery = product ? allProductImages(product) : []
+      if (!product || gallery.length < 2) return
+      light = (light + delta + gallery.length) % gallery.length
       showDetail(product)
     }
 

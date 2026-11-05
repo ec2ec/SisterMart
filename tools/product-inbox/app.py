@@ -147,8 +147,67 @@ def is_image_file(path: Path) -> bool:
 
 
 def list_images(folder: Path) -> list[Path]:
-    files = [path for path in folder.iterdir() if is_image_file(path)]
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return []
+    files = [path for path in entries if is_image_file(path)]
     return sorted(files, key=lambda p: p.name.casefold())
+
+
+def find_ok_dir(folder: Path) -> Path | None:
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return None
+    for child in entries:
+        if child.is_symlink() or not child.is_dir() or child.name.startswith("."):
+            continue
+        if child.name.casefold() == "ok":
+            return child
+    return None
+
+
+def image_rows_for(paths: list[Path], root: Path, *, ok: bool = False) -> list[dict]:
+    rows = []
+    root_resolved = root.resolve()
+    for image in paths:
+        try:
+            image_rel = image.resolve().relative_to(root_resolved).as_posix()
+            stat = image.stat()
+        except (OSError, ValueError):
+            continue
+        rows.append(
+            {
+                "name": image.name,
+                "path": image_rel,
+                "mtime": stat.st_mtime_ns,
+                "heic": image.suffix.lower() in HEIC_EXT and not can_preview_heic(),
+                "ok": ok,
+            }
+        )
+    return rows
+
+
+def match_cover(cover_name: str, root_images: list[Path], ok_images: list[Path], ok_dir: Path | None) -> Path | None:
+    name = (cover_name or "").replace("\\", "/").strip()
+    if not name:
+        return None
+    lowered = name.casefold()
+    if "/" in name:
+        folder_part, file_part = lowered.rsplit("/", 1)
+        if folder_part == "ok" and ok_dir is not None:
+            for image in ok_images:
+                if image.name.casefold() == file_part:
+                    return image
+        return None
+    for image in root_images:
+        if image.name.casefold() == lowered:
+            return image
+    for image in ok_images:
+        if image.name.casefold() == lowered:
+            return image
+    return None
 
 
 def read_index_text(path: Path) -> str:
@@ -310,10 +369,12 @@ def clear_cover_reference(product_rel: str, filename: str) -> None:
     fields = parse_index(index_path)
     if not fields:
         return
+    targets = {filename.casefold(), f"ok/{filename}".casefold()}
     changed = False
     rows: list[dict[str, str]] = []
     for field in fields:
-        if field["key"] == "主圖" and field["value"].casefold() == filename.casefold():
+        value = field["value"].replace("\\", "/").casefold()
+        if field["key"] == "主圖" and value in targets:
             rows.append({"key": "主圖", "value": ""})
             changed = True
         else:
@@ -542,6 +603,8 @@ def move_image(src_rel: str, to_rel: str) -> dict:
     if not is_image_file(src):
         raise FileNotFoundError("檔案不存在")
     parts = [part for part in src_rel.split("/") if part]
+    if len(parts) == 4 and parts[2].casefold() == "ok":
+        raise ValueError("已處理（ok）裡的圖片不能移動")
     if len(parts) != 3:
         raise ValueError("只能移動商品文件夾裡的圖片")
     src_product = f"{parts[0]}/{parts[1]}"
@@ -588,10 +651,14 @@ def move_image(src_rel: str, to_rel: str) -> dict:
 def read_product(category: str, folder: Path, root: Path) -> dict:
     fields = parse_index(folder / "index.txt")
     images = list_images(folder)
+    ok_dir = find_ok_dir(folder)
+    ok_images = list_images(ok_dir) if ok_dir is not None else []
     cover_name = field_value(fields, "主圖")
-    cover = next((p for p in images if p.name.casefold() == cover_name.casefold()), None)
+    cover = match_cover(cover_name, images, ok_images, ok_dir)
     if cover is None and images:
         cover = images[0]
+    elif cover is None and ok_images:
+        cover = ok_images[0]
 
     def rel(path: Path) -> str:
         try:
@@ -599,20 +666,6 @@ def read_product(category: str, folder: Path, root: Path) -> dict:
         except ValueError:
             return ""
 
-    image_rows = []
-    for image in images:
-        image_rel = rel(image)
-        if not image_rel:
-            continue
-        stat = image.stat()
-        image_rows.append(
-            {
-                "name": image.name,
-                "path": image_rel,
-                "mtime": stat.st_mtime_ns,
-                "heic": image.suffix.lower() in HEIC_EXT and not can_preview_heic(),
-            }
-        )
     return {
         "folder": folder.name,
         "name": field_value(fields, "名稱") or folder.name,
@@ -621,7 +674,9 @@ def read_product(category: str, folder: Path, root: Path) -> dict:
         "index_text": read_index_text(folder / "index.txt"),
         "fields": fields,
         "cover": rel(cover) if cover else "",
-        "images": image_rows,
+        "images": image_rows_for(images, root, ok=False),
+        "ok_images": image_rows_for(ok_images, root, ok=True),
+        "has_ok_dir": ok_dir is not None,
         "status_color": read_status_color(folder),
     }
 
