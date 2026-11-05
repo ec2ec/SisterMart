@@ -119,6 +119,20 @@ def field_value(fields: list[dict[str, str]], key: str) -> str:
     return ""
 
 
+def image_record(image: Path, root: Path) -> dict | None:
+    try:
+        image_rel = image.resolve().relative_to(root.resolve()).as_posix()
+        stat = image.stat()
+    except (OSError, ValueError):
+        return None
+    return {
+        "name": image.name,
+        "path": image_rel,
+        "mtime": stat.st_mtime_ns,
+        "heic": image.suffix.lower() in HEIC_EXT and not can_preview_heic(),
+    }
+
+
 def is_appledouble(name: str) -> bool:
     return name.startswith("._")
 
@@ -188,6 +202,7 @@ def write_index(rel: str, text: str) -> None:
             tmp.unlink()
 
 
+INBOX_NAME = "未歸檔"
 STAGING_PRODUCT = "待整理/待歸檔"
 
 
@@ -295,6 +310,8 @@ def move_products(paths: list, to: str) -> dict:
     if len(paths) > 200:
         raise ValueError("一次最多移動 200 個商品")
     to = urllib.parse.unquote(str(to or "")).replace("\\", "/").strip().strip("/")
+    if to == INBOX_NAME:
+        raise ValueError("不能把商品文件夾移入未歸檔")
     if to in {"待整理", "inbox", "_inbox"}:
         dest_cat = category_dir("待整理", create=True)
     else:
@@ -325,6 +342,137 @@ def move_products(paths: list, to: str) -> dict:
         except (PermissionError, FileNotFoundError, ValueError, OSError) as exc:
             failed.append({"path": rel, "error": str(exc) or "無法移動"})
     return {"moved": moved, "skipped": skipped, "failed": failed, "catalog": scan()}
+
+
+def clean_folder_name(name: str) -> str:
+    name = str(name or "").replace("\x00", "").strip()
+    if (
+        not name
+        or name in {".", ".."}
+        or "/" in name
+        or "\\" in name
+        or ":" in name
+        or name.startswith(".")
+    ):
+        raise PermissionError("路徑不允許")
+    return name
+
+
+def with_default_cover(text: str, cover: str) -> str:
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    found = False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("主圖：") or stripped.startswith("主圖:"):
+            sep = "：" if "：" in stripped else ":"
+            value = stripped.split(sep, 1)[1]
+            if not value.strip():
+                lines[index] = f"主圖：{cover}"
+            found = True
+            break
+    if not found:
+        lines.append(f"主圖：{cover}")
+    return "\n".join(lines).strip("\n") + "\n"
+
+
+def inbox_image_path(rel: str) -> Path:
+    rel = urllib.parse.unquote(rel or "").replace("\\", "/").replace("\x00", "").strip().strip("/")
+    parts = [part for part in rel.split("/") if part not in {"", "."}]
+    if len(parts) != 2 or parts[0] != INBOX_NAME:
+        raise PermissionError("只能歸檔未歸檔裡的圖片")
+    path = safe_path(rel)
+    root = ROOT.resolve()
+    inbox = (root / INBOX_NAME).resolve()
+    if path.parent.resolve() != inbox or not is_image_file(path):
+        raise PermissionError("只能歸檔未歸檔裡的圖片")
+    return path
+
+
+def move_file_into(src: Path, folder: Path) -> Path:
+    dest = unique_image_dest(folder, src.name)
+    try:
+        src.rename(dest)
+    except OSError:
+        shutil.move(str(src), str(dest))
+    sidecar = src.parent / f"._{src.name}"
+    if sidecar.is_file() and not sidecar.is_symlink():
+        side_dest = folder / f"._{dest.name}"
+        if side_dest.exists():
+            side_dest = unique_image_dest(folder, side_dest.name)
+        try:
+            sidecar.rename(side_dest)
+        except OSError:
+            try:
+                shutil.move(str(sidecar), str(side_dest))
+            except OSError:
+                pass
+    return dest
+
+
+def archive_inbox(paths: list, category: str, folder: str, text: str, merge: bool) -> dict:
+    if not isinstance(paths, list) or not paths:
+        raise ValueError("請先勾選圖片")
+    if len(paths) > 200:
+        raise ValueError("一次最多歸檔 200 張圖片")
+    category = str(category or "").strip()
+    if category == INBOX_NAME:
+        raise ValueError("請選擇其他分類")
+    dest_cat = category_dir(category, create=False)
+    folder_name = clean_folder_name(folder)
+    dest_folder = dest_cat / folder_name
+    if dest_folder.is_symlink() or (dest_folder.exists() and not dest_folder.is_dir()):
+        raise PermissionError("路徑不允許")
+    if dest_folder.exists() and dest_folder.resolve().parent != dest_cat.resolve():
+        raise PermissionError("路徑不允許")
+    exists = dest_folder.is_dir()
+    if exists and not merge:
+        return {"exists": True, "catalog": scan()}
+    if not isinstance(text, str):
+        text = ""
+    if not exists and len(text.encode("utf-8")) > INDEX_LIMIT:
+        raise ValueError("內容超過 64KB")
+    created = False
+    if not exists:
+        dest_folder.mkdir(parents=False, exist_ok=False)
+        created = True
+    moved = []
+    failed = []
+    seen: set[str] = set()
+    for raw in paths:
+        if not isinstance(raw, str):
+            failed.append({"path": "", "error": "路徑不允許"})
+            continue
+        rel = urllib.parse.unquote(raw).replace("\\", "/").strip().strip("/")
+        if rel in seen:
+            continue
+        seen.add(rel)
+        try:
+            src = inbox_image_path(rel)
+            dest = move_file_into(src, dest_folder)
+            moved.append({
+                "from": rel,
+                "to": f"{dest_cat.name}/{folder_name}/{dest.name}",
+                "name": dest.name,
+            })
+        except (PermissionError, FileNotFoundError, ValueError, OSError) as exc:
+            failed.append({"path": rel, "error": str(exc) or "無法移動"})
+    if created and not moved:
+        try:
+            dest_folder.rmdir()
+        except OSError:
+            pass
+        created = False
+    if created and moved:
+        write_index(f"{dest_cat.name}/{folder_name}", with_default_cover(text, moved[0]["name"]))
+    return {
+        "exists": False,
+        "created": created,
+        "merged": bool(exists and moved),
+        "to": f"{dest_cat.name}/{folder_name}",
+        "moved": moved,
+        "failed": failed,
+        "catalog": scan(),
+    }
 
 
 def move_image(src_rel: str, to_rel: str) -> dict:
@@ -425,13 +573,30 @@ def scan() -> dict:
         categories_on_disk = [
             p for p in root_entries if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
         ]
+        inbox_row = None
         for cat in sorted(categories_on_disk, key=lambda p: p.name.casefold()):
-            products = []
-            loose_in_cat = 0
             try:
                 children = sorted(cat.iterdir(), key=lambda p: p.name.casefold())
             except OSError:
                 children = []
+            if cat.name == INBOX_NAME:
+                images = []
+                for child in children:
+                    if child.name.startswith(".") or child.is_symlink() or not is_image_file(child):
+                        continue
+                    record = image_record(child, root)
+                    if record:
+                        images.append(record)
+                inbox_row = {
+                    "name": INBOX_NAME,
+                    "inbox": True,
+                    "products": [],
+                    "images": images,
+                    "loose_images": 0,
+                }
+                continue
+            products = []
+            loose_in_cat = 0
             for child in children:
                 if child.name.startswith(".") or child.is_symlink():
                     continue
@@ -449,6 +614,8 @@ def scan() -> dict:
                     "loose_images": loose_in_cat,
                 }
             )
+        if inbox_row:
+            categories.insert(0, inbox_row)
     heic_files, heic_hidden = collect_heic(root) if root.is_dir() else ([], [])
     return {
         "root": str(root),
@@ -727,6 +894,9 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/product/move":
             self._post_product_move()
             return
+        if parsed.path == "/api/inbox/archive":
+            self._post_inbox_archive()
+            return
         self._json({"error": "找不到"}, 404)
 
     def _read_json(self, limit: int) -> dict:
@@ -828,6 +998,30 @@ class Handler(BaseHTTPRequestHandler):
             return
         except OSError as exc:
             self._json({"error": f"無法移動：{exc}"}, 500)
+            return
+        self._json(result)
+
+    def _post_inbox_archive(self) -> None:
+        try:
+            body = self._read_json(INDEX_LIMIT + 65536)
+            result = archive_inbox(
+                body.get("paths"),
+                str(body.get("category") or ""),
+                str(body.get("folder") or ""),
+                body.get("text") if isinstance(body.get("text"), str) else "",
+                bool(body.get("merge")),
+            )
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+            return
+        except PermissionError as exc:
+            self._json({"error": str(exc)}, 403)
+            return
+        except FileNotFoundError:
+            self._json({"error": "檔案不存在"}, 404)
+            return
+        except OSError as exc:
+            self._json({"error": f"無法歸檔：{exc}"}, 500)
             return
         self._json(result)
 

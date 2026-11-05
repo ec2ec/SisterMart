@@ -187,12 +187,21 @@
       border-radius: 13px;
       color: #ffffff;
     }
-    #list {
+    #list.inbox-mode {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .inbox-view {
       flex: 1 1 auto;
       min-height: 0;
-      overflow: auto;
-      padding: 0.5rem 1rem 1.2rem;
+      display: grid;
+      grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+      gap: 0.85rem;
     }
+    .inbox-view.idle { grid-template-columns: minmax(0, 1fr); }
+    .inbox-photos { min-width: 0; min-height: 0; overflow: auto; }
+    .inbox-file { color: var(--muted); font-size: 0.75rem; overflow-wrap: anywhere; }
     section { margin: 0 0 1.2rem; }
     .section-head {
       display: block;
@@ -309,7 +318,7 @@
     }
     .editor .label-text .zh { color: var(--ink); font-weight: 600; }
     .editor .label-text .en { color: var(--muted); }
-    .editor input, .editor textarea {
+    .editor input, .editor textarea, .editor select {
       width: 100%;
       margin: 0;
       padding: 0.4rem 0.55rem;
@@ -604,6 +613,9 @@
     let toolsReady = false
     let multiOn = false
     let picked = new Set()
+    let inboxPicked = new Set()
+    let inboxDraft = { folder: '', category: '', fields: {} }
+    let inboxScroll = 0
     const FIELD_GROUPS = [
       [{ key: '編碼', en: 'Code' }],
       [
@@ -785,6 +797,15 @@
         '全部',
       ]))
       for (const cat of catalog.categories) {
+        if (cat.inbox) {
+          const images = filteredInbox(cat)
+          tree.append(el('button', {
+            type: 'button',
+            class: 'tree-item' + (activeNode === `cat:${cat.name}` ? ' on' : ''),
+            onclick: () => setCategory(cat.name),
+          }, [`${cat.name}（${images.length}）`]))
+          continue
+        }
         const open = expanded.has(cat.name)
         const rows = cat.products.filter(matchesQuery)
         const group = el('div')
@@ -826,7 +847,220 @@
       }
     }
 
+    function filteredInbox(cat) {
+      const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+      return (cat?.images || []).filter((image) => words.every((word) => image.name.toLowerCase().includes(word)))
+    }
+
+    function toggleInbox(image) {
+      if (inboxPicked.has(image.path)) inboxPicked.delete(image.path)
+      else inboxPicked.add(image.path)
+      paintHome(false)
+    }
+
+    function inboxValues() {
+      const values = {}
+      for (const key of FIELD_KEYS) values[key] = inboxDraft.fields[key] || ''
+      return values
+    }
+
+    function inboxField(def) {
+      const input = def.multiline
+        ? el('textarea', { spellcheck: 'false', rows: '3' })
+        : el('input', { type: 'text', spellcheck: 'false' })
+      input.value = inboxDraft.fields[def.key] || ''
+      input.addEventListener('input', () => {
+        inboxDraft.fields[def.key] = input.value
+      })
+      return el('label', {}, [
+        el('div', { class: 'label-text' }, [
+          el('span', { class: 'zh' }, [def.key]),
+          el('span', { class: 'en' }, [def.en]),
+        ]),
+        input,
+      ])
+    }
+
+    function inboxForm() {
+      const hint = el('span', { id: 'inboxHint', class: 'saved' }, [''])
+      const folder = el('input', { type: 'text', spellcheck: 'false', value: inboxDraft.folder })
+      folder.addEventListener('input', () => { inboxDraft.folder = folder.value })
+      const select = el('select', {}, [
+        el('option', { value: '' }, ['請選擇分類']),
+        ...catalog.categories.filter((cat) => !cat.inbox).map((cat) => el('option', {
+          value: cat.name,
+          selected: cat.name === inboxDraft.category,
+        }, [cat.name])),
+      ])
+      select.addEventListener('change', () => { inboxDraft.category = select.value })
+      const fields = el('div', { class: 'fields' }, [
+        el('div', { class: 'group' }, [
+          el('label', {}, [
+            el('div', { class: 'label-text' }, [
+              el('span', { class: 'zh' }, ['文件夾名']),
+              el('span', { class: 'en' }, ['Folder']),
+            ]),
+            folder,
+          ]),
+          el('label', {}, [
+            el('div', { class: 'label-text' }, [
+              el('span', { class: 'zh' }, ['分類']),
+              el('span', { class: 'en' }, ['Category']),
+            ]),
+            select,
+          ]),
+        ]),
+        ...FIELD_GROUPS.map((group) => el('div', { class: 'group' }, group.map((def) => inboxField(def)))),
+      ])
+      const save = async () => {
+        hint.className = 'err'
+        if (!inboxPicked.size) {
+          hint.textContent = '請先勾選圖片'
+          return
+        }
+        if (!inboxDraft.folder.trim() || !inboxDraft.category) {
+          hint.textContent = '請填寫文件夾名和分類'
+          return
+        }
+        hint.className = 'saved'
+        hint.textContent = '正在歸檔…'
+        await archiveInbox(false, hint)
+      }
+      return el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
+        fields,
+        el('div', { class: 'row' }, [
+          el('button', { type: 'submit' }, ['保存']),
+          hint,
+        ]),
+      ])
+    }
+
+    function askConfirm(message) {
+      return new Promise((resolve) => {
+        let settled = false
+        const done = (value) => {
+          if (settled) return
+          settled = true
+          resolve(value)
+        }
+        const modal = showModal({
+          title: '商品文件夾已存在',
+          body: [el('p', {}, [message])],
+          actions: [
+            { label: '取消', onclick: () => done(false) },
+            { label: '歸檔至該商品', primary: true, onclick: () => done(true) },
+          ],
+        })
+        modal.mask.addEventListener('click', (event) => {
+          if (event.target === modal.mask) done(false)
+        })
+      })
+    }
+
+    async function archiveInbox(merge, hint) {
+      const response = await fetch('/api/inbox/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: [...inboxPicked],
+          category: inboxDraft.category,
+          folder: inboxDraft.folder.trim(),
+          text: serializeFields(inboxValues()),
+          merge,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        if (hint) {
+          hint.className = 'err'
+          hint.textContent = data.error || '無法歸檔'
+        }
+        return
+      }
+      if (data.exists && !merge) {
+        if (hint) hint.textContent = ''
+        const yes = await askConfirm(`「${inboxDraft.category}/${inboxDraft.folder.trim()}」已存在，是否歸檔至該商品？`)
+        if (!yes) return
+        await archiveInbox(true, hint)
+        return
+      }
+      catalog = data.catalog
+      inboxPicked.clear()
+      inboxDraft = { folder: '', category: '', fields: {} }
+      paintHome(false)
+      const lines = (data.moved || []).map((item) => `${item.from.split('/').pop()} → ${item.to}`)
+      if (data.failed?.length) {
+        for (const item of data.failed) lines.push(`失敗 ${item.path || ''}：${item.error}`)
+      }
+      const title = data.created ? '已建立商品文件夾' : (data.merged ? '已歸檔至該商品' : '沒有歸檔')
+      showModal({
+        title,
+        body: [
+          el('p', {}, [`${data.to || ''}，移入 ${data.moved?.length || 0} 張圖片。`]),
+          ...lines.map((line) => el('p', {}, [line])),
+        ],
+        actions: [{ label: '關閉', primary: true }],
+      })
+    }
+
+    function renderInbox(cat) {
+      const prev = list.querySelector('.inbox-photos')
+      if (prev) inboxScroll = prev.scrollTop
+      const live = new Set((cat.images || []).map((image) => image.path))
+      for (const path of [...inboxPicked]) {
+        if (!live.has(path)) inboxPicked.delete(path)
+      }
+      const images = filteredInbox(cat)
+      const counts = document.querySelector('#counts')
+      if (counts) counts.textContent = `${images.length} 張未歸檔圖片 · 已選 ${inboxPicked.size} 張`
+      const pickLabel = document.querySelector('#pickLabel')
+      if (pickLabel) pickLabel.textContent = `多選 （已選中 ${picked.size} 個）`
+      list.classList.add('inbox-mode')
+      const photos = el('div', { class: 'inbox-photos' })
+      if (!images.length) {
+        photos.append(el('div', { class: 'empty' }, ['未歸檔裡還沒有圖片。把散圖直接放進這個文件夾，再按重新掃描。']))
+      } else {
+        photos.append(el('div', { class: 'grid' }, images.map((image) => {
+          const chosen = inboxPicked.has(image.path)
+          const wrap = el('div', { class: 'card-wrap multi' + (chosen ? ' picked' : '') })
+          const button = el('button', {
+            class: 'card',
+            type: 'button',
+            onclick: () => toggleInbox(image),
+          }, [
+            image.heic
+              ? el('div', { class: 'ph' }, ['HEIC'])
+              : el('img', { src: mediaUrl('/thumb', image.path, image.mtime), alt: image.name }),
+            el('strong', {}, [image.name]),
+          ])
+          wrap.append(button, el('input', {
+            class: 'tick',
+            type: 'checkbox',
+            checked: chosen,
+            onclick: (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              toggleInbox(image)
+            },
+          }))
+          return wrap
+        })))
+      }
+      const view = el('div', { class: 'inbox-view' + (inboxPicked.size ? '' : ' idle') })
+      if (inboxPicked.size) view.append(inboxForm())
+      view.append(photos)
+      list.replaceChildren(view)
+      photos.scrollTop = inboxScroll
+      photos.addEventListener('scroll', () => { inboxScroll = photos.scrollTop })
+    }
+
     function fillResults() {
+      const inbox = (catalog.categories || []).find((cat) => cat.inbox && cat.name === category)
+      if (inbox) {
+        renderInbox(inbox)
+        return
+      }
+      list.classList.remove('inbox-mode')
       const products = allProducts().filter(visible)
       const imageCount = products.reduce((sum, product) => sum + product.images.length, 0)
       const counts = document.querySelector('#counts')
@@ -1079,6 +1313,7 @@
         el('hr'),
       ])
       for (const cat of catalog.categories) {
+        if (cat.inbox) continue
         if (cat.name === '待整理') continue
         if (products.every((item) => item.category === cat.name)) continue
         menu.append(el('button', {
