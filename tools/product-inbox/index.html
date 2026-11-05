@@ -825,7 +825,7 @@
             type: 'button',
             class: 'tree-cat',
             onclick: () => setCategory(cat.name),
-          }, [`${cat.name}（${images.length}）`]))
+          }, [`${cat.name}（${rows.length} 夾 · ${images.length} 圖）`]))
           group.append(row)
           if (rows.length) {
             const kids = el('div', { class: 'tree-kids' + (open ? '' : ' collapsed') })
@@ -1049,16 +1049,23 @@
         if (!live.has(path)) inboxPicked.delete(path)
       }
       const images = filteredInbox(cat)
+      const folders = (cat.products || []).filter(matchesQuery)
       const counts = document.querySelector('#counts')
-      if (counts) counts.textContent = `${images.length} 張待整理圖片 · 已選 ${inboxPicked.size} 張`
+      if (counts) counts.textContent = `${folders.length} 個商品文件夾 · ${images.length} 張待整理圖片 · 已選 ${inboxPicked.size} 張`
       const pickLabel = document.querySelector('#pickLabel')
       if (pickLabel) pickLabel.textContent = `多選 （已選中 ${picked.size} 個）`
       list.classList.add('inbox-mode')
       const photos = el('div', { class: 'inbox-photos' })
-      if (!images.length) {
-        photos.append(el('div', { class: 'empty' }, ['_待整理_裡還沒有圖片。把散圖直接放進這個文件夾，再按重新掃描。']))
-      } else {
-        photos.append(el('div', { class: 'grid' }, images.map((image) => {
+      if (folders.length) {
+        const section = el('section')
+        section.append(el('h2', { class: 'section-head' }, [`商品文件夾（${folders.length}）`]))
+        section.append(grid(folders))
+        photos.append(section)
+      }
+      if (images.length) {
+        const section = el('section')
+        section.append(el('h2', { class: 'section-head' }, [`散圖（${images.length}）`]))
+        section.append(el('div', { class: 'grid' }, images.map((image) => {
           const chosen = inboxPicked.has(image.path)
           const wrap = el('div', { class: 'card-wrap multi' + (chosen ? ' picked' : '') })
           const button = el('button', {
@@ -1083,6 +1090,10 @@
           }))
           return wrap
         })))
+        photos.append(section)
+      }
+      if (!folders.length && !images.length) {
+        photos.append(el('div', { class: 'empty' }, ['_待整理_裡還沒有圖片或商品文件夾。']))
       }
       const view = el('div', { class: 'inbox-view' + (inboxPicked.size ? '' : ' idle') })
       if (inboxPicked.size) view.append(inboxForm())
