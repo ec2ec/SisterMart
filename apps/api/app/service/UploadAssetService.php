@@ -356,6 +356,11 @@ class UploadAssetService
             $path = (string) $row['path'];
             $thumb = $uploads->ensureThumb($path);
             if ($thumb === null) {
+                // 標記為「無獨立縮略圖」，避免同一失敗檔反覆卡住批次。
+                Db::execute(
+                    "UPDATE `{$table}` SET `thumb_path` = ?, `updated_at` = ? WHERE `id` = ?",
+                    [$path, $now, (int) $row['id']],
+                );
                 $failed++;
                 continue;
             }
