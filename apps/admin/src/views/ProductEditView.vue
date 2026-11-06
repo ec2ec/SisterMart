@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
@@ -263,16 +263,49 @@ onMounted(async () => {
 
 function showSavedDialog() {
   // 用 createDiscreteApi 彈窗，避免依賴當前組件樹的 DialogProvider 注入時機
-  appDialog.success({
+  const d = appDialog.success({
     title: '商品保存成功',
     content: '商品資料已保存。',
-    positiveText: '確認',
-    negativeText: '去列表',
     maskClosable: false,
     closeOnEsc: false,
-    onNegativeClick: () => {
-      router.push('/catalog/products')
-    },
+    closable: true,
+    action: () =>
+      h(
+        'div',
+        { style: 'display:flex;gap:0.5rem;justify-content:flex-end;flex-wrap:wrap' },
+        [
+          h(
+            NButton,
+            {
+              onClick: () => {
+                d.destroy()
+                router.push('/catalog/products')
+              },
+            },
+            { default: () => '去列表' },
+          ),
+          h(
+            NButton,
+            {
+              onClick: () => {
+                d.destroy()
+                router.push('/catalog/products/new')
+              },
+            },
+            { default: () => '去新增' },
+          ),
+          h(
+            NButton,
+            {
+              type: 'primary',
+              onClick: () => {
+                d.destroy()
+              },
+            },
+            { default: () => '確認' },
+          ),
+        ],
+      ),
   })
 }
 
