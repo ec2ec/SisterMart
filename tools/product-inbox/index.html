@@ -234,7 +234,6 @@
       grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
       gap: 0.85rem;
     }
-    .inbox-view.idle { grid-template-columns: minmax(0, 1fr); }
     .inbox-photos { min-width: 0; min-height: 0; overflow: auto; }
     .inbox-file { color: var(--muted); font-size: 0.75rem; overflow-wrap: anywhere; }
     section { margin: 0 0 1.2rem; }
@@ -375,8 +374,14 @@
       background: var(--accent);
       color: var(--accent-ink);
       padding: 0.4rem 0.9rem;
+      cursor: pointer;
+    }
+    .editor .row button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
     .saved { color: #3f6b45; font-size: 0.85rem; }
+    .hint-muted { color: var(--muted); font-size: 0.85rem; }
     .preview-pane {
       min-width: 0;
       min-height: 0;
@@ -1028,7 +1033,12 @@
     }
 
     function inboxForm() {
-      const hint = el('span', { id: 'inboxHint', class: 'saved' }, [''])
+      const canSave = inboxPicked.size > 0
+      const hint = el(
+        'span',
+        { id: 'inboxHint', class: canSave ? 'saved' : 'hint-muted' },
+        [canSave ? '' : '請先勾選圖片'],
+      )
       const folder = el('input', { type: 'text', spellcheck: 'false', value: inboxDraft.folder })
       folder.addEventListener('input', () => { inboxDraft.folder = folder.value })
       const select = el('select', {}, [
@@ -1058,9 +1068,11 @@
         ]),
         ...FIELD_GROUPS.map((group) => el('div', { class: 'group' }, group.map((def) => inboxField(def)))),
       ])
+      const saveBtn = el('button', { type: 'submit', disabled: !canSave }, ['保存'])
       const save = async () => {
         hint.className = 'err'
         if (!inboxPicked.size) {
+          hint.className = 'hint-muted'
           hint.textContent = '請先勾選圖片'
           return
         }
@@ -1075,7 +1087,7 @@
       return el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
         fields,
         el('div', { class: 'row' }, [
-          el('button', { type: 'submit' }, ['保存']),
+          saveBtn,
           hint,
         ]),
       ])
@@ -1203,8 +1215,8 @@
       if (!folders.length && !images.length) {
         photos.append(el('div', { class: 'empty' }, ['_待整理_裡還沒有圖片或商品文件夾。']))
       }
-      const view = el('div', { class: 'inbox-view' + (inboxPicked.size ? '' : ' idle') })
-      if (inboxPicked.size) view.append(inboxForm())
+      const view = el('div', { class: 'inbox-view' })
+      view.append(inboxForm())
       view.append(photos)
       list.replaceChildren(view)
       photos.scrollTop = inboxScroll
