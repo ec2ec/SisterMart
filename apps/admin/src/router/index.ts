@@ -55,7 +55,7 @@ export const router = createRouter({
       component: AdminLayout,
       children: [
         { path: '', component: DashboardView, meta: { title: '概覽' } },
-        { path: '/catalog/products', component: ProductsView, meta: { title: '商品' } },
+        { path: '/catalog/products', component: ProductsView, meta: { title: '商品列表' } },
         { path: '/catalog/products/:id', component: ProductEditView, meta: { title: '商品編輯' } },
         { path: '/catalog/categories', component: CategoriesView, meta: { title: '分類' } },
         { path: '/catalog/suppliers', component: SuppliersView, meta: { title: '供應商' } },

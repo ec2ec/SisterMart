@@ -32,7 +32,10 @@ const active = computed(() => {
   if (p.startsWith('/catalog/specs/') && p !== '/catalog/specs') return '/catalog/specs'
   return p === '/' ? '/' : p
 })
-const title = computed(() => String(route.meta.title || 'SisterMart'))
+const title = computed(() => {
+  if (route.path === '/catalog/products/new') return '新增商品'
+  return String(route.meta.title || 'SisterMart')
+})
 const menus = computed(() => menuOptions(admin?.value?.role))
 const contentStyle = computed(() =>
   isNarrow.value
