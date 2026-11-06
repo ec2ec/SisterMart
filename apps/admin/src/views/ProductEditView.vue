@@ -22,6 +22,7 @@ import ProductSkuEditor, {
 } from '../components/ProductSkuEditor.vue'
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import { toStoredUrl } from '../utils/assetUrl'
+import { defaultSkuCode } from '../utils/specCode'
 
 type Cat = { id: number; label: string }
 type SupplierOpt = {
@@ -105,7 +106,7 @@ function defaultSpecs() {
   ]
   skus.value = [
     {
-      code: 'default',
+      code: defaultSkuCode(form.value.code, 'default'),
       price: 0,
       compare_at: 0,
       agent_price: 0,
@@ -423,7 +424,12 @@ async function save() {
       </span>
     </n-form-item>
 
-    <ProductSkuEditor ref="skuEditor" v-model:groups="specGroups" v-model:skus="skus" />
+    <ProductSkuEditor
+      ref="skuEditor"
+      v-model:groups="specGroups"
+      v-model:skus="skus"
+      :product-code="form.code"
+    />
 
     <n-space style="margin-top: 1rem">
       <n-button type="primary" @click="save">保存</n-button>

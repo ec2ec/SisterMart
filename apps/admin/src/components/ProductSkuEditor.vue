@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { showError } from '../feedback'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import {
   NButton,
   NCard,
@@ -13,7 +13,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { ensureSpecCode, refsKey } from '../utils/specCode'
+import { defaultSkuCode, ensureSpecCode, refsKey } from '../utils/specCode'
 import SkuImageCell from './SkuImageCell.vue'
 
 export type Localized = { 'zh-HK': string; en: string }
@@ -35,10 +35,15 @@ export type SkuDraft = {
 const MAX_GROUPS = 3
 const MAX_SKUS = 50
 
-const props = defineProps<{
-  groups: SpecGroupDraft[]
-  skus: SkuDraft[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    groups: SpecGroupDraft[]
+    skus: SkuDraft[]
+    /** 當前商品代碼；生成／默認 SKU 時拼在規格組合代碼前 */
+    productCode?: string
+  }>(),
+  { productCode: '' },
+)
 
 const emit = defineEmits<{
   'update:groups': [SpecGroupDraft[]]
@@ -117,9 +122,10 @@ function ensureDefaults() {
     const g = group
     const o = g.options?.[0]
     if (!o) return
+    const combo = o.code || 'default'
     skuModel.value = [
       {
-        code: o.code || 'default',
+        code: defaultSkuCode(props.productCode, combo),
         price: 0,
         compare_at: 0,
         agent_price: 0,
@@ -279,18 +285,21 @@ function generateSkus() {
   groupModel.value = groups
   const prev = new Map(skuModel.value.map((s) => [refsKey(s.option_refs), s]))
   const next: SkuDraft[] = combos.map((c) => {
+    const autoCode = defaultSkuCode(props.productCode, c.code)
     const old = prev.get(refsKey(c.refs))
     if (old) {
+      // 空代碼、或仍是「僅組合代碼」的自動值 → 改為商品代碼+組合；手動改過的保留
+      const code = !old.code?.trim() || old.code === c.code ? autoCode : old.code
       return {
         ...old,
-        code: old.code || c.code,
+        code,
         supplier_sku: old.supplier_sku ?? '',
         option_refs: c.refs,
         status: old.status ?? 1,
       }
     }
     return {
-      code: c.code,
+      code: autoCode,
       price: 0,
       compare_at: 0,
       agent_price: 0,
@@ -383,6 +392,51 @@ function skuLabel(s: SkuDraft) {
   return s.option_refs.map((r) => r.split(':')[1] || r).join(' / ') || s.code
 }
 
+type BulkFillField = 'price' | 'compare_at' | 'agent_price' | 'cost_price' | 'stock'
+
+const BULK_FILL_COLS: Array<{ key: BulkFillField; label: string }> = [
+  { key: 'price', label: '售價' },
+  { key: 'compare_at', label: '劃線價' },
+  { key: 'agent_price', label: '代理價' },
+  { key: 'cost_price', label: '成本價' },
+  { key: 'stock', label: '庫存' },
+]
+
+function openBulkFill(field: BulkFillField, label: string) {
+  if (!skuModel.value.length) {
+    message.warning('請先生成 SKU')
+    return
+  }
+  const draft = ref<number | null>(null)
+  const min = field === 'price' || field === 'compare_at' ? undefined : 0
+  dialog.create({
+    title: `自動填入 ${label}列`,
+    content: () =>
+      h(NInputNumber, {
+        value: draft.value,
+        'onUpdate:value': (v: number | null) => {
+          draft.value = v
+        },
+        min,
+        showButton: false,
+        placeholder: '輸入數字後確認，將填入全部 SKU 行',
+        style: 'width: 100%',
+      }),
+    positiveText: '確認',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      if (draft.value == null || Number.isNaN(Number(draft.value))) {
+        message.warning('請輸入數字')
+        return false
+      }
+      const raw = Number(draft.value)
+      const nextVal = field === 'stock' ? Math.max(0, Math.floor(raw)) : raw
+      skuModel.value = skuModel.value.map((s) => ({ ...s, [field]: nextVal }))
+      message.success(`已將「${label}」填入全部 ${skuModel.value.length} 行`)
+    },
+  })
+}
+
 /** 供父組件保存前校驗與歸一化 */
 function prepareForSave(): { groups: SpecGroupDraft[]; skus: SkuDraft[] } | null {
   const groups = normalizeGroups()
@@ -443,7 +497,7 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   <n-card size="small" title="銷售規格 / SKU" class="sku-editor">
     <p class="hint">
       最多 {{ MAX_GROUPS }} 組規格、{{ MAX_SKUS }} 個 SKU。可套用「規格模板」，改完選項後點「生成
-      SKU」。SKU 圖片選填；H5 詳情會與商品主圖一併展示，選中該規格時跳到對應圖。
+      SKU」。SKU 代碼默認＝商品代碼 + 規格組合代碼。SKU 圖片選填；H5 詳情會與商品主圖一併展示，選中該規格時跳到對應圖。
       當前組合約 {{ comboCount }} 個。
     </p>
 
@@ -536,11 +590,18 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
             <th>SKU 圖片</th>
             <th>SKU 代碼</th>
             <th>供應商編碼</th>
-            <th>售價</th>
-            <th>劃線價</th>
-            <th>代理價</th>
-            <th>成本價</th>
-            <th>庫存</th>
+            <th
+              v-for="col in BULK_FILL_COLS"
+              :key="col.key"
+              class="th-bulk"
+              role="button"
+              tabindex="0"
+              :title="`自動填入 ${col.label}列`"
+              @click="openBulkFill(col.key, col.label)"
+              @keydown.enter.prevent="openBulkFill(col.key, col.label)"
+            >
+              {{ col.label }} ⏬
+            </th>
             <th>啟用</th>
             <th />
           </tr>
@@ -679,6 +740,15 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   font-weight: 600;
   white-space: nowrap;
   background: #fafaf8;
+}
+.th-bulk {
+  cursor: pointer;
+  user-select: none;
+}
+.th-bulk:hover,
+.th-bulk:focus-visible {
+  color: #2f2a24;
+  outline: none;
 }
 .col-combo {
   min-width: 6.5rem;
