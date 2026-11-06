@@ -14,6 +14,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { ensureSpecCode, refsKey } from '../utils/specCode'
+import SkuImageCell from './SkuImageCell.vue'
 
 export type Localized = { 'zh-HK': string; en: string }
 export type SpecOptionDraft = { code: string; name: Localized; image?: string | null }
@@ -431,7 +432,8 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
 <template>
   <n-card size="small" title="銷售規格 / SKU" class="sku-editor">
     <p class="hint">
-      最多 {{ MAX_GROUPS }} 組規格、{{ MAX_SKUS }} 個 SKU。可套用「規格模板」，改完選項後點「生成 SKU」。
+      最多 {{ MAX_GROUPS }} 組規格、{{ MAX_SKUS }} 個 SKU。可套用「規格模板」，改完選項後點「生成
+      SKU」。SKU 圖片選填；H5 詳情會與商品主圖一併展示，選中該規格時跳到對應圖。
       當前組合約 {{ comboCount }} 個。
     </p>
 
@@ -521,6 +523,7 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
           <tr>
             <th class="col-combo">規格組合</th>
             <th class="col-refs">規格引用</th>
+            <th>SKU 圖片</th>
             <th>SKU 代碼</th>
             <th>供應商編碼</th>
             <th>售價</th>
@@ -539,6 +542,9 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
             </td>
             <td class="col-refs">
               <code v-for="(ref, ri) in s.option_refs" :key="ri" class="ref-chip">{{ ref }}</code>
+            </td>
+            <td class="col-img">
+              <SkuImageCell v-model="s.image" />
             </td>
             <td>
               <n-input v-model:value="s.code" placeholder="代碼" size="small" style="width: 7.5rem" />
@@ -643,9 +649,12 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
 }
 .sku-table {
   width: 100%;
-  min-width: 52rem;
+  min-width: 60rem;
   border-collapse: collapse;
   background: #fff;
+}
+.col-img {
+  min-width: 8rem;
 }
 .sku-table th,
 .sku-table td {

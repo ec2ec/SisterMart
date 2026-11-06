@@ -6,7 +6,14 @@ import { showDialog, showToast, type SwipeInstance } from 'vant'
 import AppHeader from '../components/AppHeader.vue'
 import ProductCard from '../components/ProductCard.vue'
 import ProductZoom from '../components/ProductZoom.vue'
-import { fetchProduct, fetchProducts, findSku, type ProductCard as Card, type ProductDetail } from '../api/catalog'
+import {
+  fetchProduct,
+  fetchProducts,
+  findSku,
+  type ProductCard as Card,
+  type ProductDetail,
+  type Sku,
+} from '../api/catalog'
 import { addCartItem } from '../api/trade'
 import { fetchSeckillProduct, postShareView } from '../api/m7'
 import { useLocaleText } from '../composables/useLocaleText'
@@ -97,14 +104,60 @@ async function load() {
 watch(() => route.params.id, load, { immediate: true })
 
 const name = computed(() => (product.value ? text(product.value.name) : ''))
-const gallery = computed(() => {
-  const images = (product.value?.media || [])
+
+const quote = computed(() => {
+  if (!product.value) return null
+  return findSku(product.value.skus, selected.value, product.value.spec_groups)
+})
+
+type GallerySlide = { src: string; skuId?: number; label: string }
+
+function skuSpecLabel(sku: Sku): string {
+  if (!product.value) return sku.code
+  const parts: string[] = []
+  for (const g of product.value.spec_groups || []) {
+    const optId = String(sku.selected?.[g.id] || '')
+    const opt = (g.options || []).find((o) => String(o.id) === optId || o.code === optId)
+    if (opt) parts.push(text(opt.name))
+  }
+  return parts.filter(Boolean).join(' / ') || sku.code
+}
+
+/** 主圖 + 有圖的 SKU（URL 去重）；選規格時跳到對應 SKU 幀 */
+const gallerySlides = computed((): GallerySlide[] => {
+  if (!product.value) return []
+  const slides: GallerySlide[] = []
+  const seen = new Set<string>()
+  const push = (src: string, extra?: { skuId?: number; label?: string }) => {
+    if (!src || seen.has(src)) return
+    seen.add(src)
+    slides.push({ src, skuId: extra?.skuId, label: extra?.label || '' })
+  }
+  const mediaImgs = (product.value.media || [])
     .filter((m) => m.media_type === 'image')
     .map((m) => assetUrl(m.url))
     .filter(Boolean)
-  if (images.length) return images
-  return (product.value?.gallery || []).map((u) => assetUrl(u)).filter(Boolean)
+  if (mediaImgs.length) {
+    for (const src of mediaImgs) push(src)
+  } else {
+    for (const u of product.value.gallery || []) push(assetUrl(u))
+  }
+  for (const sku of product.value.skus || []) {
+    const src = assetUrl(sku.image || '')
+    if (!src) continue
+    push(src, { skuId: sku.id, label: skuSpecLabel(sku) })
+  }
+  return slides
 })
+const gallery = computed(() => gallerySlides.value.map((s) => s.src))
+const galleryCaptions = computed(() =>
+  gallerySlides.value.map((s) => {
+    const q = quote.value
+    if (q?.image && assetUrl(q.image) === s.src) return skuSpecLabel(q)
+    return s.label
+  }),
+)
+const currentGalleryCaption = computed(() => String(galleryCaptions.value[slide.value] || '').trim())
 const zoomImages = computed(() => gallery.value)
 
 const detailRaw = computed(() => (product.value ? text(product.value.detail) : ''))
@@ -113,11 +166,6 @@ const detailHtml = computed(() => {
   const raw = detailRaw.value
   if (!detailIsHtml.value) return raw
   return raw.replace(/(src=["'])(\/[^"']+)(["'])/gi, (_, a, path, b) => `${a}${assetUrl(path)}${b}`)
-})
-
-const quote = computed(() => {
-  if (!product.value) return null
-  return findSku(product.value.skus, selected.value, product.value.spec_groups)
 })
 
 const price = computed(() =>
@@ -184,6 +232,24 @@ function closeZoom() {
 function choose(groupId: string, optionId: string) {
   selected.value = { ...selected.value, [groupId]: optionId }
 }
+
+function jumpGalleryToSku(skuId: number | undefined) {
+  if (skuId == null) return
+  const idx = gallerySlides.value.findIndex((s) => s.skuId === skuId)
+  if (idx < 0) return
+  slide.value = idx
+  nextTick(() => gallerySwipe.value?.swipeTo(idx, { immediate: false }))
+}
+
+watch(
+  () => quote.value?.id,
+  (id) => {
+    if (id == null) return
+    const q = quote.value
+    if (!q?.image) return
+    jumpGalleryToSku(q.id)
+  },
+)
 
 function money(value: number) {
   return `HK$ ${value.toFixed(2)}`
@@ -292,24 +358,27 @@ async function share() {
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
     <div class="pdp-scroll">
-    <van-swipe
-      :key="product.id"
-      ref="gallerySwipe"
-      class="gallery"
-      :initial-swipe="0"
-      :duration="250"
-      :show-indicators="false"
-      :loop="gallery.length > 1"
-      @change="onGalleryChange"
-    >
-      <van-swipe-item v-for="(src, index) in gallery" :key="`${product.id}-${index}`">
-        <button type="button" class="shot" @click="openZoom(index)">
-          <img :src="src" :alt="name" />
-        </button>
-      </van-swipe-item>
-    </van-swipe>
-    <div class="dots">
-      <i v-for="(_, index) in gallery" :key="index" :class="{ on: index === slide }" />
+    <div class="gallery-wrap">
+      <van-swipe
+        :key="`${product.id}-${gallery.length}`"
+        ref="gallerySwipe"
+        class="gallery"
+        :initial-swipe="0"
+        :duration="250"
+        :show-indicators="false"
+        :loop="gallery.length > 1"
+        @change="onGalleryChange"
+      >
+        <van-swipe-item v-for="(src, index) in gallery" :key="`${product.id}-${index}`">
+          <button type="button" class="shot" @click="openZoom(index)">
+            <img :src="src" :alt="name" />
+          </button>
+        </van-swipe-item>
+      </van-swipe>
+      <p v-if="currentGalleryCaption" class="gallery-sku-label">{{ currentGalleryCaption }}</p>
+      <div class="dots">
+        <i v-for="(_, index) in gallery" :key="index" :class="{ on: index === slide }" />
+      </div>
     </div>
 
     <section class="info">
@@ -442,6 +511,7 @@ async function share() {
     <ProductZoom
       v-if="zooming"
       :images="zoomImages"
+      :captions="galleryCaptions"
       :start="slide"
       @close="closeZoom"
       @change="onZoomChange"
@@ -472,6 +542,10 @@ async function share() {
   padding-top: var(--sm-header-h);
   padding-bottom: 0.75rem;
 }
+.gallery-wrap {
+  position: relative;
+  background: #f6f6f6;
+}
 .gallery {
   height: 17.5rem;
   background: #f6f6f6;
@@ -488,6 +562,23 @@ async function share() {
   height: 100%;
   object-fit: contain;
   display: block;
+}
+.gallery-sku-label {
+  position: absolute;
+  left: 50%;
+  bottom: 1.75rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  margin: 0;
+  max-width: min(90%, 20rem);
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(22, 22, 43, 0.62);
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
 }
 .dots {
   display: flex;

@@ -2,15 +2,24 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-const props = defineProps<{
-  images: string[]
-  start: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    images: string[]
+    start: number
+    /** 與 images 對齊；SKU 圖幀顯示規格名稱 */
+    captions?: string[]
+  }>(),
+  { captions: () => [] },
+)
 
 const emit = defineEmits<{ close: []; change: [index: number] }>()
 const { t } = useI18n()
 
 const index = ref(0)
+const captionText = computed(() => {
+  const list = props.captions || []
+  return String(list[index.value] || '').trim()
+})
 const scale = ref(1)
 const panX = ref(0)
 const panY = ref(0)
@@ -244,6 +253,7 @@ function imgStyle(i: number) {
           <img :src="src" alt="" :style="imgStyle(i)" />
         </div>
       </div>
+      <p v-if="captionText" class="sku-caption">{{ captionText }}</p>
     </div>
     <p>{{ t('pdp.swipeHint') }}</p>
   </div>
@@ -286,6 +296,24 @@ function imgStyle(i: number) {
   overflow: hidden;
   touch-action: none;
   position: relative;
+}
+
+.sku-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  margin: 0;
+  max-width: min(90%, 22rem);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
 }
 
 .track {
