@@ -1700,7 +1700,10 @@
           multiline: key === '備註',
         }, values))))
       }
+      const saveBtn = el('button', { type: 'submit' }, ['保存'])
+      let saving = false
       const save = async () => {
+        if (saving) return
         const current = {}
         for (const input of fields.querySelectorAll('input, textarea')) {
           current[input.dataset.key] = input.value
@@ -1708,34 +1711,59 @@
         indexDraft = current
         saveNote = ''
         hint.className = 'saved'
-        hint.textContent = '正在保存…'
-        const response = await fetch('/api/index', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path: `${product.category}/${product.folder}`,
-            text: serializeFields(current),
-          }),
-        })
-        const data = await response.json()
-        if (!response.ok) {
-          saveNote = data.error || '無法保存'
+        hint.textContent = ''
+        saving = true
+        saveBtn.disabled = true
+        saveBtn.textContent = '保存中…'
+        let data
+        try {
+          const response = await fetch('/api/index', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              path: `${product.category}/${product.folder}`,
+              text: serializeFields(current),
+            }),
+          })
+          data = await response.json()
+          if (!response.ok) {
+            saveNote = data.error || '無法保存'
+            hint.className = 'err'
+            hint.textContent = saveNote
+            saving = false
+            saveBtn.disabled = false
+            saveBtn.textContent = '保存'
+            return
+          }
+        } catch (error) {
+          saveNote = '無法保存'
           hint.className = 'err'
           hint.textContent = saveNote
+          saving = false
+          saveBtn.disabled = false
+          saveBtn.textContent = '保存'
           return
         }
         catalog = data
         indexDraft = null
-        saveNote = '已保存'
+        saveNote = ''
         paintHome()
         const next = findSelected()
         if (next) showDetail(next)
         else hideDetail()
+        showModal({
+          title: '商品保存成功',
+          body: [],
+          actions: [
+            { label: '去列表', onclick: () => hideDetail() },
+            { label: '確認', primary: true },
+          ],
+        })
       }
       const form = el('form', { class: 'editor', onsubmit: (event) => { event.preventDefault(); save() } }, [
         fields,
         el('div', { class: 'row' }, [
-          el('button', { type: 'submit' }, ['保存']),
+          saveBtn,
           hint,
         ]),
       ])
