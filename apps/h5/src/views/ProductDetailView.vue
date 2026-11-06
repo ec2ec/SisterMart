@@ -41,7 +41,6 @@ const loadError = ref('')
 const loading = ref(false)
 const slide = ref(0)
 const gallerySwipe = ref<SwipeInstance>()
-const pdpScroll = ref<HTMLElement | null>(null)
 const zooming = ref(false)
 const showAllReviews = ref(false)
 const selected = ref<Record<string, string>>({})
@@ -255,11 +254,7 @@ function jumpGalleryToSku(sku: Sku | null | undefined) {
   if (idx < 0) idx = gallerySlides.value.findIndex((s) => s.src === src)
   if (idx < 0) return
   slide.value = idx
-  // 規格在下方：先捲回頂部圖庫，再滑到對應幀
-  pdpScroll.value?.scrollTo({ top: 0, behavior: 'smooth' })
-  nextTick(() => {
-    gallerySwipe.value?.swipeTo(idx, { immediate: false })
-  })
+  nextTick(() => gallerySwipe.value?.swipeTo(idx, { immediate: false }))
 }
 
 watch(
@@ -376,7 +371,7 @@ async function share() {
   <div v-else class="pdp">
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
-    <div ref="pdpScroll" class="pdp-scroll">
+    <div class="pdp-scroll">
     <div class="gallery-wrap">
       <van-swipe
         :key="`${product.id}-${gallery.length}`"
