@@ -27,11 +27,15 @@ const menuOpen = ref(false)
 const active = computed(() => {
   const p = route.path
   if (p.startsWith('/sales/orders/')) return '/sales/orders'
+  if (p === '/catalog/products/new') return '/catalog/products/new'
   if (p.startsWith('/catalog/products/') && p !== '/catalog/products') return '/catalog/products'
   if (p.startsWith('/catalog/specs/') && p !== '/catalog/specs') return '/catalog/specs'
   return p === '/' ? '/' : p
 })
-const title = computed(() => String(route.meta.title || 'SisterMart'))
+const title = computed(() => {
+  if (route.path === '/catalog/products/new') return '新增商品'
+  return String(route.meta.title || 'SisterMart')
+})
 const menus = computed(() => menuOptions(admin?.value?.role))
 const contentStyle = computed(() =>
   isNarrow.value

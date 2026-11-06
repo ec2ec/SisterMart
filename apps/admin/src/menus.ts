@@ -14,7 +14,8 @@ export const adminMenus: AdminMenu[] = [
     label: '商品目錄',
     key: 'catalog',
     children: [
-      { label: '商品', key: '/catalog/products', path: '/catalog/products' },
+      { label: '新增商品', key: '/catalog/products/new', path: '/catalog/products/new' },
+      { label: '商品列表', key: '/catalog/products', path: '/catalog/products' },
       { label: '分類', key: '/catalog/categories', path: '/catalog/categories' },
       { label: '供應商', key: '/catalog/suppliers', path: '/catalog/suppliers' },
       { label: '角標', key: '/catalog/badges', path: '/catalog/badges' },

@@ -351,30 +351,47 @@ class UploadAssetService
     }
 
     /**
-     * 為缺少縮略圖的已索引原圖補產 64×64 cover。
+     * 為已索引原圖補產 cover 縮略圖。
+     * `$force` 時覆蓋已有 `.thumb.`（尺寸變更後重刷）；用 `$afterId` 游標分批。
      *
-     * @return array{scanned: int, created: int, skipped: int, failed: int, has_more: bool}
+     * @return array{scanned: int, created: int, skipped: int, failed: int, has_more: bool, force: bool, size: int, next_after_id: int}
      */
-    public function backfillThumbs(int $limit = 80): array
+    public function backfillThumbs(int $limit = 80, bool $force = false, int $afterId = 0): array
     {
         $this->ensureSchema();
         $limit = max(1, min(200, $limit));
+        $afterId = max(0, $afterId);
         $table = $this->table();
-        $rows = Db::query(
-            "SELECT `id`, `path`, `thumb_path` FROM `{$table}`
-             WHERE `status` IN ('active', 'delisted', 'orphaned')
-               AND (`thumb_path` IS NULL OR `thumb_path` = '')
-               AND `path` NOT LIKE '%.thumb.%'
-             ORDER BY `id` ASC LIMIT {$limit}",
-        );
+        if ($force) {
+            $rows = Db::query(
+                "SELECT `id`, `path`, `thumb_path` FROM `{$table}`
+                 WHERE `status` IN ('active', 'delisted', 'orphaned')
+                   AND `path` NOT LIKE '%.thumb.%'
+                   AND `id` > ?
+                 ORDER BY `id` ASC LIMIT {$limit}",
+                [$afterId],
+            );
+        } else {
+            $rows = Db::query(
+                "SELECT `id`, `path`, `thumb_path` FROM `{$table}`
+                 WHERE `status` IN ('active', 'delisted', 'orphaned')
+                   AND (`thumb_path` IS NULL OR `thumb_path` = '')
+                   AND `path` NOT LIKE '%.thumb.%'
+                   AND `id` > ?
+                 ORDER BY `id` ASC LIMIT {$limit}",
+                [$afterId],
+            );
+        }
         $uploads = new ImageUploadService();
         $created = 0;
         $skipped = 0;
         $failed = 0;
         $now = date('Y-m-d H:i:s');
+        $lastId = $afterId;
         foreach ($rows as $row) {
+            $lastId = (int) $row['id'];
             $path = (string) $row['path'];
-            $thumb = $uploads->ensureThumb($path);
+            $thumb = $uploads->ensureThumb($path, $force);
             if ($thumb === null) {
                 // 標記為「無獨立縮略圖」，避免同一失敗檔反覆卡住批次。
                 Db::execute(
@@ -390,12 +407,24 @@ class UploadAssetService
             );
             $created++;
         }
-        $more = Db::query(
-            "SELECT COUNT(*) AS c FROM `{$table}`
-             WHERE `status` IN ('active', 'delisted', 'orphaned')
-               AND (`thumb_path` IS NULL OR `thumb_path` = '')
-               AND `path` NOT LIKE '%.thumb.%'",
-        );
+        if ($force) {
+            $more = Db::query(
+                "SELECT COUNT(*) AS c FROM `{$table}`
+                 WHERE `status` IN ('active', 'delisted', 'orphaned')
+                   AND `path` NOT LIKE '%.thumb.%'
+                   AND `id` > ?",
+                [$lastId],
+            );
+        } else {
+            $more = Db::query(
+                "SELECT COUNT(*) AS c FROM `{$table}`
+                 WHERE `status` IN ('active', 'delisted', 'orphaned')
+                   AND (`thumb_path` IS NULL OR `thumb_path` = '')
+                   AND `path` NOT LIKE '%.thumb.%'
+                   AND `id` > ?",
+                [$lastId],
+            );
+        }
 
         return [
             'scanned' => count($rows),
@@ -403,6 +432,9 @@ class UploadAssetService
             'skipped' => $skipped,
             'failed' => $failed,
             'has_more' => (int) ($more[0]['c'] ?? 0) > 0,
+            'force' => $force,
+            'size' => \app\support\ImageProcess::COVER_THUMB_SIZE,
+            'next_after_id' => $lastId,
         ];
     }
 

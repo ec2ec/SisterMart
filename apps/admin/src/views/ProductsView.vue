@@ -158,7 +158,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <n-card title="商品">
+  <n-card title="商品列表">
     <div class="toolbar">
       <n-space wrap>
         <n-input
@@ -291,11 +291,11 @@ td {
   vertical-align: middle;
 }
 .col-thumb {
-  width: 2.5rem;
+  width: 4.5rem;
 }
 .thumb {
-  width: 2rem;
-  height: 2rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 0.25rem;
   object-fit: cover;
   display: block;

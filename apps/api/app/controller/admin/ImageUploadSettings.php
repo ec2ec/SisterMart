@@ -63,13 +63,16 @@ class ImageUploadSettings extends ApiController
         });
     }
 
-    /** 為缺少縮略圖的已索引原圖補產 64×64 cover。 */
+    /** 為已索引原圖補產 cover 縮略圖；payload.force=true 時覆蓋重刷。 */
     public function backfillThumbs(): Response
     {
         return $this->run(function () {
-            $limit = (int) ($this->payload()['limit'] ?? $this->request->get('limit', 80));
+            $payload = $this->payload();
+            $limit = (int) ($payload['limit'] ?? $this->request->get('limit', 80));
+            $force = filter_var($payload['force'] ?? $this->request->get('force', false), FILTER_VALIDATE_BOOLEAN);
+            $afterId = (int) ($payload['after_id'] ?? $this->request->get('after_id', 0));
 
-            return (new UploadAssetService())->backfillThumbs($limit);
+            return (new UploadAssetService())->backfillThumbs($limit, $force, $afterId);
         });
     }
 }

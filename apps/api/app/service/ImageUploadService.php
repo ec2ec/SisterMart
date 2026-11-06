@@ -73,7 +73,7 @@ class ImageUploadService
         $thumbUrl = ImageProcess::thumbUrlFor($url);
         $thumbPath = $this->absolutePath($thumbUrl);
         try {
-            ImageProcess::coverThumb($destPath, $thumbPath, 64);
+            ImageProcess::coverThumb($destPath, $thumbPath, ImageProcess::COVER_THUMB_SIZE);
         } catch (\Throwable) {
             $thumbUrl = '';
         }
@@ -364,8 +364,8 @@ class ImageUploadService
         return $this->jailedFile($toUrl) !== null;
     }
 
-    /** 為已落盤原圖補產 64×64 cover 縮略圖（存在則略過）。 */
-    public function ensureThumb(string $url): ?string
+    /** 為已落盤原圖補產 cover 縮略圖；`$force` 時覆蓋已有 `.thumb.` 檔。 */
+    public function ensureThumb(string $url, bool $force = false): ?string
     {
         $url = trim($url);
         if ($url === '' || !str_starts_with($url, '/storage/') || preg_match('/\.thumb\./i', $url)) {
@@ -377,11 +377,11 @@ class ImageUploadService
         }
         $thumbUrl = ImageProcess::thumbUrlFor($url);
         $thumbFull = $this->absolutePath($thumbUrl);
-        if (is_file($thumbFull)) {
+        if (!$force && is_file($thumbFull)) {
             return $thumbUrl;
         }
         try {
-            ImageProcess::coverThumb($full, $thumbFull, 64);
+            ImageProcess::coverThumb($full, $thumbFull, ImageProcess::COVER_THUMB_SIZE);
         } catch (\Throwable) {
             return null;
         }

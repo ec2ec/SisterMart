@@ -167,9 +167,12 @@ final class ImageProcess
      *
      * @return array{path: string, width: int, height: int, bytes: int, format: string, ext: string}
      */
-    public static function coverThumb(string $sourcePath, string $destPath, int $size = 64, int $quality = 82): array
+    /** 管理列表 cover 縮略圖邊長（正方形）。 */
+    public const COVER_THUMB_SIZE = 128;
+
+    public static function coverThumb(string $sourcePath, string $destPath, int $size = self::COVER_THUMB_SIZE, int $quality = 82): array
     {
-        $size = max(16, min(256, $size));
+        $size = max(16, min(512, $size));
         $quality = self::clampQuality($quality);
         if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
             throw new ApiException('SERVER', '伺服器未啟用 GD 圖片擴展，無法處理圖片', 500, 50002);

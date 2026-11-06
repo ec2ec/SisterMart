@@ -244,32 +244,39 @@ async function savePublicTags(row: PublicItem, raw: string) {
 function confirmBackfillThumbs() {
   if (backfilling.value) return
   dialog.info({
-    title: '為舊圖補產縮略圖？',
-    content: '會為索引中尚未有 64×64 縮略圖的原圖批次補產。可重複執行直到全部完成。',
-    positiveText: '開始補產',
+    title: '重刷縮略圖？',
+    content: '會按當前設定（128×128 cover）為索引中的原圖批次生成／覆蓋縮略圖。可重複執行直到全部完成。',
+    positiveText: '開始重刷',
     negativeText: '取消',
     onPositiveClick: () => {
-      void runBackfillThumbs()
+      void runBackfillThumbs(true)
     },
   })
 }
 
-async function runBackfillThumbs() {
+async function runBackfillThumbs(force = true) {
   backfilling.value = true
   let created = 0
   let failed = 0
+  let afterId = 0
   try {
-    for (let round = 0; round < 200; round++) {
-      const res = await api<{ created: number; failed: number; has_more: boolean }>(
-        '/api/v1/admin/settings/upload-assets/thumbs-backfill',
-        { method: 'POST', body: JSON.stringify({ limit: 80 }) },
-        true,
-      )
+    for (let round = 0; round < 500; round++) {
+      const res = await api<{
+        created: number
+        failed: number
+        has_more: boolean
+        next_after_id?: number
+        size?: number
+      }>('/api/v1/admin/settings/upload-assets/thumbs-backfill', {
+        method: 'POST',
+        body: JSON.stringify({ limit: 80, force, after_id: afterId }),
+      }, true)
       created += res.created
       failed += res.failed
+      afterId = Number(res.next_after_id || afterId)
       if (!res.has_more) break
     }
-    message.success(`縮略圖補產完成：新增 ${created}${failed ? `，失敗 ${failed}` : ''}`)
+    message.success(`縮略圖重刷完成：處理 ${created}${failed ? `，失敗 ${failed}` : ''}`)
     await load()
     await loadPublic()
   } finally {
