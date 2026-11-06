@@ -158,7 +158,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <n-card title="商品">
+  <n-card title="商品列表">
     <div class="toolbar">
       <n-space wrap>
         <n-input
