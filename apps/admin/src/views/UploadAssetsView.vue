@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NInput, NPagination, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
+import { NButton, NCard, NImage, NInput, NPagination, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
 import { api, uploadImage } from '../api'
 import { showError } from '../feedback'
-import { thumbUrl } from '../utils/assetUrl'
+import { assetUrl, thumbUrl } from '../utils/assetUrl'
 
 type Group = {
   domain: string
@@ -461,7 +461,13 @@ onMounted(() => {
             </tr>
             <tr v-for="row in publicItems" :key="row.id">
               <td>
-                <img class="thumb" :src="thumbUrl(row.thumb_url || row.url)" alt="" />
+                <n-image
+                  class="thumb"
+                  :src="thumbUrl(row.thumb_url || row.url)"
+                  :preview-src="assetUrl(row.url)"
+                  object-fit="cover"
+                  :img-props="{ alt: '', title: '點擊看原圖' }"
+                />
               </td>
               <td>
                 <n-input
@@ -574,7 +580,13 @@ onMounted(() => {
             </tr>
             <tr v-for="row in recent" :key="row.id">
               <td>
-                <img class="thumb" :src="thumbUrl(row.thumb_path || row.path)" alt="" loading="lazy" />
+                <n-image
+                  class="thumb"
+                  :src="thumbUrl(row.thumb_path || row.path)"
+                  :preview-src="assetUrl(row.path)"
+                  object-fit="cover"
+                  :img-props="{ alt: '', title: '點擊看原圖', loading: 'lazy' }"
+                />
               </td>
               <td>{{ row.label }}</td>
               <td class="mono">{{ row.path }}</td>
@@ -665,9 +677,16 @@ td {
 .thumb {
   width: 2.5rem;
   height: 2.5rem;
-  object-fit: cover;
   border-radius: 0.25rem;
   background: #f3f0ea;
+  display: block;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.thumb :deep(img) {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
   display: block;
 }
 .scan-note {
