@@ -170,6 +170,30 @@ async function onPublicFiles(ev: Event) {
   }
 }
 
+function filterPublicByTag(tag: string) {
+  publicFilterTag.value = publicFilterTag.value === tag ? '' : tag
+  publicPage.value = 1
+  void loadPublic()
+}
+
+function togglePublicDelistedFilter() {
+  publicFilterStatus.value = publicFilterStatus.value === 'all' ? 'delisted' : 'all'
+  publicPage.value = 1
+  void loadPublic()
+}
+
+function publicPrevPage() {
+  if (publicPage.value <= 1) return
+  publicPage.value -= 1
+  void loadPublic()
+}
+
+function publicNextPage() {
+  if (publicPage.value * publicPageSize >= publicTotal.value) return
+  publicPage.value += 1
+  void loadPublic()
+}
+
 async function setPublicStatus(row: PublicItem, status: 'active' | 'delisted') {
   publicBusy.value = true
   try {
@@ -390,24 +414,12 @@ onMounted(() => {
           round
           :type="publicFilterTag === tag ? 'primary' : 'default'"
           style="cursor: pointer"
-          @click="
-            publicFilterTag = publicFilterTag === tag ? '' : tag
-            publicPage = 1
-            void loadPublic()
-          "
+          @click="filterPublicByTag(tag)"
         >
           {{ tag }}
         </n-tag>
-        <n-button
-          size="tiny"
-          quaternary
-          @click="
-            publicFilterStatus = publicFilterStatus === 'all' ? 'delisted' : 'all'
-            publicPage = 1
-            void loadPublic()
-          "
-        >
-          {{ publicFilterStatus === 'delisted' ? '只看已下架' : '含已下架' }}
+        <n-button size="tiny" quaternary @click="togglePublicDelistedFilter">
+          {{ publicFilterStatus === 'delisted' ? '顯示全部' : '只看已下架' }}
         </n-button>
       </div>
       <div class="table-wrap">
@@ -461,25 +473,12 @@ onMounted(() => {
       </div>
       <p v-if="publicTotal > publicPageSize" class="scan-note">
         共 {{ publicTotal }} 張 ·
-        <n-button
-          size="tiny"
-          quaternary
-          :disabled="publicPage <= 1"
-          @click="
-            publicPage -= 1
-            void loadPublic()
-          "
-        >
-          上一頁
-        </n-button>
+        <n-button size="tiny" quaternary :disabled="publicPage <= 1" @click="publicPrevPage">上一頁</n-button>
         <n-button
           size="tiny"
           quaternary
           :disabled="publicPage * publicPageSize >= publicTotal"
-          @click="
-            publicPage += 1
-            void loadPublic()
-          "
+          @click="publicNextPage"
         >
           下一頁
         </n-button>
