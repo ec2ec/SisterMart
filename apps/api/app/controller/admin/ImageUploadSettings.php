@@ -22,10 +22,15 @@ class ImageUploadSettings extends ApiController
         return $this->run(fn () => (new ImageUploadSceneService())->save($this->payload()));
     }
 
-    /** 新上傳的張數與體積。不含此功能上線前的舊圖。 */
+    /** 新上傳的張數與體積。不含此功能上線前的舊圖。最近上傳支援分頁。 */
     public function assets(): Response
     {
-        return $this->run(fn () => (new UploadAssetService())->overview());
+        return $this->run(function () {
+            $page = (int) $this->request->get('recent_page', 1);
+            $pageSize = (int) $this->request->get('recent_page_size', 20);
+
+            return (new UploadAssetService())->overview($page, $pageSize);
+        });
     }
 
     public function scanAssets(): Response

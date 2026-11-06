@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NInput, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
+import { NButton, NCard, NInput, NPagination, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
 import { api, uploadImage } from '../api'
 import { showError } from '../feedback'
 import { thumbUrl } from '../utils/assetUrl'
@@ -65,6 +65,9 @@ const totalCount = ref(0)
 const totalBytes = ref(0)
 const groups = ref<Group[]>([])
 const recent = ref<Recent[]>([])
+const recentPage = ref(1)
+const recentPageSize = 20
+const recentTotal = ref(0)
 const scanning = ref(false)
 const purging = ref(false)
 const migrating = ref(false)
@@ -105,16 +108,32 @@ function who(row: Recent) {
 }
 
 async function load() {
+  const q = new URLSearchParams({
+    recent_page: String(recentPage.value),
+    recent_page_size: String(recentPageSize),
+  })
   const data = await api<{
     total_count: number
     total_bytes: number
     groups: Group[]
     recent: Recent[]
-  }>('/api/v1/admin/settings/upload-assets', {}, true)
+    recent_total?: number
+    recent_page?: number
+    recent_page_size?: number
+  }>(`/api/v1/admin/settings/upload-assets?${q}`, {}, true)
   totalCount.value = data.total_count
   totalBytes.value = data.total_bytes
   groups.value = data.groups
   recent.value = data.recent
+  recentTotal.value = data.recent_total ?? data.recent.length
+  if (data.recent_page && data.recent_page !== recentPage.value) {
+    recentPage.value = data.recent_page
+  }
+}
+
+async function onRecentPage(page: number) {
+  recentPage.value = page
+  await load()
 }
 
 async function loadPublic() {
@@ -566,6 +585,14 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
+      <div v-if="recentTotal > recentPageSize" class="pager">
+        <n-pagination
+          :page="recentPage"
+          :item-count="recentTotal"
+          :page-size="recentPageSize"
+          @update:page="onRecentPage"
+        />
+      </div>
     </n-card>
   </div>
 </template>
@@ -588,6 +615,11 @@ onMounted(() => {
   gap: 0.4rem;
   align-items: center;
   margin-bottom: 0.75rem;
+}
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
 }
 .stats {
   display: flex;

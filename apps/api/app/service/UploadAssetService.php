@@ -122,17 +122,34 @@ class UploadAssetService
         );
     }
 
-    /** @return array{total_count: int, total_bytes: int, groups: list<array<string, mixed>>, recent: list<array<string, mixed>>} */
-    public function overview(int $recentLimit = 40): array
+    /**
+     * @return array{
+     *   total_count: int,
+     *   total_bytes: int,
+     *   groups: list<array<string, mixed>>,
+     *   recent: list<array<string, mixed>>,
+     *   recent_total: int,
+     *   recent_page: int,
+     *   recent_page_size: int
+     * }
+     */
+    public function overview(int $recentPage = 1, int $recentPageSize = 20): array
     {
         $this->ensureSchema();
         $table = $this->table();
-        $recentLimit = max(1, min(100, $recentLimit));
+        $recentPage = max(1, $recentPage);
+        $recentPageSize = max(1, min(100, $recentPageSize));
         $groups = Db::query(
             "SELECT `domain`, `asset_type`, COUNT(*) AS `cnt`, COALESCE(SUM(`bytes`), 0) AS `bytes` FROM `{$table}` WHERE `status` = 'active' GROUP BY `domain`, `asset_type` ORDER BY `bytes` DESC, `domain`, `asset_type`",
         );
+        $recentTotalRow = Db::query(
+            "SELECT COUNT(*) AS c FROM `{$table}` WHERE `status` = 'active'",
+        );
+        $recentTotal = (int) ($recentTotalRow[0]['c'] ?? 0);
+        $offset = ($recentPage - 1) * $recentPageSize;
         $recent = Db::query(
-            "SELECT `id`, `path`, `thumb_path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `created_at` FROM `{$table}` WHERE `status` = 'active' ORDER BY `id` DESC LIMIT {$recentLimit}",
+            "SELECT `id`, `path`, `thumb_path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `created_at`
+             FROM `{$table}` WHERE `status` = 'active' ORDER BY `id` DESC LIMIT {$recentPageSize} OFFSET {$offset}",
         );
         $totalCount = 0;
         $totalBytes = 0;
@@ -176,6 +193,9 @@ class UploadAssetService
             'total_bytes' => $totalBytes,
             'groups' => $presented,
             'recent' => $recentRows,
+            'recent_total' => $recentTotal,
+            'recent_page' => $recentPage,
+            'recent_page_size' => $recentPageSize,
         ];
     }
 
