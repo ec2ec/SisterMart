@@ -41,6 +41,7 @@ const loadError = ref('')
 const loading = ref(false)
 const slide = ref(0)
 const gallerySwipe = ref<SwipeInstance>()
+const pdpScroll = ref<HTMLElement | null>(null)
 const zooming = ref(false)
 const showAllReviews = ref(false)
 const selected = ref<Record<string, string>>({})
@@ -110,7 +111,7 @@ const quote = computed(() => {
   return findSku(product.value.skus, selected.value, product.value.spec_groups)
 })
 
-type GallerySlide = { src: string; skuId?: number; label: string }
+type GallerySlide = { src: string; skuIds: number[]; label: string }
 
 function skuSpecLabel(sku: Sku): string {
   if (!product.value) return sku.code
@@ -123,15 +124,28 @@ function skuSpecLabel(sku: Sku): string {
   return parts.filter(Boolean).join(' / ') || sku.code
 }
 
-/** 主圖 + 有圖的 SKU（URL 去重）；選規格時跳到對應 SKU 幀 */
+/** 主圖 + 有圖的 SKU（URL 去重，SKU id 掛到對應幀）；選規格時跳到該圖 */
 const gallerySlides = computed((): GallerySlide[] => {
   if (!product.value) return []
   const slides: GallerySlide[] = []
-  const seen = new Set<string>()
+  const indexBySrc = new Map<string, number>()
   const push = (src: string, extra?: { skuId?: number; label?: string }) => {
-    if (!src || seen.has(src)) return
-    seen.add(src)
-    slides.push({ src, skuId: extra?.skuId, label: extra?.label || '' })
+    if (!src) return
+    const existing = indexBySrc.get(src)
+    if (existing != null) {
+      const slide = slides[existing]
+      if (extra?.skuId != null && !slide.skuIds.includes(extra.skuId)) {
+        slide.skuIds.push(extra.skuId)
+      }
+      if (extra?.label && !slide.label) slide.label = extra.label
+      return
+    }
+    indexBySrc.set(src, slides.length)
+    slides.push({
+      src,
+      skuIds: extra?.skuId != null ? [extra.skuId] : [],
+      label: extra?.label || '',
+    })
   }
   const mediaImgs = (product.value.media || [])
     .filter((m) => m.media_type === 'image')
@@ -233,21 +247,26 @@ function choose(groupId: string, optionId: string) {
   selected.value = { ...selected.value, [groupId]: optionId }
 }
 
-function jumpGalleryToSku(skuId: number | undefined) {
-  if (skuId == null) return
-  const idx = gallerySlides.value.findIndex((s) => s.skuId === skuId)
+function jumpGalleryToSku(sku: Sku | null | undefined) {
+  if (!sku?.image) return
+  const src = assetUrl(sku.image)
+  if (!src) return
+  let idx = gallerySlides.value.findIndex((s) => s.skuIds.includes(sku.id))
+  if (idx < 0) idx = gallerySlides.value.findIndex((s) => s.src === src)
   if (idx < 0) return
   slide.value = idx
-  nextTick(() => gallerySwipe.value?.swipeTo(idx, { immediate: false }))
+  // 規格在下方：先捲回頂部圖庫，再滑到對應幀
+  pdpScroll.value?.scrollTo({ top: 0, behavior: 'smooth' })
+  nextTick(() => {
+    gallerySwipe.value?.swipeTo(idx, { immediate: false })
+  })
 }
 
 watch(
   () => quote.value?.id,
   (id) => {
     if (id == null) return
-    const q = quote.value
-    if (!q?.image) return
-    jumpGalleryToSku(q.id)
+    jumpGalleryToSku(quote.value)
   },
 )
 
@@ -357,7 +376,7 @@ async function share() {
   <div v-else class="pdp">
     <AppHeader show-back @back="closeOverlay" />
     <!-- 滾動區與購買欄分離：疊層 overflow 會讓內部 position:fixed 跟著滑走 -->
-    <div class="pdp-scroll">
+    <div ref="pdpScroll" class="pdp-scroll">
     <div class="gallery-wrap">
       <van-swipe
         :key="`${product.id}-${gallery.length}`"
