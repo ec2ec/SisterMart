@@ -13,7 +13,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { ensureSpecCode, refsKey } from '../utils/specCode'
+import { defaultSkuCode, ensureSpecCode, refsKey } from '../utils/specCode'
 import SkuImageCell from './SkuImageCell.vue'
 
 export type Localized = { 'zh-HK': string; en: string }
@@ -35,10 +35,15 @@ export type SkuDraft = {
 const MAX_GROUPS = 3
 const MAX_SKUS = 50
 
-const props = defineProps<{
-  groups: SpecGroupDraft[]
-  skus: SkuDraft[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    groups: SpecGroupDraft[]
+    skus: SkuDraft[]
+    /** 當前商品代碼；生成／默認 SKU 時拼在規格組合代碼前 */
+    productCode?: string
+  }>(),
+  { productCode: '' },
+)
 
 const emit = defineEmits<{
   'update:groups': [SpecGroupDraft[]]
@@ -117,9 +122,10 @@ function ensureDefaults() {
     const g = group
     const o = g.options?.[0]
     if (!o) return
+    const combo = o.code || 'default'
     skuModel.value = [
       {
-        code: o.code || 'default',
+        code: defaultSkuCode(props.productCode, combo),
         price: 0,
         compare_at: 0,
         agent_price: 0,
@@ -279,18 +285,21 @@ function generateSkus() {
   groupModel.value = groups
   const prev = new Map(skuModel.value.map((s) => [refsKey(s.option_refs), s]))
   const next: SkuDraft[] = combos.map((c) => {
+    const autoCode = defaultSkuCode(props.productCode, c.code)
     const old = prev.get(refsKey(c.refs))
     if (old) {
+      // 空代碼、或仍是「僅組合代碼」的自動值 → 改為商品代碼+組合；手動改過的保留
+      const code = !old.code?.trim() || old.code === c.code ? autoCode : old.code
       return {
         ...old,
-        code: old.code || c.code,
+        code,
         supplier_sku: old.supplier_sku ?? '',
         option_refs: c.refs,
         status: old.status ?? 1,
       }
     }
     return {
-      code: c.code,
+      code: autoCode,
       price: 0,
       compare_at: 0,
       agent_price: 0,
@@ -443,7 +452,7 @@ defineExpose({ prepareForSave, generateSkus, MAX_GROUPS, MAX_SKUS })
   <n-card size="small" title="銷售規格 / SKU" class="sku-editor">
     <p class="hint">
       最多 {{ MAX_GROUPS }} 組規格、{{ MAX_SKUS }} 個 SKU。可套用「規格模板」，改完選項後點「生成
-      SKU」。SKU 圖片選填；H5 詳情會與商品主圖一併展示，選中該規格時跳到對應圖。
+      SKU」。SKU 代碼默認＝商品代碼 + 規格組合代碼。SKU 圖片選填；H5 詳情會與商品主圖一併展示，選中該規格時跳到對應圖。
       當前組合約 {{ comboCount }} 個。
     </p>
 

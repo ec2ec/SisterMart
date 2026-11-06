@@ -26,3 +26,21 @@ export function normalizeCode(input: string): string {
 export function refsKey(refs: string[]): string {
   return [...refs].map((r) => r.trim()).filter(Boolean).sort().join('|')
 }
+
+/**
+ * SKU 代碼默認：商品代碼 + 規格組合代碼（以 `_` 連接）。
+ * 無商品代碼時僅用組合代碼；若組合已帶商品前綴則不重複拼接。
+ */
+export function defaultSkuCode(productCode: string, comboCode: string): string {
+  const base = normalizeCode(productCode)
+  const combo =
+    normalizeCode(comboCode) ||
+    String(comboCode || '')
+      .trim()
+      .toLowerCase()
+      .slice(0, 64)
+  if (!base) return (combo || 'sku').slice(0, 64)
+  if (!combo) return base.slice(0, 64)
+  if (combo === base || combo.startsWith(`${base}_`)) return combo.slice(0, 64)
+  return `${base}_${combo}`.slice(0, 64)
+}
