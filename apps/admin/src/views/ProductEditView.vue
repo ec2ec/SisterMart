@@ -12,10 +12,10 @@ import {
   NSelect,
   NSpace,
   NSwitch,
-  useDialog,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
+import { dialog as appDialog } from '../feedback'
 import ProductMediaGallery, { type MediaItem } from '../components/ProductMediaGallery.vue'
 import ProductSkuEditor, {
   type SpecGroupDraft,
@@ -40,7 +40,6 @@ const PRODUCT_NAME_MAX = 191
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
-const dialog = useDialog()
 const saving = ref(false)
 const isNew = computed(() => route.params.id === 'new')
 const categories = ref<Cat[]>([])
@@ -263,10 +262,14 @@ onMounted(async () => {
 })
 
 function showSavedDialog() {
-  dialog.success({
+  // 用 createDiscreteApi 彈窗，避免依賴當前組件樹的 DialogProvider 注入時機
+  appDialog.success({
     title: '商品保存成功',
+    content: '商品資料已保存。',
     positiveText: '確認',
     negativeText: '去列表',
+    maskClosable: false,
+    closeOnEsc: false,
     onNegativeClick: () => {
       router.push('/catalog/products')
     },
