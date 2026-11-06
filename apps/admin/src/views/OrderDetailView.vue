@@ -15,7 +15,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { orderStatusLabel, orderStatusTagType } from '../utils/orderStatus'
-import { assetUrl } from '../utils/assetUrl'
+import { assetUrl, thumbUrl } from '../utils/assetUrl'
 
 type OrderMsg = { id: number; sender: 'seller' | 'buyer'; body: string; created_at: string }
 
@@ -204,7 +204,7 @@ function goMember(id: number) {
 
     <h3 style="margin-top: 1rem">明細</h3>
     <div v-for="(item, idx) in order.items || []" :key="idx" class="line">
-      <img class="thumb" :src="assetUrl(item.image)" alt="" />
+      <img class="thumb" :src="thumbUrl(item.image)" alt="" />
       <div>
         <div>{{ itemName(item) }} / {{ itemSpec(item) }}</div>
         <div>HK$ {{ item.unit_price }} × {{ item.qty }}（已退 {{ item.refunded_qty || 0 }}）= {{ item.line_amount }}</div>
@@ -221,7 +221,8 @@ function goMember(id: number) {
               <n-image
                 v-for="(img, i) in item.review.images"
                 :key="i"
-                :src="assetUrl(img)"
+                :src="thumbUrl(img)"
+                :preview-src="assetUrl(img)"
                 width="56"
                 height="56"
                 object-fit="cover"
@@ -260,7 +261,7 @@ function goMember(id: number) {
             <img
               v-for="(u, i) in as.evidence.slice(0, 3)"
               :key="i"
-              :src="assetUrl(u)"
+              :src="thumbUrl(u)"
               alt=""
             />
           </div>

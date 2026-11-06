@@ -14,7 +14,7 @@ import {
 } from 'naive-ui'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { thumbUrl, toStoredUrl } from '../utils/assetUrl'
 import SceneImageField from '../components/SceneImageField.vue'
 
 type Banner = {
@@ -114,7 +114,7 @@ onMounted(load)
     <n-card title="首頁輪播">
       <div v-for="row in paged" :key="row.id" class="row">
         <div class="meta">
-          <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
+          <img v-if="row.image_url" :src="thumbUrl(row.image_url)" alt="" />
           <div>
             <strong>#{{ row.id }} · {{ row.title['zh-HK'] || '(無標題)' }}</strong>
             <p>{{ row.link_type }} {{ row.link_value }} · sort {{ row.sort_order }} · {{ row.status === 1 ? '啟用' : '停用' }}</p>

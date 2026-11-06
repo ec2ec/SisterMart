@@ -18,7 +18,7 @@ import {
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
-import { assetUrl } from '../utils/assetUrl'
+import { assetUrl, thumbUrl } from '../utils/assetUrl'
 
 type Row = {
   id: number
@@ -252,7 +252,7 @@ async function forceBalance() {
               <img
                 v-for="(u, i) in row.evidence.slice(0, 3)"
                 :key="i"
-                :src="assetUrl(u)"
+                :src="thumbUrl(u)"
                 alt=""
               />
               <span v-if="(row.evidence_count || row.evidence.length) > 3" class="more">
@@ -314,7 +314,8 @@ async function forceBalance() {
               v-for="(u, i) in current.evidence"
               :key="i"
               class="thumb"
-              :src="assetUrl(u)"
+              :src="thumbUrl(u)"
+              :preview-src="assetUrl(u)"
               :width="72"
               :height="72"
               object-fit="cover"

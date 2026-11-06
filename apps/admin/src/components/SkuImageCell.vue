@@ -3,7 +3,7 @@ import { showError } from '../feedback'
 import { computed, ref } from 'vue'
 import { NButton, NImage, NSpin, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { assetUrl, thumbUrl, toStoredUrl } from '../utils/assetUrl'
 import MediaPickerDialog from './MediaPickerDialog.vue'
 
 const props = defineProps<{
@@ -20,7 +20,8 @@ const libraryOpen = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 
 const url = computed(() => (props.modelValue || '').trim())
-const preview = computed(() => (url.value ? assetUrl(url.value) : ''))
+const preview = computed(() => (url.value ? thumbUrl(url.value) : ''))
+const previewFull = computed(() => (url.value ? assetUrl(url.value) : ''))
 
 function setUrl(next: string | null) {
   emit('update:modelValue', next && next.trim() ? toStoredUrl(next.trim()) : null)
@@ -71,7 +72,7 @@ function onLibrarySelect(picked: string) {
           class="thumb"
           :src="preview"
           object-fit="cover"
-          :preview-src="preview"
+          :preview-src="previewFull"
         />
         <div v-else class="thumb empty" aria-hidden="true" />
         <div class="actions">

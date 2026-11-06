@@ -109,6 +109,8 @@ class AdminAcl
             '/api/v1/admin/uploads/banner' => self::PERM_CMS,
             '/api/v1/admin/uploads/image' => self::PERM_CATALOG,
             '/api/v1/admin/uploads/library' => self::PERM_CATALOG,
+            '/api/v1/admin/uploads/public-library' => self::PERM_SETTINGS,
+            '/api/v1/admin/uploads/requirements' => self::PERM_CATALOG,
             '/api/v1/admin/coupons' => self::PERM_MARKETING,
             '/api/v1/admin/points' => self::PERM_MARKETING,
             '/api/v1/admin/points-mall' => self::PERM_MARKETING,

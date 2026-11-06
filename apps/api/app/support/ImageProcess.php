@@ -162,6 +162,109 @@ final class ImageProcess
         ]);
     }
 
+    /**
+     * 管理列表用縮略圖：中心裁切 cover，固定正方形邊長。
+     *
+     * @return array{path: string, width: int, height: int, bytes: int, format: string, ext: string}
+     */
+    public static function coverThumb(string $sourcePath, string $destPath, int $size = 64, int $quality = 82): array
+    {
+        $size = max(16, min(256, $size));
+        $quality = self::clampQuality($quality);
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            throw new ApiException('SERVER', '伺服器未啟用 GD 圖片擴展，無法處理圖片', 500, 50002);
+        }
+        if (!is_file($sourcePath)) {
+            throw new ApiException('INVALID', '圖片讀取失敗', 422, 42290);
+        }
+        $info = @getimagesize($sourcePath);
+        if (!$info || empty($info[0]) || empty($info[1])) {
+            throw new ApiException('INVALID', '無法解析圖片', 422, 42290);
+        }
+        $srcW = (int) $info[0];
+        $srcH = (int) $info[1];
+        $type = (int) ($info[2] ?? 0);
+        $outExt = self::outputExt('jpg', $type);
+
+        $src = match ($type) {
+            IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($sourcePath) : false,
+            IMAGETYPE_PNG => function_exists('imagecreatefrompng') ? @imagecreatefrompng($sourcePath) : false,
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($sourcePath) : false,
+            default => false,
+        };
+        if ($src === false) {
+            throw new ApiException('INVALID', '不支持的圖片格式，請使用 JPG／PNG／WebP', 422, 42290);
+        }
+
+        $scale = max($size / max(1, $srcW), $size / max(1, $srcH));
+        $cropW = max(1, (int) round($size / $scale));
+        $cropH = max(1, (int) round($size / $scale));
+        $srcX = max(0, (int) floor(($srcW - $cropW) / 2));
+        $srcY = max(0, (int) floor(($srcH - $cropH) / 2));
+        if ($srcX + $cropW > $srcW) {
+            $srcX = max(0, $srcW - $cropW);
+        }
+        if ($srcY + $cropH > $srcH) {
+            $srcY = max(0, $srcH - $cropH);
+        }
+
+        $dst = imagecreatetruecolor($size, $size);
+        if ($dst === false) {
+            imagedestroy($src);
+            throw new ApiException('SERVER', '圖片處理失敗', 500, 50001);
+        }
+        $white = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $size, $size, $white);
+        imagecopyresampled($dst, $src, 0, 0, $srcX, $srcY, $size, $size, $cropW, $cropH);
+        imagedestroy($src);
+
+        $dir = dirname($destPath);
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            imagedestroy($dst);
+            throw new ApiException('SERVER', '無法建立上傳目錄', 500, 50001);
+        }
+        if (!self::write($dst, $destPath, $outExt, $quality)) {
+            imagedestroy($dst);
+            throw new ApiException('SERVER', '圖片寫入失敗', 500, 50001);
+        }
+        imagedestroy($dst);
+        $bytes = (int) (filesize($destPath) ?: 0);
+
+        return [
+            'path' => $destPath,
+            'width' => $size,
+            'height' => $size,
+            'bytes' => $bytes,
+            'format' => $outExt,
+            'ext' => $outExt,
+        ];
+    }
+
+    /** 原圖 URL → 同目錄 `.thumb.` 縮略圖 URL。 */
+    public static function thumbUrlFor(string $storageUrl): string
+    {
+        $url = trim($storageUrl);
+        if ($url === '' || !str_starts_with($url, '/storage/')) {
+            return $url;
+        }
+        if (preg_match('/\.thumb\.[a-z0-9]+$/i', $url)) {
+            return $url;
+        }
+
+        return (string) preg_replace('/(\.[a-z0-9]+)$/i', '.thumb$1', $url);
+    }
+
+    /** 縮略圖 URL → 原圖 URL（無 `.thumb.` 則原樣）。 */
+    public static function originalUrlFor(string $storageUrl): string
+    {
+        $url = trim($storageUrl);
+        if ($url === '') {
+            return $url;
+        }
+
+        return (string) preg_replace('/\.thumb(\.[a-z0-9]+)$/i', '$1', $url);
+    }
+
     public static function resolveOutputExt(string $format, string $sourcePath): string
     {
         $info = @getimagesize($sourcePath);

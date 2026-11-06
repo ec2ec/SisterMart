@@ -230,6 +230,8 @@ Route::group('api/v1/admin', function () {
     Route::post('uploads/banner', 'admin.HomeBanners/upload');
     Route::post('uploads/image', 'admin.Uploads/image');
     Route::get('uploads/library', 'admin.Uploads/library');
+    Route::get('uploads/public-library', 'admin.Uploads/publicLibrary');
+    Route::put('uploads/public-library/:id', 'admin.Uploads/updatePublicLibrary');
     Route::get('uploads/requirements', 'admin.Uploads/requirements');
     Route::get('home-ops', 'admin.HomeOps/read');
     Route::put('home-ops', 'admin.HomeOps/update');
@@ -261,6 +263,7 @@ Route::group('api/v1/admin', function () {
     Route::post('settings/upload-assets/scan', 'admin.ImageUploadSettings/scanAssets');
     Route::post('settings/upload-assets/purge', 'admin.ImageUploadSettings/purgeAssets');
     Route::post('settings/upload-assets/migrate', 'admin.ImageUploadSettings/migrateAssets');
+    Route::post('settings/upload-assets/thumbs-backfill', 'admin.ImageUploadSettings/backfillThumbs');
     Route::get('settings/upload-assets', 'admin.ImageUploadSettings/assets');
     Route::get('settings/image-upload', 'admin.ImageUploadSettings/index');
     Route::put('settings/image-upload', 'admin.ImageUploadSettings/update');

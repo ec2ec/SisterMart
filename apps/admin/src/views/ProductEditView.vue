@@ -373,7 +373,7 @@ async function save() {
       />
     </n-form-item>
     <n-form-item label="商品主圖">
-      <ProductMediaGallery v-model="form.media" />
+      <ProductMediaGallery v-model="form.media" library />
     </n-form-item>
     <n-form-item label="繁體中文詳情">
       <WangSimpleEditor v-model="form.detail_zh" scene="catalog.product_detail" placeholder="繁體中文詳情，可上傳圖片" :height="240" />

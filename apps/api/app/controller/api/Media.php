@@ -29,6 +29,14 @@ class Media extends BaseController
         $full = app()->getRootPath() . 'public/storage/' . $path;
         $root = realpath(app()->getRootPath() . 'public/storage');
         $real = realpath($full);
+        // 縮略圖尚未補產時回退原圖，避免管理列表破圖。
+        if (($root === false || $real === false || !is_file((string) $real)) && preg_match('/\.thumb\./i', $path)) {
+            $fallback = preg_replace('/\.thumb(\.[a-z0-9]+)$/i', '$1', $path);
+            if (is_string($fallback) && $fallback !== $path) {
+                $full = app()->getRootPath() . 'public/storage/' . $fallback;
+                $real = realpath($full);
+            }
+        }
         if ($root === false || $real === false || !str_starts_with($real, $root) || !is_file($real)) {
             return response('Not Found', 404);
         }

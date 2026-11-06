@@ -23,7 +23,7 @@ import ProductMediaGallery, { type MediaItem } from '../components/ProductMediaG
 import WangSimpleEditor from '../components/WangSimpleEditor.vue'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 
 type Coupon = {
   id: number
@@ -349,7 +349,7 @@ function removeCoupon(row: Coupon) {
               <td>{{ row.claimed }}/{{ row.stock }}（限{{ row.per_member_limit }}）</td>
               <td>{{ (row.rules_zh || row.rules?.['zh-HK'] || '').trim() ? '已填' : '—' }}</td>
               <td>
-                <img v-if="row.background_image" class="bg-thumb" :src="assetUrl(row.background_image)" alt="" />
+                <img v-if="row.background_image" class="bg-thumb" :src="thumbUrl(row.background_image)" alt="" />
                 <span v-else>—</span>
               </td>
               <td>

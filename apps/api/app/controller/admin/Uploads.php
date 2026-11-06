@@ -38,6 +38,13 @@ class Uploads extends ApiController
             } else {
                 $opts['preset'] = (string) ($input['preset'] ?? 'admin');
             }
+            // 公共圖庫用 shared 目錄，避免 draft claim 搬移。
+            if ($scene === 'library.public') {
+                $opts['owner_id'] = 'shared';
+            }
+            if (isset($input['tags'])) {
+                $opts['tags'] = $input['tags'];
+            }
 
             return (new ImageUploadService())->store($file, $opts);
         }, 201);
@@ -49,15 +56,38 @@ class Uploads extends ApiController
         return $this->run(fn () => (new ImageUploadSceneService())->list());
     }
 
-    /** GET /api/v1/admin/uploads/library?scene=&page=&page_size= */
+    /** GET /api/v1/admin/uploads/library?scene=&source=scene|public&tag=&page=&page_size= */
     public function library(): Response
     {
         return $this->run(function () {
             $scene = trim((string) $this->request->get('scene', ''));
+            $source = trim((string) $this->request->get('source', 'scene'));
+            $tag = trim((string) $this->request->get('tag', ''));
             $page = (int) $this->request->get('page', 1);
             $pageSize = (int) $this->request->get('page_size', 24);
 
-            return (new ImageUploadSceneService())->library($scene, $page, $pageSize);
+            return (new ImageUploadSceneService())->library($scene, $page, $pageSize, $source, $tag);
+        });
+    }
+
+    /** GET /api/v1/admin/uploads/public-library?tag=&status=&page=&page_size= */
+    public function publicLibrary(): Response
+    {
+        return $this->run(function () {
+            $tag = trim((string) $this->request->get('tag', ''));
+            $status = trim((string) $this->request->get('status', 'all'));
+            $page = (int) $this->request->get('page', 1);
+            $pageSize = (int) $this->request->get('page_size', 24);
+
+            return (new \app\service\UploadAssetService())->publicLibrary($page, $pageSize, $tag, $status);
+        });
+    }
+
+    /** PUT /api/v1/admin/uploads/public-library/:id */
+    public function updatePublicLibrary(int|string $id): Response
+    {
+        return $this->run(function () use ($id) {
+            return (new \app\service\UploadAssetService())->updatePublicLibraryItem((int) $id, $this->payload());
         });
     }
 }

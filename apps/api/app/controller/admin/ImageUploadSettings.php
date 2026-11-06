@@ -57,4 +57,14 @@ class ImageUploadSettings extends ApiController
             return (new UploadAssetService())->migrateLegacy();
         });
     }
+
+    /** 為缺少縮略圖的已索引原圖補產 64×64 cover。 */
+    public function backfillThumbs(): Response
+    {
+        return $this->run(function () {
+            $limit = (int) ($this->payload()['limit'] ?? $this->request->get('limit', 80));
+
+            return (new UploadAssetService())->backfillThumbs($limit);
+        });
+    }
 }

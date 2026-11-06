@@ -18,7 +18,7 @@ import {
 import { api } from '../api'
 import { showWarningDialog } from '../feedback'
 import ProductMediaGallery, { type MediaItem } from '../components/ProductMediaGallery.vue'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 
 type Popup = {
   id: number
@@ -232,7 +232,7 @@ onMounted(load)
       </p>
       <div v-for="row in items" :key="row.id" class="row">
         <div class="meta">
-          <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
+          <img v-if="row.image_url" :src="thumbUrl(row.image_url)" alt="" />
           <div>
             <strong>#{{ row.id }} · {{ row.title['zh-HK'] || '(無標題)' }}</strong>
             <p>

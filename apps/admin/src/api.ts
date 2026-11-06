@@ -50,6 +50,7 @@ export async function api<T>(path: string, init: RequestInit = {}, auth = false,
 
 export type ImageUploadResult = {
   url: string
+  thumb_url?: string | null
   width: number
   height: number
   bytes: number
@@ -58,13 +59,21 @@ export type ImageUploadResult = {
   format?: string
   scene?: string
   preset: string
+  tags?: string[]
 }
 
 /** 後台圖片上傳。壓縮參數只看該場景的當前配置，請求不能覆蓋。 */
-export async function uploadImage(file: File, options: { scene: string }): Promise<ImageUploadResult> {
+export async function uploadImage(
+  file: File,
+  options: { scene: string; tags?: string[] | string },
+): Promise<ImageUploadResult> {
   const body = new FormData()
   body.append('file', file)
   body.append('scene', options.scene)
+  if (options.tags != null) {
+    const tags = Array.isArray(options.tags) ? options.tags.join(',') : options.tags
+    if (tags.trim()) body.append('tags', tags)
+  }
   return api<ImageUploadResult>('/api/v1/admin/uploads/image', { method: 'POST', body }, true)
 }
 
