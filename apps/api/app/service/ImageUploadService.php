@@ -193,13 +193,34 @@ class ImageUploadService
         }
         $old = array_values(array_unique($this->pendingDrafts));
         $this->pendingDrafts = [];
+        $this->purgeUnreferencedPaths($old);
+    }
+
+    /**
+     * 刪除已無任何資料列引用的圖片檔（含多 SKU 共用：仍有引用則保留）。
+     *
+     * @param list<string>|array<int, string|null> $paths
+     */
+    public function purgeUnreferencedPaths(array $paths): void
+    {
+        $candidates = [];
+        foreach ($paths as $path) {
+            $url = trim((string) $path);
+            if ($url === '' || !str_starts_with($url, '/storage/')) {
+                continue;
+            }
+            $candidates[$url] = true;
+        }
+        if ($candidates === []) {
+            return;
+        }
         try {
             $referenced = (new UploadAssetService())->referencedPathSet();
         } catch (\Throwable) {
             return;
         }
         $assets = new UploadAssetService();
-        foreach ($old as $url) {
+        foreach (array_keys($candidates) as $url) {
             if (isset($referenced[$url])) {
                 continue;
             }

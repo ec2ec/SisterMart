@@ -496,8 +496,9 @@ class CatalogService
 
         $soldBoost = max(0, (int) ($body['sold_boost'] ?? 0));
         $files = new ImageUploadService();
+        $previousSkuImages = [];
 
-        Db::transaction(function () use ($body, &$id, $code, $categoryId, $supplierId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost, $files) {
+        Db::transaction(function () use ($body, &$id, $code, $categoryId, $supplierId, $nameZh, $nameEn, $detailZh, $detailEn, $media, $groups, $skus, $cover, $now, $commissionType, $commissionValue, $soldBoost, $files, &$previousSkuImages) {
             $data = [
                 'code'        => $code,
                 'category_id' => $categoryId,
@@ -629,6 +630,14 @@ class CatalogService
                 }
             }
 
+            // 改寫 SKU 前記下舊圖：保存後若已無引用（含多 SKU 共用）再刪檔。
+            foreach (Db::name('skus')->where('product_id', $id)->column('image_url') as $prevImg) {
+                $prevImg = trim((string) $prevImg);
+                if ($prevImg !== '') {
+                    $previousSkuImages[] = $prevImg;
+                }
+            }
+
             $oldGroups = Db::name('spec_groups')->where('product_id', $id)->column('id');
             if ($oldGroups) {
                 $oldOptions = Db::name('spec_options')->whereIn('spec_group_id', $oldGroups)->column('id');
@@ -721,6 +730,8 @@ class CatalogService
             }
         });
         $files->releaseUnreferencedDrafts();
+        // 新 SKU 已寫入：僅刪「舊 SKU 圖且全庫已無引用」的檔（共用圖保留）。
+        $files->purgeUnreferencedPaths($previousSkuImages);
 
         return $this->productDetail((string) $id, true);
     }

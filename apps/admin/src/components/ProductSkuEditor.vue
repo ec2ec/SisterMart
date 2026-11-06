@@ -356,11 +356,21 @@ function removeSku(idx: number) {
   }
   const s = skuModel.value[idx]
   const label = skuLabel(s) || s?.code || `#${idx + 1}`
+  const img = (s?.image || '').trim()
+  const shared =
+    img !== '' &&
+    skuModel.value.some((other, i) => i !== idx && (other.image || '').trim() === img)
+  let content = `確定刪除 SKU「${label}」？`
+  if (img && !shared) {
+    content = `確定刪除 SKU「${label}」？保存商品後將一併刪除僅由此 SKU 使用的圖片。`
+  } else if (img && shared) {
+    content = `確定刪除 SKU「${label}」？圖片仍被其他 SKU 使用，不會刪除檔案。`
+  }
   dialog.warning({
     maskClosable: false,
     closeOnEsc: false,
     title: '確認刪除 SKU',
-    content: `確定刪除 SKU「${label}」？`,
+    content,
     positiveText: '刪除',
     negativeText: '取消',
     onPositiveClick: () => {
