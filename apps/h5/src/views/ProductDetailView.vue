@@ -561,12 +561,18 @@ async function share() {
   background: #f6f6f6;
 }
 .gallery {
-  height: 17.5rem;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
   background: #f6f6f6;
+}
+.gallery :deep(.van-swipe__track),
+.gallery :deep(.van-swipe-item) {
+  height: 100%;
 }
 .shot {
   width: 100%;
-  height: 17.5rem;
+  height: 100%;
   border: 0;
   padding: 0;
   background: #f6f6f6;
