@@ -12,6 +12,7 @@ import {
   NSelect,
   NSpace,
   NSwitch,
+  useDialog,
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
@@ -39,6 +40,8 @@ const PRODUCT_NAME_MAX = 191
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
+const dialog = useDialog()
+const saving = ref(false)
 const isNew = computed(() => route.params.id === 'new')
 const categories = ref<Cat[]>([])
 const suppliers = ref<SupplierOpt[]>([])
@@ -259,7 +262,19 @@ onMounted(async () => {
   if (!specGroups.value.length || !skus.value.length) defaultSpecs()
 })
 
+function showSavedDialog() {
+  dialog.success({
+    title: '商品保存成功',
+    positiveText: '確認',
+    negativeText: '去列表',
+    onNegativeClick: () => {
+      router.push('/catalog/products')
+    },
+  })
+}
+
 async function save() {
+  if (saving.value) return
   const prepared = skuEditor.value?.prepareForSave()
   if (!prepared) return
 
@@ -301,21 +316,26 @@ async function save() {
     spec_groups: prepared.groups,
     skus: prepared.skus,
   }
-  if (isNew.value) {
-    const saved = await api<{ db_id: number }>(
-      '/api/v1/admin/products',
-      { method: 'POST', body: JSON.stringify(body) },
-      true,
-    )
-    message.success('商品已保存')
-    // 新建後留在編輯頁（切到真實 id）
-    if (saved?.db_id) {
-      await router.replace(`/catalog/products/${saved.db_id}`)
+  saving.value = true
+  try {
+    if (isNew.value) {
+      const saved = await api<{ db_id: number }>(
+        '/api/v1/admin/products',
+        { method: 'POST', body: JSON.stringify(body) },
+        true,
+      )
+      // 新建後留在編輯頁（切到真實 id）
+      if (saved?.db_id) {
+        await router.replace(`/catalog/products/${saved.db_id}`)
+      }
+      showSavedDialog()
+      return
     }
-    return
+    await api(`/api/v1/admin/products/${route.params.id}`, { method: 'PUT', body: JSON.stringify(body) }, true)
+    showSavedDialog()
+  } finally {
+    saving.value = false
   }
-  await api(`/api/v1/admin/products/${route.params.id}`, { method: 'PUT', body: JSON.stringify(body) }, true)
-  message.success('商品已保存')
 }
 </script>
 
@@ -432,8 +452,8 @@ async function save() {
     />
 
     <n-space style="margin-top: 1rem">
-      <n-button type="primary" @click="save">保存</n-button>
-      <n-button @click="router.push('/catalog/products')">返回列表</n-button>
+      <n-button type="primary" :loading="saving" :disabled="saving" @click="save">保存</n-button>
+      <n-button :disabled="saving" @click="router.push('/catalog/products')">返回列表</n-button>
     </n-space>
   </n-card>
 </template>
