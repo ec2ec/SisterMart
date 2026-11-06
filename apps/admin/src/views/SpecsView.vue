@@ -3,7 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NCard, NInput, NPagination, NSpace } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
 
@@ -76,7 +76,7 @@ onMounted(load)
       <tbody>
         <tr v-for="row in paged" :key="row.db_id" v-bind="rowAttrs(row.db_id)" :class="{ off: row.status !== 1 }">
           <td class="col-thumb">
-            <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
+            <img v-if="row.image" class="thumb" :src="thumbUrl(row.image)" :alt="row.name['zh-HK']" />
             <span v-else class="thumb placeholder" />
           </td>
           <td>{{ row.code }}</td>

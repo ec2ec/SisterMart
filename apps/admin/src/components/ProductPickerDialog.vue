@@ -13,7 +13,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
 
 export type ProductSku = {
@@ -268,7 +268,7 @@ function skuLabel(s: ProductSku) {
                   <img
                     v-if="row.image"
                     class="thumb"
-                    :src="assetUrl(row.image)"
+                    :src="thumbUrl(row.image)"
                     :alt="row.name['zh-HK']"
                   />
                   <span v-else class="thumb placeholder" />

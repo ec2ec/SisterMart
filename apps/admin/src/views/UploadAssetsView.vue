@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { NButton, NCard, NSpace, useDialog, useMessage } from 'naive-ui'
-import { api } from '../api'
-import { assetUrl } from '../utils/assetUrl'
+import { NButton, NCard, NImage, NInput, NPagination, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
+import { api, uploadImage } from '../api'
+import { showError } from '../feedback'
+import { assetUrl, thumbUrl } from '../utils/assetUrl'
 
 type Group = {
   domain: string
@@ -17,6 +18,7 @@ type Group = {
 type Recent = {
   id: number
   path: string
+  thumb_path?: string | null
   scene: string
   label: string
   uploader_type: string
@@ -24,6 +26,16 @@ type Recent = {
   bytes: number
   width: number | null
   height: number | null
+  created_at: string
+}
+
+type PublicItem = {
+  id: number
+  url: string
+  thumb_url?: string | null
+  tags: string[]
+  status: string
+  bytes: number
   created_at: string
 }
 
@@ -53,10 +65,26 @@ const totalCount = ref(0)
 const totalBytes = ref(0)
 const groups = ref<Group[]>([])
 const recent = ref<Recent[]>([])
+const recentPage = ref(1)
+const recentPageSize = 20
+const recentTotal = ref(0)
 const scanning = ref(false)
 const purging = ref(false)
 const migrating = ref(false)
+const backfilling = ref(false)
 const scanResult = ref<ScanResult | null>(null)
+
+const publicItems = ref<PublicItem[]>([])
+const publicTags = ref<string[]>([])
+const publicFilterTag = ref('')
+const publicFilterStatus = ref<'all' | 'active' | 'delisted'>('all')
+const publicPage = ref(1)
+const publicTotal = ref(0)
+const publicLoading = ref(false)
+const publicBusy = ref(false)
+const publicTagInput = ref('保養說明')
+const publicFileRef = ref<HTMLInputElement | null>(null)
+const publicPageSize = 24
 
 type MigrateResult = {
   migrated: number
@@ -80,16 +108,173 @@ function who(row: Recent) {
 }
 
 async function load() {
+  const q = new URLSearchParams({
+    recent_page: String(recentPage.value),
+    recent_page_size: String(recentPageSize),
+  })
   const data = await api<{
     total_count: number
     total_bytes: number
     groups: Group[]
     recent: Recent[]
-  }>('/api/v1/admin/settings/upload-assets', {}, true)
+    recent_total?: number
+    recent_page?: number
+    recent_page_size?: number
+  }>(`/api/v1/admin/settings/upload-assets?${q}`, {}, true)
   totalCount.value = data.total_count
   totalBytes.value = data.total_bytes
   groups.value = data.groups
   recent.value = data.recent
+  recentTotal.value = data.recent_total ?? data.recent.length
+  if (data.recent_page && data.recent_page !== recentPage.value) {
+    recentPage.value = data.recent_page
+  }
+}
+
+async function onRecentPage(page: number) {
+  recentPage.value = page
+  await load()
+}
+
+async function loadPublic() {
+  publicLoading.value = true
+  try {
+    const q = new URLSearchParams({
+      page: String(publicPage.value),
+      page_size: String(publicPageSize),
+      status: publicFilterStatus.value,
+    })
+    if (publicFilterTag.value) q.set('tag', publicFilterTag.value)
+    const data = await api<{ items: PublicItem[]; total: number; tags: string[] }>(
+      `/api/v1/admin/uploads/public-library?${q}`,
+      {},
+      true,
+    )
+    publicItems.value = data.items || []
+    publicTotal.value = data.total || 0
+    publicTags.value = data.tags || []
+  } finally {
+    publicLoading.value = false
+  }
+}
+
+function openPublicUpload() {
+  publicFileRef.value?.click()
+}
+
+async function onPublicFiles(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  publicBusy.value = true
+  try {
+    let ok = 0
+    for (const file of files) {
+      try {
+        await uploadImage(file, { scene: 'library.public', tags: publicTagInput.value })
+        ok++
+      } catch (e: unknown) {
+        showError(e instanceof Error ? e.message : `上傳失敗：${file.name}`)
+      }
+    }
+    if (ok) {
+      message.success(`已上傳 ${ok} 張到公共圖庫`)
+      publicPage.value = 1
+      await loadPublic()
+      await load()
+    }
+  } finally {
+    publicBusy.value = false
+  }
+}
+
+function filterPublicByTag(tag: string) {
+  publicFilterTag.value = publicFilterTag.value === tag ? '' : tag
+  publicPage.value = 1
+  void loadPublic()
+}
+
+function togglePublicDelistedFilter() {
+  publicFilterStatus.value = publicFilterStatus.value === 'all' ? 'delisted' : 'all'
+  publicPage.value = 1
+  void loadPublic()
+}
+
+function publicPrevPage() {
+  if (publicPage.value <= 1) return
+  publicPage.value -= 1
+  void loadPublic()
+}
+
+function publicNextPage() {
+  if (publicPage.value * publicPageSize >= publicTotal.value) return
+  publicPage.value += 1
+  void loadPublic()
+}
+
+async function setPublicStatus(row: PublicItem, status: 'active' | 'delisted') {
+  publicBusy.value = true
+  try {
+    await api(`/api/v1/admin/uploads/public-library/${row.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }, true)
+    message.success(status === 'delisted' ? '已下架（素材庫不可選）' : '已重新上架')
+    await loadPublic()
+  } finally {
+    publicBusy.value = false
+  }
+}
+
+async function savePublicTags(row: PublicItem, raw: string) {
+  publicBusy.value = true
+  try {
+    await api(`/api/v1/admin/uploads/public-library/${row.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ tags: raw }),
+    }, true)
+    message.success('標籤已更新')
+    await loadPublic()
+  } finally {
+    publicBusy.value = false
+  }
+}
+
+function confirmBackfillThumbs() {
+  if (backfilling.value) return
+  dialog.info({
+    title: '為舊圖補產縮略圖？',
+    content: '會為索引中尚未有 64×64 縮略圖的原圖批次補產。可重複執行直到全部完成。',
+    positiveText: '開始補產',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      void runBackfillThumbs()
+    },
+  })
+}
+
+async function runBackfillThumbs() {
+  backfilling.value = true
+  let created = 0
+  let failed = 0
+  try {
+    for (let round = 0; round < 200; round++) {
+      const res = await api<{ created: number; failed: number; has_more: boolean }>(
+        '/api/v1/admin/settings/upload-assets/thumbs-backfill',
+        { method: 'POST', body: JSON.stringify({ limit: 80 }) },
+        true,
+      )
+      created += res.created
+      failed += res.failed
+      if (!res.has_more) break
+    }
+    message.success(`縮略圖補產完成：新增 ${created}${failed ? `，失敗 ${failed}` : ''}`)
+    await load()
+    await loadPublic()
+  } finally {
+    backfilling.value = false
+  }
 }
 
 async function scan() {
@@ -175,7 +360,10 @@ function confirmPurge() {
   })
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadPublic()
+})
 </script>
 
 <template>
@@ -218,6 +406,108 @@ onMounted(load)
           </tbody>
         </table>
       </div>
+    </n-card>
+
+    <n-card title="公共圖庫">
+      <p class="lead">
+        上傳可跨場景共用的素材（如保養說明、服務須知）。素材庫彈窗可切到「公共圖庫」選用，會直接引用同一路徑。下架後不可再選，但已引用的地方仍可顯示。
+      </p>
+      <n-space align="center" style="margin-bottom: 0.75rem">
+        <n-input v-model:value="publicTagInput" placeholder="上傳標籤，逗號分隔" style="width: 16rem" />
+        <n-button type="primary" :loading="publicBusy" @click="openPublicUpload">上傳到公共圖庫</n-button>
+        <input
+          ref="publicFileRef"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+          multiple
+          hidden
+          @change="onPublicFiles"
+        />
+        <n-button :loading="backfilling" @click="confirmBackfillThumbs">補產縮略圖</n-button>
+      </n-space>
+      <div v-if="publicTags.length" class="pub-tags">
+        <n-tag
+          v-for="tag in publicTags"
+          :key="tag"
+          size="small"
+          round
+          :type="publicFilterTag === tag ? 'primary' : 'default'"
+          style="cursor: pointer"
+          @click="filterPublicByTag(tag)"
+        >
+          {{ tag }}
+        </n-tag>
+        <n-button size="tiny" quaternary @click="togglePublicDelistedFilter">
+          {{ publicFilterStatus === 'delisted' ? '顯示全部' : '只看已下架' }}
+        </n-button>
+      </div>
+      <div class="table-wrap">
+        <table class="table recent">
+          <thead>
+            <tr>
+              <th>預覽</th>
+              <th>標籤</th>
+              <th>狀態</th>
+              <th>體積</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="publicLoading">
+              <td colspan="5" class="muted">載入中…</td>
+            </tr>
+            <tr v-else-if="!publicItems.length">
+              <td colspan="5" class="muted">尚無公共素材</td>
+            </tr>
+            <tr v-for="row in publicItems" :key="row.id">
+              <td>
+                <n-image
+                  class="thumb"
+                  :src="thumbUrl(row.thumb_url || row.url)"
+                  :preview-src="assetUrl(row.url)"
+                  object-fit="cover"
+                  :img-props="{ alt: '', title: '點擊看原圖' }"
+                />
+              </td>
+              <td>
+                <n-input
+                  size="small"
+                  :default-value="(row.tags || []).join(',')"
+                  placeholder="標籤"
+                  style="min-width: 10rem"
+                  @blur="(e: FocusEvent) => savePublicTags(row, (e.target as HTMLInputElement).value)"
+                />
+              </td>
+              <td>{{ row.status === 'delisted' ? '已下架' : '上架中' }}</td>
+              <td>{{ formatBytes(row.bytes) }}</td>
+              <td>
+                <n-button
+                  v-if="row.status !== 'delisted'"
+                  size="tiny"
+                  @click="setPublicStatus(row, 'delisted')"
+                >
+                  下架
+                </n-button>
+                <n-button v-else size="tiny" type="primary" secondary @click="setPublicStatus(row, 'active')">
+                  上架
+                </n-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-if="publicTotal > publicPageSize" class="scan-note">
+        共 {{ publicTotal }} 張 ·
+        <n-button size="tiny" quaternary :disabled="publicPage <= 1" @click="publicPrevPage">上一頁</n-button>
+        <n-button
+          size="tiny"
+          quaternary
+          :disabled="publicPage * publicPageSize >= publicTotal"
+          @click="publicNextPage"
+        >
+          下一頁
+        </n-button>
+      </p>
     </n-card>
 
     <n-card title="舊圖整理">
@@ -290,7 +580,13 @@ onMounted(load)
             </tr>
             <tr v-for="row in recent" :key="row.id">
               <td>
-                <img class="thumb" :src="assetUrl(row.path)" alt="" />
+                <n-image
+                  class="thumb"
+                  :src="thumbUrl(row.thumb_path || row.path)"
+                  :preview-src="assetUrl(row.path)"
+                  object-fit="cover"
+                  :img-props="{ alt: '', title: '點擊看原圖', loading: 'lazy' }"
+                />
               </td>
               <td>{{ row.label }}</td>
               <td class="mono">{{ row.path }}</td>
@@ -300,6 +596,14 @@ onMounted(load)
             </tr>
           </tbody>
         </table>
+      </div>
+      <div v-if="recentTotal > recentPageSize" class="pager">
+        <n-pagination
+          :page="recentPage"
+          :item-count="recentTotal"
+          :page-size="recentPageSize"
+          @update:page="onRecentPage"
+        />
       </div>
     </n-card>
   </div>
@@ -316,6 +620,18 @@ onMounted(load)
   color: #666;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+.pub-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
 }
 .stats {
   display: flex;
@@ -361,9 +677,16 @@ td {
 .thumb {
   width: 2.5rem;
   height: 2.5rem;
-  object-fit: cover;
   border-radius: 0.25rem;
   background: #f3f0ea;
+  display: block;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.thumb :deep(img) {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
   display: block;
 }
 .scan-note {

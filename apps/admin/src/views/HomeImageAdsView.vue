@@ -14,7 +14,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { thumbUrl, toStoredUrl } from '../utils/assetUrl'
 import SceneImageField from '../components/SceneImageField.vue'
 
 type ImageAdItem = {
@@ -172,7 +172,7 @@ onMounted(load)
       <n-empty v-if="!items.length" description="尚未建立圖片廣告" />
       <div v-for="row in items" :key="row.code" class="row">
         <div class="meta">
-          <img v-if="row.image_url" :src="assetUrl(row.image_url)" alt="" />
+          <img v-if="row.image_url" :src="thumbUrl(row.image_url)" alt="" />
           <div class="meta-text">
             <strong>{{ row.title?.['zh-HK'] || row.title?.en || row.code }}</strong>
             <p>

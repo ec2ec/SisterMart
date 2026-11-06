@@ -221,7 +221,21 @@ class ImageUploadSceneService
             'quality' => 85,
             'min_quality' => 45,
         ],
+        'library.public' => [
+            'label' => '公共圖庫',
+            'group' => '素材',
+            'bucket' => 'library/public',
+            'legacy' => [],
+            'format' => 'jpg',
+            'max_edge' => 1600,
+            'max_upload_bytes' => 5242880,
+            'max_bytes' => 716800,
+            'quality' => 85,
+            'min_quality' => 45,
+        ],
     ];
+
+    public const PUBLIC_PREFIX = '/storage/library/public/';
 
     /** @return array<string, mixed> */
     public function list(): array
@@ -281,13 +295,17 @@ class ImageUploadSceneService
         };
     }
 
-    /** 本站 /storage 路徑須落在場景桶或歷史前綴；外鏈原樣保留。 */
+    /** 本站 /storage 路徑須落在場景桶、公共圖庫或歷史前綴；外鏈原樣保留。 */
     public function assertUrl(string $scene, string $url): string
     {
         $url = trim($url);
         $storage = $this->extractStorageUrl($url);
         if ($storage === null) {
             return $url;
+        }
+        // 公共圖庫可被任意後台場景直接引用（不含會員場景）。
+        if (!str_starts_with($scene, 'member.') && str_starts_with($storage, self::PUBLIC_PREFIX)) {
+            return $storage;
         }
         $cfg = $this->resolved($scene);
         $prefixes = array_merge(['/storage/' . $cfg['bucket'] . '/'], $cfg['legacy']);
@@ -339,13 +357,17 @@ class ImageUploadSceneService
     }
 
     /**
-     * 後台素材庫：只列該場景分桶裡已上傳的圖。不含會員頭像／評價／售後。
+     * 後台素材庫：只列該場景分桶裡已上傳的圖。不含會員頭像／評價／售後與縮略圖檔。
      *
-     * @return array{scene: string, items: list<array{url: string, bytes: int}>, total: int, page: int, page_size: int}
+     * @return array{scene: string, source: string, items: list<array{url: string, thumb_url: ?string, bytes: int, tags?: list<string>}>, total: int, page: int, page_size: int, tags?: list<string>}
      */
-    public function library(string $scene, int $page, int $pageSize): array
+    public function library(string $scene, int $page, int $pageSize, string $source = 'scene', string $tag = ''): array
     {
-        if (!isset(self::SCENES[$scene]) || str_starts_with($scene, 'member.')) {
+        $source = $source === 'public' ? 'public' : 'scene';
+        if ($source === 'public') {
+            return (new UploadAssetService())->publicLibrary($page, $pageSize, $tag, 'active');
+        }
+        if (!isset(self::SCENES[$scene]) || str_starts_with($scene, 'member.') || $scene === 'library.public') {
             throw new ApiException('INVALID', '素材庫只收後台圖片場景', 422, 42201);
         }
         $page = max(1, $page);
@@ -356,11 +378,17 @@ class ImageUploadSceneService
         $slice = array_slice($files, ($page - 1) * $pageSize, $pageSize);
         $items = [];
         foreach ($slice as $row) {
-            $items[] = ['url' => $row['url'], 'bytes' => $row['bytes']];
+            $thumb = \app\support\ImageProcess::thumbUrlFor($row['url']);
+            $items[] = [
+                'url' => $row['url'],
+                'thumb_url' => $thumb !== $row['url'] ? $thumb : null,
+                'bytes' => $row['bytes'],
+            ];
         }
 
         return [
             'scene' => $scene,
+            'source' => 'scene',
             'items' => $items,
             'total' => $total,
             'page' => $page,
@@ -513,6 +541,10 @@ class ImageUploadSceneService
             }
             $ext = strtolower($file->getExtension());
             if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+                continue;
+            }
+            $name = $file->getFilename();
+            if (preg_match('/\.thumb\./i', $name)) {
                 continue;
             }
             $realFile = $file->getRealPath();

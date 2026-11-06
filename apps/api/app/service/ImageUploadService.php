@@ -16,8 +16,8 @@ use think\file\UploadedFile;
 class ImageUploadService
 {
     /**
-     * @param array{scene?: string, preset?: string, owner_id?: int|string} $options
-     * @return array{url: string, width: int, height: int, bytes: int, quality: int, max_edge: int, format: string, scene: string, preset: string}
+     * @param array{scene?: string, preset?: string, owner_id?: int|string, tags?: list<string>|string} $options
+     * @return array{url: string, thumb_url: ?string, width: int, height: int, bytes: int, quality: int, max_edge: int, format: string, scene: string, preset: string, tags: list<string>}
      */
     public function store(UploadedFile $file, array $options = []): array
     {
@@ -70,7 +70,15 @@ class ImageUploadService
         }
 
         $url = '/storage/' . $relDir . '/' . $outName;
+        $thumbUrl = ImageProcess::thumbUrlFor($url);
+        $thumbPath = $this->absolutePath($thumbUrl);
+        try {
+            ImageProcess::coverThumb($destPath, $thumbPath, 64);
+        } catch (\Throwable) {
+            $thumbUrl = '';
+        }
         $uploader = $this->resolveUploader($options, $scene);
+        $tags = $this->normalizeTags($options['tags'] ?? null);
         try {
             (new UploadAssetService())->record([
                 'url' => $url,
@@ -80,6 +88,8 @@ class ImageUploadService
                 'height' => (int) $meta['height'],
                 'uploader_type' => $uploader['uploader_type'],
                 'uploader_id' => $uploader['uploader_id'],
+                'thumb_path' => $thumbUrl !== '' ? $thumbUrl : null,
+                'tags' => $tags,
             ]);
         } catch (\Throwable) {
             // 索引寫入失敗不影響圖片本身已落盤。
@@ -87,6 +97,7 @@ class ImageUploadService
 
         return [
             'url' => $url,
+            'thumb_url' => $thumbUrl !== '' ? $thumbUrl : null,
             'width' => $meta['width'],
             'height' => $meta['height'],
             'bytes' => $meta['bytes'],
@@ -95,7 +106,34 @@ class ImageUploadService
             'format' => $meta['format'],
             'scene' => $scene,
             'preset' => (string) ($options['preset'] ?? $scene),
+            'tags' => $tags,
         ];
+    }
+
+    /** @param mixed $raw @return list<string> */
+    private function normalizeTags(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $raw = preg_split('/[,，]/u', $raw) ?: [];
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $tag) {
+            $tag = trim((string) $tag);
+            if ($tag === '' || mb_strlen($tag) > 32) {
+                continue;
+            }
+            if (!isset($out[$tag])) {
+                $out[$tag] = $tag;
+            }
+            if (count($out) >= 12) {
+                break;
+            }
+        }
+
+        return array_values($out);
     }
 
     /**
@@ -228,6 +266,13 @@ class ImageUploadService
             if ($full !== null) {
                 @unlink($full);
             }
+            $thumb = ImageProcess::thumbUrlFor($url);
+            if ($thumb !== $url) {
+                $thumbFull = $this->jailedFile($thumb);
+                if ($thumbFull !== null) {
+                    @unlink($thumbFull);
+                }
+            }
             try {
                 $assets->markDeleted($url);
             } catch (\Throwable) {
@@ -302,8 +347,46 @@ class ImageUploadService
         if (!copy($from, $toFull)) {
             return false;
         }
+        $fromThumb = ImageProcess::thumbUrlFor($fromUrl);
+        $toThumb = ImageProcess::thumbUrlFor($toUrl);
+        $fromThumbFile = $this->jailedFile($fromThumb);
+        if ($fromThumbFile !== null) {
+            $toThumbFull = $this->absolutePath($toThumb);
+            $thumbDir = dirname($toThumbFull);
+            if (!is_dir($thumbDir)) {
+                @mkdir($thumbDir, 0775, true);
+            }
+            if (!is_file($toThumbFull)) {
+                @copy($fromThumbFile, $toThumbFull);
+            }
+        }
 
         return $this->jailedFile($toUrl) !== null;
+    }
+
+    /** 為已落盤原圖補產 64×64 cover 縮略圖（存在則略過）。 */
+    public function ensureThumb(string $url): ?string
+    {
+        $url = trim($url);
+        if ($url === '' || !str_starts_with($url, '/storage/') || preg_match('/\.thumb\./i', $url)) {
+            return null;
+        }
+        $full = $this->jailedFile($url);
+        if ($full === null) {
+            return null;
+        }
+        $thumbUrl = ImageProcess::thumbUrlFor($url);
+        $thumbFull = $this->absolutePath($thumbUrl);
+        if (is_file($thumbFull)) {
+            return $thumbUrl;
+        }
+        try {
+            ImageProcess::coverThumb($full, $thumbFull, 64);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_file($thumbFull) ? $thumbUrl : null;
     }
 
     private function jailedFile(string $url): ?string

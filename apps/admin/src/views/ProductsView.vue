@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { NButton, NCard, NInput, NPagination, NSelect, NSpace, NTag, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
 import { showError } from '../feedback'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
 
@@ -211,7 +211,7 @@ onMounted(async () => {
             :class="{ off: row.status !== 1 }"
           >
             <td class="col-thumb">
-              <img v-if="row.image" class="thumb" :src="assetUrl(row.image)" :alt="row.name['zh-HK']" />
+              <img v-if="row.image" class="thumb" :src="thumbUrl(row.image)" :alt="row.name['zh-HK']" />
               <span v-else class="thumb placeholder" />
             </td>
             <td>{{ row.code }}</td>

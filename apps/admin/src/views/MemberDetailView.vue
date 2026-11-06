@@ -16,7 +16,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl } from '../utils/assetUrl'
+import { thumbUrl } from '../utils/assetUrl'
 import { formatRelativeZh } from '../utils/relativeTime'
 import { orderStatusLabel, orderStatusTagType } from '../utils/orderStatus'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
@@ -197,7 +197,7 @@ function activeLabel(at?: string | null) {
         <img
           v-if="member.avatar_url"
           class="avatar"
-          :src="assetUrl(member.avatar_url)"
+          :src="thumbUrl(member.avatar_url)"
           alt=""
         />
         <div v-else class="avatar placeholder">{{ (member.nickname || member.email || '#')[0] }}</div>

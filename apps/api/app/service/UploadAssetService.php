@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use app\support\ApiException;
+use app\support\ImageProcess;
 use think\facade\Db;
 
 /**
@@ -43,45 +45,111 @@ class UploadAssetService
         [$domain, $assetType] = $this->splitScene($scene);
         $uploaderType = ($row['uploader_type'] ?? '') === 'member' ? 'member' : 'admin';
         $now = date('Y-m-d H:i:s');
+        $thumbPath = isset($row['thumb_path']) ? trim((string) $row['thumb_path']) : '';
+        if ($thumbPath !== '' && (!str_starts_with($thumbPath, '/storage/') || strlen($thumbPath) > 191)) {
+            $thumbPath = '';
+        }
+        $tagsJson = null;
+        if (array_key_exists('tags', $row)) {
+            $tags = is_array($row['tags']) ? array_values($row['tags']) : [];
+            $clean = [];
+            foreach ($tags as $tag) {
+                $tag = trim((string) $tag);
+                if ($tag !== '' && mb_strlen($tag) <= 32) {
+                    $clean[$tag] = $tag;
+                }
+            }
+            $tagsJson = json_encode(array_values($clean), JSON_UNESCAPED_UNICODE);
+        }
         $this->ensureSchema();
         $table = $this->table();
         $existing = Db::query("SELECT `id` FROM `{$table}` WHERE `path` = ? LIMIT 1", [$path]);
-        $payload = [
-            $domain,
-            $assetType,
-            $uploaderType,
-            max(0, (int) ($row['uploader_id'] ?? 0)),
-            max(0, (int) ($row['bytes'] ?? 0)),
-            isset($row['width']) ? (int) $row['width'] : null,
-            isset($row['height']) ? (int) $row['height'] : null,
-            $now,
-            $path,
-        ];
         if ($existing) {
+            $sets = [
+                '`domain` = ?',
+                '`asset_type` = ?',
+                '`uploader_type` = ?',
+                '`uploader_id` = ?',
+                '`bytes` = ?',
+                '`width` = ?',
+                '`height` = ?',
+                '`status` = \'active\'',
+                '`orphaned_at` = NULL',
+                '`updated_at` = ?',
+            ];
+            $params = [
+                $domain,
+                $assetType,
+                $uploaderType,
+                max(0, (int) ($row['uploader_id'] ?? 0)),
+                max(0, (int) ($row['bytes'] ?? 0)),
+                isset($row['width']) ? (int) $row['width'] : null,
+                isset($row['height']) ? (int) $row['height'] : null,
+                $now,
+            ];
+            if ($thumbPath !== '') {
+                $sets[] = '`thumb_path` = ?';
+                $params[] = $thumbPath;
+            }
+            if ($tagsJson !== null) {
+                $sets[] = '`tags_json` = ?';
+                $params[] = $tagsJson;
+            }
+            $params[] = $path;
             Db::execute(
-                "UPDATE `{$table}` SET `domain` = ?, `asset_type` = ?, `uploader_type` = ?, `uploader_id` = ?, `bytes` = ?, `width` = ?, `height` = ?, `status` = 'active', `orphaned_at` = NULL, `updated_at` = ? WHERE `path` = ?",
-                $payload,
+                "UPDATE `{$table}` SET " . implode(', ', $sets) . ' WHERE `path` = ?',
+                $params,
             );
 
             return;
         }
         Db::execute(
-            "INSERT INTO `{$table}` (`path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `status`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)",
-            [$path, $domain, $assetType, $uploaderType, $payload[3], $payload[4], $payload[5], $payload[6], $now, $now],
+            "INSERT INTO `{$table}` (`path`, `thumb_path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `tags_json`, `status`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)",
+            [
+                $path,
+                $thumbPath !== '' ? $thumbPath : null,
+                $domain,
+                $assetType,
+                $uploaderType,
+                max(0, (int) ($row['uploader_id'] ?? 0)),
+                max(0, (int) ($row['bytes'] ?? 0)),
+                isset($row['width']) ? (int) $row['width'] : null,
+                isset($row['height']) ? (int) $row['height'] : null,
+                $tagsJson,
+                $now,
+                $now,
+            ],
         );
     }
 
-    /** @return array{total_count: int, total_bytes: int, groups: list<array<string, mixed>>, recent: list<array<string, mixed>>} */
-    public function overview(int $recentLimit = 40): array
+    /**
+     * @return array{
+     *   total_count: int,
+     *   total_bytes: int,
+     *   groups: list<array<string, mixed>>,
+     *   recent: list<array<string, mixed>>,
+     *   recent_total: int,
+     *   recent_page: int,
+     *   recent_page_size: int
+     * }
+     */
+    public function overview(int $recentPage = 1, int $recentPageSize = 20): array
     {
         $this->ensureSchema();
         $table = $this->table();
-        $recentLimit = max(1, min(100, $recentLimit));
+        $recentPage = max(1, $recentPage);
+        $recentPageSize = max(1, min(100, $recentPageSize));
         $groups = Db::query(
             "SELECT `domain`, `asset_type`, COUNT(*) AS `cnt`, COALESCE(SUM(`bytes`), 0) AS `bytes` FROM `{$table}` WHERE `status` = 'active' GROUP BY `domain`, `asset_type` ORDER BY `bytes` DESC, `domain`, `asset_type`",
         );
+        $recentTotalRow = Db::query(
+            "SELECT COUNT(*) AS c FROM `{$table}` WHERE `status` = 'active'",
+        );
+        $recentTotal = (int) ($recentTotalRow[0]['c'] ?? 0);
+        $offset = ($recentPage - 1) * $recentPageSize;
         $recent = Db::query(
-            "SELECT `id`, `path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `created_at` FROM `{$table}` WHERE `status` = 'active' ORDER BY `id` DESC LIMIT {$recentLimit}",
+            "SELECT `id`, `path`, `thumb_path`, `domain`, `asset_type`, `uploader_type`, `uploader_id`, `bytes`, `width`, `height`, `created_at`
+             FROM `{$table}` WHERE `status` = 'active' ORDER BY `id` DESC LIMIT {$recentPageSize} OFFSET {$offset}",
         );
         $totalCount = 0;
         $totalBytes = 0;
@@ -108,6 +176,7 @@ class UploadAssetService
             $recentRows[] = [
                 'id' => (int) $row['id'],
                 'path' => (string) $row['path'],
+                'thumb_path' => $row['thumb_path'] !== null ? (string) $row['thumb_path'] : null,
                 'scene' => $scene,
                 'label' => $this->label($scene),
                 'uploader_type' => (string) $row['uploader_type'],
@@ -124,7 +193,257 @@ class UploadAssetService
             'total_bytes' => $totalBytes,
             'groups' => $presented,
             'recent' => $recentRows,
+            'recent_total' => $recentTotal,
+            'recent_page' => $recentPage,
+            'recent_page_size' => $recentPageSize,
         ];
+    }
+
+    /**
+     * 公共圖庫列表（素材庫「公共」與設置頁管理共用）。
+     *
+     * @return array{scene: string, source: string, items: list<array<string, mixed>>, total: int, page: int, page_size: int, tags: list<string>}
+     */
+    public function publicLibrary(int $page, int $pageSize, string $tag = '', string $status = 'active'): array
+    {
+        $this->ensureSchema();
+        $page = max(1, $page);
+        $pageSize = max(1, min(60, $pageSize));
+        $status = in_array($status, ['active', 'delisted', 'all'], true) ? $status : 'active';
+        $table = $this->table();
+        $where = ["`domain` = 'library'", "`asset_type` = 'public'"];
+        $params = [];
+        if ($status === 'active') {
+            $where[] = "`status` = 'active'";
+        } elseif ($status === 'delisted') {
+            $where[] = "`status` = 'delisted'";
+        } else {
+            $where[] = "`status` IN ('active', 'delisted')";
+        }
+        $tag = trim($tag);
+        if ($tag !== '') {
+            $where[] = '`tags_json` LIKE ?';
+            $params[] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $tag) . '%';
+        }
+        $whereSql = implode(' AND ', $where);
+        $countRow = Db::query("SELECT COUNT(*) AS c FROM `{$table}` WHERE {$whereSql}", $params);
+        $total = (int) ($countRow[0]['c'] ?? 0);
+        $offset = ($page - 1) * $pageSize;
+        $rows = Db::query(
+            "SELECT `id`, `path`, `thumb_path`, `tags_json`, `status`, `bytes`, `width`, `height`, `created_at`, `updated_at`
+             FROM `{$table}` WHERE {$whereSql} ORDER BY `id` DESC LIMIT {$pageSize} OFFSET {$offset}",
+            $params,
+        );
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = [
+                'id' => (int) $row['id'],
+                'url' => (string) $row['path'],
+                'thumb_url' => $row['thumb_path'] !== null && $row['thumb_path'] !== ''
+                    ? (string) $row['thumb_path']
+                    : null,
+                'tags' => $this->decodeTags($row['tags_json'] ?? null),
+                'status' => (string) $row['status'],
+                'bytes' => (int) $row['bytes'],
+                'width' => $row['width'] !== null ? (int) $row['width'] : null,
+                'height' => $row['height'] !== null ? (int) $row['height'] : null,
+                'created_at' => (string) $row['created_at'],
+                'updated_at' => (string) $row['updated_at'],
+            ];
+        }
+
+        return [
+            'scene' => 'library.public',
+            'source' => 'public',
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $pageSize,
+            'tags' => $this->publicTagCatalog(),
+        ];
+    }
+
+    /**
+     * @param array{tags?: list<string>|string, status?: string} $patch
+     * @return array<string, mixed>
+     */
+    public function updatePublicLibraryItem(int $id, array $patch): array
+    {
+        $this->ensureSchema();
+        if ($id <= 0) {
+            throw new ApiException('INVALID', '無效素材', 422, 42201);
+        }
+        $table = $this->table();
+        $rows = Db::query(
+            "SELECT `id`, `path`, `thumb_path`, `tags_json`, `status`, `bytes`, `width`, `height`, `created_at`, `updated_at`
+             FROM `{$table}` WHERE `id` = ? AND `domain` = 'library' AND `asset_type` = 'public' LIMIT 1",
+            [$id],
+        );
+        if (!$rows) {
+            throw new ApiException('NOT_FOUND', '素材不存在', 404, 40402);
+        }
+        $sets = [];
+        $params = [];
+        if (array_key_exists('tags', $patch)) {
+            $tags = $patch['tags'];
+            if (is_string($tags)) {
+                $tags = preg_split('/[,，]/u', $tags) ?: [];
+            }
+            if (!is_array($tags)) {
+                $tags = [];
+            }
+            $clean = [];
+            foreach ($tags as $tag) {
+                $tag = trim((string) $tag);
+                if ($tag !== '' && mb_strlen($tag) <= 32) {
+                    $clean[$tag] = $tag;
+                }
+                if (count($clean) >= 12) {
+                    break;
+                }
+            }
+            $sets[] = '`tags_json` = ?';
+            $params[] = json_encode(array_values($clean), JSON_UNESCAPED_UNICODE);
+        }
+        if (array_key_exists('status', $patch)) {
+            $status = (string) $patch['status'];
+            if (!in_array($status, ['active', 'delisted'], true)) {
+                throw new ApiException('INVALID', '狀態只能是 active 或 delisted', 422, 42201);
+            }
+            $sets[] = '`status` = ?';
+            $params[] = $status;
+            if ($status === 'active') {
+                $sets[] = '`orphaned_at` = NULL';
+            }
+        }
+        if ($sets === []) {
+            throw new ApiException('INVALID', '沒有可更新的欄位', 422, 42201);
+        }
+        $now = date('Y-m-d H:i:s');
+        $sets[] = '`updated_at` = ?';
+        $params[] = $now;
+        $params[] = $id;
+        Db::execute('UPDATE `' . $table . '` SET ' . implode(', ', $sets) . ' WHERE `id` = ?', $params);
+        $fresh = $this->publicLibrary(1, 1, '', 'all');
+        foreach ($fresh['items'] as $item) {
+            if ((int) $item['id'] === $id) {
+                return $item;
+            }
+        }
+        $row = Db::query(
+            "SELECT `id`, `path`, `thumb_path`, `tags_json`, `status`, `bytes`, `width`, `height`, `created_at`, `updated_at`
+             FROM `{$table}` WHERE `id` = ? LIMIT 1",
+            [$id],
+        )[0];
+
+        return [
+            'id' => (int) $row['id'],
+            'url' => (string) $row['path'],
+            'thumb_url' => $row['thumb_path'] !== null && $row['thumb_path'] !== '' ? (string) $row['thumb_path'] : null,
+            'tags' => $this->decodeTags($row['tags_json'] ?? null),
+            'status' => (string) $row['status'],
+            'bytes' => (int) $row['bytes'],
+            'width' => $row['width'] !== null ? (int) $row['width'] : null,
+            'height' => $row['height'] !== null ? (int) $row['height'] : null,
+            'created_at' => (string) $row['created_at'],
+            'updated_at' => (string) $row['updated_at'],
+        ];
+    }
+
+    /**
+     * 為缺少縮略圖的已索引原圖補產 64×64 cover。
+     *
+     * @return array{scanned: int, created: int, skipped: int, failed: int, has_more: bool}
+     */
+    public function backfillThumbs(int $limit = 80): array
+    {
+        $this->ensureSchema();
+        $limit = max(1, min(200, $limit));
+        $table = $this->table();
+        $rows = Db::query(
+            "SELECT `id`, `path`, `thumb_path` FROM `{$table}`
+             WHERE `status` IN ('active', 'delisted', 'orphaned')
+               AND (`thumb_path` IS NULL OR `thumb_path` = '')
+               AND `path` NOT LIKE '%.thumb.%'
+             ORDER BY `id` ASC LIMIT {$limit}",
+        );
+        $uploads = new ImageUploadService();
+        $created = 0;
+        $skipped = 0;
+        $failed = 0;
+        $now = date('Y-m-d H:i:s');
+        foreach ($rows as $row) {
+            $path = (string) $row['path'];
+            $thumb = $uploads->ensureThumb($path);
+            if ($thumb === null) {
+                // 標記為「無獨立縮略圖」，避免同一失敗檔反覆卡住批次。
+                Db::execute(
+                    "UPDATE `{$table}` SET `thumb_path` = ?, `updated_at` = ? WHERE `id` = ?",
+                    [$path, $now, (int) $row['id']],
+                );
+                $failed++;
+                continue;
+            }
+            Db::execute(
+                "UPDATE `{$table}` SET `thumb_path` = ?, `updated_at` = ? WHERE `id` = ?",
+                [$thumb, $now, (int) $row['id']],
+            );
+            $created++;
+        }
+        $more = Db::query(
+            "SELECT COUNT(*) AS c FROM `{$table}`
+             WHERE `status` IN ('active', 'delisted', 'orphaned')
+               AND (`thumb_path` IS NULL OR `thumb_path` = '')
+               AND `path` NOT LIKE '%.thumb.%'",
+        );
+
+        return [
+            'scanned' => count($rows),
+            'created' => $created,
+            'skipped' => $skipped,
+            'failed' => $failed,
+            'has_more' => (int) ($more[0]['c'] ?? 0) > 0,
+        ];
+    }
+
+    /** @return list<string> */
+    private function publicTagCatalog(): array
+    {
+        $table = $this->table();
+        $rows = Db::query(
+            "SELECT `tags_json` FROM `{$table}` WHERE `domain` = 'library' AND `asset_type` = 'public' AND `status` IN ('active', 'delisted') AND `tags_json` IS NOT NULL AND `tags_json` <> '' AND `tags_json` <> '[]'",
+        );
+        $tags = [];
+        foreach ($rows as $row) {
+            foreach ($this->decodeTags($row['tags_json'] ?? null) as $tag) {
+                $tags[$tag] = $tag;
+            }
+        }
+        $list = array_values($tags);
+        sort($list, SORT_STRING);
+
+        return $list;
+    }
+
+    /** @return list<string> */
+    private function decodeTags(mixed $raw): array
+    {
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $out = [];
+        foreach ($decoded as $tag) {
+            $tag = trim((string) $tag);
+            if ($tag !== '') {
+                $out[] = $tag;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -138,12 +457,17 @@ class UploadAssetService
         $referenced = $this->referencedPaths();
         $table = $this->table();
         $rows = Db::query(
-            "SELECT `id`, `path`, `status`, `orphaned_at` FROM `{$table}` WHERE `status` IN ('active', 'orphaned')",
+            "SELECT `id`, `path`, `domain`, `asset_type`, `status`, `orphaned_at`
+             FROM `{$table}` WHERE `status` IN ('active', 'orphaned')",
         );
         $now = date('Y-m-d H:i:s');
         $newly = 0;
         $restored = 0;
         foreach ($rows as $row) {
+            // 公共圖庫只走下架，不進自動孤兒清理。
+            if ((string) $row['domain'] === 'library' && (string) $row['asset_type'] === 'public') {
+                continue;
+            }
             $path = (string) $row['path'];
             $used = isset($referenced[$path]);
             if ($used && (string) $row['status'] === 'orphaned') {
@@ -197,6 +521,7 @@ class UploadAssetService
                 $skipped++;
                 continue;
             }
+            $this->removeStoredFile(ImageProcess::thumbUrlFor($path));
             Db::execute(
                 "UPDATE `{$table}` SET `status` = 'deleted', `updated_at` = ? WHERE `id` = ?",
                 [$now, (int) $row['id']],
@@ -831,14 +1156,21 @@ class UploadAssetService
               KEY `idx_upload_assets_status` (`status`, `id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         );
+        $this->ensureColumn($table, 'orphaned_at', "ALTER TABLE `{$table}` ADD COLUMN `orphaned_at` DATETIME NULL AFTER `status`");
+        $this->ensureColumn($table, 'thumb_path', "ALTER TABLE `{$table}` ADD COLUMN `thumb_path` VARCHAR(191) NULL AFTER `path`");
+        $this->ensureColumn($table, 'tags_json', "ALTER TABLE `{$table}` ADD COLUMN `tags_json` TEXT NULL AFTER `height`");
+        self::$schemaReady = true;
+    }
+
+    private function ensureColumn(string $table, string $column, string $alterSql): void
+    {
         $col = Db::query(
-            "SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'orphaned_at'",
-            [$table],
+            "SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$table, $column],
         );
         if ((int) ($col[0]['c'] ?? 0) === 0) {
-            Db::execute("ALTER TABLE `{$table}` ADD COLUMN `orphaned_at` DATETIME NULL AFTER `status`");
+            Db::execute($alterSql);
         }
-        self::$schemaReady = true;
     }
 
     private function table(): string

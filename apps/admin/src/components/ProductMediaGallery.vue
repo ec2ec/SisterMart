@@ -3,7 +3,7 @@ import { showError } from '../feedback'
 import { computed, onMounted, ref, watch } from 'vue'
 import { NImage, NImageGroup, NSpin, useDialog, useMessage } from 'naive-ui'
 import { uploadImage } from '../api'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { assetUrl, thumbUrl, toStoredUrl } from '../utils/assetUrl'
 import { describeUpload, loadUploadRequirements } from '../uploadRequirements'
 import MediaPickerDialog from './MediaPickerDialog.vue'
 
@@ -75,6 +75,10 @@ const items = computed({
 const canAdd = computed(() => items.value.length < props.max)
 
 function previewUrl(url: string) {
+  return thumbUrl(url)
+}
+
+function fullUrl(url: string) {
   return assetUrl(url)
 }
 
@@ -209,6 +213,7 @@ async function onFiles(ev: Event) {
               v-else
               class="thumb"
               :src="previewUrl(item.url)"
+              :preview-src="fullUrl(item.url)"
               object-fit="cover"
               :img-props="{ alt: `圖片 ${idx + 1}`, title: '點擊放大' }"
             />

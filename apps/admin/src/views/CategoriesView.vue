@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { NButton, NCard, NFormItem, NInput, NInputNumber, NSelect, NSpace, NSwitch, useDialog, useMessage } from 'naive-ui'
 import { api } from '../api'
-import { assetUrl, toStoredUrl } from '../utils/assetUrl'
+import { thumbUrl, toStoredUrl } from '../utils/assetUrl'
 import SceneImageField from '../components/SceneImageField.vue'
 
 type Cat = {
@@ -144,7 +144,7 @@ onMounted(load)
       <n-space vertical :size="0">
         <div v-for="row in flat" :key="row.id" class="row" :class="{ off: row.status !== 1 }">
           <span class="col-thumb">
-            <img v-if="row.icon" class="thumb" :src="assetUrl(row.icon)" :alt="row.name['zh-HK']" />
+            <img v-if="row.icon" class="thumb" :src="thumbUrl(row.icon)" :alt="row.name['zh-HK']" />
             <span v-else class="thumb placeholder" />
           </span>
           <span class="col-name">{{ row.label }}</span>

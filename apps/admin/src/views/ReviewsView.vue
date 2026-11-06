@@ -13,6 +13,7 @@ import {
   useMessage,
   NPagination,
 } from 'naive-ui'
+import { thumbUrl as thumbAssetUrl } from '../utils/assetUrl'
 import { api } from '../api'
 import { useClientPager } from '../composables/useClientPager'
 import { useTableRowSelect } from '../composables/useTableRowSelect'
@@ -52,6 +53,14 @@ const modFilter = ref<string>(
 )
 const productCode = ref(typeof route.query.product_code === 'string' ? route.query.product_code : '')
 const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'
+function thumbSrc(u: string) {
+  try {
+    return thumbAssetUrl(u)
+  } catch {
+    return assetUrl(u)
+  }
+}
+
 function assetUrl(u: string) {
   return u.startsWith('http') ? u : `${apiBase}${u}`
 }
@@ -334,7 +343,7 @@ function requestReReview() {
         <p class="body">{{ current.body }}</p>
         <div v-if="current.images?.length" class="imgs">
           <a v-for="(u, i) in current.images" :key="i" :href="assetUrl(u)" target="_blank" rel="noreferrer">
-            <img :src="assetUrl(u)" alt="" />
+            <img :src="thumbSrc(u)" alt="" />
           </a>
         </div>
       </div>
