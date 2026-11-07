@@ -146,53 +146,15 @@ HTML,
     40,
 );
 
-// ——— 私隱協議（原創精簡；非照搬外部條款） ———
+// ——— 私隱政策（PDPO 合規詳版；見 privacy_policy_*.html） ———
+$privacyZh = (string) file_get_contents(__DIR__ . '/privacy_policy_zh_hk.html');
+$privacyEn = (string) file_get_contents(__DIR__ . '/privacy_policy_en.html');
 upsertArticle(
     'privacy',
-    '私隱協議',
-    <<<HTML
-<p>SisterMart（姐妹商店）重視你的私隱。本協議說明我們如何收集、使用與保護個人資料。使用本店服務，即表示你知悉本協議內容。</p>
-<h2>我們收集的資料</h2>
-<ul>
-<li>帳戶資料：電郵、手機號碼、暱稱／頭像等</li>
-<li>訂單與配送：收件人姓名、電話、地址、訂單內容</li>
-<li>登入與驗證：驗證碼發送記錄、裝置／瀏覽的基本技術資訊</li>
-<li>客服溝通：你透過 WhatsApp 或站內訊息提供的內容</li>
-</ul>
-<h2>用途</h2>
-<ul>
-<li>建立帳戶、登入驗證（電郵或 WhatsApp）</li>
-<li>處理訂單、付款核對、配送與售後</li>
-<li>發送與訂單／帳戶相關的必要通知</li>
-<li>改善網站體驗與防止欺詐（在合理範圍內）</li>
-</ul>
-<h2>分享與保存</h2>
-<p>我們不會出售你的個人資料。僅在配送、支付或法律要求等必要情況下，與受託服務方共享完成服務所需的最少資料。資料保存至業務與法律所需期間，期後刪除或匿名化。</p>
-<h2>你的選擇</h2>
-<p>你可在帳戶設定更新資料或退出登錄。如需查閱、更正或刪除個人資料，請透過「聯絡我們」提出。我們可能不時更新本協議，更新後以本頁最新版本為準。</p>
-HTML,
+    '私隱政策',
+    $privacyZh,
     'Privacy Policy',
-    <<<HTML
-<p>SisterMart respects your privacy. This notice explains what we collect and how we use it. Using our shop means you acknowledge this policy.</p>
-<h2>Data we collect</h2>
-<ul>
-<li>Account details: email, phone, nickname/avatar</li>
-<li>Order &amp; delivery: recipient name, phone, address, order items</li>
-<li>Sign-in &amp; verification: OTP delivery logs and basic device/browser data</li>
-<li>Support messages you send via WhatsApp or in-app chat</li>
-</ul>
-<h2>How we use it</h2>
-<ul>
-<li>Account creation and login (email or WhatsApp)</li>
-<li>Orders, payment checks, shipping, and after-sales</li>
-<li>Necessary account/order notifications</li>
-<li>Improving the site and preventing abuse, within reason</li>
-</ul>
-<h2>Sharing &amp; retention</h2>
-<p>We do not sell your personal data. We only share the minimum needed with trusted providers (e.g. delivery or payment) or when required by law. We keep data only as long as needed for business and legal purposes, then delete or anonymize it.</p>
-<h2>Your choices</h2>
-<p>You can update your profile or log out in account settings. To access, correct, or delete personal data, contact us via Contact Us. We may update this page from time to time; the latest version here applies.</p>
-HTML,
+    $privacyEn,
     50,
 );
 

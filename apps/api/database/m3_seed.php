@@ -271,10 +271,10 @@ Db::transaction(function () {
     );
     upsertArticle(
         'privacy',
-        '私隱協議',
-        '我們會保存你的電郵、手機和收貨地址，用於登錄驗證、配送和售後。驗證碼可能經電郵或 WhatsApp 發送。你可以在設置中修改資料或退出登錄。',
+        '私隱政策',
+        (string) file_get_contents(__DIR__ . '/privacy_policy_zh_hk.html'),
         'Privacy Policy',
-        'We store your email, phone number, and shipping address for sign-in, delivery, and after-sales. Verification codes may be sent by email or WhatsApp.',
+        (string) file_get_contents(__DIR__ . '/privacy_policy_en.html'),
         2,
     );
 
