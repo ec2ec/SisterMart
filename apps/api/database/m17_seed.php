@@ -15,7 +15,7 @@ use think\facade\Db;
 
 $now = date('Y-m-d H:i:s');
 $defaults = [
-    'aftersale.window_days' => '30',
+    'aftersale.window_days' => '7',
     'cs.whatsapp' => '85290001234',
 ];
 foreach ($defaults as $key => $value) {

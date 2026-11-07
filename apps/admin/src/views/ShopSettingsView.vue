@@ -6,7 +6,7 @@ import { api } from '../api'
 const message = useMessage()
 const mode = ref<'exact' | 'fuzzy'>('fuzzy')
 const form = reactive({
-  aftersale_window_days: 30,
+  aftersale_window_days: 7,
   cs_whatsapp: '',
   cs_email: '',
 })
