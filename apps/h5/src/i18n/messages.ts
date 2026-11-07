@@ -18,6 +18,7 @@ export const messages = {
       category: '分類',
       cart: '購物車',
       account: '我的',
+      loginTips: '登錄 發現更多驚喜',
     },
     home: {
       promo: '首次下單最高享 4 折優惠 · 立即選購',
@@ -612,6 +613,7 @@ export const messages = {
       category: 'Category',
       cart: 'Cart',
       account: 'Account',
+      loginTips: 'Log in for more surprises',
     },
     home: {
       promo: 'Get up to 40% off on your 1st order · Shop now',

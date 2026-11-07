@@ -228,6 +228,7 @@ function onItemClick(item: TabItem) {
  * content-box：上下 padding 疊在 height 外；safe-area 併入 padding-bottom（已關 Vant 默認） */
 :deep(.van-tabbar),
 .van-tabbar {
+  z-index: 100;
   height: var(--van-tabbar-height);
   padding-top: var(--sm-tabbar-pad-y, 0.5rem);
   padding-bottom: calc(var(--sm-tabbar-pad-y, 0.5rem) + env(safe-area-inset-bottom, 0px));
