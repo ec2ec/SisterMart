@@ -11,7 +11,8 @@ declare(strict_types=1);
  * 用法：php apps/api/database/m33_footer_cms_seed.php
  *
  * 聯絡頁連結讀取 shop_settings：
- *   cs.whatsapp      （純數字，如 85290001234）
+ *   cs.whatsapp      （純數字，如 85255983063）
+ *   cs.email         （客服電郵，如 service@sistermart.vip）
  *   cs.facebook_url  （粉絲專頁完整 URL；可後改）
  */
 
@@ -77,7 +78,11 @@ function upsertArticle(string $code, string $zhTitle, string $zhBody, string $en
     }
 }
 
-$whatsapp = preg_replace('/\D+/', '', ensureSetting('cs.whatsapp', '85290001234')) ?: '85290001234';
+$whatsapp = preg_replace('/\D+/', '', ensureSetting('cs.whatsapp', '85255983063')) ?: '85255983063';
+$email = trim(ensureSetting('cs.email', 'service@sistermart.vip'));
+if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $email = 'service@sistermart.vip';
+}
 $facebook = trim(ensureSetting('cs.facebook_url', 'https://www.facebook.com/'));
 if ($facebook === '') {
     $facebook = 'https://www.facebook.com/';
@@ -85,10 +90,15 @@ if ($facebook === '') {
 $waLink = 'https://wa.me/' . $whatsapp;
 $fbEsc = htmlspecialchars($facebook, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $waEsc = htmlspecialchars($waLink, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$emailEsc = htmlspecialchars($email, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-// 輕量按鈕（避免內聯 SVG 造成 H5 v-html／後台富文本卡頓）
-$btnWa = 'class="sm-contact-btn sm-contact-wa"';
-$btnFb = 'class="sm-contact-btn sm-contact-fb"';
+$fillContact = static function (string $html) use ($waEsc, $fbEsc, $emailEsc): string {
+    return str_replace(
+        ['{{WA_HREF}}', '{{FB_HREF}}', '{{EMAIL}}'],
+        [$waEsc, $fbEsc, $emailEsc],
+        $html,
+    );
+};
 
 // ——— 關於我們（含商業登記 BR 合規披露；見 about_us_*.html） ———
 $aboutZh = (string) file_get_contents(__DIR__ . '/about_us_zh_hk.html');
@@ -102,29 +112,15 @@ upsertArticle(
     10,
 );
 
-// ——— 聯絡我們 ———
+// ——— 聯絡我們（含客服電郵；見 contact_us_*.html） ———
+$contactZh = $fillContact((string) file_get_contents(__DIR__ . '/contact_us_zh_hk.html'));
+$contactEn = $fillContact((string) file_get_contents(__DIR__ . '/contact_us_en.html'));
 upsertArticle(
     'contact',
     '聯絡我們',
-    <<<HTML
-<p>購物、訂單或售後問題，歡迎透過以下方式聯絡 <strong>SisterMart 姐妹商店</strong>。</p>
-<h2>1. 線上聊天（WhatsApp）</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp 客服</a></p>
-<p>工作時間：每日 <strong>10:00–19:00</strong>（香港時間）。非工作時段留言，我們會在下一工作時段回覆。</p>
-<h2>2. 社交媒體</h2>
-<p>你也可以在社交平台找到我們。繁忙時段該服務<strong>可能需要排隊</strong>，感謝耐心等候。</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
-HTML,
+    $contactZh,
     'Contact Us',
-    <<<HTML
-<p>For shopping, orders, or after-sales questions, contact <strong>SisterMart</strong> below.</p>
-<h2>1. Live chat (WhatsApp)</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp support</a></p>
-<p>Hours: daily <strong>10:00–19:00</strong> (Hong Kong time). Messages outside hours will be answered in the next working window.</p>
-<h2>2. Social media</h2>
-<p>You can also find us on social media. During busy periods this channel <strong>may require queuing</strong>—thanks for your patience.</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
-HTML,
+    $contactEn,
     40,
 );
 
