@@ -234,7 +234,7 @@ function reasonText(item: CartItem) {
 
 <style scoped>
 .cart-pull {
-  min-height: calc(100vh - var(--sm-tabbar-h) - 4rem);
+  min-height: calc(100vh - var(--sm-tab-bottom-h) - 4rem);
   overflow: visible;
 }
 .trust {
@@ -310,7 +310,7 @@ function reasonText(item: CartItem) {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  bottom: calc(var(--sm-tab-bottom-h) + env(safe-area-inset-bottom, 0rem));
   display: flex;
   align-items: center;
   gap: 0.5rem;

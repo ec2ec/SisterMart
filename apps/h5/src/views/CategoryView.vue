@@ -115,7 +115,7 @@ function openList(item: CategoryNode | (typeof gridItems.value)[0]) {
   height: 100vh;
   overflow: hidden;
   padding-top: var(--sm-header-h);
-  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  padding-bottom: calc(var(--sm-tab-bottom-h) + env(safe-area-inset-bottom, 0rem));
 }
 .body {
   flex: 1;

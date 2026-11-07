@@ -2,13 +2,14 @@
 import { computed, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import AppTabbar from './components/AppTabbar.vue'
+import GuestLoginTips from './components/GuestLoginTips.vue'
 import HomeView from './views/HomeView.vue'
 import CategoryView from './views/CategoryView.vue'
 import CartView from './views/CartView.vue'
 import AccountView from './views/AccountView.vue'
 import MaintenanceView from './views/MaintenanceView.vue'
 import { useMaintenance } from './composables/useMaintenance'
-import { authToken } from './composables/useSession'
+import { authToken, loggedIn } from './composables/useSession'
 import { useTabShell, routeIsTab } from './composables/useTabShell'
 
 /** 與各頁 defineOptions({ name }) 對齊 */
@@ -96,6 +97,7 @@ onUnmounted(() => {
       />
     </router-view>
 
+    <GuestLoginTips v-if="showTabbar && !loggedIn" />
     <AppTabbar v-if="showTabbar" />
   </template>
 </template>

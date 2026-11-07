@@ -810,10 +810,10 @@ const tabLabel = (tab: HomeRecTab) => {
 <style scoped>
 .home {
   padding-top: var(--sm-header-h);
-  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  padding-bottom: calc(var(--sm-tab-bottom-h) + env(safe-area-inset-bottom, 0rem));
 }
 .home-pull {
-  min-height: calc(100vh - var(--sm-header-h) - var(--sm-tabbar-h));
+  min-height: calc(100vh - var(--sm-header-h) - var(--sm-tab-bottom-h));
   overflow: visible;
 }
 .hero-wrap {

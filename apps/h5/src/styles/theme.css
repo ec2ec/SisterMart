@@ -24,6 +24,10 @@ html {
   --sm-tabbar-pad-y: 0.5rem;
   /* 頁面底部避讓 = 欄高 + 上下 padding；safe-area 另加（見 .page） */
   --sm-tabbar-h: 4.125rem;
+  /* 未登錄 login tips；默認 0，html.sm-guest-login-tips 時撐開 */
+  --sm-login-tips-h: 0rem;
+  /* Tab 區底部總避讓（tabbar + tips，不含 safe-area） */
+  --sm-tab-bottom-h: calc(var(--sm-tabbar-h) + var(--sm-login-tips-h));
   /* 觸控／CTA 標準（勿對元素做 scale 縮小） */
   --sm-tap-min: 2.75rem;
   --sm-icon-btn: 2.75rem;
@@ -180,9 +184,13 @@ textarea,
   font-weight: 700 !important;
 }
 
+html.sm-guest-login-tips {
+  --sm-login-tips-h: 2.75rem;
+}
+
 .page {
   min-height: 100vh;
-  padding-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem));
+  padding-bottom: calc(var(--sm-tab-bottom-h) + env(safe-area-inset-bottom, 0rem));
   background: var(--sm-bg);
 }
 
@@ -213,12 +221,12 @@ textarea,
   color: var(--sm-text-muted);
 }
 
-/* 首頁回頂：Vant BackTop，品牌色 + 避開底欄 */
+/* 首頁回頂：Vant BackTop，品牌色 + 避開底欄／login tips */
 .sm-back-top.van-back-top {
   --van-back-top-size: 2.5rem;
   --van-back-top-icon-size: 1.25rem;
   --van-back-top-right: 1rem;
-  --van-back-top-bottom: calc(var(--sm-tabbar-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem);
+  --van-back-top-bottom: calc(var(--sm-tab-bottom-h) + env(safe-area-inset-bottom, 0rem) + 0.75rem);
   --van-back-top-z-index: 120;
   --van-back-top-background: var(--sm-primary);
   box-shadow: 0 0.125rem 0.5rem rgba(22, 22, 43, 0.28);
