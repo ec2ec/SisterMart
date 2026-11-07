@@ -178,99 +178,27 @@ HTML,
     30,
 );
 
-// ——— 退貨政策 ———
+// ——— 退貨政策（合規詳版＋店家審核空間；見 return_policy_*.html） ———
+$returnZh = (string) file_get_contents(__DIR__ . '/return_policy_zh_hk.html');
+$returnEn = (string) file_get_contents(__DIR__ . '/return_policy_en.html');
 upsertArticle(
     'return',
     '退貨政策',
-    <<<HTML
-<p>我們希望你收到滿意的商品。以下為 SisterMart 退貨說明（簡要）。</p>
-<h2>可申請情形</h2>
-<ul>
-<li>收到商品後 <strong>7 天內</strong>（以簽收日計）</li>
-<li>商品未穿用／未使用、吊牌與包裝完整、不影響二次銷售</li>
-<li>質量問題或與頁面描述明顯不符</li>
-</ul>
-<h2>不適用／限制</h2>
-<ul>
-<li>個人衛生相關、已拆封的貼身／美容耗材等（法律或衛生原因）</li>
-<li>特價清貨、訂製或註明不可退換的商品</li>
-<li>人為損壞、洗滌後、或缺少配件</li>
-</ul>
-<h2>如何辦理</h2>
-<ol>
-<li>在訂單進入售後申請，或透過「聯絡我們」的 WhatsApp 說明訂單編號與原因</li>
-<li>按指引寄回（保留寄件證明）</li>
-<li>我們收貨檢驗後，再安排換貨或按退款政策處理</li>
-</ol>
-<p>非質量問題的退貨，來回運費一般由顧客承擔；質量問題則由我們承擔合理運費。</p>
-HTML,
+    $returnZh,
     'Return Policy',
-    <<<HTML
-<p>We want you to be happy with your order. Here is SisterMart’s simple return guide.</p>
-<h2>Eligible cases</h2>
-<ul>
-<li>Within <strong>7 days</strong> of delivery (signed date)</li>
-<li>Unused item with tags/packaging intact and resalable</li>
-<li>Quality issues or clear mismatch with the product page</li>
-</ul>
-<h2>Not eligible / limits</h2>
-<ul>
-<li>Hygiene-sensitive or opened intimate/beauty consumables</li>
-<li>Final sale, made-to-order, or items marked non-returnable</li>
-<li>Damage from use/washing, or missing accessories</li>
-</ul>
-<h2>How to return</h2>
-<ol>
-<li>Open an after-sales request on the order, or WhatsApp us with order no. and reason</li>
-<li>Ship back as instructed (keep the receipt)</li>
-<li>After inspection we arrange exchange or refund per the Refund Policy</li>
-</ol>
-<p>For non-quality returns, shipping is usually paid by the customer; for quality issues we cover reasonable return shipping.</p>
-HTML,
+    $returnEn,
     90,
 );
 
-// ——— 退款政策 ———
+// ——— 退款政策（合規詳版＋店家操作空間；見 refund_policy_*.html） ———
+$refundZh = (string) file_get_contents(__DIR__ . '/refund_policy_zh_hk.html');
+$refundEn = (string) file_get_contents(__DIR__ . '/refund_policy_en.html');
 upsertArticle(
     'refund',
     '退款政策',
-    <<<HTML
-<p>本政策說明 SisterMart 何時及如何退款，並與「退貨政策」一併適用。</p>
-<h2>可退款情況</h2>
-<ul>
-<li>退貨檢驗通過後</li>
-<li>付款後長時間未能出貨，且你選擇取消</li>
-<li>重複扣款、系統錯誤或多收運費等經核實的情況</li>
-</ul>
-<h2>退款方式與時間</h2>
-<ul>
-<li>原則退回<strong>原支付途徑</strong>（如信用卡／支付平台／帳戶餘額等）</li>
-<li>我們確認退款後，一般於 <strong>3–10 個工作天</strong>到帳（視銀行或支付平台而定）</li>
-<li>使用優惠券／積分的訂單，退款時可能按規則回退券額或積分，現金部分另行計算</li>
-</ul>
-<h2>部分退款</h2>
-<p>若訂單含多件商品，可只退回符合條件的部分；運費是否退還視整筆訂單是否仍達免運門檻及退貨原因而定。</p>
-<p>詳情可於「聯絡我們」查詢你的訂單編號。</p>
-HTML,
+    $refundZh,
     'Refund Policy',
-    <<<HTML
-<p>This policy explains when and how SisterMart issues refunds, together with the Return Policy.</p>
-<h2>When we refund</h2>
-<ul>
-<li>After an approved return passes inspection</li>
-<li>Long delay before shipment where you choose to cancel</li>
-<li>Verified duplicate charges, system errors, or overcharged shipping</li>
-</ul>
-<h2>Method &amp; timing</h2>
-<ul>
-<li>Refunds go back to the <strong>original payment method</strong> when possible (card/wallet/balance, etc.)</li>
-<li>After we confirm, funds usually arrive in <strong>3–10 business days</strong> (bank/provider dependent)</li>
-<li>Orders with coupons/points may restore benefits by rule; cash portion is calculated separately</li>
-</ul>
-<h2>Partial refunds</h2>
-<p>For multi-item orders we may refund only eligible items. Shipping refunds depend on whether the remaining order still meets free-shipping rules and the return reason.</p>
-<p>Contact us with your order number for case-specific help.</p>
-HTML,
+    $refundEn,
     60,
 );
 
