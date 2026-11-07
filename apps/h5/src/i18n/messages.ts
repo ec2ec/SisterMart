@@ -20,6 +20,14 @@ export const messages = {
       account: '我的',
       loginTips: '登錄 發現更多驚喜',
     },
+    /** TMP_SITE_GATE：正式發佈前刪除整段 */
+    tmpGate: {
+      title: '請輸入測試密碼',
+      hint: '此為臨時測試門禁，通過後本機可繼續瀏覽。',
+      placeholder: '測試密碼',
+      submit: '確認',
+      badPassword: '密碼錯誤',
+    },
     home: {
       promo: '首次下單最高享 4 折優惠 · 立即選購',
       categories: '商品分類',
@@ -614,6 +622,14 @@ export const messages = {
       cart: 'Cart',
       account: 'Account',
       loginTips: 'Log in for more surprises',
+    },
+    /** TMP_SITE_GATE: remove before production launch */
+    tmpGate: {
+      title: 'Enter test password',
+      hint: 'Temporary test gate. After unlock, this device can browse.',
+      placeholder: 'Test password',
+      submit: 'Confirm',
+      badPassword: 'Incorrect password',
     },
     home: {
       promo: 'Get up to 40% off on your 1st order · Shop now',

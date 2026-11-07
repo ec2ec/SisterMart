@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch, type Component } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import AppTabbar from './components/AppTabbar.vue'
 import GuestLoginTips from './components/GuestLoginTips.vue'
+import TmpSiteGate from './components/TmpSiteGate.vue'
 import HomeView from './views/HomeView.vue'
 import CategoryView from './views/CategoryView.vue'
 import CartView from './views/CartView.vue'
@@ -11,6 +12,7 @@ import MaintenanceView from './views/MaintenanceView.vue'
 import { useMaintenance } from './composables/useMaintenance'
 import { authToken, loggedIn } from './composables/useSession'
 import { useTabShell, routeIsTab } from './composables/useTabShell'
+import { readTmpSiteGatePassed, TMP_SITE_GATE_ENABLED } from './composables/useTmpSiteGate'
 
 /** 與各頁 defineOptions({ name }) 對齊 */
 const KEEP_ALIVE_NAMES = ['HomeView', 'CategoryView', 'CartView', 'AccountView']
@@ -26,6 +28,12 @@ const route = useRoute()
 const { backgroundTabName, showTabbar, isOverlay } = useTabShell()
 const { status, enabled: maintenanceOn, loaded: maintenanceLoaded, refresh: refreshMaintenance } =
   useMaintenance()
+
+/** TMP_SITE_GATE：正式發佈前移除 TmpSiteGate 掛載與相關 import／i18n */
+const tmpGatePassed = ref(!TMP_SITE_GATE_ENABLED || readTmpSiteGatePassed())
+function onTmpGatePassed() {
+  tmpGatePassed.value = true
+}
 
 /** 維護期間仍允許白名單用戶走登錄／找回／協議頁 */
 const maintenanceAuthEscape = computed(() => {
@@ -65,40 +73,45 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <MaintenanceView
-    v-if="showMaintenance && status"
-    :status="status"
-    @retry="refreshMaintenance"
-  />
+  <!-- TMP_SITE_GATE：通過前不渲染站內內容（含維護頁／Tab） -->
+  <TmpSiteGate v-if="!tmpGatePassed" @passed="onTmpGatePassed" />
 
   <template v-else>
-    <!-- 底層 Tab：進疊層時不卸載；隱藏繪製以免協議／商詳滾動卡頓 -->
-    <div class="sm-tab-shell" :class="{ under: isOverlay }" :aria-hidden="isOverlay ? 'true' : undefined">
-      <keep-alive :include="KEEP_ALIVE_NAMES">
-        <component
-          :is="backgroundComponent"
-          v-if="backgroundComponent && backgroundTabName"
-          :key="backgroundTabName"
-        />
-      </keep-alive>
-    </div>
+    <MaintenanceView
+      v-if="showMaintenance && status"
+      :status="status"
+      @retry="refreshMaintenance"
+    />
 
-    <router-view v-slot="{ Component, route: r }">
-      <!-- 商詳等疊層：蓋在 Tab 之上；按 fullPath 強制重掛，避免協議 A→B 複用實例閃舊文 -->
-      <div v-if="r.meta.overlay && Component" :key="r.fullPath" class="sm-route-overlay">
-        <component :is="Component" :key="r.fullPath" />
+    <template v-else>
+      <!-- 底層 Tab：進疊層時不卸載；隱藏繪製以免協議／商詳滾動卡頓 -->
+      <div class="sm-tab-shell" :class="{ under: isOverlay }" :aria-hidden="isOverlay ? 'true' : undefined">
+        <keep-alive :include="KEEP_ALIVE_NAMES">
+          <component
+            :is="backgroundComponent"
+            v-if="backgroundComponent && backgroundTabName"
+            :key="backgroundTabName"
+          />
+        </keep-alive>
       </div>
-      <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
-      <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->
-      <component
-        :is="Component"
-        v-else-if="Component && !routeIsTab(r) && !r.meta.overlay"
-        :key="r.name === 'orders' ? 'orders' : r.fullPath"
-      />
-    </router-view>
 
-    <GuestLoginTips v-if="showTabbar && !loggedIn" />
-    <AppTabbar v-if="showTabbar" />
+      <router-view v-slot="{ Component, route: r }">
+        <!-- 商詳等疊層：蓋在 Tab 之上；按 fullPath 強制重掛，避免協議 A→B 複用實例閃舊文 -->
+        <div v-if="r.meta.overlay && Component" :key="r.fullPath" class="sm-route-overlay">
+          <component :is="Component" :key="r.fullPath" />
+        </div>
+        <!-- 其餘整頁（結算／登錄等）；Tab 已由底層渲染，勿重複掛載 -->
+        <!-- orders：Tab query 變化時用穩定 key，避免整頁 remount 白屏（對齊首頁 Feed） -->
+        <component
+          :is="Component"
+          v-else-if="Component && !routeIsTab(r) && !r.meta.overlay"
+          :key="r.name === 'orders' ? 'orders' : r.fullPath"
+        />
+      </router-view>
+
+      <GuestLoginTips v-if="showTabbar && !loggedIn" />
+      <AppTabbar v-if="showTabbar" />
+    </template>
   </template>
 </template>
 
