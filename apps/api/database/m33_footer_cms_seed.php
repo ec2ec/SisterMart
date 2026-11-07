@@ -90,33 +90,15 @@ $waEsc = htmlspecialchars($waLink, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $btnWa = 'class="sm-contact-btn sm-contact-wa"';
 $btnFb = 'class="sm-contact-btn sm-contact-fb"';
 
-// ——— 關於我們 ———
+// ——— 關於我們（含商業登記 BR 合規披露；見 about_us_*.html） ———
+$aboutZh = (string) file_get_contents(__DIR__ . '/about_us_zh_hk.html');
+$aboutEn = (string) file_get_contents(__DIR__ . '/about_us_en.html');
 upsertArticle(
     'about',
     '關於我們',
-    <<<HTML
-<p><strong>SisterMart（姐妹商店）</strong>於 <strong>2026 年</strong>成立，是一間立足香港的線上選品小店。</p>
-<p>我們專注優選<strong>高性價比</strong>的各類好物，希望把<strong>實惠與品質</strong>同時帶給姐妹們——好看、好用、價錢也公道。</p>
-<h2>我們在意什麼</h2>
-<ul>
-<li>嚴選商品與清晰實拍，減少「貨不對板」</li>
-<li>香港本地配送體驗，流程簡單好跟進</li>
-<li>售前售後都聽得見你的聲音</li>
-</ul>
-<p>謝謝你來到 SisterMart。有任何想法，都歡迎透過「聯絡我們」告訴我們。</p>
-HTML,
+    $aboutZh,
     'About Us',
-    <<<HTML
-<p><strong>SisterMart</strong> was founded in <strong>2026</strong> as a Hong Kong–based online boutique.</p>
-<p>We curate <strong>great value</strong> everyday finds—bringing <strong>affordable quality</strong> to our community with clear photos and honest pricing.</p>
-<h2>What we care about</h2>
-<ul>
-<li>Careful picks and real product photos</li>
-<li>Straightforward local shipping in Hong Kong</li>
-<li>Friendly support before and after your order</li>
-</ul>
-<p>Thanks for visiting SisterMart. Reach us anytime via Contact Us.</p>
-HTML,
+    $aboutEn,
     10,
 );
 
