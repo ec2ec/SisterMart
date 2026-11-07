@@ -11,7 +11,8 @@ declare(strict_types=1);
  * 用法：php apps/api/database/m33_footer_cms_seed.php
  *
  * 聯絡頁連結讀取 shop_settings：
- *   cs.whatsapp      （純數字，如 85290001234）
+ *   cs.whatsapp      （純數字，如 85255983063）
+ *   cs.email         （客服電郵，如 service@sistermart.vip）
  *   cs.facebook_url  （粉絲專頁完整 URL；可後改）
  */
 
@@ -77,7 +78,11 @@ function upsertArticle(string $code, string $zhTitle, string $zhBody, string $en
     }
 }
 
-$whatsapp = preg_replace('/\D+/', '', ensureSetting('cs.whatsapp', '85290001234')) ?: '85290001234';
+$whatsapp = preg_replace('/\D+/', '', ensureSetting('cs.whatsapp', '85255983063')) ?: '85255983063';
+$email = trim(ensureSetting('cs.email', 'service@sistermart.vip'));
+if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $email = 'service@sistermart.vip';
+}
 $facebook = trim(ensureSetting('cs.facebook_url', 'https://www.facebook.com/'));
 if ($facebook === '') {
     $facebook = 'https://www.facebook.com/';
@@ -85,114 +90,49 @@ if ($facebook === '') {
 $waLink = 'https://wa.me/' . $whatsapp;
 $fbEsc = htmlspecialchars($facebook, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $waEsc = htmlspecialchars($waLink, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$emailEsc = htmlspecialchars($email, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-// 輕量按鈕（避免內聯 SVG 造成 H5 v-html／後台富文本卡頓）
-$btnWa = 'class="sm-contact-btn sm-contact-wa"';
-$btnFb = 'class="sm-contact-btn sm-contact-fb"';
+$fillContact = static function (string $html) use ($waEsc, $fbEsc, $emailEsc): string {
+    return str_replace(
+        ['{{WA_HREF}}', '{{FB_HREF}}', '{{EMAIL}}'],
+        [$waEsc, $fbEsc, $emailEsc],
+        $html,
+    );
+};
 
-// ——— 關於我們 ———
+// ——— 關於我們（含商業登記 BR 合規披露；見 about_us_*.html） ———
+$aboutZh = (string) file_get_contents(__DIR__ . '/about_us_zh_hk.html');
+$aboutEn = (string) file_get_contents(__DIR__ . '/about_us_en.html');
 upsertArticle(
     'about',
     '關於我們',
-    <<<HTML
-<p><strong>SisterMart（姐妹商店）</strong>於 <strong>2026 年</strong>成立，是一間立足香港的線上選品小店。</p>
-<p>我們專注優選<strong>高性價比</strong>的各類好物，希望把<strong>實惠與品質</strong>同時帶給姐妹們——好看、好用、價錢也公道。</p>
-<h2>我們在意什麼</h2>
-<ul>
-<li>嚴選商品與清晰實拍，減少「貨不對板」</li>
-<li>香港本地配送體驗，流程簡單好跟進</li>
-<li>售前售後都聽得見你的聲音</li>
-</ul>
-<p>謝謝你來到 SisterMart。有任何想法，都歡迎透過「聯絡我們」告訴我們。</p>
-HTML,
+    $aboutZh,
     'About Us',
-    <<<HTML
-<p><strong>SisterMart</strong> was founded in <strong>2026</strong> as a Hong Kong–based online boutique.</p>
-<p>We curate <strong>great value</strong> everyday finds—bringing <strong>affordable quality</strong> to our community with clear photos and honest pricing.</p>
-<h2>What we care about</h2>
-<ul>
-<li>Careful picks and real product photos</li>
-<li>Straightforward local shipping in Hong Kong</li>
-<li>Friendly support before and after your order</li>
-</ul>
-<p>Thanks for visiting SisterMart. Reach us anytime via Contact Us.</p>
-HTML,
+    $aboutEn,
     10,
 );
 
-// ——— 聯絡我們 ———
+// ——— 聯絡我們（含客服電郵；見 contact_us_*.html） ———
+$contactZh = $fillContact((string) file_get_contents(__DIR__ . '/contact_us_zh_hk.html'));
+$contactEn = $fillContact((string) file_get_contents(__DIR__ . '/contact_us_en.html'));
 upsertArticle(
     'contact',
     '聯絡我們',
-    <<<HTML
-<p>購物、訂單或售後問題，歡迎透過以下方式聯絡 <strong>SisterMart 姐妹商店</strong>。</p>
-<h2>1. 線上聊天（WhatsApp）</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp 客服</a></p>
-<p>工作時間：每日 <strong>10:00–19:00</strong>（香港時間）。非工作時段留言，我們會在下一工作時段回覆。</p>
-<h2>2. 社交媒體</h2>
-<p>你也可以在社交平台找到我們。繁忙時段該服務<strong>可能需要排隊</strong>，感謝耐心等候。</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
-HTML,
+    $contactZh,
     'Contact Us',
-    <<<HTML
-<p>For shopping, orders, or after-sales questions, contact <strong>SisterMart</strong> below.</p>
-<h2>1. Live chat (WhatsApp)</h2>
-<p><a href="{$waEsc}" target="_blank" rel="noopener noreferrer" {$btnWa}>WhatsApp support</a></p>
-<p>Hours: daily <strong>10:00–19:00</strong> (Hong Kong time). Messages outside hours will be answered in the next working window.</p>
-<h2>2. Social media</h2>
-<p>You can also find us on social media. During busy periods this channel <strong>may require queuing</strong>—thanks for your patience.</p>
-<p><a href="{$fbEsc}" target="_blank" rel="noopener noreferrer" {$btnFb}>Facebook</a></p>
-HTML,
+    $contactEn,
     40,
 );
 
-// ——— 私隱協議（原創精簡；非照搬外部條款） ———
+// ——— 私隱政策（PDPO 合規詳版；見 privacy_policy_*.html） ———
+$privacyZh = (string) file_get_contents(__DIR__ . '/privacy_policy_zh_hk.html');
+$privacyEn = (string) file_get_contents(__DIR__ . '/privacy_policy_en.html');
 upsertArticle(
     'privacy',
-    '私隱協議',
-    <<<HTML
-<p>SisterMart（姐妹商店）重視你的私隱。本協議說明我們如何收集、使用與保護個人資料。使用本店服務，即表示你知悉本協議內容。</p>
-<h2>我們收集的資料</h2>
-<ul>
-<li>帳戶資料：電郵、手機號碼、暱稱／頭像等</li>
-<li>訂單與配送：收件人姓名、電話、地址、訂單內容</li>
-<li>登入與驗證：驗證碼發送記錄、裝置／瀏覽的基本技術資訊</li>
-<li>客服溝通：你透過 WhatsApp 或站內訊息提供的內容</li>
-</ul>
-<h2>用途</h2>
-<ul>
-<li>建立帳戶、登入驗證（電郵或 WhatsApp）</li>
-<li>處理訂單、付款核對、配送與售後</li>
-<li>發送與訂單／帳戶相關的必要通知</li>
-<li>改善網站體驗與防止欺詐（在合理範圍內）</li>
-</ul>
-<h2>分享與保存</h2>
-<p>我們不會出售你的個人資料。僅在配送、支付或法律要求等必要情況下，與受託服務方共享完成服務所需的最少資料。資料保存至業務與法律所需期間，期後刪除或匿名化。</p>
-<h2>你的選擇</h2>
-<p>你可在帳戶設定更新資料或退出登錄。如需查閱、更正或刪除個人資料，請透過「聯絡我們」提出。我們可能不時更新本協議，更新後以本頁最新版本為準。</p>
-HTML,
+    '私隱政策',
+    $privacyZh,
     'Privacy Policy',
-    <<<HTML
-<p>SisterMart respects your privacy. This notice explains what we collect and how we use it. Using our shop means you acknowledge this policy.</p>
-<h2>Data we collect</h2>
-<ul>
-<li>Account details: email, phone, nickname/avatar</li>
-<li>Order &amp; delivery: recipient name, phone, address, order items</li>
-<li>Sign-in &amp; verification: OTP delivery logs and basic device/browser data</li>
-<li>Support messages you send via WhatsApp or in-app chat</li>
-</ul>
-<h2>How we use it</h2>
-<ul>
-<li>Account creation and login (email or WhatsApp)</li>
-<li>Orders, payment checks, shipping, and after-sales</li>
-<li>Necessary account/order notifications</li>
-<li>Improving the site and preventing abuse, within reason</li>
-</ul>
-<h2>Sharing &amp; retention</h2>
-<p>We do not sell your personal data. We only share the minimum needed with trusted providers (e.g. delivery or payment) or when required by law. We keep data only as long as needed for business and legal purposes, then delete or anonymize it.</p>
-<h2>Your choices</h2>
-<p>You can update your profile or log out in account settings. To access, correct, or delete personal data, contact us via Contact Us. We may update this page from time to time; the latest version here applies.</p>
-HTML,
+    $privacyEn,
     50,
 );
 
@@ -238,99 +178,27 @@ HTML,
     30,
 );
 
-// ——— 退貨政策 ———
+// ——— 退貨政策（合規詳版＋店家審核空間；見 return_policy_*.html） ———
+$returnZh = (string) file_get_contents(__DIR__ . '/return_policy_zh_hk.html');
+$returnEn = (string) file_get_contents(__DIR__ . '/return_policy_en.html');
 upsertArticle(
     'return',
     '退貨政策',
-    <<<HTML
-<p>我們希望你收到滿意的商品。以下為 SisterMart 退貨說明（簡要）。</p>
-<h2>可申請情形</h2>
-<ul>
-<li>收到商品後 <strong>7 天內</strong>（以簽收日計）</li>
-<li>商品未穿用／未使用、吊牌與包裝完整、不影響二次銷售</li>
-<li>質量問題或與頁面描述明顯不符</li>
-</ul>
-<h2>不適用／限制</h2>
-<ul>
-<li>個人衛生相關、已拆封的貼身／美容耗材等（法律或衛生原因）</li>
-<li>特價清貨、訂製或註明不可退換的商品</li>
-<li>人為損壞、洗滌後、或缺少配件</li>
-</ul>
-<h2>如何辦理</h2>
-<ol>
-<li>在訂單進入售後申請，或透過「聯絡我們」的 WhatsApp 說明訂單編號與原因</li>
-<li>按指引寄回（保留寄件證明）</li>
-<li>我們收貨檢驗後，再安排換貨或按退款政策處理</li>
-</ol>
-<p>非質量問題的退貨，來回運費一般由顧客承擔；質量問題則由我們承擔合理運費。</p>
-HTML,
+    $returnZh,
     'Return Policy',
-    <<<HTML
-<p>We want you to be happy with your order. Here is SisterMart’s simple return guide.</p>
-<h2>Eligible cases</h2>
-<ul>
-<li>Within <strong>7 days</strong> of delivery (signed date)</li>
-<li>Unused item with tags/packaging intact and resalable</li>
-<li>Quality issues or clear mismatch with the product page</li>
-</ul>
-<h2>Not eligible / limits</h2>
-<ul>
-<li>Hygiene-sensitive or opened intimate/beauty consumables</li>
-<li>Final sale, made-to-order, or items marked non-returnable</li>
-<li>Damage from use/washing, or missing accessories</li>
-</ul>
-<h2>How to return</h2>
-<ol>
-<li>Open an after-sales request on the order, or WhatsApp us with order no. and reason</li>
-<li>Ship back as instructed (keep the receipt)</li>
-<li>After inspection we arrange exchange or refund per the Refund Policy</li>
-</ol>
-<p>For non-quality returns, shipping is usually paid by the customer; for quality issues we cover reasonable return shipping.</p>
-HTML,
+    $returnEn,
     90,
 );
 
-// ——— 退款政策 ———
+// ——— 退款政策（合規詳版＋店家操作空間；見 refund_policy_*.html） ———
+$refundZh = (string) file_get_contents(__DIR__ . '/refund_policy_zh_hk.html');
+$refundEn = (string) file_get_contents(__DIR__ . '/refund_policy_en.html');
 upsertArticle(
     'refund',
     '退款政策',
-    <<<HTML
-<p>本政策說明 SisterMart 何時及如何退款，並與「退貨政策」一併適用。</p>
-<h2>可退款情況</h2>
-<ul>
-<li>退貨檢驗通過後</li>
-<li>付款後長時間未能出貨，且你選擇取消</li>
-<li>重複扣款、系統錯誤或多收運費等經核實的情況</li>
-</ul>
-<h2>退款方式與時間</h2>
-<ul>
-<li>原則退回<strong>原支付途徑</strong>（如信用卡／支付平台／帳戶餘額等）</li>
-<li>我們確認退款後，一般於 <strong>3–10 個工作天</strong>到帳（視銀行或支付平台而定）</li>
-<li>使用優惠券／積分的訂單，退款時可能按規則回退券額或積分，現金部分另行計算</li>
-</ul>
-<h2>部分退款</h2>
-<p>若訂單含多件商品，可只退回符合條件的部分；運費是否退還視整筆訂單是否仍達免運門檻及退貨原因而定。</p>
-<p>詳情可於「聯絡我們」查詢你的訂單編號。</p>
-HTML,
+    $refundZh,
     'Refund Policy',
-    <<<HTML
-<p>This policy explains when and how SisterMart issues refunds, together with the Return Policy.</p>
-<h2>When we refund</h2>
-<ul>
-<li>After an approved return passes inspection</li>
-<li>Long delay before shipment where you choose to cancel</li>
-<li>Verified duplicate charges, system errors, or overcharged shipping</li>
-</ul>
-<h2>Method &amp; timing</h2>
-<ul>
-<li>Refunds go back to the <strong>original payment method</strong> when possible (card/wallet/balance, etc.)</li>
-<li>After we confirm, funds usually arrive in <strong>3–10 business days</strong> (bank/provider dependent)</li>
-<li>Orders with coupons/points may restore benefits by rule; cash portion is calculated separately</li>
-</ul>
-<h2>Partial refunds</h2>
-<p>For multi-item orders we may refund only eligible items. Shipping refunds depend on whether the remaining order still meets free-shipping rules and the return reason.</p>
-<p>Contact us with your order number for case-specific help.</p>
-HTML,
+    $refundEn,
     60,
 );
 

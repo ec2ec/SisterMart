@@ -66,7 +66,7 @@ class TradeSettings
     /** 訂單完成後可申請售後的天數窗口 */
     public static function aftersaleWindowDays(): int
     {
-        return max(1, (int) self::get('aftersale.window_days', '30'));
+        return max(1, (int) self::get('aftersale.window_days', '7'));
     }
 
     /** 客服 WhatsApp 號碼（可含空格/+，前端去非數字） */
